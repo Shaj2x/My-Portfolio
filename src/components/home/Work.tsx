@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { ArrowUpRight } from "lucide-react";
+import Band from "@/components/site/Band";
+import Kicker from "@/components/site/Kicker";
 import Reveal from "@/components/site/Reveal";
-import SectionHead from "@/components/site/SectionHead";
-import LedgerRow from "@/components/site/LedgerRow";
+import ListRow from "@/components/site/ListRow";
 import { profile, projectDemos, projectNotes, projectsInProgress } from "@/content/profile";
 
 interface Repo {
@@ -15,13 +15,9 @@ interface Repo {
   updated_at: string;
 }
 
-type State =
-  | { status: "loading" }
-  | { status: "ready"; repos: Repo[] }
-  | { status: "error" };
+type State = { status: "loading" } | { status: "ready"; repos: Repo[] } | { status: "error" };
 
-const prettyName = (name: string) =>
-  name.replace(/---.*$/, "").replace(/[-_]+/g, " ").trim();
+const prettyName = (name: string) => name.replace(/---.*$/, "").replace(/[-_]+/g, " ").trim();
 
 const Work = () => {
   const [state, setState] = useState<State>({ status: "loading" });
@@ -51,123 +47,97 @@ const Work = () => {
   }, []);
 
   return (
-    <section id="work" className="section border-b border-border">
-      <div className="measure">
-        <SectionHead kicker="Selected work" title="Things I've shipped">
-          Pulled live from{" "}
+    <Band id="work">
+      <Reveal>
+        <Kicker>Selected work</Kicker>
+        <h2 className="t-heading-lg mt-7 max-w-[15ch]">Things I have shipped</h2>
+        <p className="t-body-sm mt-7 max-w-[46ch] text-felt-gray">
+          Pulled live from GitHub, newest first.
+        </p>
+      </Reveal>
+
+      {state.status === "loading" && (
+        <ul className="mt-11.5 border-t border-obsidian/15" aria-busy="true" aria-label="Loading repositories">
+          {[0, 1, 2, 3].map((i) => (
+            <li key={i} className="border-b border-obsidian/15 py-7">
+              <div className="h-[11px] w-[88px] bg-obsidian/10" />
+              <div className="mt-3.5 h-[30px] w-[280px] max-w-full bg-obsidian/10" />
+              <div className="mt-3.5 h-[16px] w-[440px] max-w-full bg-obsidian/10" />
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {state.status === "error" && (
+        <div className="mt-11.5 border-t border-obsidian py-7">
+          <p className="t-subheading">GitHub did not answer.</p>
+          <p className="t-body-sm mt-3.5 max-w-[52ch] text-felt-gray">
+            The repository list is fetched live and the request failed — usually a rate limit.
+          </p>
           <a
             href={profile.github}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-primary underline decoration-primary/30 underline-offset-[4px] hover:decoration-primary"
+            className="t-label link mt-7 inline-block"
           >
-            GitHub
+            Browse the repositories directly →
           </a>
-          , newest first.
-        </SectionHead>
+        </div>
+      )}
 
-        {state.status === "loading" && (
-          <ul className="ledger" aria-busy="true" aria-label="Loading repositories">
-            {[0, 1, 2, 3].map((i) => (
-              <li key={i} className="ledger-row">
-                <div className="h-3 w-20 animate-pulse rounded-sm bg-muted" />
-                <div className="space-y-2">
-                  <div className="h-4 w-48 animate-pulse rounded-sm bg-muted" />
-                  <div className="h-3 w-full max-w-md animate-pulse rounded-sm bg-muted" />
-                </div>
-                <div className="h-3 w-16 animate-pulse rounded-sm bg-muted md:justify-self-end" />
-              </li>
+      {state.status === "ready" && state.repos.length === 0 && (
+        <p className="t-body-sm mt-11.5 text-felt-gray">No public repositories to show right now.</p>
+      )}
+
+      {state.status === "ready" && state.repos.length > 0 && (
+        <Reveal>
+          <ul className="mt-11.5 border-t border-obsidian/15">
+            {state.repos.map((repo) => (
+              <ListRow
+                key={repo.id}
+                period={new Date(repo.updated_at).toLocaleDateString("en-CA", {
+                  year: "numeric",
+                  month: "short",
+                })}
+                title={prettyName(repo.name)}
+                href={repo.html_url}
+                org={repo.language ?? undefined}
+                note={projectNotes[repo.name] ?? repo.description ?? undefined}
+                tag={projectsInProgress.includes(repo.name) ? "In progress" : undefined}
+                trailing={
+                  <>
+                    {repo.stargazers_count > 0 && (
+                      <span className="t-label tnum text-felt-gray">
+                        {repo.stargazers_count} stars
+                      </span>
+                    )}
+                    {projectDemos[repo.name] && (
+                      <a
+                        href={projectDemos[repo.name]}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="t-label link"
+                      >
+                        Live demo →
+                      </a>
+                    )}
+                  </>
+                }
+              />
             ))}
           </ul>
-        )}
+        </Reveal>
+      )}
 
-        {state.status === "error" && (
-          <div className="border-l-2 border-signal bg-secondary/60 px-5 py-4">
-            <p className="font-display text-sm font-semibold">GitHub didn't answer.</p>
-            <p className="prose-measure mt-1.5 text-[0.9375rem] text-muted-foreground">
-              The repository list is fetched live and the request failed — usually a rate limit.
-              You can{" "}
-              <a
-                href={profile.github}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary underline decoration-primary/30 underline-offset-[4px] hover:decoration-primary"
-              >
-                browse the repositories directly
-              </a>{" "}
-              in the meantime.
-            </p>
-          </div>
-        )}
-
-        {state.status === "ready" && state.repos.length === 0 && (
-          <p className="text-muted-foreground">No public repositories to show right now.</p>
-        )}
-
-        {state.status === "ready" && state.repos.length > 0 && (
-          <Reveal>
-            <ul className="ledger">
-              {state.repos.map((repo) => {
-                const demo = projectDemos[repo.name];
-                const inProgress = projectsInProgress.includes(repo.name);
-                return (
-                  <LedgerRow
-                    key={repo.id}
-                    period={new Date(repo.updated_at).toLocaleDateString("en-CA", {
-                      year: "numeric",
-                      month: "short",
-                    })}
-                    title={prettyName(repo.name)}
-                    href={repo.html_url}
-                    org={repo.language ?? undefined}
-                    note={projectNotes[repo.name] ?? repo.description ?? undefined}
-                    tag={inProgress ? "In progress" : undefined}
-                    trailing={
-                      <>
-                        {repo.stargazers_count > 0 && (
-                          <span className="font-mono text-[0.625rem] uppercase tracking-[0.1em] text-muted-foreground tnum">
-                            ★ {repo.stargazers_count}
-                          </span>
-                        )}
-                        {demo && (
-                          <a
-                            href={demo}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="group inline-flex items-center gap-1 font-mono text-[0.625rem] uppercase tracking-[0.1em] text-primary underline decoration-primary/30 underline-offset-[4px] hover:decoration-primary"
-                          >
-                            Live demo
-                            <ArrowUpRight
-                              size={11}
-                              strokeWidth={2}
-                              className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
-                            />
-                          </a>
-                        )}
-                      </>
-                    }
-                  />
-                );
-              })}
-            </ul>
-          </Reveal>
-        )}
-
-        <a
-          href={`${profile.github}?tab=repositories`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="group mt-7 inline-flex items-center gap-1.5 font-mono text-[0.6875rem] uppercase tracking-[0.12em] text-primary underline decoration-primary/30 underline-offset-[5px] hover:decoration-primary"
-        >
-          All repositories
-          <ArrowUpRight
-            size={12}
-            strokeWidth={2}
-            className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
-          />
-        </a>
-      </div>
-    </section>
+      <a
+        href={`${profile.github}?tab=repositories`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="t-label link mt-10 inline-block"
+      >
+        All repositories →
+      </a>
+    </Band>
   );
 };
 

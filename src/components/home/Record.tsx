@@ -1,16 +1,17 @@
+import Band from "@/components/site/Band";
+import Kicker from "@/components/site/Kicker";
 import Reveal from "@/components/site/Reveal";
-import SectionHead from "@/components/site/SectionHead";
-import LedgerRow from "@/components/site/LedgerRow";
+import ListRow from "@/components/site/ListRow";
 import { education, experience, leadership, RecordEntry } from "@/content/profile";
 
-const period = (e: RecordEntry) => (e.start === e.end ? e.start : `${e.start}–${e.end}`);
+const period = (e: RecordEntry) => (e.start === e.end ? e.start : `${e.start}—${e.end}`);
 
 const Group = ({ label, entries }: { label: string; entries: RecordEntry[] }) => (
   <div>
-    <h3 className="meta mb-3">{label}</h3>
-    <ul className="ledger">
+    <Kicker>{label}</Kicker>
+    <ul className="mt-3.5 border-t border-obsidian/15">
       {entries.map((e) => (
-        <LedgerRow
+        <ListRow
           key={`${e.title}-${e.start}`}
           period={period(e)}
           title={e.title}
@@ -24,19 +25,18 @@ const Group = ({ label, entries }: { label: string; entries: RecordEntry[] }) =>
 );
 
 const Record = () => (
-  <section id="record" className="section border-b border-border">
-    <div className="measure">
-      <SectionHead kicker="Record" title="Education, work and leadership">
-        Everything in one ledger, most recent first within each group.
-      </SectionHead>
+  <Band id="record">
+    <Reveal>
+      <Kicker>Record</Kicker>
+      <h2 className="t-heading-lg mt-7 max-w-[16ch]">Education, work, leadership</h2>
+    </Reveal>
 
-      <Reveal className="space-y-12">
-        <Group label="Education" entries={education} />
-        <Group label="Experience" entries={experience} />
-        <Group label="Leadership" entries={leadership} />
-      </Reveal>
-    </div>
-  </section>
+    <Reveal delay={0.08} className="mt-11.5 flex flex-col gap-16">
+      <Group label="Education" entries={education} />
+      <Group label="Experience" entries={experience} />
+      <Group label="Leadership" entries={leadership} />
+    </Reveal>
+  </Band>
 );
 
 export default Record;

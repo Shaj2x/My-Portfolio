@@ -3,8 +3,14 @@ import { useLocation } from "react-router-dom";
 import SiteHeader from "./SiteHeader";
 import SiteFooter from "./SiteFooter";
 
-/** Sets the document title per route and resets scroll on navigation. */
-const Layout = ({ children, title }: { children: ReactNode; title: string }) => {
+interface LayoutProps {
+  children: ReactNode;
+  title: string;
+  /** True when the page opens on a dark or iridescent full-bleed hero. */
+  darkHeader?: boolean;
+}
+
+const Layout = ({ children, title, darkHeader = false }: LayoutProps) => {
   const { pathname } = useLocation();
 
   useEffect(() => {
@@ -16,17 +22,15 @@ const Layout = ({ children, title }: { children: ReactNode; title: string }) => 
   }, [pathname]);
 
   return (
-    <div className="flex min-h-screen flex-col bg-background">
+    <div className="flex min-h-screen flex-col bg-paper">
       <a
-        href="#main"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-3 focus:z-[60] focus:rounded-sm focus:bg-foreground focus:px-3 focus:py-2 focus:font-mono focus:text-[0.6875rem] focus:uppercase focus:tracking-[0.12em] focus:text-background"
+        href="#start"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-10 focus:top-3 focus:z-[60] focus:bg-obsidian focus:px-7 focus:py-3 focus:text-label focus:uppercase focus:text-paper"
       >
         Skip to content
       </a>
-      <SiteHeader />
-      <main id="main" className="flex-1">
-        {children}
-      </main>
+      <SiteHeader inverse={darkHeader} />
+      <main className="flex-1">{children}</main>
       <SiteFooter />
     </div>
   );

@@ -1,32 +1,33 @@
+import Band from "@/components/site/Band";
+import Kicker from "@/components/site/Kicker";
 import Reveal from "@/components/site/Reveal";
-import SectionHead from "@/components/site/SectionHead";
 import { capabilities } from "@/content/profile";
 
 const Capabilities = () => (
-  <section id="capabilities" className="section border-b border-border">
-    <div className="measure">
-      <SectionHead kicker="Toolkit" title="What I work in" />
+  <Band id="toolkit" tight>
+    <Reveal>
+      <Kicker>Toolkit</Kicker>
+    </Reveal>
 
-      <Reveal>
-        <dl className="grid gap-x-10 gap-y-7 sm:grid-cols-2 lg:grid-cols-4">
-          {capabilities.map((c) => (
-            <div key={c.group} className="border-t border-border pt-4">
-              <dt className="meta">{c.group}</dt>
-              <dd className="mt-3">
-                <ul className="space-y-1.5">
-                  {c.items.map((item) => (
-                    <li key={item} className="text-[0.9375rem] leading-snug">
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </dd>
-            </div>
-          ))}
-        </dl>
-      </Reveal>
-    </div>
-  </section>
+    <Reveal delay={0.08}>
+      <dl className="mt-7 grid gap-11.5 sm:grid-cols-2 lg:grid-cols-4">
+        {capabilities.map((c) => (
+          <div key={c.group} className="border-t border-obsidian pt-3.5">
+            <dt className="t-label text-felt-gray">{c.group}</dt>
+            <dd className="mt-3.5">
+              <ul className="flex flex-col gap-2">
+                {c.items.map((item) => (
+                  <li key={item} className="t-body-sm">
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </Reveal>
+  </Band>
 );
 
 export default Capabilities;

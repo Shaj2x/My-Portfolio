@@ -136,7 +136,7 @@ const PongGame = () => {
       ctx.setLineDash([]);
 
       // Paddles
-      const paddleColor = paint.accent;
+      const paddleColor = paint.mark;
       ctx.fillStyle = paddleColor;
       ctx.shadowColor = paddleColor;
       ctx.shadowBlur = 12;
@@ -187,32 +187,32 @@ const PongGame = () => {
 
   return (
     <div>
-      <p className="mb-6 font-mono text-[0.6875rem] uppercase tracking-[0.1em] text-muted-foreground">
-        First to {WIN_SCORE} wins! Use <span className="text-foreground">W/S</span> or <span className="text-foreground">↑/↓</span> to move.
+      <p className="t-label mb-7 text-felt-gray">
+        First to {WIN_SCORE} wins! Use <span className="text-obsidian">W/S</span> or <span className="text-obsidian">↑/↓</span> to move.
       </p>
 
-      <div className="relative inline-block max-w-full overflow-hidden border border-border bg-ink">
+      <div className="relative inline-block max-w-full overflow-hidden border border-obsidian bg-obsidian">
         <canvas
           ref={canvasRef}
           width={CANVAS_W}
           height={CANVAS_H}
-          className="block max-w-full bg-ink"
+          className="block max-w-full bg-obsidian"
           style={{ aspectRatio: `${CANVAS_W}/${CANVAS_H}` }}
         />
         {!playing && (
-          <div className="fade-in absolute inset-0 flex flex-col items-center justify-center bg-ink/85 text-ink-foreground backdrop-blur-sm">
-            <img src={ssLogo} alt="SS Logo" className="mb-4 h-14 w-14 rounded-full" />
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-obsidian/85 text-paper">
+            <img src={ssLogo} alt="SS Logo" className="mb-7 h-14 w-14 rounded-full opacity-90" />
             {winner && (
-              <p className="mb-4 font-display text-2xl font-bold text-ink-accent">{winner} Win{winner === "You" ? "" : "s"}!</p>
+              <p className="t-subheading mb-7">{winner} Win{winner === "You" ? "" : "s"}!</p>
             )}
             <button
               onClick={startGame}
-              className="bg-ink-foreground px-6 py-2.5 font-mono text-[0.6875rem] uppercase tracking-[0.12em] text-ink transition-opacity hover:opacity-85"
+              className="pill pill-dark t-label"
             >
               {winner ? "Play Again" : "Start Game"}
             </button>
             {(score.player > 0 || score.cpu > 0) && !winner && (
-              <p className="mt-4 font-mono text-sm text-ink-muted">
+              <p className="t-label mt-3.5 text-paper/60">
                 Last: You {score.player} – {score.cpu} CPU
               </p>
             )}
@@ -222,12 +222,12 @@ const PongGame = () => {
 
       {playing && (
         <div className="mt-4 flex flex-wrap items-center gap-6">
-          <p className="font-mono text-[0.6875rem] uppercase tracking-[0.1em] text-muted-foreground tnum">
+          <p className="t-label tnum text-felt-gray">
             You {score.player} – {score.cpu} CPU
           </p>
           <button
             onClick={() => endGame()}
-            className="border border-border px-3.5 py-1.5 font-mono text-[0.6875rem] uppercase tracking-[0.1em] text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+            className="pill pill-light t-label"
           >
             End Game
           </button>

@@ -1,7 +1,8 @@
 import { useId, useState } from "react";
-import { Loader2 } from "lucide-react";
+import Band from "@/components/site/Band";
+import Kicker from "@/components/site/Kicker";
 import Reveal from "@/components/site/Reveal";
-import SectionHead from "@/components/site/SectionHead";
+import Pill from "@/components/site/Pill";
 import { toast } from "@/hooks/use-toast";
 import { profile } from "@/content/profile";
 
@@ -28,9 +29,7 @@ const ContactSection = ({
     try {
       // Loaded on submit so the client library stays out of the initial bundle.
       const { supabase } = await import("@/integrations/supabase/client");
-      const { data, error } = await supabase.functions.invoke("send-contact-email", {
-        body: form,
-      });
+      const { data, error } = await supabase.functions.invoke("send-contact-email", { body: form });
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -39,12 +38,12 @@ const ContactSection = ({
       setForm({ name: "", email: "", message: "" });
       toast({
         title: "Message sent",
-        description: "It's in my inbox — I'll reply within a day or two.",
+        description: "It is in my inbox — I will reply within a day or two.",
       });
     } catch (err) {
       console.error("Contact form failed:", err);
       toast({
-        title: "The message didn't send",
+        title: "The message did not send",
         description: `Try again, or email ${profile.email} directly.`,
         variant: "destructive",
       });
@@ -53,123 +52,119 @@ const ContactSection = ({
     }
   };
 
+  // Sharp 0px inputs — a hairline underline rather than a box.
   const field =
-    "w-full border border-input bg-background px-3.5 py-2.5 font-body text-[0.9375rem] text-foreground transition-colors placeholder:text-muted-foreground/70 focus:border-primary focus:outline-none";
+    "w-full border-0 border-b border-obsidian/30 bg-transparent pb-3 pt-2 text-body text-obsidian transition-colors duration-micro ease-monopo placeholder:text-ash-mist focus:border-obsidian focus:outline-none";
 
   return (
-    <section id="contact" className="section">
-      <div className="measure">
-        <SectionHead kicker={kicker} title={title}>
-          {lead}
-        </SectionHead>
+    <Band id="contact">
+      <Reveal>
+        <Kicker>{kicker}</Kicker>
+        <h2 className="t-heading-lg mt-7 max-w-[13ch]">{title}</h2>
+        <p className="t-body-sm mt-7 max-w-[48ch] text-felt-gray">{lead}</p>
+      </Reveal>
 
-        <div className="grid gap-10 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] md:gap-14">
-          <Reveal>
-            {sent ? (
-              <div className="border-l-2 border-primary bg-secondary/60 px-5 py-5">
-                <p className="font-display text-sm font-semibold">Message sent.</p>
-                <p className="prose-measure mt-1.5 text-[0.9375rem] text-muted-foreground">
-                  Thanks for reaching out — I'll reply within a day or two.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setSent(false)}
-                  className="mt-4 font-mono text-[0.6875rem] uppercase tracking-[0.12em] text-primary underline decoration-primary/30 underline-offset-[5px] hover:decoration-primary"
-                >
-                  Send another
-                </button>
-              </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <label htmlFor={`${ids}-name`} className="meta mb-1.5 block">
-                      Name
-                    </label>
-                    <input
-                      id={`${ids}-name`}
-                      name="name"
-                      type="text"
-                      required
-                      autoComplete="name"
-                      value={form.name}
-                      onChange={(e) => setForm({ ...form, name: e.target.value })}
-                      className={field}
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor={`${ids}-email`} className="meta mb-1.5 block">
-                      Email
-                    </label>
-                    <input
-                      id={`${ids}-email`}
-                      name="email"
-                      type="email"
-                      required
-                      autoComplete="email"
-                      value={form.email}
-                      onChange={(e) => setForm({ ...form, email: e.target.value })}
-                      className={field}
-                    />
-                  </div>
-                </div>
+      <div className="mt-11.5 grid gap-11.5 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+        <Reveal delay={0.08}>
+          {sent ? (
+            <div className="border-t border-obsidian pt-7">
+              <p className="t-subheading">Message sent.</p>
+              <p className="t-body-sm mt-3.5 max-w-[44ch] text-felt-gray">
+                Thanks for reaching out — I will reply within a day or two.
+              </p>
+              <button type="button" onClick={() => setSent(false)} className="t-label link mt-7">
+                Send another →
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="flex flex-col gap-10">
+              <div className="grid gap-10 sm:grid-cols-2">
                 <div>
-                  <label htmlFor={`${ids}-message`} className="meta mb-1.5 block">
-                    Message
+                  <label htmlFor={`${ids}-name`} className="t-label text-felt-gray">
+                    Name
                   </label>
-                  <textarea
-                    id={`${ids}-message`}
-                    name="message"
+                  <input
+                    id={`${ids}-name`}
+                    name="name"
+                    type="text"
                     required
-                    rows={6}
-                    value={form.message}
-                    onChange={(e) => setForm({ ...form, message: e.target.value })}
-                    className={`${field} resize-y`}
+                    autoComplete="name"
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    className={field}
                   />
                 </div>
-                <button
-                  type="submit"
-                  disabled={sending}
-                  className="inline-flex items-center gap-2 bg-foreground px-5 py-2.5 font-mono text-[0.6875rem] uppercase tracking-[0.12em] text-background transition-opacity hover:opacity-85 disabled:opacity-50"
-                >
-                  {sending && <Loader2 size={13} className="animate-spin" />}
-                  {sending ? "Sending" : "Send message"}
-                </button>
-              </form>
-            )}
-          </Reveal>
-
-          <Reveal delay={0.08}>
-            <dl className="border-t border-border">
-              {[
-                { label: "Email", value: profile.email, href: `mailto:${profile.email}` },
-                { label: "GitHub", value: `@${profile.githubUser}`, href: profile.github },
-                { label: "LinkedIn", value: "Shajith Sasikumar", href: profile.linkedin },
-                { label: "Based in", value: profile.location },
-              ].map((row) => (
-                <div key={row.label} className="border-b border-border py-3.5">
-                  <dt className="meta">{row.label}</dt>
-                  <dd className="mt-1 text-[0.9375rem]">
-                    {row.href ? (
-                      <a
-                        href={row.href}
-                        target={row.href.startsWith("mailto:") ? undefined : "_blank"}
-                        rel="noopener noreferrer"
-                        className="underline decoration-border underline-offset-[5px] transition-colors hover:text-primary hover:decoration-primary"
-                      >
-                        {row.value}
-                      </a>
-                    ) : (
-                      row.value
-                    )}
-                  </dd>
+                <div>
+                  <label htmlFor={`${ids}-email`} className="t-label text-felt-gray">
+                    Email
+                  </label>
+                  <input
+                    id={`${ids}-email`}
+                    name="email"
+                    type="email"
+                    required
+                    autoComplete="email"
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    className={field}
+                  />
                 </div>
-              ))}
-            </dl>
-          </Reveal>
-        </div>
+              </div>
+
+              <div>
+                <label htmlFor={`${ids}-message`} className="t-label text-felt-gray">
+                  Message
+                </label>
+                <textarea
+                  id={`${ids}-message`}
+                  name="message"
+                  required
+                  rows={5}
+                  value={form.message}
+                  onChange={(e) => setForm({ ...form, message: e.target.value })}
+                  className={`${field} resize-y`}
+                />
+              </div>
+
+              <div>
+                <Pill type="submit" disabled={sending}>
+                  {sending ? "Sending" : "Send message"}
+                </Pill>
+              </div>
+            </form>
+          )}
+        </Reveal>
+
+        <Reveal delay={0.16}>
+          <dl className="border-t border-obsidian/15">
+            {[
+              { label: "Email", value: profile.email, href: `mailto:${profile.email}` },
+              { label: "GitHub", value: `@${profile.githubUser}`, href: profile.github },
+              { label: "LinkedIn", value: "Shajith Sasikumar", href: profile.linkedin },
+              { label: "Based in", value: profile.location },
+            ].map((row) => (
+              <div key={row.label} className="border-b border-obsidian/15 py-3.5">
+                <dt className="t-label text-felt-gray">{row.label}</dt>
+                <dd className="t-body-sm mt-2">
+                  {row.href ? (
+                    <a
+                      href={row.href}
+                      target={row.href.startsWith("mailto:") ? undefined : "_blank"}
+                      rel="noopener noreferrer"
+                      className="link"
+                    >
+                      {row.value}
+                    </a>
+                  ) : (
+                    row.value
+                  )}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </Reveal>
       </div>
-    </section>
+    </Band>
   );
 };
 

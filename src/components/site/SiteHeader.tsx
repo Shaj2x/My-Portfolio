@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { Menu, X } from "lucide-react";
-import ThemeToggle from "@/components/ThemeToggle";
 import { profile } from "@/content/profile";
 
 const routes = [
@@ -10,44 +8,76 @@ const routes = [
   { to: "/play", label: "Play" },
 ];
 
-const SiteHeader = () => {
+/**
+ * Fixed, transparent, 66px tall. No background fill and no shadow on scroll —
+ * the header is invisible until content passes behind it. Over the iridescent
+ * hero it inverts to paper; everywhere else it sits in obsidian.
+ */
+const SiteHeader = ({ inverse = false }: { inverse?: boolean }) => {
   const [open, setOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
+  const [overDark, setOverDark] = useState(inverse);
   const location = useLocation();
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
 
   useEffect(() => setOpen(false), [location.pathname]);
 
-  const linkClass = ({ isActive }: { isActive: boolean }) =>
-    [
-      "font-mono text-[0.6875rem] uppercase tracking-[0.12em] transition-colors",
-      isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground",
-    ].join(" ");
+  /*
+    The header has no background fill, so its colour has to follow whatever
+    band is behind it. Any section marked as a dark region flips it to paper
+    while it sits under the 66px bar — the iridescent hero, the obsidian
+    practice band, and the process band all qualify.
+  */
+  useEffect(() => {
+    const midBar = 33;
+    let frame = 0;
+
+    const check = () => {
+      frame = 0;
+      const regions = document.querySelectorAll("[data-dark-region]");
+      let dark = false;
+      regions.forEach((r) => {
+        const box = r.getBoundingClientRect();
+        if (box.top <= midBar && box.bottom >= midBar) dark = true;
+      });
+      setOverDark(dark);
+    };
+
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(check);
+    };
+
+    check();
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule);
+    return () => {
+      if (frame) cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
+    };
+  }, [location.pathname]);
+
+  useEffect(() => {
+    document.body.style.overflow = open ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [open]);
+
+  // The open menu is always an obsidian sheet, so its contents are always paper.
+  const tone = overDark || open ? "text-paper" : "text-obsidian";
+
+  const navLink = ({ isActive }: { isActive: boolean }) =>
+    ["t-label link transition-opacity duration-micro", isActive ? "opacity-100" : "opacity-55 hover:opacity-100"].join(" ");
 
   return (
-    <header
-      className={[
-        "sticky top-0 z-50 bg-background/88 backdrop-blur-sm transition-colors",
-        scrolled ? "border-b border-border" : "border-b border-transparent",
-      ].join(" ")}
-    >
-      <div className="measure flex h-14 items-center justify-between gap-4">
-        <Link
-          to="/"
-          className="font-display text-[0.9375rem] font-bold tracking-[-0.02em] text-foreground"
-        >
-          {profile.name}
+    <header className={`fixed inset-x-0 top-0 z-50 transition-colors duration-micro ease-monopo ${tone}`}>
+      <div className="shell flex h-[66px] items-center justify-between gap-10">
+        <Link to="/" className="link text-body-sm font-normal" onClick={() => setOpen(false)}>
+          {profile.name.toLowerCase()}
         </Link>
 
-        <nav className="hidden items-center gap-7 md:flex" aria-label="Primary">
+        <nav className="hidden items-center gap-10 md:flex" aria-label="Primary">
           {routes.map((r) => (
-            <NavLink key={r.to} to={r.to} end={r.end} className={linkClass}>
+            <NavLink key={r.to} to={r.to} end={r.end} className={navLink}>
               {r.label}
             </NavLink>
           ))}
@@ -55,47 +85,36 @@ const SiteHeader = () => {
             href={profile.resume}
             target="_blank"
             rel="noopener noreferrer"
-            className="font-mono text-[0.6875rem] uppercase tracking-[0.12em] text-muted-foreground transition-colors hover:text-foreground"
+            className="t-label link opacity-55 transition-opacity duration-micro hover:opacity-100"
           >
             Résumé
           </a>
-          <span className="h-4 w-px bg-border" aria-hidden="true" />
-          <ThemeToggle />
         </nav>
 
-        <div className="flex items-center gap-1 md:hidden">
-          <ThemeToggle />
-          <button
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            aria-expanded={open}
-            aria-controls="mobile-nav"
-            aria-label={open ? "Close menu" : "Open menu"}
-            className="grid h-8 w-8 place-items-center rounded-sm text-foreground"
-          >
-            {open ? <X size={17} strokeWidth={1.75} /> : <Menu size={17} strokeWidth={1.75} />}
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          aria-controls="mobile-nav"
+          className="t-label md:hidden"
+        >
+          {open ? "Close" : "Menu"}
+        </button>
       </div>
 
-      <nav
+      {/* Full obsidian sheet — the menu is a register change, not a dropdown. */}
+      <div
         id="mobile-nav"
         hidden={!open}
-        aria-label="Primary"
-        className="border-t border-border md:hidden"
+        className="fixed inset-0 top-[66px] bg-obsidian text-paper md:hidden"
       >
-        <div className="measure flex flex-col py-2">
+        <nav className="shell flex flex-col pt-12" aria-label="Primary">
           {routes.map((r) => (
             <NavLink
               key={r.to}
               to={r.to}
               end={r.end}
-              className={({ isActive }) =>
-                [
-                  "border-b border-border py-3 font-mono text-[0.6875rem] uppercase tracking-[0.12em]",
-                  isActive ? "text-foreground" : "text-muted-foreground",
-                ].join(" ")
-              }
+              className="t-heading border-b border-paper/20 py-7 font-light"
             >
               {r.label}
             </NavLink>
@@ -104,12 +123,12 @@ const SiteHeader = () => {
             href={profile.resume}
             target="_blank"
             rel="noopener noreferrer"
-            className="py-3 font-mono text-[0.6875rem] uppercase tracking-[0.12em] text-muted-foreground"
+            className="t-heading py-7 font-light"
           >
             Résumé
           </a>
-        </div>
-      </nav>
+        </nav>
+      </div>
     </header>
   );
 };

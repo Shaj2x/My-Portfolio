@@ -5,16 +5,13 @@ interface RevealProps {
   className?: string;
   /** Seconds to stagger this item behind its siblings. */
   delay?: number;
-  as?: "div" | "section" | "li";
+  as?: "div" | "section" | "li" | "article";
 }
 
 /**
- * Settles content into place as it scrolls in.
- *
- * Content is visible by default and only *armed* once this component mounts,
- * so a failed script, a dead observer or a screenshot all get the finished
- * page rather than a blank one. Anything already on screen at mount skips the
- * transition entirely.
+ * Elements glide into place over 1.25s on the house curve — patient, never
+ * abrupt. Content is visible by default and only armed once this component
+ * mounts, so a failed script or a screenshot gets the finished page.
  */
 const Reveal = ({ children, className = "", delay = 0, as: Tag = "div" }: RevealProps) => {
   const ref = useRef<HTMLElement | null>(null);
@@ -22,11 +19,9 @@ const Reveal = ({ children, className = "", delay = 0, as: Tag = "div" }: Reveal
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     if (!("IntersectionObserver" in window)) return;
 
-    // Already in view on first paint — show it without animating.
     if (el.getBoundingClientRect().top < window.innerHeight - 40) {
       el.classList.add("reveal", "is-in");
       return;
@@ -42,7 +37,7 @@ const Reveal = ({ children, className = "", delay = 0, as: Tag = "div" }: Reveal
           }
         }
       },
-      { rootMargin: "0px 0px -60px 0px" }
+      { rootMargin: "0px 0px -80px 0px" }
     );
     observer.observe(el);
     return () => observer.disconnect();

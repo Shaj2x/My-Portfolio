@@ -1,40 +1,50 @@
+import Band from "@/components/site/Band";
+import Kicker from "@/components/site/Kicker";
 import Reveal from "@/components/site/Reveal";
-import SectionHead from "@/components/site/SectionHead";
 import { offers } from "@/content/profile";
 
+/**
+ * Single-column list rows rather than a card grid — each offer gets the full
+ * measure, with a hairline rule and no chrome around it.
+ */
 const Offers = () => (
-  <section id="offers" className="section border-b border-border">
-    <div className="measure">
-      <SectionHead kicker="Offers" title="What you can actually buy">
+  <Band id="offers">
+    <Reveal>
+      <Kicker>Offers</Kicker>
+      <h2 className="t-heading-lg mt-7 max-w-[15ch]">What you can actually buy</h2>
+      <p className="t-body-sm mt-7 max-w-[54ch] text-felt-gray">
         Six things, each scoped so you know what arrives and when. Pricing is quoted per project
-        after the first call — there's no honest number I can put here without knowing the work.
-      </SectionHead>
+        after the first call — there is no honest number I can put here without knowing the work.
+      </p>
+    </Reveal>
 
-      <div className="grid gap-x-12 gap-y-10 md:grid-cols-2">
-        {offers.map((offer, i) => (
-          <Reveal key={offer.name} delay={i * 0.05} className="border-t-2 border-foreground pt-5">
-            <h3 className="font-display text-[1.125rem] font-bold">{offer.name}</h3>
-            <p className="mt-1.5 font-display text-[0.9375rem] font-medium text-primary">
-              {offer.promise}
-            </p>
-            <p className="mt-3.5 text-[0.9375rem] leading-relaxed text-muted-foreground">
-              {offer.detail}
-            </p>
-            <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-1.5">
+    <ul className="mt-11.5 border-t border-obsidian/15">
+      {offers.map((offer, i) => (
+        <Reveal
+          as="li"
+          key={offer.name}
+          delay={i * 0.06}
+          className="grid grid-cols-1 gap-x-3.5 gap-y-3.5 border-b border-obsidian/15 py-10 md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]"
+        >
+          <div>
+            <h3 className="t-subheading">{offer.name}</h3>
+            <p className="t-body-sm mt-3 max-w-[34ch] text-felt-gray">{offer.promise}</p>
+          </div>
+
+          <div>
+            <p className="t-body max-w-[52ch]">{offer.detail}</p>
+            <ul className="mt-7 flex flex-wrap gap-2">
               {offer.outcomes.map((o) => (
-                <li
-                  key={o}
-                  className="font-mono text-[0.625rem] uppercase tracking-[0.1em] text-muted-foreground"
-                >
+                <li key={o} className="t-label rounded-pill border border-obsidian px-7 py-3">
                   {o}
                 </li>
               ))}
             </ul>
-          </Reveal>
-        ))}
-      </div>
-    </div>
-  </section>
+          </div>
+        </Reveal>
+      ))}
+    </ul>
+  </Band>
 );
 
 export default Offers;
