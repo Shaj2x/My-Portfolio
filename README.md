@@ -1,73 +1,61 @@
-# Welcome to your Lovable project
+# shajithsasikumar.com
 
-## Project info
+Personal site for Shajith Sasikumar — Engineering Science + Ivey HBA at Western
+University, and a practice building automated systems for small businesses.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Design direction
 
-## How can I edit this code?
+**Technical Editorial.** Paper ground, a strict grid, hairline rules instead of
+card chrome, and a single petrol accent spent sparingly. Monospace is reserved
+for metadata — dates, organisations, languages, counts — and never used for
+prose. The serif carries the reading text.
 
-There are several ways of editing your application.
+Two rules keep it coherent:
 
-**Use Lovable**
+- **Everything is a ledger row.** Jobs, degrees, leadership roles and
+  repositories share one structure (`LedgerRow`) rather than six variations on a
+  card. Structure encodes what the content actually is.
+- **One dark block per page.** The `ink` token set is the only dark surface on
+  an otherwise paper site, and it marks where the practice begins. It carries
+  its own colours in both themes so it never borrows the page ground.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+Both themes are defined at token level in `src/index.css`: the bare `:root`
+block is the complete light palette, and `.dark` redefines only the tokens.
 
-Changes made via Lovable will be committed automatically to this repo.
+## Routes
 
-**Use your preferred IDE**
+| Route    | Audience                        | Contents                                        |
+| -------- | ------------------------------- | ----------------------------------------------- |
+| `/`      | Recruiters, admissions, peers   | Masthead, about, GitHub work, record, toolkit   |
+| `/build` | Small-business clients          | Offers, process, contact                        |
+| `/play`  | Anyone                          | Pong and Snake, written from scratch on canvas  |
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+`/` ships eagerly; the other routes are code-split.
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## Content
 
-Follow these steps:
+All copy — roles, dates, offers, project notes — lives in
+`src/content/profile.ts`. Edit there, not in components.
+
+## Stack
+
+Vite · React · TypeScript · Tailwind · React Router · Supabase Edge Function
+(contact form only, imported on submit so it stays out of the initial bundle).
+
+Typefaces: Archivo (display), Source Serif 4 (body), IBM Plex Mono (metadata).
+
+## Local development
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+npm install
+npm run dev        # dev server
+npm run build      # production build
+npm run lint       # eslint
+npm test           # vitest
 ```
 
-**Edit a file directly in GitHub**
+## Social card
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+`public/og.png` is generated from `index.html`'s metadata design. Regenerate it
+by rendering a 1200×630 page in the site's own type and palette; the referenced
+URL in `index.html` must match wherever the site is deployed.

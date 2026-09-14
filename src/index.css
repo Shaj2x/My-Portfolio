@@ -1,91 +1,105 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/*
+  Technical Editorial
+  ---------------------------------------------------------------
+  Paper ground, strict grid, hairline rules instead of card chrome.
+  One petrol accent, spent sparingly. Monospace is reserved for
+  metadata — dates, organisations, languages, counts — never prose.
+*/
+
 @layer base {
   :root {
-    --background: 0 0% 4%;
-    --foreground: 0 0% 95%;
+    /* paper */
+    --background: 60 29% 98%;
+    --foreground: 200 14% 7%;
 
-    --card: 0 0% 7%;
-    --card-foreground: 0 0% 95%;
+    /* raised surfaces: used rarely, and never as a default card */
+    --card: 0 0% 100%;
+    --card-foreground: 200 14% 7%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 200 14% 7%;
 
-    --popover: 0 0% 7%;
-    --popover-foreground: 0 0% 95%;
+    /* petrol — the single accent */
+    --primary: 203 67% 22%;
+    --primary-foreground: 60 29% 98%;
 
-    --primary: 0 72% 51%;
-    --primary-foreground: 0 0% 100%;
+    --secondary: 66 14% 94%;
+    --secondary-foreground: 200 14% 20%;
 
-    --secondary: 0 0% 12%;
-    --secondary-foreground: 0 0% 85%;
+    --muted: 66 14% 94%;
+    --muted-foreground: 120 3% 42%;
 
-    --muted: 0 0% 12%;
-    --muted-foreground: 0 0% 55%;
+    --accent: 203 67% 22%;
+    --accent-foreground: 60 29% 98%;
 
-    --accent: 0 72% 51%;
-    --accent-foreground: 0 0% 100%;
+    /* signal — status only (in progress, live, error). Not an accent. */
+    --signal: 21 62% 38%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 6 62% 42%;
+    --destructive-foreground: 60 29% 98%;
 
-    --border: 0 0% 15%;
-    --input: 0 0% 15%;
-    --ring: 0 72% 51%;
+    /* hairlines */
+    --border: 72 8% 87%;
+    --input: 72 8% 87%;
+    --ring: 203 67% 22%;
 
-    --radius: 0.5rem;
+    /* the ink surface: the one dark block on the site */
+    --ink: 216 24% 6%;
+    --ink-foreground: 214 18% 92%;
+    --ink-muted: 214 12% 64%;
+    --ink-surface: 216 20% 11%;
+    --ink-border: 214 15% 19%;
+    --ink-accent: 219 79% 65%;
 
-    --sidebar-background: 0 0% 6%;
-    --sidebar-foreground: 0 0% 85%;
-    --sidebar-primary: 0 72% 51%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 12%;
-    --sidebar-accent-foreground: 0 0% 85%;
-    --sidebar-border: 0 0% 15%;
-    --sidebar-ring: 0 72% 51%;
+    --radius: 0.25rem;
 
-    --font-heading: 'Space Grotesk', sans-serif;
-    --font-mono: 'JetBrains Mono', monospace;
+    --font-display: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+    --font-body: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   }
 
-  .light {
-    --background: 0 0% 98%;
-    --foreground: 0 0% 10%;
+  .dark {
+    --background: 210 17% 9%;
+    --foreground: 214 18% 92%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 10%;
+    --card: 212 19% 12%;
+    --card-foreground: 214 18% 92%;
+    --popover: 212 19% 12%;
+    --popover-foreground: 214 18% 92%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 10%;
+    --primary: 197 46% 57%;
+    --primary-foreground: 210 17% 9%;
 
-    --primary: 0 72% 51%;
-    --primary-foreground: 0 0% 100%;
+    --secondary: 213 16% 16%;
+    --secondary-foreground: 214 18% 88%;
 
-    --secondary: 0 0% 93%;
-    --secondary-foreground: 0 0% 20%;
+    --muted: 213 16% 16%;
+    --muted-foreground: 214 12% 62%;
 
-    --muted: 0 0% 93%;
-    --muted-foreground: 0 0% 40%;
+    --accent: 197 46% 57%;
+    --accent-foreground: 210 17% 9%;
 
-    --accent: 0 72% 51%;
-    --accent-foreground: 0 0% 100%;
+    --signal: 28 70% 62%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 6 62% 58%;
+    --destructive-foreground: 210 17% 9%;
 
-    --border: 0 0% 87%;
-    --input: 0 0% 87%;
-    --ring: 0 72% 51%;
+    --border: 214 15% 20%;
+    --input: 214 15% 20%;
+    --ring: 197 46% 57%;
 
-    --sidebar-background: 0 0% 96%;
-    --sidebar-foreground: 0 0% 20%;
-    --sidebar-primary: 0 72% 51%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 93%;
-    --sidebar-accent-foreground: 0 0% 20%;
-    --sidebar-border: 0 0% 87%;
-    --sidebar-ring: 0 72% 51%;
+    /* in dark mode the ink block steps *away* from the page, not toward it */
+    --ink: 216 26% 4%;
+    --ink-foreground: 214 18% 92%;
+    --ink-muted: 214 12% 62%;
+    --ink-surface: 216 22% 9%;
+    --ink-border: 214 15% 17%;
+    --ink-accent: 219 79% 68%;
   }
 }
 
@@ -94,57 +108,145 @@
     @apply border-border;
   }
 
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+
   body {
-    @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'Space Grotesk', sans-serif;
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--font-body);
+    font-size: 17px;
+    line-height: 1.62;
+    font-synthesis-weight: none;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-heading);
+    font-family: var(--font-display);
+    text-wrap: balance;
+    letter-spacing: -0.02em;
+    line-height: 1.12;
   }
 
-  code, pre {
+  code, pre, time {
     font-family: var(--font-mono);
+  }
+
+  /* Visible, consistent keyboard focus everywhere. */
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  ::selection {
+    background: hsl(var(--primary) / 0.16);
+  }
+}
+
+@layer components {
+  /* One measure for the whole site — the grid never changes width. */
+  .measure {
+    width: 100%;
+    max-width: 68rem;
+    margin-inline: auto;
+    padding-inline: 1.25rem;
+  }
+  @media (min-width: 768px) {
+    .measure { padding-inline: 2.5rem; }
+  }
+
+  .section {
+    padding-block: clamp(3.5rem, 8vw, 6.5rem);
+  }
+
+  /* Metadata voice: organisations, dates, languages, counts. */
+  .meta {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: hsl(var(--muted-foreground));
+  }
+
+  /* Prose runs in the serif and stays near 65 characters. */
+  .prose-measure {
+    max-width: 62ch;
+  }
+
+  /* A ledger row: the site's one repeating structure. */
+  .ledger {
+    border-top: 1px solid hsl(var(--border));
+  }
+  .ledger-row {
+    display: grid;
+    gap: 0.25rem 1.5rem;
+    padding-block: 1.125rem;
+    border-bottom: 1px solid hsl(var(--border));
+    grid-template-columns: minmax(0, 1fr);
+    align-items: baseline;
+  }
+  @media (min-width: 720px) {
+    .ledger-row {
+      grid-template-columns: 8.5rem minmax(0, 1fr) minmax(0, 15rem);
+      gap: 0.25rem 2rem;
+    }
   }
 }
 
 @layer utilities {
-  .text-gradient {
-    @apply bg-clip-text text-transparent;
-    background-image: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.6));
-  }
+  .font-display { font-family: var(--font-display); }
+  .font-body { font-family: var(--font-body); }
+  .tnum { font-variant-numeric: tabular-nums; }
 
-  .glow-red {
-    box-shadow: 0 0 30px -5px hsl(var(--primary) / 0.3);
-  }
-
-  .glass {
-    background: hsl(var(--card) / 0.6);
-    backdrop-filter: blur(16px);
-    border: 1px solid hsl(var(--border) / 0.5);
-  }
-
-  .section-padding {
-    @apply py-20 md:py-32 px-6 md:px-12;
+  /* Wide display setting, used only on the masthead. */
+  .display-wide {
+    font-family: var(--font-display);
+    font-stretch: 108%;
+    letter-spacing: -0.032em;
   }
 }
 
-/* Smooth scrolling */
-html {
-  scroll-behavior: smooth;
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.fade-in {
+  animation: fade-in 0.25s ease-out both;
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
+/*
+  Reveal: applied by script at mount, never in the markup, so content is
+  visible if the script never runs.
+*/
+.reveal {
+  opacity: 0.001;
+  transform: translateY(14px);
+  transition:
+    opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-delay, 0s),
+    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1) var(--reveal-delay, 0s);
 }
-::-webkit-scrollbar-track {
-  background: hsl(0 0% 4%);
+.reveal.is-in {
+  opacity: 1;
+  transform: none;
 }
+
+/* Motion is opt-in for anyone who wants it. */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .reveal { opacity: 1 !important; transform: none !important; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+::-webkit-scrollbar { width: 11px; height: 11px; }
+::-webkit-scrollbar-track { background: hsl(var(--background)); }
 ::-webkit-scrollbar-thumb {
-  background: hsl(0 0% 20%);
-  border-radius: 3px;
+  background: hsl(var(--border));
+  border: 3px solid hsl(var(--background));
+  border-radius: 99px;
 }
-::-webkit-scrollbar-thumb:hover {
-  background: hsl(0 72% 51%);
-}
+::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground) / 0.5); }

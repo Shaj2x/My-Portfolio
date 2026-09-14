@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState, useCallback } from "react";
-import { motion } from "framer-motion";
-import ssLogo from "@/assets/ss-logo.png";
+import ssLogo from "@/assets/ss-mark.png";
+import { canvasTheme, GAME_FONT } from "@/lib/canvas-theme";
 
 const CANVAS_W = 600;
 const CANVAS_H = 400;
@@ -33,7 +33,7 @@ const SnakeGame = () => {
     nextDir: "RIGHT" as Dir,
     food: { x: 15, y: Math.floor(ROWS / 2) } as Point,
     score: 0,
-    intervalId: 0 as any,
+    intervalId: 0 as ReturnType<typeof setInterval> | 0,
   });
 
   const logoImg = useRef<HTMLImageElement | null>(null);
@@ -50,15 +50,15 @@ const SnakeGame = () => {
     const ctx = canvas.getContext("2d")!;
     const s = state.current;
 
-    const primaryColor = getComputedStyle(document.documentElement).getPropertyValue("--primary").trim();
-    const color = primaryColor ? `hsl(${primaryColor})` : "hsl(0, 85%, 55%)";
+    const paint = canvasTheme();
+    const color = paint.accent;
 
     // Background
-    ctx.fillStyle = getComputedStyle(canvas).getPropertyValue("--bg-color") || "#0a0a0a";
+    ctx.fillStyle = paint.ground;
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
     // Grid dots
-    ctx.fillStyle = "hsl(0, 0%, 15%)";
+    ctx.fillStyle = paint.line;
     for (let x = 0; x < COLS; x++) {
       for (let y = 0; y < ROWS; y++) {
         ctx.fillRect(x * CELL + CELL / 2, y * CELL + CELL / 2, 1, 1);
@@ -96,8 +96,8 @@ const SnakeGame = () => {
     ctx.shadowBlur = 0;
 
     // Score
-    ctx.fillStyle = "hsl(0, 0%, 40%)";
-    ctx.font = "bold 20px 'Space Grotesk', sans-serif";
+    ctx.fillStyle = paint.dim;
+    ctx.font = `bold 20px ${GAME_FONT}`;
     ctx.textAlign = "right";
     ctx.fillText(`Score: ${s.score}`, CANVAS_W - 16, 30);
   }, []);
@@ -169,57 +169,54 @@ const SnakeGame = () => {
       if (newDir !== opposites[s.dir]) s.nextDir = newDir;
     };
     window.addEventListener("keydown", handleKey);
+    const game = state.current;
     return () => {
-      clearInterval(state.current.intervalId);
+      clearInterval(game.intervalId);
       window.removeEventListener("keydown", handleKey);
     };
   }, [playing]);
 
   return (
-    <div className="text-center">
-      <p className="text-muted-foreground mb-8">
-        Use <span className="text-primary font-mono">W/A/S/D</span> or <span className="text-primary font-mono">Arrow Keys</span> to move. Eat the logo to grow!
+    <div>
+      <p className="mb-6 font-mono text-[0.6875rem] uppercase tracking-[0.1em] text-muted-foreground">
+        Use <span className="text-foreground">W/A/S/D</span> or <span className="text-foreground">Arrow Keys</span> to move. Eat the logo to grow!
       </p>
-      <div className="relative inline-block rounded-lg overflow-hidden border border-border">
+      <div className="relative inline-block max-w-full overflow-hidden border border-border bg-ink">
         <canvas
           ref={canvasRef}
           width={CANVAS_W}
           height={CANVAS_H}
-          className="block bg-background max-w-full"
+          className="block max-w-full bg-ink"
           style={{ aspectRatio: `${CANVAS_W}/${CANVAS_H}` }}
         />
         {!playing && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm"
-          >
-            <img src={ssLogo} alt="SS Logo" className="w-16 h-16 mb-4 rounded-full" />
+          <div className="fade-in absolute inset-0 flex flex-col items-center justify-center bg-ink/85 text-ink-foreground backdrop-blur-sm">
+            <img src={ssLogo} alt="SS Logo" className="mb-4 h-14 w-14 rounded-full" />
             {gameOver && (
-              <p className="text-2xl font-bold mb-2 text-primary">Game Over!</p>
+              <p className="mb-2 font-display text-2xl font-bold text-ink-accent">Game Over!</p>
             )}
             {gameOver && (
-              <p className="text-muted-foreground mb-4 font-mono">
+              <p className="mb-4 font-mono text-sm text-ink-muted">
                 Score: {score} | Best: {highScore}
               </p>
             )}
             <button
               onClick={startGame}
-              className="px-8 py-3 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors font-medium text-lg"
+              className="bg-ink-foreground px-6 py-2.5 font-mono text-[0.6875rem] uppercase tracking-[0.12em] text-ink transition-opacity hover:opacity-85"
             >
               {gameOver ? "Play Again" : "Start Game"}
             </button>
-          </motion.div>
+          </div>
         )}
       </div>
       {playing && (
-        <div className="mt-4 flex items-center justify-center gap-6">
-          <p className="text-sm text-muted-foreground font-mono">
+        <div className="mt-4 flex flex-wrap items-center gap-6">
+          <p className="font-mono text-[0.6875rem] uppercase tracking-[0.1em] text-muted-foreground tnum">
             Score: {score}
           </p>
           <button
             onClick={endGame}
-            className="px-4 py-1.5 text-sm border border-border text-muted-foreground rounded-md hover:border-primary hover:text-primary transition-colors"
+            className="border border-border px-3.5 py-1.5 font-mono text-[0.6875rem] uppercase tracking-[0.1em] text-muted-foreground transition-colors hover:border-primary hover:text-primary"
           >
             End Game
           </button>

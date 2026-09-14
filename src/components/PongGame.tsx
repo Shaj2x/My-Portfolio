@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState, useCallback } from "react";
-import { motion } from "framer-motion";
 
-import ssLogo from "@/assets/ss-logo.png";
+import ssLogo from "@/assets/ss-mark.png";
+import { canvasTheme, GAME_FONT } from "@/lib/canvas-theme";
 
 const CANVAS_W = 600;
 const CANVAS_H = 400;
@@ -121,12 +121,13 @@ const PongGame = () => {
       }
 
       // Draw
-      ctx.fillStyle = getComputedStyle(canvas).getPropertyValue("--bg-color") || "#0a0a0a";
+      const paint = canvasTheme();
+      ctx.fillStyle = paint.ground;
       ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
       // Center line
       ctx.setLineDash([8, 8]);
-      ctx.strokeStyle = "hsl(0, 0%, 25%)";
+      ctx.strokeStyle = paint.line;
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(CANVAS_W / 2, 0);
@@ -135,8 +136,7 @@ const PongGame = () => {
       ctx.setLineDash([]);
 
       // Paddles
-      const primaryColor = getComputedStyle(document.documentElement).getPropertyValue("--primary").trim();
-      const paddleColor = primaryColor ? `hsl(${primaryColor})` : "hsl(0, 85%, 55%)";
+      const paddleColor = paint.accent;
       ctx.fillStyle = paddleColor;
       ctx.shadowColor = paddleColor;
       ctx.shadowBlur = 12;
@@ -168,8 +168,8 @@ const PongGame = () => {
       }
 
       // Score
-      ctx.fillStyle = "hsl(0, 0%, 40%)";
-      ctx.font = "bold 48px 'Space Grotesk', sans-serif";
+      ctx.fillStyle = paint.dim;
+      ctx.font = `bold 48px ${GAME_FONT}`;
       ctx.textAlign = "center";
       ctx.fillText(String(g.playerScore), CANVAS_W / 4, 60);
       ctx.fillText(String(g.cpuScore), (3 * CANVAS_W) / 4, 60);
@@ -186,52 +186,48 @@ const PongGame = () => {
   }, [playing, resetBall, endGame]);
 
   return (
-    <div className="text-center">
-      <p className="text-muted-foreground mb-8">
-        First to {WIN_SCORE} wins! Use <span className="text-primary font-mono">W/S</span> or <span className="text-primary font-mono">↑/↓</span> to move.
+    <div>
+      <p className="mb-6 font-mono text-[0.6875rem] uppercase tracking-[0.1em] text-muted-foreground">
+        First to {WIN_SCORE} wins! Use <span className="text-foreground">W/S</span> or <span className="text-foreground">↑/↓</span> to move.
       </p>
 
-      <div className="relative inline-block rounded-lg overflow-hidden border border-border">
+      <div className="relative inline-block max-w-full overflow-hidden border border-border bg-ink">
         <canvas
           ref={canvasRef}
           width={CANVAS_W}
           height={CANVAS_H}
-          className="block bg-background max-w-full"
+          className="block max-w-full bg-ink"
           style={{ aspectRatio: `${CANVAS_W}/${CANVAS_H}` }}
         />
         {!playing && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm"
-          >
-            <img src={ssLogo} alt="SS Logo" className="w-16 h-16 mb-4 rounded-full" />
+          <div className="fade-in absolute inset-0 flex flex-col items-center justify-center bg-ink/85 text-ink-foreground backdrop-blur-sm">
+            <img src={ssLogo} alt="SS Logo" className="mb-4 h-14 w-14 rounded-full" />
             {winner && (
-              <p className="text-2xl font-bold mb-4 text-primary">{winner} Win{winner === "You" ? "" : "s"}!</p>
+              <p className="mb-4 font-display text-2xl font-bold text-ink-accent">{winner} Win{winner === "You" ? "" : "s"}!</p>
             )}
             <button
               onClick={startGame}
-              className="px-8 py-3 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors font-medium text-lg"
+              className="bg-ink-foreground px-6 py-2.5 font-mono text-[0.6875rem] uppercase tracking-[0.12em] text-ink transition-opacity hover:opacity-85"
             >
               {winner ? "Play Again" : "Start Game"}
             </button>
             {(score.player > 0 || score.cpu > 0) && !winner && (
-              <p className="mt-4 text-muted-foreground font-mono">
+              <p className="mt-4 font-mono text-sm text-ink-muted">
                 Last: You {score.player} – {score.cpu} CPU
               </p>
             )}
-          </motion.div>
+          </div>
         )}
       </div>
 
       {playing && (
-        <div className="mt-4 flex items-center justify-center gap-6">
-          <p className="text-sm text-muted-foreground font-mono">
+        <div className="mt-4 flex flex-wrap items-center gap-6">
+          <p className="font-mono text-[0.6875rem] uppercase tracking-[0.1em] text-muted-foreground tnum">
             You {score.player} – {score.cpu} CPU
           </p>
           <button
             onClick={() => endGame()}
-            className="px-4 py-1.5 text-sm border border-border text-muted-foreground rounded-md hover:border-primary hover:text-primary transition-colors"
+            className="border border-border px-3.5 py-1.5 font-mono text-[0.6875rem] uppercase tracking-[0.1em] text-muted-foreground transition-colors hover:border-primary hover:text-primary"
           >
             End Game
           </button>
