@@ -1,0 +1,8 @@
+# Raw generations and review copies. Kept out of the deploy folder by the
+# pipeline, and out of git because they are large binaries.
+*.mp4
+*.mov
+*.png
+*.jpg
+*.jpeg
+*.webp
