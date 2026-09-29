@@ -259,7 +259,7 @@ export function createCampus(track: Track, rand: () => number): Campus {
 
   /** A block with painted faces. front faces +z, toward the room. */
   function block(w: number, h: number, d: number, x: number, z: number, front: THREE.Texture, side: THREE.Texture, y0 = GROUND_Y) {
-    const tint = new THREE.Color(1.25, 1.25, 1.25); // lets lit windows push past 1.0 and bloom a little
+    const tint = new THREE.Color(0.95, 0.95, 1.0); // a dark, wet night: lit windows stay just under bloom
     const frontMat = basic({ map: front, color: tint });
     const sideMat = basic({ map: side, color: tint });
     const mesh = new THREE.Mesh(track(new THREE.BoxGeometry(w, h, d)), [sideMat, sideMat, roofMat, darkMat, frontMat, frontMat]);
@@ -318,10 +318,10 @@ export function createCampus(track: Track, rand: () => number): Campus {
   {
     const { ctx } = skyC;
     const g = ctx.createLinearGradient(0, 0, 0, 512);
-    g.addColorStop(0, "#03060c");
-    g.addColorStop(0.55, "#0c1422");
-    g.addColorStop(0.85, "#1f2231");
-    g.addColorStop(1, "#3a2c2c"); // city glow on low cloud
+    g.addColorStop(0, "#020307");
+    g.addColorStop(0.55, "#070b13");
+    g.addColorStop(0.85, "#10141d");
+    g.addColorStop(1, "#1f1a1c"); // faint city glow on low rain cloud
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, 1024, 512);
     ctx.filter = "blur(18px)";
@@ -358,7 +358,7 @@ export function createCampus(track: Track, rand: () => number): Campus {
       }
     }
   }
-  const skyline = new THREE.Mesh(track(new THREE.PlaneGeometry(1500, 190)), basic({ map: texture(skylineC.c), transparent: true, fog: false, depthWrite: false, color: "#9aa3b5" }));
+  const skyline = new THREE.Mesh(track(new THREE.PlaneGeometry(1500, 190)), basic({ map: texture(skylineC.c), transparent: true, fog: false, depthWrite: false, color: "#5a6070" }));
   skyline.position.set(40, GROUND_Y + 95 - 30, -640);
   skyline.renderOrder = -1;
   group.add(skyline);
@@ -424,7 +424,7 @@ export function createCampus(track: Track, rand: () => number): Campus {
     }
     ctx.globalCompositeOperation = "source-over";
   }
-  const ground = new THREE.Mesh(track(new THREE.PlaneGeometry(G.x1 - G.x0, G.z1 - G.z0)), basic({ map: texture(groundC.c) }));
+  const ground = new THREE.Mesh(track(new THREE.PlaneGeometry(G.x1 - G.x0, G.z1 - G.z0)), basic({ map: texture(groundC.c), color: "#9a9aa4" }));
   ground.rotation.x = -Math.PI / 2;
   ground.position.set((G.x0 + G.x1) / 2, GROUND_Y, (G.z0 + G.z1) / 2);
   group.add(ground);
@@ -434,8 +434,8 @@ export function createCampus(track: Track, rand: () => number): Campus {
   const UC = { x: 30, z: -150 };
   const towerH = 36;
   const towerW = 8.5;
-  const towerFront = facade({ w: towerW, h: towerH, cols: 2, rows: 5, winW: 1.2, winH: 3.2, bottom: 9, top: 3, arch: true, lit: 0.35, flood: "rgba(255,196,130,0.55)", floodReach: 0.55, purple: 1, door: true, stone: "#3d3427" });
-  const towerSide = facade({ w: towerW, h: towerH, cols: 2, rows: 5, winW: 1.2, winH: 3.2, bottom: 9, top: 3, arch: true, lit: 0.25, flood: "rgba(255,196,130,0.4)", floodReach: 0.5, purple: 0.8, stone: "#352d22" });
+  const towerFront = facade({ w: towerW, h: towerH, cols: 2, rows: 5, winW: 1.2, winH: 3.2, bottom: 9, top: 3, arch: true, lit: 0.35, flood: "rgba(255,196,130,0.55)", floodReach: 0.55, purple: 0.7, door: true, stone: "#3d3427" });
+  const towerSide = facade({ w: towerW, h: towerH, cols: 2, rows: 5, winW: 1.2, winH: 3.2, bottom: 9, top: 3, arch: true, lit: 0.25, flood: "rgba(255,196,130,0.4)", floodReach: 0.5, purple: 0.55, stone: "#352d22" });
   block(towerW, towerH, towerW, UC.x, UC.z + 3, towerFront, towerSide);
   const towerTop = GROUND_Y + towerH;
   battlements(towerW, towerW, UC.x, towerTop, UC.z + 3, stonePurple);
@@ -607,6 +607,55 @@ export function createCampus(track: Track, rand: () => number): Campus {
     { name: "The Western sign", detail: "At the foot of the lawn below UC", position: new THREE.Vector3(30, GROUND_Y + 1, -110) },
   ];
 
+  // ---------- rain across campus ----------
+  // Tens of thousands of streaks animated entirely in the vertex shader; they fade with distance
+  // like the fog, so through the telescope the air between the window and the school reads as wet.
+  const DROPS = 30000;
+  const RB = { x0: -30, x1: 90, y0: GROUND_Y, y1: GROUND_Y + 42, z0: -215, z1: -12 };
+  const rPos = new Float32Array(DROPS * 6);
+  const rEnd = new Float32Array(DROPS * 2);
+  const rSeed = new Float32Array(DROPS * 2);
+  for (let i = 0; i < DROPS; i++) {
+    const x = rr(RB.x0, RB.x1);
+    const y = rr(RB.y0, RB.y1);
+    const z = rr(RB.z0, RB.z1);
+    rPos.set([x, y, z, x, y, z], i * 6);
+    rEnd.set([0, 1], i * 2);
+    const sd = rand();
+    rSeed.set([sd, sd], i * 2);
+  }
+  const rainGeo = track(new THREE.BufferGeometry());
+  rainGeo.setAttribute("position", new THREE.BufferAttribute(rPos, 3));
+  rainGeo.setAttribute("aEnd", new THREE.BufferAttribute(rEnd, 1));
+  rainGeo.setAttribute("aSeed", new THREE.BufferAttribute(rSeed, 1));
+  const rainMat = track(
+    new THREE.ShaderMaterial({
+      transparent: true,
+      depthWrite: false,
+      uniforms: { uTime: { value: 0 }, uY0: { value: RB.y0 }, uH: { value: RB.y1 - RB.y0 } },
+      vertexShader: /* glsl */ `
+        attribute float aEnd; attribute float aSeed;
+        uniform float uTime; uniform float uY0; uniform float uH;
+        varying float vFade;
+        void main() {
+          vec3 p = position;
+          float speed = 9.0 + aSeed * 4.0;
+          p.y = uY0 + mod(p.y - uY0 - uTime * speed, uH);
+          p.y -= aEnd * (0.45 + aSeed * 0.3);
+          p.x -= aEnd * 0.09; // a little wind
+          vec4 mv = modelViewMatrix * vec4(p, 1.0);
+          vFade = (1.0 - smoothstep(25.0, 190.0, -mv.z)) * (0.55 + 0.45 * aEnd);
+          gl_Position = projectionMatrix * mv;
+        }`,
+      fragmentShader: /* glsl */ `
+        varying float vFade;
+        void main() { gl_FragColor = vec4(0.62, 0.7, 0.82, 0.32 * vFade); }`,
+    }),
+  );
+  const campusRain = new THREE.LineSegments(rainGeo, rainMat);
+  campusRain.frustumCulled = false;
+  group.add(campusRain);
+
   // the flag ripples a little in the wind
   const flagPos = flagGeo.attributes.position as THREE.BufferAttribute;
   const flagBase = Float32Array.from(flagPos.array as Float32Array);
@@ -616,6 +665,7 @@ export function createCampus(track: Track, rand: () => number): Campus {
       flagPos.setZ(i, Math.sin(x * 2.2 - t * 5) * 0.12 * (x / 2.6));
     }
     flagPos.needsUpdate = true;
+    rainMat.uniforms.uTime.value = t;
   };
 
   return { group, sky, landmarks, update };
