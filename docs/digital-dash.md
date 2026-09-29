@@ -21,10 +21,15 @@ The file has three parts: `<style>`, the markup, and one IIFE `<script>`. The sc
 | persistence | Global state `S`, `DEFAULT`, `merge()`, `save()`, `connect()` |
 | theme | Skins, fonts (`UIF`, `CLF`), gradients (`GRADS`), custom schemes, backgrounds, clock stage background, image storage helpers, background colour matching |
 | motion | `anim()`, `vt()`, `flipRender()`, `initSeg()`/`glide()`, `moveInd()`, `tweenNum()` (see Motion below) |
-| navigation | `show(view)` switches between the 5 tabs |
+| navigation | `show(view)` switches between the 5 views. Navigation is a floating dock (`.rail`) at the bottom centre; brand, sync, sounds mini-player, install and search buttons sit in `.topbar` |
 | CLOCKS | Flip, Digital, Analog, Words, Progress rings, Focus timer (chime; custom timers via the + button: `useTimer`, `addTimer`, `removeTimer`; focus timers log a session, breaks don't) |
-| TASKS | Urgency 0 to 3 (Critical, High, Medium, Low), due dates, sort by urgency then due |
-| CALENDAR | Month grid, events plus tasks with due dates |
+| TASKS | Urgency 0 to 3 (Critical, High, Medium, Low), due dates with optional time (`dueTime`), sort by urgency then due |
+| deadline pressure | `pressing(now)` picks tasks due within `PRESS_WIN` (3h); `updatePressure()` tints the clock stage (`#pressure`, weighted by `URG_W`), draws due ticks on the day line and shows a live countdown on the now-task pill; one toast at 15 minutes left |
+| CALENDAR | Month grid, events plus tasks with due dates. `#cal-mode` switches to the week review |
+| week review | `weekStats(start, upTo)`, `renderWeek()`: KPIs (focus time, sessions, tasks finished, net worth change, streak) compared with the same point last week, bar charts with tooltips and an `sr-only` table. Route `#week` |
+| calendar import | `parseICS` / `expandICS` (RRULE daily/weekly/monthly/yearly, INTERVAL, COUNT, UNTIL, EXDATE, TZID) / `importICS`. File upload or URL (webcal is rewritten to https; many hosts block CORS, the error says so). Imported events carry `src`; re-importing replaces them. Colours `CAL_SLOTS` were checked with the dataviz palette validator |
+| jukebox | Ambient sounds made live with Web Audio (no files): rain, waves, wind, fire, cafe, brown, pink, white noise, binaural. `jbPlay`, `jbPause`, mixes in `JB_MIXES`; optional auto mode plays during focus timers (`jbTimerSync`) |
+| command bar | `<dialog id="cmd">`, Ctrl/Cmd+K or `/`. `cmdResults(q)` builds rows; `parseTask` / `parseWhen` understand things like "gym tomorrow 5pm high", "essay sep 30 !!!", "timer 40", "play rain", "theme midnight", "done lab", "tfsa 13000", "week". A bare time already past rolls to tomorrow |
 | NET WORTH | Assets and debts accounts, daily history snapshots, SVG line chart, privacy eye (`setPrivacy()`: masks every amount, shows growth as a percentage; stored as `settings.hideNw`) |
 | mini stats | Widget system (`WT` registry, `renderWidgets`, widget config forms) |
 | focus controls | Clock picker, 24h and seconds toggles, zen mode |
@@ -36,17 +41,20 @@ Everything is in one object `S`, saved as JSON:
 
 ```
 S = {
-  tasks:    [{id, title, urg, due:"YYYY-MM-DD", done, doneAt, created}],
-  events:   [{id, date, time, title}],
+  tasks:    [{id, title, urg, due:"YYYY-MM-DD", dueTime:"HH:MM"?, done, doneAt, created}],
+  events:   [{id, date, time, title, src?}],          // src = imported calendar id
+  calendars:[{id, name, url?, slot, count, at}],     // imported .ics calendars
   accounts: [{id, name, kind:"asset"|"debt", cat, value}],
   history:  [{d:"YYYY-MM-DD", v:netWorth}],        // one point per day
   sessions: {"YYYY-MM-DD": count},                  // finished focus timers
+  focusLog: {"YYYY-MM-DD": seconds},                // focus time, for the week review
   timers:   [{id, name, sec, kind:"focus"|"break"}],  // Focus timer choices (settings.timerId = last used)
   schemes:  [{id, name, c:{bg,panel,ink,accent,card,cardInk}}],
   widgets:  [{id, type, size:"s"|"w", title?, cfg?}],
   settings: {
     skin, accent, uiFont, clockFont, clock, h24, secs, currency, hideNw, surface:"solid"|"glass",
-    radius, clockScale, subs:{},
+    radius, clockScale, subs:{}, refract,
+    jb:    {vol, on:[soundIds], lv:{id:level}, auto},
     bg:    {type:"none"|"color"|"gradient"|"image", color, grad, image, iw, ih, dim, blur, match, pal},
     stage: {type:"theme"|"color"|"gradient"|"image"|"glass", color, grad, image, iw, ih, dim, ink}
   }
@@ -54,6 +62,12 @@ S = {
 ```
 
 `merge()` fills in defaults for any missing keys, so adding a new setting only needs a default in `DEFAULT`.
+
+## Installable app (PWA)
+
+- `public/digital-dash.webmanifest` (scope `/digital-dash`, standalone, shortcuts to Tasks, Week review and Calendar) and icons `public/digital-dash-*.png`.
+- `public/digital-dash-sw.js`: network first for the app, cache fallback so it opens offline; Google Fonts cache first. Bump `CACHE` when the precache list changes.
+- The Install button appears when the browser fires `beforeinstallprompt`; on iPhone, Your data shows the Share, Add to Home Screen steps.
 
 ## Storage
 
@@ -110,7 +124,7 @@ The goal is that nothing teleports and nothing waits on you. Rules the code foll
 - UI copy is plain, friendly, sentence case, and uses no em dashes.
 - Keep it one file with no framework unless we deliberately decide to migrate.
 - Respect `prefers-reduced-motion`. Every animation has a reduced variant (see Motion).
-- Mobile: below 720px the sidebar becomes a bottom tab bar.
+- Mobile: below 720px the dock stretches edge to edge with stacked icon and label; the search button shrinks to an icon and keyboard hints hide on touch screens.
 
 ## Ideas for next steps
 
@@ -118,4 +132,4 @@ The goal is that nothing teleports and nothing waits on you. Rules the code foll
 - Real accounts and sync (Supabase or Firebase) to replace the claude.ai runtime.
 - Import bank balances automatically, recurring tasks, calendar sync with Google Calendar.
 - Drag and drop for widgets instead of arrow buttons.
-- Package as a PWA so it installs on a phone.
+- Two-way Google Calendar sync (needs OAuth and a backend; today's import is read-only).
