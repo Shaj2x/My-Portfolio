@@ -528,6 +528,31 @@ html.lg h1,html.lg .sec{text-shadow:0 1px 12px color-mix(in srgb,var(--bg) 60%,t
   html.lg .panel::after,html.lg .task::after,html.lg .skin::after{display:none}
 }
 
+/* ---------- Font fitting ----------
+   Fonts differ a lot in width and in where their digits sit. fitFonts() measures the chosen fonts
+   once they load and sets: --hs (display headings), --ns (big numbers), --fs/--dw/--cw (clock
+   digits, card width, colon width), --dy (vertical centring of digits in flip cards) and
+   --us (body text). Wide faces come down in size; condensed ones keep the full size. */
+body{font-size:calc(15px*var(--us,1))}
+.brand{font-size:calc(22px*var(--hs,1))}
+h1{font-size:calc(clamp(34px,5vw,52px)*var(--hs,1))}
+@media (max-width:720px){h1{font-size:calc(34px*var(--hs,1))}}
+.sec{font-size:calc(24px*var(--hs,1))}
+.words{font-size:calc(clamp(40px,8.5vw,112px)*var(--cs,1)*var(--hs,1))}
+.total{font-size:calc(clamp(48px,8vw,96px)*var(--ns,1))}
+.widget .big,.mini .big{font-size:calc(44px*var(--ns,1))}
+.ring b{font-size:calc(30px*var(--ns,1))}
+.skin .sw{font-size:calc(30px*var(--ns,1))}
+.flip .colon{width:var(--cw,.28em);display:flex;justify-content:center;transform:translate(var(--kx,0em),calc(var(--ky,0em) - .04em))} /* flex centres even when a monospace colon's advance is wider than its box; --kx/--ky centre the dots themselves */
+.flip .card.blank{display:none}
+/* --fk: last-resort fit so the clock never spills out of its stage (set by fitClock) */
+.flip{font-size:calc(clamp(56px,13vw,170px)*var(--cs,1)*var(--fs,1)*var(--fk,1))}
+.digital{font-size:calc(clamp(70px,17vw,220px)*var(--cs,1)*var(--fs,1)*var(--fk,1))}
+.timer .t{font-size:calc(clamp(80px,18vw,210px)*var(--cs,1)*var(--fs,1)*var(--fk,1))}
+.words{font-size:calc(clamp(40px,8.5vw,112px)*var(--cs,1)*var(--hs,1)*var(--fk,1))}
+.half span,.face span{position:relative;top:var(--dy,0em)}
+.stage-contrast{font-size:12.5px;color:var(--muted);margin:6px 0 0}
+
 /* ---------- Presets ---------- */
 .presets{position:relative;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
 .preset{position:relative;display:flex;flex-direction:column;gap:10px;padding:10px;border:2px solid var(--line);border-radius:calc(var(--r) + 6px);background:var(--panel);transition:border-color var(--t-fast) ease}
@@ -758,6 +783,7 @@ html.lg .eye{background:var(--glass-tint);box-shadow:inset 0 1px 0 color-mix(in 
         <div class="stopt" data-for="glass"><p class="hint" style="margin:0">Glass lets your page background show through behind the clock. Use the Dim slider to control how see-through it is.</p></div>
         <div class="stopt" data-for="dim"><div class="field"><span>Dim</span><input type="range" id="st-dim" min="0" max="95"></div></div>
         <div class="field" style="margin-top:12px"><span>Clock digit colour</span><span class="row"><input type="color" id="st-ink"><button class="btn ghost small" id="st-ink-reset">Reset</button></span></div>
+        <p class="stage-contrast" id="st-contrast" hidden>This colour was too close to the clock background, so it's been lightened or darkened to stay readable.</p>
       </div>
 
       <h2 class="sec">Fonts</h2>
@@ -984,11 +1010,70 @@ const lum=h=>{const [r,g,b]=hex2rgb(h).map(v=>{v/=255;return v<=.03928?v/12.92:M
 const readable=h=>lum(h)>.42?"#141414":"#FFFFFF";
 const isHex=v=>/^#[0-9a-f]{6}$/i.test(v||"");
 let previewScheme=null, editingScheme=null;
-const loadedFonts=new Set();
+const loadedFonts=new Set(), fontCss=new Map(); // Google Fonts spec -> promise that its stylesheet has loaded
 function loadFonts(list){
   const need=list.filter(g=>g&&!loadedFonts.has(g));if(!need.length)return;
   need.forEach(g=>loadedFonts.add(g));
-  const l=document.createElement("link");l.rel="stylesheet";l.href="https://fonts.googleapis.com/css2?family="+need.join("&family=")+"&display=swap";document.head.appendChild(l);
+  const l=document.createElement("link");l.rel="stylesheet";l.href="https://fonts.googleapis.com/css2?family="+need.join("&family=")+"&display=swap";
+  const ready=new Promise(res=>{l.onload=l.onerror=res;setTimeout(res,4000);});need.forEach(g=>fontCss.set(g,ready));
+  document.head.appendChild(l);
+}
+/* ---------- font fitting ----------
+   Measure a font on a canvas: widest digit, average capital, colon, and where digits sit relative
+   to the line box. Everything is compared against the default pair (Big Shoulders for display,
+   Bricolage for text) and softened with a power curve, so a wide face comes down enough to fit
+   without looking tiny next to a condensed one. */
+const FM=new Map(),mCtx=document.createElement("canvas").getContext("2d");
+function measureFont(fam,weight){
+  const key=weight+"|"+fam;if(FM.has(key))return FM.get(key);
+  mCtx.font=`${weight} 100px ${fam}`;let dw=0,aA=0,aD=0;
+  for(const d of "0123456789"){const m=mCtx.measureText(d);dw=Math.max(dw,m.width);aA=Math.max(aA,m.actualBoundingBoxAscent||0);aD=Math.max(aD,m.actualBoundingBoxDescent||0);}
+  const z=mCtx.measureText("0"),fA=z.fontBoundingBoxAscent,fD=z.fontBoundingBoxDescent;
+  const k=mCtx.measureText(":"),kL=k.actualBoundingBoxLeft||0,kR=k.actualBoundingBoxRight||k.width,kA=k.actualBoundingBoxAscent||0,kD=k.actualBoundingBoxDescent||0;
+  const r={dw:dw/100,cap:mCtx.measureText("GOOD AFTERNOONS").width/1500,low:mCtx.measureText("the quick brown fox jumps over").width/3000,
+    colon:(()=>{const m=mCtx.measureText(":"),ink=(m.actualBoundingBoxLeft||0)+(m.actualBoundingBoxRight||0);return (ink>0?ink:m.width)/100;})(), /* inked width: monospace colons have a full-width advance */aA:aA/100,aD:aD/100,fA:(fA||80)/100,fD:(fD||20)/100,
+    /* colon ink centre relative to its advance box: some faces draw the dots off-centre or high */
+    kx:(k.width/2-(kR-kL)/2)/100,ky:(((fD||20)-(fA||80))+(kA-kD))/200};
+  // Only remember measurements of the real face; a fallback measured before download must be redone
+  const prim=(fam.match(/^"([^"]+)"/)||[])[1];
+  if(!prim||document.fonts.check(`${weight} 16px "${prim}"`,"0"))FM.set(key,r);
+  return r;
+}
+const famOf=f=>f[0]==="system"?"system-ui,sans-serif":`"${f[2]}",${f[3]}`;
+async function fontReady(f,weight){
+  const g=f[4];if(g&&fontCss.has(g))await fontCss.get(g);
+  if(f[0]==="system")return;
+  try{await Promise.race([document.fonts.load(`${weight} 100px "${f[2]}"`,"0123456789AGO"),new Promise(r=>setTimeout(r,4000))]);}catch(e){}
+}
+let fitSeq=0;
+async function fitFonts(uf,cf){
+  const seq=++fitSeq;
+  await Promise.all([fontReady(cf,800),fontReady(CLF[0],800),fontReady(uf,400),fontReady(UIF[0],400)]);
+  if(seq!==fitSeq)return; // a newer choice arrived while this one loaded
+  const h=document.documentElement,c=measureFont(famOf(cf),800),r=measureFont(famOf(CLF[0]),800);
+  const u=measureFont(famOf(uf),400),ur=measureFont(famOf(UIF[0]),400);
+  // Soft curves: wide faces come down, but keep presence (a pure width match makes them look tiny)
+  h.style.setProperty("--kx",Math.max(-.3,Math.min(.3,c.kx)).toFixed(3)+"em");
+  h.style.setProperty("--ky",Math.max(-.3,Math.min(.3,c.ky)).toFixed(3)+"em");
+  // fitClock catches any overflow, so the digit scale can stay gentle
+  const fs=Math.min(1,Math.pow(r.dw/c.dw,.5)), hs=Math.max(.55,Math.min(1,Math.pow(r.cap/c.cap,.6)));
+  h.style.setProperty("--fs",fs.toFixed(3));
+  h.style.setProperty("--ns",fs.toFixed(3));
+  h.style.setProperty("--hs",hs.toFixed(3));
+  h.style.setProperty("--dw",(c.dw+.14).toFixed(3)+"em");          // card: widest digit plus side margin
+  h.style.setProperty("--cw",Math.max(.24,c.colon+.16).toFixed(3)+"em");
+  // Line box is 1.12em; move the glyphs so the digits' ink, not the font's em box, is centred
+  const dy=((c.fD-c.fA)+(c.aA-c.aD))/2;h.style.setProperty("--dy",Math.max(-.2,Math.min(.2,dy)).toFixed(3)+"em");
+  h.style.setProperty("--us",Math.max(.86,Math.min(1.04,Math.pow(ur.low/u.low,.8))).toFixed(3));
+  fitFontPreviews();fitClock();
+  if(typeof moveInd==="function"){moveInd(true);document.querySelectorAll(".seg").forEach(s=>glide(s,true));}
+}
+// Each option in the font pickers shows "12:45" in its own face; size them so wide faces fit their tile
+async function fitFontPreviews(){
+  // Previews: full size unless "12:45" is wider than the space it has, then just enough smaller to fit
+  const fitTo=(el,base,room)=>{el.style.fontSize=base+"px";const w=el.scrollWidth;if(w>room)el.style.fontSize=Math.max(12,base*room/w).toFixed(1)+"px";};
+  document.querySelectorAll("#clock-fonts .fontopt").forEach(async b=>{const f=CLF.find(x=>x[0]===b.dataset.f);if(!f||!fontCss.has(f[4]))return;await fontReady(f,800);const t=b.querySelector("b");t.style.display="inline-block";fitTo(t,24,b.clientWidth-28);});
+  document.querySelectorAll("#presets .pclock").forEach(async el=>{const f=CLF.find(x=>x[0]===el.dataset.f);if(!f)return;await fontReady(f,800);fitTo(el,26,el.parentElement.clientWidth*.62);});
 }
 function setScheme(c){
   const h=document.documentElement.style;
@@ -1032,6 +1117,7 @@ function applyTheme(){
   h.style.setProperty("--clock",`"${cf[2]}",${cf[3]}`);
   h.style.setProperty("--dw",cf[5]);
   h.style.setProperty("--fs",Math.min(1,.7/parseFloat(cf[5])).toFixed(3));
+  fitFonts(uf,cf); // refine from real measurements once the fonts are in
   h.style.setProperty("--r",s.radius+"px");
   h.style.setProperty("--cs",(s.clockScale/100).toFixed(2));
   applyBg();
@@ -1278,7 +1364,16 @@ function applyStage(){
   else if(st.type==="image"){const src=resolveImg(st.image);if(src)css=`linear-gradient(${dim},${dim}),url("${src}") center / cover no-repeat var(--card)`;}
   else if(st.type==="glass")css=`color-mix(in srgb,var(--card) ${st.dim}%,transparent)`;
   el.style.background=css;el.classList.toggle("glass",st.type==="glass");
-  el.style.color=isHex(st.ink)?st.ink:"";
+  // Readability guard: the digits, date and "Up next" all use this colour. If the chosen ink (or the
+  // scheme's) is too close to what's behind it, push it toward white or black until it reads (4.5:1).
+  const cs=getComputedStyle(document.documentElement),base=st.type==="color"&&isHex(st.color)?st.color:cs.getPropertyValue("--card").trim();
+  let ink=isHex(st.ink)?st.ink:cs.getPropertyValue("--card-ink").trim(),fixed=false;
+  if(isHex(ink)&&isHex(base)&&st.type!=="glass"){
+    const cr=(a,b)=>{const x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05);},to=lum(base)<.4?"#ffffff":"#000000";
+    for(let t=.1;cr(ink,base)<4.5&&t<=1.001;t+=.1){ink=mixc(isHex(st.ink)?st.ink:cs.getPropertyValue("--card-ink").trim(),to,t);fixed=true;}
+  }
+  el.style.color=fixed||isHex(st.ink)?ink:"";
+  const note=$("#st-contrast");if(note)note.hidden=!fixed;
 }
 function updHints(){
   const b=S.settings.bg,st=S.settings.stage;
@@ -1294,7 +1389,7 @@ function show(v){
   $$(".view").forEach(s=>{const on=s.id==="v-"+v;if(!(same&&on))s.classList.toggle("on",on);});
   $$(".nav").forEach(b=>b.setAttribute("aria-current",b.dataset.view===v));
   moveInd();
-  if(v==="themes")loadFonts(UIF.map(f=>f[4]).concat(CLF.map(f=>f[4])));
+  if(v==="themes"){loadFonts(UIF.map(f=>f[4]).concat(CLF.map(f=>f[4])));fitFontPreviews();}
   if(v==="calendar")renderCal(); if(v==="money"){renderMoney();if(!same)drawChart();} if(v==="tasks")renderTasks();
   $("main").scrollTop=0;
 }
@@ -1347,10 +1442,20 @@ function buildClock(k){
     $("#tm-reset").addEventListener("click",()=>{T.running=false;T.left=T.len;updTimer();});
   }
   if(k==="analog")syncAnalog();
+  fitClock();
   if(k==="rings"){void w.offsetWidth;$$(".ring circle[id]").forEach((r,i)=>{r.style.transitionDelay=i*60+"ms";});setTimeout(()=>$$(".ring circle[id]").forEach(r=>{r.style.transitionDelay="";}),1400);}
   tick(true);
   if(had&&w.firstElementChild)anim(w.firstElementChild,[{opacity:0,transform:"scale(.97)"},{opacity:1,transform:"none"}],{duration:240,easing:EASE_OUT});
 }
+// Whatever the font, keep the clock inside its stage with a little breathing room
+function fitClock(){
+  const w=$("#clock"),el=w&&w.firstElementChild,stg=$("#stage");if(!el||!stg||!stg.offsetWidth)return;
+  if(!el.matches(".flip,.digital,.timer,.words"))return;
+  w.style.setProperty("--fk","1");
+  const avail=stg.clientWidth-48,wd=el.scrollWidth;
+  if(wd>avail)w.style.setProperty("--fk",Math.max(.4,avail/wd).toFixed(3));
+}
+if(typeof ResizeObserver!=="undefined")new ResizeObserver(()=>fitClock()).observe($("#stage"));
 // Phase-lock the CSS hand spins to the wall clock (negative delay = already that far in).
 function syncAnalog(){
   const d=new Date(),s=d.getSeconds()+d.getMilliseconds()/1000,m=d.getMinutes()*60+s,h=(d.getHours()%12)*3600+m;
@@ -1410,6 +1515,8 @@ function tick(force){
     const hs=S.settings.h24?pad(hh):String(hh).padStart(2," ");
     const str=hs+pad(mm)+pad(s);
     flipCards.forEach((c,i)=>setFlip(c,str[i]===" "?"":str[i]));
+    // 12-hour single-digit hours: drop the empty leading card instead of showing a blank tile
+    const blank=str[0]===" ";if(flipCards[0].classList.contains("blank")!==blank){flipCards[0].classList.toggle("blank",blank);fitClock();}
     const a=$("#flip-ampm");if(a)a.textContent=ap;
   }else if(clockKind==="digital"){
     $("#dg-hm").innerHTML=`${S.settings.h24?pad(hh):hh}<span class="blink">:</span>${pad(mm)}`;
@@ -1989,12 +2096,12 @@ function renderPresets(){
       const skin=String(s.skin).startsWith("custom:")?(p.scheme?p.scheme.name:"Custom"):((SKINS.find(k=>k.id===s.skin)||{}).name||"Theme");
       return `<div class="preset" data-id="${p.id}">
         <span class="badge">In use</span>
-        <button class="pv" data-pr="apply" aria-label="Apply ${esc(p.name)}" style="background:${bg}"><span class="pclock" style="font-family:'${cf[2]}',${cf[3]};background:${sw.card};color:${sw.cardInk}">12:45</span><i style="background:${sw.accent}"></i></button>
+        <button class="pv" data-pr="apply" aria-label="Apply ${esc(p.name)}" style="background:${bg}"><span class="pclock" data-f="${cf[0]}" style="font-family:'${cf[2]}',${cf[3]};background:${sw.card};color:${sw.cardInk}">12:45</span><i style="background:${sw.accent}"></i></button>
         <div class="pmeta"><input type="text" class="pname" data-pr="name" value="${esc(p.name)}" maxlength="40" aria-label="Preset name" style="font-family:${uf[0]==="system"?"system-ui":`'${uf[2]}',${uf[3]}`}"><small>${esc(skin)} · ${esc(uf[1])} / ${esc(cf[1])}${s.surface==="glass"?" · Liquid glass":""}</small></div>
         <div class="pact"><button class="btn small" data-pr="apply">Apply</button><button class="btn ghost small" data-pr="update" title="Replace this preset with the current look">Update</button><button class="icon-btn" data-pr="del" aria-label="Delete ${esc(p.name)}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
       </div>`;}).join("");
   });
-  markPresets();
+  markPresets();fitFontPreviews();
 }
 // Glass on/off: hand the highlights back to their CSS versions (or take them over), refilter panes
 function lgModeChanged(){
