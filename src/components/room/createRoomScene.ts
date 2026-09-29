@@ -22,6 +22,8 @@ export type RoomView = "doorway" | "explore";
 
 export interface RoomSceneHandle {
   setView: (view: RoomView) => void;
+  /** flip the bedside lamp; returns the new state */
+  toggleLamp: () => boolean;
   dispose: () => void;
 }
 
@@ -80,7 +82,12 @@ function noiseFill(ctx: CanvasRenderingContext2D, w: number, h: number, base: st
 
 // ---------- scene ----------
 
-export function createRoomScene(container: HTMLElement): RoomSceneHandle {
+export interface RoomSceneOptions {
+  /** called when the lamp is switched, including by clicking it in the scene */
+  onLampChange?: (on: boolean) => void;
+}
+
+export function createRoomScene(container: HTMLElement, options: RoomSceneOptions = {}): RoomSceneHandle {
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const disposables: { dispose: () => void }[] = [];
   const track = <T extends { dispose: () => void }>(d: T) => {
@@ -928,7 +935,8 @@ export function createRoomScene(container: HTMLElement): RoomSceneHandle {
   const shadeMat = mat({ color: "#e8cfa6", emissive: "#ffb366", emissiveIntensity: 1.6, roughness: 0.9, side: THREE.DoubleSide });
   const shade = new THREE.Mesh(track(new THREE.CylinderGeometry(0.1, 0.16, 0.2, 32, 1, true)), shadeMat);
   shade.position.y = 0.82;
-  const bulbGlow = new THREE.Mesh(track(new THREE.SphereGeometry(0.035, 16, 12)), track(new THREE.MeshBasicMaterial({ color: new THREE.Color(3, 2, 1.1) })));
+  const bulbGlowMat = track(new THREE.MeshBasicMaterial({ color: new THREE.Color(3, 2, 1.1) }));
+  const bulbGlow = new THREE.Mesh(track(new THREE.SphereGeometry(0.035, 16, 12)), bulbGlowMat);
   bulbGlow.position.y = 0.8;
   stand.add(lampBase, lampStem, shade, bulbGlow);
   const bedLamp = new THREE.PointLight("#ffac5c", 2.6, 5, 1.7);
@@ -1079,6 +1087,49 @@ export function createRoomScene(container: HTMLElement): RoomSceneHandle {
     pointerTarget.set(((e.clientX - r.left) / r.width) * 2 - 1, ((e.clientY - r.top) / r.height) * 2 - 1);
   };
   const onPointerLeave = () => pointerTarget.set(0, 0);
+
+  // ---------- lamp switch ----------
+  // Clicking the lamp (or calling toggleLamp) fades it like a real bulb: fast on, a short filament glow off.
+  let lampOn = true;
+  let lampLevel = 1;
+  const lampParts = [lampBase, lampStem, shade, bulbGlow];
+  const BULB_ON = new THREE.Color(3, 2, 1.1);
+  const BULB_OFF = new THREE.Color(0.16, 0.13, 0.1);
+  const SHADE_ON = new THREE.Color("#e8cfa6");
+  const SHADE_OFF = new THREE.Color("#6d6152");
+  const applyLamp = (k: number) => {
+    bedLamp.intensity = 2.6 * k;
+    shadeMat.emissiveIntensity = 1.6 * k;
+    shadeMat.color.copy(SHADE_OFF).lerp(SHADE_ON, k);
+    bulbGlowMat.color.copy(BULB_OFF).lerp(BULB_ON, k);
+  };
+  const toggleLamp = () => {
+    lampOn = !lampOn;
+    options.onLampChange?.(lampOn);
+    return lampOn;
+  };
+  const raycaster = new THREE.Raycaster();
+  const ndc = new THREE.Vector2();
+  const hitsLamp = (e: PointerEvent) => {
+    const r = renderer.domElement.getBoundingClientRect();
+    ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    raycaster.setFromCamera(ndc, camera);
+    return raycaster.intersectObjects(lampParts, false).length > 0;
+  };
+  // a press that drags (orbiting) shouldn't count as a click
+  let downAt: { x: number; y: number } | null = null;
+  const onPointerDown = (e: PointerEvent) => (downAt = { x: e.clientX, y: e.clientY });
+  const onPointerUp = (e: PointerEvent) => {
+    if (downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < 6 && hitsLamp(e)) toggleLamp();
+    downAt = null;
+  };
+  const onHover = (e: PointerEvent) => {
+    if (e.buttons) return;
+    renderer.domElement.style.cursor = hitsLamp(e) ? "pointer" : "";
+  };
+  renderer.domElement.addEventListener("pointerdown", onPointerDown);
+  renderer.domElement.addEventListener("pointerup", onPointerUp);
+  renderer.domElement.addEventListener("pointermove", onHover);
   renderer.domElement.addEventListener("pointermove", onPointerMove);
   renderer.domElement.addEventListener("pointerleave", onPointerLeave);
 
@@ -1208,6 +1259,13 @@ export function createRoomScene(container: HTMLElement): RoomSceneHandle {
 
     // subtle breathing
     person.update(t, reducedMotion);
+
+    const lampTarget = lampOn ? 1 : 0;
+    if (lampLevel !== lampTarget) {
+      lampLevel += (lampTarget - lampLevel) * damp(lampOn ? 18 : 9, dt);
+      if (Math.abs(lampTarget - lampLevel) < 0.002) lampLevel = lampTarget;
+      applyLamp(lampLevel);
+    }
     // the figure moves, so refresh shadow maps ~10 times a second rather than baking them once
     if (!reducedMotion && ++shadowTick % 6 === 0) renderer.shadowMap.needsUpdate = true;
 
@@ -1276,12 +1334,16 @@ export function createRoomScene(container: HTMLElement): RoomSceneHandle {
 
   return {
     setView,
+    toggleLamp,
     dispose: () => {
       disposed = true;
       cancelAnimationFrame(frame);
       resizeObserver.disconnect();
       renderer.domElement.removeEventListener("pointermove", onPointerMove);
       renderer.domElement.removeEventListener("pointerleave", onPointerLeave);
+      renderer.domElement.removeEventListener("pointerdown", onPointerDown);
+      renderer.domElement.removeEventListener("pointerup", onPointerUp);
+      renderer.domElement.removeEventListener("pointermove", onHover);
       controls.dispose();
       composer.dispose();
       rt.dispose();
