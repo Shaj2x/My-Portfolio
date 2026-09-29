@@ -27,6 +27,9 @@ export interface RoomSceneHandle {
   setView: (view: RoomView) => void;
   /** flip the bedside lamp; returns the new state */
   toggleLamp: () => boolean;
+  /** change any lighting settings; lights fade to the new values */
+  setLighting: (settings: Partial<LightingSettings>) => void;
+  getLighting: () => LightingSettings;
   dispose: () => void;
 }
 
@@ -85,6 +88,30 @@ function noiseFill(ctx: CanvasRenderingContext2D, w: number, h: number, base: st
 
 // ---------- scene ----------
 
+/** Everything the light switch panel can change. */
+export interface LightingSettings {
+  /** overhead light, 0 (off) to 1 */
+  ceiling: number;
+  /** fairy lights, 0 (off) to 1.5 */
+  fairy: number;
+  /** fairy light colour as a hex string, or "rainbow" */
+  fairyColor: string;
+  /** bedside lamp, 0 (off) to 1.5 */
+  lamp: number;
+  candle: boolean;
+  /** overall colour temperature, -1 (cool) to 1 (warm) */
+  warmth: number;
+}
+
+export const LIGHTING_PRESETS: Record<string, LightingSettings> = {
+  "Late night": { ceiling: 0, fairy: 1, fairyColor: "#ffb36b", lamp: 1, candle: true, warmth: 0 },
+  Cozy: { ceiling: 0, fairy: 1.35, fairyColor: "#ffa24d", lamp: 1.3, candle: true, warmth: 0.45 },
+  "Lights on": { ceiling: 1, fairy: 0.8, fairyColor: "#ffb36b", lamp: 1, candle: true, warmth: 0.05 },
+  "Western purple": { ceiling: 0, fairy: 1.3, fairyColor: "#9b5cff", lamp: 0.55, candle: true, warmth: -0.15 },
+  Party: { ceiling: 0, fairy: 1.4, fairyColor: "rainbow", lamp: 0.4, candle: false, warmth: 0 },
+  "Screen only": { ceiling: 0, fairy: 0, fairyColor: "#ffb36b", lamp: 0, candle: false, warmth: -0.1 },
+};
+
 export interface RoomSceneOptions {
   /** called when the lamp is switched, including by clicking it in the scene */
   onLampChange?: (on: boolean) => void;
@@ -92,6 +119,10 @@ export interface RoomSceneOptions {
   onViewChange?: (view: RoomView) => void;
   /** the campus landmark nearest the centre of the telescope, or null */
   onScopeTarget?: (landmark: { name: string; detail: string } | null) => void;
+  /** fires whenever lighting settings change, including from the lamp toggle */
+  onLightingChange?: (settings: LightingSettings) => void;
+  /** the light switch on the wall was clicked */
+  onLightSwitch?: () => void;
   /** the wall clock's time, e.g. "2:48 AM", whenever the minute changes */
   onClockChange?: (label: string) => void;
 }
@@ -957,6 +988,40 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
   candleLight.position.y = 0.16;
   candle.add(candleLight);
 
+  // Ceiling light: a frosted dome, off by default; brightness is set from the light switch panel
+  const ceilingFixture = new THREE.Group();
+  ceilingFixture.position.set(0.2, ROOM.height, 0.4);
+  scene.add(ceilingFixture);
+  const domeMat = mat({ color: "#d9d3c8", emissive: "#fff0d8", emissiveIntensity: 0, roughness: 0.4, side: THREE.DoubleSide });
+  const dome = new THREE.Mesh(track(new THREE.SphereGeometry(0.24, 32, 16, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2)), domeMat);
+  dome.scale.y = 0.5;
+  const domeRim = new THREE.Mesh(track(new THREE.TorusGeometry(0.24, 0.012, 8, 40)), metalMat);
+  domeRim.rotation.x = Math.PI / 2;
+  domeRim.position.y = -0.005;
+  ceilingFixture.add(dome, domeRim);
+  const ceilingLight = new THREE.PointLight("#ffeedd", 0, 14, 1.4);
+  ceilingLight.position.y = -0.25;
+  ceilingFixture.add(ceilingLight);
+
+  // Light switch on the back wall, between the bookshelf and the telescope.
+  // A small amber locator LED makes it findable in the dark, as real ones do.
+  const lightSwitch = new THREE.Group();
+  lightSwitch.position.set(0.2, 1.22, ROOM.back + 0.006);
+  scene.add(lightSwitch);
+  const plateMat = mat({ color: "#e6e0d4", roughness: 0.35 });
+  const plate = new THREE.Mesh(track(new RoundedBoxGeometry(0.075, 0.118, 0.01, 3, 0.004)), plateMat);
+  const rocker = new THREE.Mesh(track(new RoundedBoxGeometry(0.03, 0.055, 0.012, 3, 0.004)), plateMat);
+  rocker.position.z = 0.008;
+  const switchLedMat = track(new THREE.MeshBasicMaterial({ color: new THREE.Color(2.2, 1.2, 0.35) }));
+  const switchLed = new THREE.Mesh(track(new THREE.CircleGeometry(0.0035, 12)), switchLedMat);
+  switchLed.position.set(0, -0.043, 0.0055);
+  for (const m of [plate, rocker]) {
+    m.castShadow = true;
+    m.receiveShadow = true;
+  }
+  lightSwitch.add(plate, rocker, switchLed);
+  const switchParts: THREE.Object3D[] = [plate, rocker, switchLed];
+
   // ---------- lighting ----------
 
   scene.add(new THREE.HemisphereLight("#2a3047", "#1c1109", 0.55));
@@ -1057,10 +1122,10 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
   composer.addPass(new OutputPass());
   // Final grade: warm vignette, fine film grain, and a fade in from black
   const finish = new ShaderPass({
-    uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uFade: { value: 0 }, uScope: { value: 0 }, uAspect: { value: 1 }, uRadius: { value: 0.46 } },
+    uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uFade: { value: 0 }, uScope: { value: 0 }, uAspect: { value: 1 }, uRadius: { value: 0.46 }, uTint: { value: new THREE.Vector3(1, 1, 1) } },
     vertexShader: /* glsl */ `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
     fragmentShader: /* glsl */ `
-      uniform sampler2D tDiffuse; uniform float uTime; uniform float uFade; uniform float uScope; uniform float uAspect; uniform float uRadius; varying vec2 vUv;
+      uniform sampler2D tDiffuse; uniform float uTime; uniform float uFade; uniform float uScope; uniform float uAspect; uniform float uRadius; uniform vec3 uTint; varying vec2 vUv;
       float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
       void main() {
         vec4 c = texture2D(tDiffuse, vUv);
@@ -1077,6 +1142,7 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
         c.rgb *= mix(1.0, aperture, uScope);
         float vig = smoothstep(0.85, 0.2, length(d * vec2(1.1, 1.25)));
         c.rgb *= mix(vec3(0.55, 0.45, 0.4), vec3(1.0), vig);
+        c.rgb *= uTint; // colour temperature from the light switch panel
         c.rgb += (hash(vUv * 1000.0 + fract(uTime * 7.0)) - 0.5) * 0.022;
         gl_FragColor = vec4(c.rgb * uFade, 1.0);
       }`,
@@ -1152,28 +1218,54 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
   const SHADE_ON = new THREE.Color("#e8cfa6");
   const SHADE_OFF = new THREE.Color("#6d6152");
   const applyLamp = (k: number) => {
+    const c = Math.min(1, k);
     bedLamp.intensity = 2.6 * k;
     shadeMat.emissiveIntensity = 1.6 * k;
-    shadeMat.color.copy(SHADE_OFF).lerp(SHADE_ON, k);
-    bulbGlowMat.color.copy(BULB_OFF).lerp(BULB_ON, k);
+    shadeMat.color.copy(SHADE_OFF).lerp(SHADE_ON, c);
+    bulbGlowMat.color.copy(BULB_OFF).lerp(BULB_ON, c);
+  };
+
+  // ---------- lighting settings (the light switch panel) ----------
+  const lighting: LightingSettings = { ...LIGHTING_PRESETS["Late night"] };
+  let lampBrightness = lighting.lamp; // remembered while the lamp is switched off
+  // current (animated) values chase the settings so every change fades smoothly
+  const live = { ceiling: 0, fairy: 1, candle: 1, warmth: 0 };
+  const fairyTarget = new THREE.Color("#ffb36b");
+  const fairyNow = new THREE.Color("#ffb36b");
+  const emitLighting = () => options.onLightingChange?.({ ...lighting });
+  const setLighting = (next: Partial<LightingSettings>) => {
+    Object.assign(lighting, next);
+    if (next.lamp !== undefined) {
+      if (next.lamp > 0) lampBrightness = next.lamp;
+      const on = next.lamp > 0;
+      if (on !== lampOn) {
+        lampOn = on;
+        options.onLampChange?.(lampOn);
+      }
+    }
+    if (next.fairyColor && next.fairyColor !== "rainbow") fairyTarget.set(next.fairyColor);
+    emitLighting();
   };
   const toggleLamp = () => {
     lampOn = !lampOn;
+    lighting.lamp = lampOn ? lampBrightness : 0;
     options.onLampChange?.(lampOn);
+    emitLighting();
     return lampOn;
   };
 
   // ---------- clicking things in the room ----------
   const raycaster = new THREE.Raycaster();
   const ndc = new THREE.Vector2();
-  const pickTarget = (e: PointerEvent): "lamp" | "telescope" | "cat" | null => {
+  const pickTarget = (e: PointerEvent): "lamp" | "telescope" | "cat" | "switch" | null => {
     if (view === "telescope") return null;
     const r = renderer.domElement.getBoundingClientRect();
     ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     raycaster.setFromCamera(ndc, camera);
-    const hit = raycaster.intersectObjects([...lampParts, ...telescopeParts, ...cat.parts], false)[0];
+    const hit = raycaster.intersectObjects([...lampParts, ...telescopeParts, ...cat.parts, ...switchParts], false)[0];
     if (!hit) return null;
     if (lampParts.includes(hit.object)) return "lamp";
+    if (switchParts.includes(hit.object)) return "switch";
     return (cat.parts as THREE.Object3D[]).includes(hit.object) ? "cat" : "telescope";
   };
   // a press that drags (orbiting, aiming the telescope) shouldn't count as a click
@@ -1188,6 +1280,7 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
       const hit = pickTarget(e);
       if (hit === "lamp") toggleLamp();
       else if (hit === "cat") cat.stir();
+      else if (hit === "switch") options.onLightSwitch?.();
       else if (hit === "telescope") setView("telescope");
     }
     downAt = dragFrom = null;
@@ -1416,6 +1509,8 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
   const lookTarget = new THREE.Vector3();
   const desired = new THREE.Vector3();
   const bulbColor = new THREE.Color();
+  const tmpColor = new THREE.Color();
+  const rainbowColor = new THREE.Color();
   let frame = 0;
   let lastClockLabel = "";
   const PHONE_X = phone.position.x;
@@ -1500,26 +1595,51 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
 
     // candle flame
     const cf = reducedMotion ? 0 : flickerNoise(t, 0);
-    candleLight.intensity = 0.9 + cf * 0.18;
+    candleLight.intensity = (0.9 + cf * 0.18) * live.candle;
     flame.scale.set(1 - cf * 0.06, 2.3 + cf * 0.25, 1 - cf * 0.06);
     flame.position.x = Math.sin(t * 2.1) * 0.0015;
 
     // fairy lights breathe slowly, out of phase
+    // lighting settings fade in
+    const lk = damp(5, dt);
+    live.ceiling += (lighting.ceiling - live.ceiling) * lk;
+    live.fairy += (lighting.fairy - live.fairy) * lk;
+    live.candle += ((lighting.candle ? 1 : 0) - live.candle) * damp(8, dt);
+    live.warmth += (lighting.warmth - live.warmth) * lk;
+    fairyNow.lerp(fairyTarget, lk);
+    const rainbow = lighting.fairyColor === "rainbow";
+    // HDR bulb colour: the chosen hue pushed past 1.0 so it blooms
+    const bulbBase = bulbColor.copy(fairyNow).multiplyScalar(2.4 / Math.max(0.35, Math.max(fairyNow.r, fairyNow.g, fairyNow.b)));
+    let n = 0;
     for (const { mesh, phase } of fairyBulbs) {
-      for (let i = 0; i < phase.length; i++) {
-        const k = reducedMotion ? 1 : 0.82 + 0.18 * Math.sin(t * 0.8 + phase[i]);
-        mesh.setColorAt(i, bulbColor.copy(BULB_COLOR).multiplyScalar(k));
+      for (let i = 0; i < phase.length; i++, n++) {
+        const k = (reducedMotion ? 1 : 0.82 + 0.18 * Math.sin(t * 0.8 + phase[i])) * live.fairy;
+        if (rainbow) rainbowColor.setHSL((n / 37 + t * 0.06) % 1, 0.9, 0.55).multiplyScalar(2.6 * k);
+        mesh.setColorAt(i, rainbow ? rainbowColor : tmpColor.copy(bulbBase).multiplyScalar(k));
       }
       mesh.instanceColor!.needsUpdate = true;
     }
-    fairyLights.forEach((l, i) => (l.intensity = 0.8 + (reducedMotion ? 0 : Math.sin(t * 0.8 + i * 1.7) * 0.06)));
+    fairyLights.forEach((l, i) => {
+      l.intensity = (0.8 + (reducedMotion ? 0 : Math.sin(t * 0.8 + i * 1.7) * 0.06)) * live.fairy;
+      if (rainbow) l.color.setHSL((i / fairyLights.length + t * 0.06) % 1, 0.8, 0.6);
+      else l.color.copy(fairyNow);
+    });
+    // ceiling light
+    ceilingLight.intensity = live.ceiling * 9;
+    domeMat.emissiveIntensity = live.ceiling * 2.2;
+    rocker.rotation.x = THREE.MathUtils.lerp(0.22, -0.22, Math.min(1, live.ceiling * 3));
+    // candle
+    candle.visible = live.candle > 0.02;
+    flameMat.opacity = 0.95 * live.candle;
+    // colour temperature: warm pushes red and pulls blue, cool the reverse
+    finish.uniforms.uTint.value.set(1 + live.warmth * 0.07, 1 + live.warmth * 0.01, 1 - live.warmth * 0.12);
 
     // subtle breathing
     person.update(t, reducedMotion);
 
-    const lampTarget = lampOn ? 1 : 0;
+    const lampTarget = lampOn ? lampBrightness : 0;
     if (lampLevel !== lampTarget) {
-      lampLevel += (lampTarget - lampLevel) * damp(lampOn ? 18 : 9, dt);
+      lampLevel += (lampTarget - lampLevel) * damp(lampTarget > lampLevel ? 18 : 9, dt);
       if (Math.abs(lampTarget - lampLevel) < 0.002) lampLevel = lampTarget;
       applyLamp(lampLevel);
     }
@@ -1594,6 +1714,8 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
   return {
     setView,
     toggleLamp,
+    setLighting,
+    getLighting: () => ({ ...lighting }),
     dispose: () => {
       disposed = true;
       cancelAnimationFrame(frame);

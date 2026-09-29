@@ -1,7 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, DoorOpen, Lightbulb, LightbulbOff, Move3d, Telescope, X } from "lucide-react";
-import { createRoomScene, type RoomSceneHandle, type RoomView } from "@/components/room/createRoomScene";
+import { ArrowLeft, DoorOpen, Lightbulb, LightbulbOff, Move3d, SlidersHorizontal, Telescope, X } from "lucide-react";
+import {
+  createRoomScene,
+  LIGHTING_PRESETS,
+  type LightingSettings,
+  type RoomSceneHandle,
+  type RoomView,
+} from "@/components/room/createRoomScene";
+import { LightingPanel } from "@/components/room/LightingPanel";
 
 type RoomCameraView = Exclude<RoomView, "telescope">;
 
@@ -9,8 +16,8 @@ const chip =
   "pointer-events-auto inline-flex items-center gap-2 rounded-full bg-black/40 px-5 py-2.5 text-sm text-white/85 backdrop-blur-md transition-colors hover:bg-black/60 hover:text-white";
 
 const HINTS: Record<RoomView, string> = {
-  doorway: "Move your cursor to lean in · click the lamp (L), the telescope (T), or the cat",
-  explore: "Drag to look around · scroll to zoom · click the lamp (L), the telescope (T), or the cat",
+  doorway: "Move your cursor to lean in · click the light switch, the lamp (L), the telescope (T), or the cat",
+  explore: "Drag to look around · scroll to zoom · click the light switch, the lamp (L), the telescope (T), or the cat",
   telescope: "Drag to aim · scroll to zoom · Esc to step back",
 };
 
@@ -25,6 +32,10 @@ const Room = () => {
   const [lampOn, setLampOn] = useState(true);
   const [target, setTarget] = useState<{ name: string; detail: string } | null>(null);
   const [clock, setClock] = useState("2:47 AM");
+  const [lighting, setLighting] = useState<LightingSettings>(LIGHTING_PRESETS["Late night"]);
+  const [panelOpen, setPanelOpen] = useState(false);
+  const panelOpenRef = useRef(false);
+  panelOpenRef.current = panelOpen;
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -39,6 +50,8 @@ const Room = () => {
         onViewChange,
         onScopeTarget: setTarget,
         onClockChange: setClock,
+        onLightingChange: setLighting,
+        onLightSwitch: () => setPanelOpen(true),
       });
     } catch (e) {
       console.error("Failed to start 3D room:", e);
@@ -49,6 +62,7 @@ const Room = () => {
       const key = e.key.toLowerCase();
       if (key === "l") sceneRef.current?.toggleLamp();
       else if (key === "t") sceneRef.current?.setView(viewRef.current === "telescope" ? roomViewRef.current : "telescope");
+      else if (key === "escape" && panelOpenRef.current) setPanelOpen(false);
       else if (key === "escape" && viewRef.current === "telescope") sceneRef.current?.setView(roomViewRef.current);
     };
     window.addEventListener("keydown", onKey);
@@ -96,6 +110,16 @@ const Room = () => {
         </div>
       )}
 
+      {panelOpen && !inScope && (
+        <div className="pointer-events-none absolute inset-x-4 bottom-[15.5rem] top-20 flex items-end justify-center sm:inset-x-auto sm:bottom-36 sm:right-6 sm:items-start">
+          <LightingPanel
+            settings={lighting}
+            onChange={(next) => sceneRef.current?.setLighting(next)}
+            onClose={() => setPanelOpen(false)}
+          />
+        </div>
+      )}
+
       <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col items-center gap-3 p-4 sm:p-6">
         <div className="flex flex-wrap items-center justify-center gap-2">
           {inScope ? (
@@ -110,6 +134,9 @@ const Room = () => {
               </button>
               <button onClick={() => sceneRef.current?.setView("telescope")} className={chip}>
                 <Telescope size={16} /> Look through the telescope
+              </button>
+              <button onClick={() => setPanelOpen((o) => !o)} aria-expanded={panelOpen} className={chip}>
+                <SlidersHorizontal size={16} className={panelOpen ? "text-amber-300" : undefined} /> Lighting
               </button>
               <button onClick={() => sceneRef.current?.toggleLamp()} aria-pressed={lampOn} className={chip}>
                 {lampOn ? <Lightbulb size={16} className="text-amber-300" /> : <LightbulbOff size={16} />}
