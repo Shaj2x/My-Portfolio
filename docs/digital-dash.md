@@ -44,7 +44,7 @@ S = {
   schemes:  [{id, name, c:{bg,panel,ink,accent,card,cardInk}}],
   widgets:  [{id, type, size:"s"|"w", title?, cfg?}],
   settings: {
-    skin, accent, uiFont, clockFont, clock, h24, secs, currency, hideNw,
+    skin, accent, uiFont, clockFont, clock, h24, secs, currency, hideNw, surface:"solid"|"glass",
     radius, clockScale, subs:{},
     bg:    {type:"none"|"color"|"gradient"|"image", color, grad, image, iw, ih, dim, blur, match, pal},
     stage: {type:"theme"|"color"|"gradient"|"image"|"glass", color, grad, image, iw, ih, dim, ink}
@@ -87,6 +87,7 @@ The goal is that nothing teleports and nothing waits on you. Rules the code foll
 - **View transitions** (`vt()`) morph the clock stage into zen mode and crossfade theme swaps. Browsers without the API just switch instantly.
 - **Toasts** use transitions, not keyframes, so rapid toasts retarget instead of restarting.
 - **Hover motion** is gated behind `(hover: hover) and (pointer: fine)`.
+- **Liquid glass** (`S.settings.surface = "glass"`, class `lg` on `<html>`): translucent panels with `backdrop-filter: blur() saturate()`, a bright top inset and a 1px gradient rim (masked `::after`) for light catching the edge. The rail is a heavier material than content. Anything inside a glass panel gets a tint (`--glass-tint`), never a second blur. With no background set, `#bg-layer` shows an accent-coloured glow so the glass has something to refract. `prefers-reduced-transparency` and `prefers-contrast: more` fall back to solid panels. Toggling it runs as a view transition.
 - **Reduced motion** means gentler, not none: movement is dropped and fades are kept. `anim()` strips transforms automatically; the analog second hand ticks with `steps(60)`.
 
 ## Conventions
