@@ -1460,7 +1460,8 @@ function show(v){
 }
 const VIEWS=["focus","tasks","calendar","money","themes"];
 // Tabs live in the URL hash (#tasks): refresh keeps your place, Back returns to the previous tab, links can point at a tab
-$$(".nav").forEach(b=>b.addEventListener("click",()=>{const v=b.dataset.view;if(location.hash.slice(1)!==v)history.pushState(null,"","#"+v);show(v);}));
+// The URL update is best effort: sandboxed previews (srcdoc iframes) refuse pushState, and that must never block switching tabs
+$$(".nav").forEach(b=>b.addEventListener("click",()=>{const v=b.dataset.view;show(v);if(location.hash.slice(1)!==v){try{history.pushState(null,"","#"+v);}catch(e){}}}));
 window.addEventListener("popstate",()=>{const v=location.hash.slice(1);show(VIEWS.includes(v)?v:"focus");});
 
 /* ---------- money formatting ---------- */
