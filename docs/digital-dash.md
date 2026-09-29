@@ -96,6 +96,14 @@ The goal is that nothing teleports and nothing waits on you. Rules the code foll
 - **Clock colour guard** (`applyStage()`): if the digit colour (chosen or from the scheme) is below 4.5:1 against the clock background, it is pushed toward white or black until it reads, and a note appears under "Clock digit colour".
 - **Reduced motion** means gentler, not none: movement is dropped and fades are kept. `anim()` strips transforms automatically; the analog second hand ticks with `steps(60)`.
 
+## UI/UX baseline (from the ui-ux-pro-max guidelines)
+
+- **Targets**: every control is at least 24×24px with a mouse (WCAG 2.2 AA) and 44px on touch (`@media (pointer: coarse)`). Small visuals that must stay small, like the task tick, get an invisible hit area (`.check::after`).
+- **Text**: nothing below 12px; form fields are 16px on phones so iOS doesn't zoom on focus.
+- **Contrast**: all built-in themes pass 4.5:1 for text, including muted text on `--panel2`. Custom schemes derive `--muted` and step it toward `--ink` until it passes (`setScheme`). Clock digits have their own guard (`applyStage`).
+- **Recoverable deletes**: deleting a task, event, account, widget or widget image shows a toast with Undo for 5 s (`toast(msg,{run,done})`); images are only discarded in `done`, after Undo expires.
+- **Deep links and Back**: each tab is a URL hash (`#tasks`, `#calendar`, `#money`, `#themes`); tab clicks push history, `popstate` switches tabs, and loading with a hash opens that tab.
+
 ## Conventions
 
 - UI copy is plain, friendly, sentence case, and uses no em dashes.

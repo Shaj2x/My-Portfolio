@@ -12,7 +12,7 @@
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px);
   padding-bottom:env(safe-area-inset-bottom,0px);
-  --bg:#EEF1F4; --panel:#FFFFFF; --panel2:#E3E8ED; --ink:#15202B; --muted:#5E6B78; --line:#CFD6DE;
+  --bg:#EEF1F4; --panel:#FFFFFF; --panel2:#E3E8ED; --ink:#15202B; --muted:#535F6B; --line:#CFD6DE;
   --accent:#2F5BEA; --accent-ink:#FFFFFF; --card:#1B2530; --card-ink:#F3F5F7;
   --good:#1F9D6B; --bad:#D6453D;
   --u0:#E5484D; --u1:#F08C3C; --u2:#D4AE3C; --u3:#7D8B99;
@@ -40,9 +40,9 @@ html:root[data-skin="dash"]{--bg:#141220;--panel:#1C1A2B;--panel2:#252236;--ink:
 html:root[data-skin="ledger"]{--bg:#12241F;--panel:#18302A;--panel2:#1F3A33;--ink:#EDE9DC;--muted:#9DB0A6;--line:#2C4A41;--accent:#D2A94B;--accent-ink:#14241F;--card:#0C1915;--card-ink:#F1D98F}
 html:root[data-skin="midnight"]{--bg:#0B1226;--panel:#111A33;--panel2:#18233F;--ink:#E4ECFF;--muted:#8A98BD;--line:#243054;--accent:#6FD3FF;--accent-ink:#081020;--card:#060B18;--card-ink:#BDEBFF}
 html:root[data-skin="ember"]{--bg:#1D1418;--panel:#281B21;--panel2:#33232A;--ink:#F6E7E1;--muted:#B39A9F;--line:#44303A;--accent:#FF7A3D;--accent-ink:#1D1418;--card:#120B0E;--card-ink:#FFB38F}
-html:root[data-skin="chalk"]{--bg:#E7EAE3;--panel:#F5F6F1;--panel2:#DCE0D6;--ink:#1E241C;--muted:#5F6A5B;--line:#C6CCBE;--accent:#3E6B2E;--accent-ink:#F5F6F1;--card:#232A21;--card-ink:#E9F2DE}
+html:root[data-skin="chalk"]{--bg:#E7EAE3;--panel:#F5F6F1;--panel2:#DCE0D6;--ink:#1E241C;--muted:#535D4F;--line:#C6CCBE;--accent:#3E6B2E;--accent-ink:#F5F6F1;--card:#232A21;--card-ink:#E9F2DE}
 html:root[data-skin="mono"]{--bg:#000000;--panel:#0E0E0E;--panel2:#1A1A1A;--ink:#FFFFFF;--muted:#9A9A9A;--line:#2B2B2B;--accent:#FFFFFF;--accent-ink:#000000;--card:#141414;--card-ink:#FFFFFF}
-html:root[data-skin="sakura"]{--bg:#F6EEF1;--panel:#FFFFFF;--panel2:#EEDFE5;--ink:#2B1D24;--muted:#7C6570;--line:#E2CDD6;--accent:#C2416F;--accent-ink:#FFFFFF;--card:#2B1D24;--card-ink:#FFD6E4}
+html:root[data-skin="sakura"]{--bg:#F6EEF1;--panel:#FFFFFF;--panel2:#EEDFE5;--ink:#2B1D24;--muted:#6A5460;--line:#E2CDD6;--accent:#C2416F;--accent-ink:#FFFFFF;--card:#2B1D24;--card-ink:#FFD6E4}
 html[data-font="serif"]{--ui:"Fraunces",Georgia,serif}
 
 *,*::before,*::after{box-sizing:inherit}
@@ -263,6 +263,9 @@ textarea{width:100%;min-height:90px;font-size:12px}
 /* Toast rises from the bottom and leaves the same way. Transitions, so rapid toasts retarget instead of restarting. */
 .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));z-index:50;transform:translate(-50%,12px) scale(.97);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;opacity:0;pointer-events:none;box-shadow:0 10px 30px -10px rgba(0,0,0,.5);transition:opacity var(--t-fast) ease,transform var(--t-ui) var(--ease-out)}
 .toast.on{opacity:1;transform:translate(-50%,0) scale(1)}
+.toast.act{pointer-events:auto;display:flex;align-items:center;gap:14px;padding:6px 6px 6px 16px}
+.toast .undo{border:0;border-radius:8px;padding:0 12px;min-height:32px;font-weight:600;background:color-mix(in srgb,var(--bg) 16%,transparent);color:inherit;cursor:pointer}
+@media (pointer:coarse){.toast .undo{min-height:44px}}
 @media (max-width:720px){.toast{bottom:calc(84px + env(safe-area-inset-bottom,0px))}}
 
 /* ---- Digital Dash polish ---- */
@@ -552,6 +555,32 @@ h1{font-size:calc(clamp(34px,5vw,52px)*var(--hs,1))}
 .words{font-size:calc(clamp(40px,8.5vw,112px)*var(--cs,1)*var(--hs,1)*var(--fk,1))}
 .half span,.face span{position:relative;top:var(--dy,0em)}
 .stage-contrast{font-size:12.5px;color:var(--muted);margin:6px 0 0}
+
+/* ---------- Targets and legibility (ui-ux-pro-max: WCAG 2.2 target size, touch 44px, 12px text floor) ---------- */
+input[type=checkbox]{width:18px;height:18px;flex:none;accent-color:var(--accent);cursor:pointer}
+input[type=range]{height:24px;cursor:pointer}
+.check{width:24px;height:24px;position:relative}
+.check::after{content:"";position:absolute;inset:-10px} /* invisible hit area around the small circle */
+.chip{font-size:12px}
+.flip .ampm{font-size:max(12px,.2em)}
+.opts label{min-height:24px}
+@media (pointer:coarse){
+  .icon-btn{min-width:44px;min-height:44px;display:inline-grid;place-items:center}
+  .btn,.btn.small,.seg button,label.btn{min-height:44px}
+  .seg button{display:inline-flex;align-items:center}
+  input[type=text],input[type=number],input[type=date],input[type=time],select,textarea{min-height:44px}
+  .opts label{min-height:44px}
+  .wctl .icon-btn{min-width:40px;min-height:40px}
+  input[type=color]{height:44px;width:52px}
+  input[type=range]{height:44px}
+  input[type=checkbox]{width:26px;height:26px}
+  .field{min-height:52px}
+}
+@media (max-width:720px){
+  /* 16px stops iOS zooming the page when a field is focused */
+  input[type=text],input[type=number],input[type=date],input[type=time],select,textarea,.urg{font-size:16px}
+  .nav{font-size:12px}
+}
 
 /* ---------- Presets ---------- */
 .presets{position:relative;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
@@ -960,7 +989,12 @@ async function connect(){
 }
 
 let toastT;
-function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("on");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("on"),1800);}
+function toast(m,undo){
+  const t=$("#toast");t.textContent=m;t.classList.toggle("act",!!undo);
+  if(undo){const b=document.createElement("button");b.type="button";b.className="undo";b.textContent="Undo";b.onclick=()=>{clearTimeout(toastT);t.classList.remove("on","act");undo.run();};t.appendChild(b);}
+  t.classList.add("on");clearTimeout(toastT);
+  toastT=setTimeout(()=>{t.classList.remove("on","act");if(undo&&undo.done)undo.done();},undo?5000:1800); // longer when there's something to act on
+}
 
 /* ---------- theme ---------- */
 const UIF=[
@@ -1078,7 +1112,11 @@ async function fitFontPreviews(){
 function setScheme(c){
   const h=document.documentElement.style;
   h.setProperty("--bg",c.bg);h.setProperty("--panel",c.panel);h.setProperty("--ink",c.ink);
-  h.setProperty("--panel2",mixc(c.panel,c.ink,.07));h.setProperty("--line",mixc(c.panel,c.ink,.16));h.setProperty("--muted",mixc(c.ink,c.bg,.42));
+  const p2=mixc(c.panel,c.ink,.07);h.setProperty("--panel2",p2);h.setProperty("--line",mixc(c.panel,c.ink,.16));
+  // muted text: as soft as possible while staying 4.5:1 on the lighter/darker of panel and panel2
+  let mu=.42,m=mixc(c.ink,c.bg,mu);const crr=(a,b)=>{const x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05);};
+  while(mu>0&&Math.min(crr(m,c.panel),crr(m,p2))<4.5){mu-=.04;m=mixc(c.ink,c.bg,Math.max(0,mu));}
+  h.setProperty("--muted",m);
   h.setProperty("--accent",c.accent);h.setProperty("--accent-ink",readable(c.accent));
   h.setProperty("--card",c.card);h.setProperty("--card-ink",c.cardInk);
 }
@@ -1393,7 +1431,10 @@ function show(v){
   if(v==="calendar")renderCal(); if(v==="money"){renderMoney();if(!same)drawChart();} if(v==="tasks")renderTasks();
   $("main").scrollTop=0;
 }
-$$(".nav").forEach(b=>b.addEventListener("click",()=>show(b.dataset.view)));
+const VIEWS=["focus","tasks","calendar","money","themes"];
+// Tabs live in the URL hash (#tasks): refresh keeps your place, Back returns to the previous tab, links can point at a tab
+$$(".nav").forEach(b=>b.addEventListener("click",()=>{const v=b.dataset.view;if(location.hash.slice(1)!==v)history.pushState(null,"","#"+v);show(v);}));
+window.addEventListener("popstate",()=>{const v=location.hash.slice(1);show(VIEWS.includes(v)?v:"focus");});
 
 /* ---------- money formatting ---------- */
 function fmt(n,compact){
@@ -1578,7 +1619,8 @@ $("#task-form").addEventListener("submit",e=>{e.preventDefault();const title=$("
   $("#t-title").value="";$("#t-due").value="";save();renderTasks();renderNowTask();renderMini();});
 $("#task-list").addEventListener("click",e=>{const b=e.target.closest("[data-act]");if(!b||b.tagName==="SELECT")return;const id=b.closest(".task").dataset.id,t=S.tasks.find(x=>x.id===id);if(!t)return;
   if(b.dataset.act==="toggle"){t.done=!t.done;t.doneAt=t.done?Date.now():null;if(t.done)toast("Done. Next one.");b.closest(".task").classList.toggle("done",t.done);b.setAttribute("aria-label",t.done?"Mark as not done":"Mark as done");save();afterTaskChange(reduced?0:420);return;}
-  if(b.dataset.act==="del"){S.tasks=S.tasks.filter(x=>x.id!==id);}
+  if(b.dataset.act==="del"){const at=S.tasks.indexOf(t);S.tasks.splice(at,1);
+    toast("Task deleted",{run(){S.tasks.splice(Math.min(at,S.tasks.length),0,t);save();renderTasks();renderNowTask();renderMini();}});}
   save();renderTasks();renderNowTask();renderMini();});
 $("#task-list").addEventListener("change",e=>{if(e.target.dataset.act!=="urg")return;const t=S.tasks.find(x=>x.id===e.target.closest(".task").dataset.id);t.urg=+e.target.value;save();renderTasks();renderNowTask();});
 $("#task-filter").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;if(taskFilter===b.dataset.f)return;taskFilter=b.dataset.f;$$("#task-filter button").forEach(x=>x.setAttribute("aria-pressed",x===b));renderTasks("plain");});
@@ -1628,7 +1670,8 @@ $("#cal-prev").addEventListener("click",()=>{calM--;if(calM<0){calM=11;calY--;}r
 $("#cal-next").addEventListener("click",()=>{calM++;if(calM>11){calM=0;calY++;}renderCal(1);});
 $("#cal-today").addEventListener("click",()=>{const d=new Date(),dir=monthDir(d.getFullYear(),d.getMonth());calY=d.getFullYear();calM=d.getMonth();selDay=dkey(d);renderCal(dir);});
 $("#ev-form").addEventListener("submit",e=>{e.preventDefault();const title=$("#ev-title").value.trim();if(!title)return;S.events.push({id:uid(),date:selDay,time:$("#ev-time").value,title});$("#ev-title").value="";$("#ev-time").value="";save();renderCal();});
-$("#day-list").addEventListener("click",e=>{const b=e.target.closest(".x");if(!b)return;const id=b.closest(".ditem").dataset.id;S.events=S.events.filter(x=>x.id!==id);save();renderCal();});
+$("#day-list").addEventListener("click",e=>{const b=e.target.closest(".x");if(!b)return;const id=b.closest(".ditem").dataset.id,at=S.events.findIndex(x=>x.id===id);if(at<0)return;const ev=S.events.splice(at,1)[0];save();renderCal();
+  toast("Event deleted",{run(){S.events.splice(Math.min(at,S.events.length),0,ev);save();renderCal();}});});
 
 /* ---------- NET WORTH ---------- */
 function totals(){let a=0,d=0;S.accounts.forEach(x=>{if(x.kind==="asset")a+=+x.value||0;else d+=+x.value||0;});return {a,d,t:a-d};}
@@ -1645,7 +1688,8 @@ function acctRows(kind){
 }
 ["#asset-list","#debt-list"].forEach(sel=>{
   $(sel).addEventListener("change",e=>{if(e.target.tagName!=="INPUT")return;const a=S.accounts.find(x=>x.id===e.target.closest(".acct").dataset.id);a.value=parseFloat(e.target.value)||0;snapshot();save();renderMoney();renderMini();});
-  $(sel).addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;const id=b.closest(".acct").dataset.id;S.accounts=S.accounts.filter(x=>x.id!==id);snapshot();save();renderMoney();renderMini();});
+  $(sel).addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;const id=b.closest(".acct").dataset.id,at=S.accounts.findIndex(x=>x.id===id);if(at<0)return;const ac=S.accounts.splice(at,1)[0];snapshot();save();renderMoney();renderMini();
+    toast(`Removed ${ac.name}`,{run(){S.accounts.splice(Math.min(at,S.accounts.length),0,ac);snapshot();save();renderMoney();renderMini();}});});
 });
 /* Privacy: hide every amount, keep the growth. Growth is shown as a percentage so it reveals nothing. */
 const MASK="•••••••", MASK_SHORT="••••";
@@ -1797,8 +1841,10 @@ $("#widgets").addEventListener("click",e=>{
     case"size":w.size=w.size==="w"?"s":"w";break;
     case"cfg":wCfg=wCfg===id?null:id;break;
     case"cfgdone":wCfg=null;break;
-    case"imgdel":{const old=w.cfg&&w.cfg.src;if(w.cfg){w.cfg.src="";w.cfg.iw=0;w.cfg.ih=0;}removeImage(old);toast("Image removed");break;}
-    case"del":if(w.type==="image"&&w.cfg&&w.cfg.src)removeImage(w.cfg.src);S.widgets.splice(i,1);break;
+    case"imgdel":{const prev=Object.assign({},w.cfg||{}),old=prev.src;if(w.cfg){w.cfg.src="";w.cfg.iw=0;w.cfg.ih=0;}
+      toast("Image removed",{run(){w.cfg=Object.assign(w.cfg||{},prev);save();renderWidgets(true);},done(){if(old&&!(w.cfg&&w.cfg.src===old))removeImage(old);}});break;}
+    case"del":{S.widgets.splice(i,1);const src=w.type==="image"&&w.cfg&&w.cfg.src; // the image is only thrown away once undo has expired
+      toast(`${WT[w.type].name} removed`,{run(){S.widgets.splice(Math.min(i,S.widgets.length),0,w);save();renderWidgets(true);},done(){if(src&&!S.widgets.includes(w))removeImage(src);}});break;}
   }
   save();renderWidgets(true);
 });
@@ -2120,6 +2166,7 @@ if(typeof ResizeObserver!=="undefined")new ResizeObserver(()=>moveInd(true)).obs
 ["#clock-seg","#task-filter","#bg-type","#st-type","#surface"].forEach(q=>initSeg($(q)));
 if(S.accounts.length)snapshot();
 renderAll();
+{const v=location.hash.slice(1);if(VIEWS.includes(v)&&v!=="focus")show(v);} // deep link, e.g. digital-dash.html#tasks
 moveInd(true);
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{moveInd(true);$$(".seg").forEach(x=>glide(x,true));});
 if(S.settings.bg.type!=="none"&&!S.settings.bg.pal)computePal();
