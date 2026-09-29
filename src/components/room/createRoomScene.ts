@@ -9,6 +9,7 @@ import { RectAreaLightUniformsLib } from "three/examples/jsm/lights/RectAreaLigh
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { createFigure } from "./createFigure";
 import { createCampus } from "./createCampus";
+import { createCat, createPhoneScreen, createSteam, createWallClock } from "./createDetails";
 
 /*
  * A late-night study room, built entirely from primitives and canvas textures:
@@ -91,6 +92,8 @@ export interface RoomSceneOptions {
   onViewChange?: (view: RoomView) => void;
   /** the campus landmark nearest the centre of the telescope, or null */
   onScopeTarget?: (landmark: { name: string; detail: string } | null) => void;
+  /** the wall clock's time, e.g. "2:48 AM", whenever the minute changes */
+  onClockChange?: (label: string) => void;
 }
 
 export function createRoomScene(container: HTMLElement, options: RoomSceneOptions = {}): RoomSceneHandle {
@@ -569,6 +572,9 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
   handle.position.set(0.052, 0.058, 0);
   handle.castShadow = true;
   mug.add(mugBody, mugBase, coffee, handle);
+  const steam = createSteam(track);
+  steam.group.position.y = 0.092;
+  mug.add(steam.group);
 
   // Phone, face up, glowing cyan
   const phone = new THREE.Group();
@@ -576,7 +582,10 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
   phone.rotation.y = 0.35;
   scene.add(phone);
   box(0.075, 0.008, 0.155, mat({ color: "#0c0d10", roughness: 0.3 }), 0, 0.004, 0, phone);
-  const phoneScreenMat = track(new THREE.MeshBasicMaterial({ color: "#4fd6e6" }));
+  const phoneUi = createPhoneScreen(track);
+  const phoneScreenMat = track(new THREE.MeshBasicMaterial({ map: phoneUi.texture }));
+  const PHONE_IDLE = 0.42; // lock screen glow, as in the reference
+  phoneScreenMat.color.setScalar(PHONE_IDLE);
   const phoneScreen = new THREE.Mesh(track(new THREE.PlaneGeometry(0.066, 0.142)), phoneScreenMat);
   phoneScreen.rotation.x = -Math.PI / 2;
   phoneScreen.position.y = 0.0085;
@@ -832,6 +841,17 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
     pillow.receiveShadow = true;
     scene.add(pillow);
   }
+
+  // A ginger cat asleep near the foot of the bed
+  const cat = createCat(track);
+  cat.group.position.set(2.48, 0.603, -1.35);
+  cat.group.rotation.y = 0.35;
+  scene.add(cat.group);
+
+  // Wall clock between the bookshelf and the window; it keeps real time from 2:47
+  const wallClock = createWallClock(track, 2 * 3600 + 47 * 60);
+  wallClock.group.position.set(0.32, 2.3, ROOM.back + 0.03);
+  scene.add(wallClock.group);
 
   // Rug
   const rug = new THREE.Mesh(track(new THREE.PlaneGeometry(2.0, 2.8)), mat({ map: rugTex, roughness: 1 }));
@@ -1146,14 +1166,15 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
   // ---------- clicking things in the room ----------
   const raycaster = new THREE.Raycaster();
   const ndc = new THREE.Vector2();
-  const pickTarget = (e: PointerEvent): "lamp" | "telescope" | null => {
+  const pickTarget = (e: PointerEvent): "lamp" | "telescope" | "cat" | null => {
     if (view === "telescope") return null;
     const r = renderer.domElement.getBoundingClientRect();
     ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     raycaster.setFromCamera(ndc, camera);
-    const hit = raycaster.intersectObjects([...lampParts, ...telescopeParts], false)[0];
+    const hit = raycaster.intersectObjects([...lampParts, ...telescopeParts, ...cat.parts], false)[0];
     if (!hit) return null;
-    return lampParts.includes(hit.object) ? "lamp" : "telescope";
+    if (lampParts.includes(hit.object)) return "lamp";
+    return (cat.parts as THREE.Object3D[]).includes(hit.object) ? "cat" : "telescope";
   };
   // a press that drags (orbiting, aiming the telescope) shouldn't count as a click
   let downAt: { x: number; y: number } | null = null;
@@ -1166,6 +1187,7 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
     if (downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < 6) {
       const hit = pickTarget(e);
       if (hit === "lamp") toggleLamp();
+      else if (hit === "cat") cat.stir();
       else if (hit === "telescope") setView("telescope");
     }
     downAt = dragFrom = null;
@@ -1395,6 +1417,8 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
   const desired = new THREE.Vector3();
   const bulbColor = new THREE.Color();
   let frame = 0;
+  let lastClockLabel = "";
+  const PHONE_X = phone.position.x;
   let shadowTick = 0;
   let slowFrames = 0;
   let sampled = 0;
@@ -1455,9 +1479,24 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
 
     // screen flicker and phone notification pulse
     laptopLight.intensity = 4.5 * (1 + Math.sin(t * 7.3) * 0.015 + Math.sin(t * 13.1) * 0.01);
-    const pulse = Math.max(0, Math.sin(t * 0.9)) ** 12;
-    phoneScreenMat.color.setRGB(0.31 + pulse * 0.5, 0.84 + pulse * 0.16, 0.9 + pulse * 0.1);
-    phoneLight.intensity = 0.15 + pulse * 0.6;
+    // wall clock, and the time everywhere else follows it
+    wallClock.update(t);
+    const clockLabel = wallClock.label(t);
+    if (clockLabel.full !== lastClockLabel) {
+      lastClockLabel = clockLabel.full;
+      options.onClockChange?.(clockLabel.full);
+    }
+
+    // phone: buzzes now and then with a notification; he glances down at it
+    const ph = phoneUi.update(t, clockLabel.hm, reducedMotion);
+    if (ph.started) person.lookAtPhone(t);
+    phoneScreenMat.color.setScalar(PHONE_IDLE + ph.brightness * 0.95);
+    phoneLight.intensity = 0.12 + ph.brightness * 0.55;
+    phone.position.x = PHONE_X + ph.jitter;
+    phone.rotation.y = 0.35 + ph.jitter * 6;
+
+    steam.update(t, camera);
+    cat.update(t, reducedMotion);
 
     // candle flame
     const cf = reducedMotion ? 0 : flickerNoise(t, 0);

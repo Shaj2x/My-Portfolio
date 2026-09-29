@@ -9,8 +9,8 @@ const chip =
   "pointer-events-auto inline-flex items-center gap-2 rounded-full bg-black/40 px-5 py-2.5 text-sm text-white/85 backdrop-blur-md transition-colors hover:bg-black/60 hover:text-white";
 
 const HINTS: Record<RoomView, string> = {
-  doorway: "Move your cursor to lean in · click the lamp (L) or the telescope (T)",
-  explore: "Drag to look around · scroll to zoom · click the lamp (L) or the telescope (T)",
+  doorway: "Move your cursor to lean in · click the lamp (L), the telescope (T), or the cat",
+  explore: "Drag to look around · scroll to zoom · click the lamp (L), the telescope (T), or the cat",
   telescope: "Drag to aim · scroll to zoom · Esc to step back",
 };
 
@@ -24,6 +24,7 @@ const Room = () => {
   const [error, setError] = useState(false);
   const [lampOn, setLampOn] = useState(true);
   const [target, setTarget] = useState<{ name: string; detail: string } | null>(null);
+  const [clock, setClock] = useState("2:47 AM");
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -37,6 +38,7 @@ const Room = () => {
         onLampChange: setLampOn,
         onViewChange,
         onScopeTarget: setTarget,
+        onClockChange: setClock,
       });
     } catch (e) {
       console.error("Failed to start 3D room:", e);
@@ -77,7 +79,7 @@ const Room = () => {
           <ArrowLeft size={16} /> Back
         </Link>
         <div className="text-right">
-          <p className="font-mono text-xs uppercase tracking-[0.25em] text-amber-300/70">2:47 AM</p>
+          <p className="font-mono text-xs uppercase tracking-[0.25em] text-amber-300/70">{clock}</p>
           <p className="text-sm text-white/50">{inScope ? "Western University, London ON" : "still building."}</p>
         </div>
       </div>

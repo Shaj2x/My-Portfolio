@@ -17,6 +17,8 @@ export interface Figure {
   head: THREE.Group;
   /** call every frame for breathing and small head movement */
   update: (t: number, still: boolean) => void;
+  /** glance down at the phone shortly after time t (e.g. when it buzzes) */
+  lookAtPhone: (t: number) => void;
 }
 
 const smooth = (e0: number, e1: number, x: number) => {
@@ -495,5 +497,11 @@ export function createFigure(track: Track, rand: () => number): Figure {
     typingHand.hand.position.x = rWristRest.x + Math.sin(t * 0.8) * 0.006 * typing;
   };
 
-  return { group, torso, head, update };
+  const lookAtPhone = (t: number) => {
+    glance = GLANCES[0];
+    glanceStart = t + 0.35; // a beat of reaction time
+    glanceHold = 2.4;
+  };
+
+  return { group, torso, head, update, lookAtPhone };
 }
