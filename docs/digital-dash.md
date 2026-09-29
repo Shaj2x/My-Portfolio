@@ -25,7 +25,7 @@ The file has three parts: `<style>`, the markup, and one IIFE `<script>`. The sc
 | CLOCKS | Flip, Digital, Analog, Words, Progress rings, Focus timer (Pomodoro with chime) |
 | TASKS | Urgency 0 to 3 (Critical, High, Medium, Low), due dates, sort by urgency then due |
 | CALENDAR | Month grid, events plus tasks with due dates |
-| NET WORTH | Assets and debts accounts, daily history snapshots, SVG line chart |
+| NET WORTH | Assets and debts accounts, daily history snapshots, SVG line chart, privacy eye (`setPrivacy()`: masks every amount, shows growth as a percentage; stored as `settings.hideNw`) |
 | mini stats | Widget system (`WT` registry, `renderWidgets`, widget config forms) |
 | focus controls | Clock picker, 24h and seconds toggles, zen mode |
 | editable subtitles | Any element with `data-sub="key"` becomes inline editable; saved to `S.settings.subs` |
@@ -88,7 +88,8 @@ The goal is that nothing teleports and nothing waits on you. Rules the code foll
 - **Toasts** use transitions, not keyframes, so rapid toasts retarget instead of restarting.
 - **Hover motion** is gated behind `(hover: hover) and (pointer: fine)`.
 - **Liquid glass** (`S.settings.surface = "glass"`, class `lg` on `<html>`): translucent panels with `backdrop-filter: blur() saturate()`, a bright top inset and a 1px gradient rim (masked `::after`) for light catching the edge. The rail is a heavier material than content. Anything inside a glass panel gets a tint (`--glass-tint`), never a second blur. With no background set, `#bg-layer` shows an accent-coloured glow so the glass has something to refract. `prefers-reduced-transparency` and `prefers-contrast: more` fall back to solid panels. Toggling it runs as a view transition.
-- **Glass hover** (mouse only, `(hover: hover) and (pointer: fine)`): light rather than movement. The rim goes from 70% to full, a top sheen fades in under the content (`::before`, `z-index:-1` inside the glass stacking context), widgets rise 2px and tasks 1px, and a glass pill wells up under hovered tabs and options. With reduced motion the lift is dropped and the light stays.
+- **Glass hover** (mouse only, glass mode): pointer-tracked springs in the "liquid glass pointer" section. Widgets and theme cards tilt up to 3deg toward the cursor (less for wide cards) and lift 2px; buttons, tabs and options are pulled up to 3px and settle back with a slight wobble (damping ratio .62); a soft light follows the cursor across glass panels and task rows. One passive `pointermove` listener, one rAF loop that stops when everything is at rest. Cards get `transform`; controls get the `translate`/`scale` properties so `:active` press scale still composes. Reduced motion keeps the light and drops tilt and pull.
+- **Select menus**: where `appearance: base-select` is supported they are drawn in theme colours (glass in glass mode) and open from the trigger in 180ms. Elsewhere `color-scheme`, set from the theme's `--bg` in `applyTheme()`, keeps native menus and date pickers light or dark to match.
 - **Reduced motion** means gentler, not none: movement is dropped and fades are kept. `anim()` strips transforms automatically; the analog second hand ticks with `steps(60)`.
 
 ## Conventions

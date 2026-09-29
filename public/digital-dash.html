@@ -482,20 +482,23 @@ html.lg .rail .ind{background:linear-gradient(180deg,color-mix(in srgb,var(--acc
 html.lg .stage{box-shadow:0 30px 60px -30px color-mix(in srgb,var(--accent) 35%,transparent),inset 0 1px 0 color-mix(in srgb,#fff 16%,transparent),inset 0 0 0 1px color-mix(in srgb,#fff 9%,transparent)}
 html.lg .toast{color:var(--ink);font-weight:500}
 html.lg h1,html.lg .sec{text-shadow:0 1px 12px color-mix(in srgb,var(--bg) 60%,transparent)}
-/* Glass hover: light, not motion. Hover happens tens of times a day, so it stays near-imperceptible:
-   the rim catches more light, a soft sheen fades in under the content, cards rise 1-2px.
-   Mouse only (touch fires false hovers); reduced motion keeps the light and drops the lift. */
+/* Liquid glass hover. Driven by pointer-tracked springs in JS (see "liquid glass pointer"):
+   cards tilt toward the cursor, controls are pulled a few px and settle back with a slight wobble,
+   and a light follows the cursor across glass. Mouse only; reduced motion keeps the light, drops the movement.
+   JS writes transform (cards) and the translate/scale properties (controls), so press scale still composes. */
 @media (hover:hover) and (pointer:fine){
   html.lg .panel::after,html.lg .task::after{opacity:.7;transition:opacity var(--t-ui) ease}
-  html.lg .widget:hover::after,html.lg .task:hover::after{opacity:1}
-  html.lg .widget::before,html.lg .skin::before{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;pointer-events:none;
-    background:linear-gradient(180deg,color-mix(in srgb,#fff 11%,transparent),transparent 55%);opacity:0;transition:opacity var(--t-ui) ease}
-  html.lg .widget:hover::before,html.lg .skin:hover::before{opacity:1}
-  html.lg .widget{transition:transform var(--t-ui) var(--ease-out)}
-  html.lg .widget:hover{transform:translateY(-2px)}
-  html.lg .task{transition:background-color var(--t-fast) ease,opacity var(--t-ui) ease,transform var(--t-ui) var(--ease-out)}
-  html.lg .task:hover{transform:translateY(-1px)}
-  html.lg .skin{position:relative;isolation:isolate}
+  html.lg .widget:hover::after,html.lg .task:hover::after,html.lg .panel.lit::after{opacity:1}
+  /* The light: a soft disc under the content, placed at the cursor by --lx/--ly set on the element itself */
+  html.lg .panel,html.lg .skin{position:relative;isolation:isolate;overflow:clip}
+  html.lg .panel::before,html.lg .skin::before{content:"";position:absolute;left:0;top:0;width:420px;height:420px;margin:-210px 0 0 -210px;z-index:-1;pointer-events:none;border-radius:50%;
+    background:radial-gradient(closest-side,color-mix(in srgb,#fff 15%,transparent),color-mix(in srgb,#fff 5%,transparent) 55%,transparent);
+    opacity:0;transform:translate(var(--lx,50%),var(--ly,0px));transition:opacity var(--t-ui) ease}
+  html.lg .lit::before{opacity:1}
+  html.lg .task.lit{background-image:radial-gradient(240px circle at var(--lx) var(--ly),color-mix(in srgb,#fff 9%,transparent),transparent 70%)}
+  /* JS owns these transforms while glass is on: no CSS transform transition, or it would smear every frame */
+  html.lg .skin{transition:border-color var(--t-fast) ease}
+  html.lg .skin:hover{transform:none}
   html.lg .fontopt:hover,html.lg .wmenu button:hover{border-color:color-mix(in srgb,#fff 28%,transparent)}
   /* A glass pill wells up under a hovered tab or option; the selected one already has its lens */
   html.lg .nav::before,html.lg .seg button::before{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;pointer-events:none;
@@ -506,7 +509,7 @@ html.lg h1,html.lg .sec{text-shadow:0 1px 12px color-mix(in srgb,var(--bg) 60%,t
   html.lg .btn.ghost{transition:transform var(--t-press) var(--ease-out),filter var(--t-fast) ease,box-shadow var(--t-fast) ease}
 }
 @media (hover:hover) and (pointer:fine) and (prefers-reduced-motion:reduce){
-  html.lg .widget:hover,html.lg .task:hover{transform:none}
+  .skin:hover{transform:none}
   html.lg .nav::before,html.lg .seg button::before{transform:none}
 }
 /* Accessibility: frostier / solid when asked */
@@ -516,6 +519,54 @@ html.lg h1,html.lg .sec{text-shadow:0 1px 12px color-mix(in srgb,var(--bg) 60%,t
 @media (prefers-contrast:more){
   html.lg .panel,html.lg .task,html.lg .rail,html.lg .picker .seg,html.lg .filters .seg,html.lg .toast{background:var(--panel);-webkit-backdrop-filter:none;backdrop-filter:none;border-color:var(--ink)}
   html.lg .panel::after,html.lg .task::after{display:none}
+}
+
+/* ---------- Privacy eye (Net worth) ---------- */
+.totrow{display:flex;align-items:center;gap:14px;min-width:0}
+.totrow .total{min-width:0}
+.total.masked{white-space:nowrap}
+.total .dots{font-size:.44em;letter-spacing:.14em;margin-left:.12em;vertical-align:.32em}
+.eye{flex:none;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--panel2);color:var(--ink);padding:0}
+.eye svg{width:20px;height:20px;overflow:visible}
+.eye g{transition:opacity var(--t-fast) ease,transform var(--t-ui) var(--ease-out);transform-box:fill-box;transform-origin:center}
+/* Like Wealthsimple: an open eye means "tap to reveal", a crossed eye means "tap to hide" */
+.eye .open{opacity:0;transform:scale(.8)}
+.eye[aria-pressed="true"] .open{opacity:1;transform:none}
+.eye[aria-pressed="true"] .shut{opacity:0;transform:scale(.8)}
+html.lg .eye{background:var(--glass-tint);box-shadow:inset 0 1px 0 color-mix(in srgb,#fff 18%,transparent),inset 0 0 0 1px var(--glass-edge)}
+.acct .mask{min-width:100px;text-align:right;color:var(--muted);letter-spacing:.12em;font-weight:600}
+.widget .big b.up,.delta b.up{color:var(--good)}
+
+/* ---------- Themed select pop-ups ----------
+   Where customizable <select> is supported, the menu is drawn by us in theme colours (and glass).
+   Everywhere else, color-scheme (set from the theme in applyTheme) at least makes the native menu
+   and date pickers light or dark to match. Opens from its trigger in 180ms, like any dropdown. */
+@supports (appearance:base-select){
+  select,::picker(select){appearance:base-select}
+  select{display:inline-flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer}
+  select::picker-icon{color:var(--muted);transition:rotate var(--t-ui) var(--ease-out)}
+  select:open::picker-icon{rotate:180deg}
+  ::picker(select){
+    background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:5px;margin-block:6px;
+    box-shadow:0 20px 44px -18px rgba(0,0,0,.6);font:inherit;min-width:anchor-size(width);
+    transform-origin:top center;
+    transition:opacity var(--t-fast) ease,transform 180ms var(--ease-out),overlay 180ms allow-discrete,display 180ms allow-discrete}
+  ::picker(select):not(:popover-open){opacity:0;transform:scale(.96) translateY(-4px)}
+  @starting-style{::picker(select):popover-open{opacity:0;transform:scale(.96) translateY(-4px)}}
+  select option{display:flex;align-items:center;gap:8px;padding:7px 12px 7px 8px;border-radius:8px;color:var(--ink);background:none;transition:background-color var(--t-fast) ease}
+  select option:hover,select option:focus-visible{background:var(--panel2);outline:none}
+  select option:checked{font-weight:600}
+  select option::checkmark{color:var(--accent)}
+  html.lg ::picker(select){
+    background:color-mix(in srgb,var(--panel) 58%,transparent);
+    -webkit-backdrop-filter:blur(26px) saturate(180%);backdrop-filter:blur(26px) saturate(180%);
+    border-color:var(--glass-edge);box-shadow:inset 0 1px 0 var(--glass-hi),0 20px 44px -18px rgba(0,0,0,.6)}
+  html.lg select option:hover,html.lg select option:focus-visible{background:var(--glass-tint)}
+  @media (prefers-reduced-motion:reduce){
+    ::picker(select):not(:popover-open),::picker(select){transform:none}
+    @starting-style{::picker(select):popover-open{transform:none}}
+  }
+  @media (prefers-reduced-transparency:reduce){html.lg ::picker(select){background:var(--panel);backdrop-filter:none}}
 }
 </style>
 </head>
@@ -617,7 +668,7 @@ html.lg h1,html.lg .sec{text-shadow:0 1px 12px color-mix(in srgb,var(--bg) 60%,t
       <div class="nwtop">
         <div class="panel">
           <div style="color:var(--muted);font-size:14px" data-sub="l-total">Total net worth</div>
-          <div class="total" id="nw-total">$0</div>
+          <div class="totrow"><div class="total" id="nw-total">$0</div><button class="icon-btn eye" id="nw-eye" aria-pressed="false" aria-label="Hide amounts" title="Hide amounts, show growth only"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><g class="open"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></g><g class="shut"><path d="M3 3l18 18"/><path d="M10.6 5.1A10 10 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4M6.6 6.6C3.8 8.4 2 12 2 12s3.6 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></g></svg></button></div>
           <div class="delta" id="nw-delta"></div>
           <div class="split">
             <div><small>Assets</small><strong id="nw-assets">$0</strong></div>
@@ -698,7 +749,7 @@ html.lg h1,html.lg .sec{text-shadow:0 1px 12px color-mix(in srgb,var(--bg) 60%,t
         <div class="panel">
           <h3>Money</h3>
           <div class="field"><span>Currency</span><select id="currency"><option>CAD</option><option>USD</option><option>EUR</option><option>GBP</option><option>INR</option><option>LKR</option><option>AUD</option></select></div>
-          <div class="field"><span>Hide net worth widget amount</span><input type="checkbox" id="hide-nw"></div>
+          <div class="field"><span>Hide amounts, show growth only<small class="muted" style="display:block;font-size:12.5px">Same as the eye button on Net worth</small></span><input type="checkbox" id="hide-nw"></div>
         </div>
         <div class="panel">
           <h3>Your data</h3>
@@ -952,6 +1003,8 @@ function applyTheme(){
   $("#currency").value=s.currency;$("#hide-nw").checked=s.hideNw;
   $("#radius").value=s.radius;$("#csize").value=s.clockScale;
   h.classList.toggle("lg",s.surface==="glass");
+  // Native pop-ups (select menus, date and colour pickers) follow the theme's lightness
+  {const bgc=getComputedStyle(h).getPropertyValue("--bg").trim();h.style.colorScheme=isHex(bgc)&&lum(bgc)>.4?"light":"dark";}
   $$("#surface button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.s===s.surface));
   const ma=matchActive();$$(".skin").forEach(b=>b.setAttribute("aria-pressed",!ma&&b.dataset.skin===s.skin));
   $("#bg-match").checked=!!s.bg.match;
@@ -1052,12 +1105,12 @@ function buildThemes(){
   $("#def-clock").innerHTML=CLOCKS.map(([v,n])=>`<option value="${v}">${n}</option>`).join("");
   $("#accent").addEventListener("input",e=>{S.settings.accent=e.target.value;previewScheme=null;applyTheme();save();});
   $("#accent-reset").addEventListener("click",()=>{S.settings.accent="";applyTheme();save();});
-  $("#surface").addEventListener("click",e=>{const b=e.target.closest("button[data-s]");if(!b||b.dataset.s===S.settings.surface)return;S.settings.surface=b.dataset.s;save();vt(applyTheme);});
+  $("#surface").addEventListener("click",e=>{const b=e.target.closest("button[data-s]");if(!b||b.dataset.s===S.settings.surface)return;S.settings.surface=b.dataset.s;save();if(b.dataset.s!=="glass")lgResetAll();vt(applyTheme);});
   $("#radius").addEventListener("input",e=>{S.settings.radius=+e.target.value;applyTheme();save();});
   $("#csize").addEventListener("input",e=>{S.settings.clockScale=+e.target.value;applyTheme();save();});
   $("#def-clock").addEventListener("change",e=>{setClock(e.target.value);});
   $("#currency").addEventListener("change",e=>{S.settings.currency=e.target.value;save();renderMoney();renderMini();});
-  $("#hide-nw").addEventListener("change",e=>{S.settings.hideNw=e.target.checked;save();renderMini();});
+  $("#hide-nw").addEventListener("change",e=>{setPrivacy(e.target.checked);});
   $("#export").addEventListener("click",()=>{$("#backup").value=JSON.stringify(S,null,1);$("#backup").select();toast("Backup ready to copy");});
   $("#import").addEventListener("click",()=>{try{const d=JSON.parse($("#backup").value);if(!d||typeof d!=="object")throw 0;merge(d);save();buildSkins();renderAll();toast("Backup restored");}catch(e){toast("That backup isn't valid JSON");}});
   $("#wipe").addEventListener("click",()=>{if(confirm("Erase all tasks, events, accounts, widgets and settings? This can't be undone.")){S=structuredClone(DEFAULT);bgData="";try{localStorage.removeItem(BGK);}catch(e){}save();buildSkins();renderAll();toast("Everything erased");}});
@@ -1422,19 +1475,44 @@ $("#acct-form").addEventListener("submit",e=>{e.preventDefault();const name=$("#
 function acctRows(kind){
   const xs=S.accounts.filter(a=>a.kind===kind);
   if(!xs.length)return `<div class="empty">${kind==="asset"?"Add a chequing account, savings or investments.":"No debts listed. Keep it that way."}</div>`;
-  return xs.map(a=>`<div class="acct" data-id="${a.id}"><div class="nm">${esc(a.name)}<small>${esc(a.cat)}</small></div><input type="number" step="0.01" min="0" value="${a.value}" aria-label="Balance for ${esc(a.name)}"><button class="icon-btn" aria-label="Remove ${esc(a.name)}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>`).join("");
+  const hid=S.settings.hideNw;
+  return xs.map(a=>`<div class="acct" data-id="${a.id}"><div class="nm">${esc(a.name)}<small>${esc(a.cat)}</small></div>${hid?`<span class="mask" aria-label="Balance hidden">${MASK_SHORT}</span>`:`<input type="number" step="0.01" min="0" value="${a.value}" aria-label="Balance for ${esc(a.name)}">`}<button class="icon-btn" aria-label="Remove ${esc(a.name)}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>`).join("");
 }
 ["#asset-list","#debt-list"].forEach(sel=>{
   $(sel).addEventListener("change",e=>{if(e.target.tagName!=="INPUT")return;const a=S.accounts.find(x=>x.id===e.target.closest(".acct").dataset.id);a.value=parseFloat(e.target.value)||0;snapshot();save();renderMoney();renderMini();});
   $(sel).addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;const id=b.closest(".acct").dataset.id;S.accounts=S.accounts.filter(x=>x.id!==id);snapshot();save();renderMoney();renderMini();});
 });
+/* Privacy: hide every amount, keep the growth. Growth is shown as a percentage so it reveals nothing. */
+const MASK="•••••••", MASK_SHORT="••••";
+function curSymbol(){try{return new Intl.NumberFormat(undefined,{style:"currency",currency:S.settings.currency}).formatToParts(0).find(p=>p.type==="currency").value;}catch(e){return "$";}}
+function growth(){
+  const h=S.history;if(h.length<2)return null;
+  const base=h[0].v,ch=totals().t-base;
+  return {ch,up:ch>=0,pct:base?ch/Math.abs(base)*100:null,since:h[0].d};
+}
+const fmtPct=p=>(p>=0?"+":"")+p.toFixed(Math.abs(p)>=100?0:1)+"%";
+function setPrivacy(on){
+  S.settings.hideNw=on;save();
+  const t=$("#nw-total");
+  // Swap under a brief blur so the two states never read as a double exposure
+  anim(t,[{filter:"blur(6px)",opacity:.4},{filter:"blur(0)",opacity:1}],{duration:240,easing:EASE_OUT});
+  lastNw=null;renderMoney();renderMini();$("#hide-nw").checked=on;
+}
+$("#nw-eye").addEventListener("click",()=>setPrivacy(!S.settings.hideNw));
 let lastNw=null;
 function renderMoney(){
-  const {a,d,t}=totals(),T0=$("#nw-total");
+  const {a,d,t}=totals(),T0=$("#nw-total"),hid=S.settings.hideNw;
   const vis=!!T0.offsetParent;
-  tweenNum(T0,vis?lastNw:null,t,fmt);$("#nw-assets").textContent=fmt(a);$("#nw-debts").textContent=fmt(d);lastNw=t;
-  const h=S.history;
-  if(h.length>1){const base=h[0].v,ch=t-base,up=ch>=0;$("#nw-delta").innerHTML=`<b class="${up?"up":"down"}">${up?"+":""}${fmt(ch)}</b> since you started tracking on ${niceDate(h[0].d)}`;}
+  const eye=$("#nw-eye");eye.setAttribute("aria-pressed",hid);eye.setAttribute("aria-label",hid?"Show amounts":"Hide amounts");
+  T0.classList.toggle("masked",hid);
+  if(hid){cancelAnimationFrame(T0._tw);T0.innerHTML=`${esc(curSymbol())}<span class="dots" aria-label="hidden">${MASK}</span>`;$("#nw-assets").textContent=MASK_SHORT;$("#nw-debts").textContent=MASK_SHORT;lastNw=null;}
+  else{tweenNum(T0,vis?lastNw:null,t,fmt);$("#nw-assets").textContent=fmt(a);$("#nw-debts").textContent=fmt(d);lastNw=t;}
+  const g=growth();
+  if(g){
+    const pct=g.pct==null?"":fmtPct(g.pct);
+    const lead=hid?(pct||(g.up?"Up":"Down")):`${g.up?"+":""}${fmt(g.ch)}${pct?` (${pct})`:""}`;
+    $("#nw-delta").innerHTML=`<b class="${g.up?"up":"down"}">${lead}</b> since you started tracking on ${niceDate(g.since)}`;
+  }
   else $("#nw-delta").textContent=S.accounts.length?"Update a balance on another day to start seeing your trend.":"Add your first account below.";
   flipRender($("#asset-list"),()=>{$("#asset-list").innerHTML=acctRows("asset");});
   flipRender($("#debt-list"),()=>{$("#debt-list").innerHTML=acctRows("debt");});
@@ -1448,7 +1526,7 @@ function renderChart(){
   const pts=h.map((x,i)=>`${X(i).toFixed(1)},${Y(x.v).toFixed(1)}`).join(" ");
   el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Net worth over time"><defs><linearGradient id="gf" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity=".35"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>
   <line x1="${P}" x2="${W-10}" y1="${Y(mx)}" y2="${Y(mx)}" stroke="var(--line)" stroke-dasharray="3 4"/><line x1="${P}" x2="${W-10}" y1="${Y(mn)}" y2="${Y(mn)}" stroke="var(--line)" stroke-dasharray="3 4"/>
-  <text class="axis" x="${P-4}" y="${Y(mx)+4}" text-anchor="end">${fmt(mx,1)}</text><text class="axis" x="${P-4}" y="${Y(mn)+4}" text-anchor="end">${fmt(mn,1)}</text>
+  ${S.settings.hideNw?"":`<text class="axis" x="${P-4}" y="${Y(mx)+4}" text-anchor="end">${fmt(mx,1)}</text><text class="axis" x="${P-4}" y="${Y(mn)+4}" text-anchor="end">${fmt(mn,1)}</text>`}
   <polygon class="area" points="${X(0)},${H-24} ${pts} ${X(h.length-1)},${H-24}" fill="url(#gf)"/><polyline class="line" pathLength="1" points="${pts}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
   <circle class="end" cx="${X(h.length-1)}" cy="${Y(h[h.length-1].v)}" r="4.5" fill="var(--accent)"/>
   <text class="axis" x="${P}" y="${H-4}">${niceDate(h[0].d)}</text><text class="axis" x="${W-10}" y="${H-4}" text-anchor="end">${niceDate(h[h.length-1].d)}</text></svg>`;
@@ -1489,7 +1567,8 @@ function wBody(w){
     case"open":return `<div class="big">${S.tasks.filter(t=>!t.done).length}</div>`;
     case"today":return `<div class="big">${S.tasks.filter(t=>!t.done&&t.due&&t.due<=today).length}</div>`;
     case"sessions":return `<div class="big">${S.sessions[today]||0}</div>`;
-    case"networth":return `<div class="big">${S.settings.hideNw?"••••":fmt(totals().t,1)}</div>`;
+    case"networth":{if(!S.settings.hideNw)return `<div class="big">${fmt(totals().t,1)}</div>`;const g=growth();
+      return `<div class="big">${curSymbol()}${MASK_SHORT}</div><small>${g&&g.pct!=null?`<b class="${g.up?"up":"down"}" style="color:var(--${g.up?"good":"bad"})">${fmtPct(g.pct)}</b> since ${niceDate(g.since)}`:"Amounts hidden"}</small>`;}
     case"donewk":{const d=new Date(),mon=new Date(d.getFullYear(),d.getMonth(),d.getDate()-((d.getDay()+6)%7)).getTime();return `<div class="big">${S.tasks.filter(t=>t.done&&t.doneAt>=mon).length}</div><small>Keep the streak going</small>`;}
     case"countdown":{if(!c.date)return `<small>Set a date in this widget's settings.</small>`;const [y,m,dd]=c.date.split("-").map(Number),t=new Date(y,m-1,dd),n=new Date(),base=new Date(n.getFullYear(),n.getMonth(),n.getDate());const days=Math.round((t-base)/864e5);return `<div class="big">${Math.abs(days)}</div><small>${days>0?`day${days===1?"":"s"} until ${esc(c.label)}`:days===0?`${esc(c.label)} is today`:`day${days===-1?"":"s"} since ${esc(c.label)}`}</small>`;}
     case"image":{const src=resolveImg(c.src),H={s:140,m:220,l:320}[c.height]||220;
@@ -1628,6 +1707,78 @@ $$("[data-sub]").forEach(p=>{
     else if(v!==S.settings.subs[k]){S.settings.subs[k]=v;toast("Subtitle saved");}
     save();renderSubs();
   });
+});
+
+/* ---------- liquid glass pointer ----------
+   One passive pointermove listener and one rAF loop that runs only while something is settling.
+   Every value is a damped spring (Apple-style response + damping ratio), so motion starts from
+   where it is, follows the cursor continuously, and can be redirected at any instant. */
+const fineHover=matchMedia("(hover: hover) and (pointer: fine)");
+const LG_TILT=".widget,.skin", LG_MAG=".btn,.nav,.seg>button,.icon-btn", LG_LIT=".panel,.skin,.task";
+// zeta 1 = settle with no overshoot; controls use .62 for a small liquid wobble when released
+const SPRING={tilt:{resp:.38,zeta:1},mag:{resp:.3,zeta:.62},lit:{resp:.16,zeta:1}};
+const REST={tilt:{rx:0,ry:0,z:0},mag:{x:0,y:0,s:1}};
+const lgS=new Map();let lgRAF=0,lgT=0,lgTilt=null,lgMag=null,lgLit=null;
+function lgState(el,kind,init){
+  let m=lgS.get(el);if(!m){m={};lgS.set(el,m);}
+  if(!m[kind]){const v={};for(const k in init)v[k]=0;m[kind]={x:Object.assign({},init),t:Object.assign({},init),v};}
+  return m[kind];
+}
+function lgKick(){if(!lgRAF){lgT=performance.now();lgRAF=requestAnimationFrame(lgFrame);}}
+function lgApply(el,kind,x){
+  if(kind==="tilt")el.style.transform=`perspective(900px) rotateX(${x.rx.toFixed(3)}deg) rotateY(${x.ry.toFixed(3)}deg) translateY(${x.z.toFixed(2)}px)`;
+  else if(kind==="mag"){el.style.translate=`${x.x.toFixed(2)}px ${x.y.toFixed(2)}px`;el.style.scale=x.s.toFixed(4);}
+  else{el.style.setProperty("--lx",x.lx.toFixed(1)+"px");el.style.setProperty("--ly",x.ly.toFixed(1)+"px");}
+}
+function lgClear(el,kind){if(kind==="tilt")el.style.transform="";else if(kind==="mag"){el.style.translate="";el.style.scale="";}}
+function lgFrame(now){
+  const dt=Math.min(1/30,(now-lgT)/1000);lgT=now;let busy=false;
+  lgS.forEach((m,el)=>{
+    for(const kind in m){
+      if(!el.isConnected){delete m[kind];continue;}
+      const st=m[kind],{resp,zeta}=SPRING[kind],k=Math.pow(2*Math.PI/resp,2),c=4*Math.PI*zeta/resp;let moving=false;
+      for(const p in st.x){
+        st.v[p]+=(-k*(st.x[p]-st.t[p])-c*st.v[p])*dt;st.x[p]+=st.v[p]*dt;
+        if(Math.abs(st.x[p]-st.t[p])>.005||Math.abs(st.v[p])>.005)moving=true;else{st.x[p]=st.t[p];st.v[p]=0;}
+      }
+      lgApply(el,kind,st.x);
+      const rest=REST[kind],atRest=rest&&Object.keys(rest).every(p=>st.t[p]===rest[p]);
+      if(!moving&&atRest){lgClear(el,kind);delete m[kind];}
+      else if(moving)busy=true;
+    }
+    if(!Object.keys(m).length)lgS.delete(el);
+  });
+  lgRAF=busy?requestAnimationFrame(lgFrame):0;
+}
+function lgRelease(el,kind){const m=lgS.get(el);if(m&&m[kind])Object.assign(m[kind].t,REST[kind]);lgKick();}
+function lgUnlight(el){el.classList.remove("lit");const m=lgS.get(el);if(m){delete m.lit;if(!Object.keys(m).length)lgS.delete(el);}}
+function lgResetAll(){lgS.forEach((m,el)=>{for(const k in m)lgClear(el,k);el.classList.remove("lit");});lgS.clear();lgTilt=lgMag=lgLit=null;}
+document.addEventListener("pointermove",e=>{
+  if(e.pointerType!=="mouse"||!fineHover.matches||!document.documentElement.classList.contains("lg"))return;
+  const t=e.target instanceof Element?e.target:null;
+  const tilt=!reduced&&t?t.closest(LG_TILT):null, mag=!reduced&&t?t.closest(LG_MAG):null, lit=t?t.closest(LG_LIT):null;
+  if(tilt!==lgTilt){if(lgTilt)lgRelease(lgTilt,"tilt");lgTilt=tilt;}
+  if(tilt&&!tilt.closest(".widgets.editing")){
+    // Lean toward the cursor; bigger cards are heavier, so they lean less
+    const r=tilt.getBoundingClientRect(),nx=((e.clientX-r.left)/r.width-.5)*2,ny=((e.clientY-r.top)/r.height-.5)*2,max=3*Math.min(1,320/r.width);
+    Object.assign(lgState(tilt,"tilt",REST.tilt).t,{rx:-ny*max,ry:nx*max,z:-2});
+  }
+  if(mag!==lgMag){if(lgMag)lgRelease(lgMag,"mag");lgMag=mag;}
+  if(mag){
+    // Pulled a few px toward the cursor, never more than 3
+    const r=mag.getBoundingClientRect(),cl=v=>Math.max(-3,Math.min(3,v));
+    Object.assign(lgState(mag,"mag",REST.mag).t,{x:cl((e.clientX-r.left-r.width/2)*.12),y:cl((e.clientY-r.top-r.height/2)*.2),s:mag.matches(".nav,.seg>button")?1:1.03});
+  }
+  if(lit!==lgLit){if(lgLit)lgUnlight(lgLit);lgLit=lit;}
+  if(lit){
+    const r=lit.getBoundingClientRect(),p={lx:e.clientX-r.left,ly:e.clientY-r.top},st=lgState(lit,"lit",p);
+    Object.assign(st.t,p);
+    if(!lit.classList.contains("lit")){Object.assign(st.x,p);lgApply(lit,"lit",st.x);lit.classList.add("lit");} // appear under the cursor, then follow
+  }
+  lgKick();
+},{passive:true});
+document.documentElement.addEventListener("pointerleave",()=>{
+  if(lgTilt)lgRelease(lgTilt,"tilt");if(lgMag)lgRelease(lgMag,"mag");if(lgLit)lgUnlight(lgLit);lgTilt=lgMag=lgLit=null;
 });
 
 buildThemes();fillCats();
