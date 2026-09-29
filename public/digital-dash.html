@@ -178,6 +178,32 @@ input::placeholder{color:var(--muted)}
 .timer .ctl{display:flex;gap:10px}
 .timer .ctl .btn.ghost{background:rgba(255,255,255,.1);color:var(--card-ink)}
 .timer .note{opacity:.7;font-size:14px}
+.stage:has(.timer){padding-top:64px} /* keep the timer bar clear of the date row as timers are added */
+.timer .tm-top{display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;max-width:100%}
+.timer .tm-editbtn{color:var(--card-ink);opacity:.75}
+.timer .tm-editbtn svg{transition:transform var(--t-ui) var(--ease-out)}
+.timer .tm-editbtn[aria-expanded="true"]{opacity:1;background:rgba(255,255,255,.1)}
+.timer .tm-editbtn[aria-expanded="true"] svg{transform:rotate(45deg)} /* + turns into x while the editor is open */
+.tm-edit{width:min(540px,100%);display:grid;gap:12px;padding:14px;border-radius:calc(var(--r) + 2px);background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);text-align:left;transition:opacity var(--t-ui) var(--ease-out),transform var(--t-ui) var(--ease-out)}
+.tm-edit[hidden]{display:none}
+@starting-style{.tm-edit{opacity:0;transform:translateY(-6px)}}
+.tm-list{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.tm-list li{display:flex;align-items:center;gap:10px;padding:2px 2px 2px 10px;border-radius:10px;background:rgba(255,255,255,.04)}
+.tm-list .tn{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tm-list .td{font-variant-numeric:tabular-nums;opacity:.85}
+.tm-list .icon-btn{color:var(--card-ink)}
+.tk{flex:none;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;background:rgba(255,255,255,.1)}
+.tk.focus{background:color-mix(in srgb,var(--accent) 32%,transparent)}
+.tm-add{display:grid;grid-template-columns:1.6fr .8fr .8fr;gap:8px 10px;align-items:end}
+.tm-add label{display:grid;gap:4px;font-size:12.5px;opacity:.9}
+.tm-add input{width:100%;min-width:0;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:var(--card-ink)}
+.tm-add .tm-kind{grid-column:1/3;justify-self:start;background:rgba(255,255,255,.07)}
+.tm-add .tm-kind button{color:var(--card-ink)}
+.tm-add .tm-kind .thumb{background:rgba(255,255,255,.2)}
+.tm-add .btn{grid-column:3}
+.tm-hint{margin:0;font-size:12.5px;opacity:.75}
+@media (max-width:560px){.tm-add{grid-template-columns:1fr 1fr}.tm-add label:first-child,.tm-add .tm-kind,.tm-add .btn{grid-column:1/-1}}
+@media (prefers-reduced-motion:reduce){.tm-edit{transition:opacity var(--t-ui) ease}@starting-style{.tm-edit{transform:none}}.timer .tm-editbtn svg{transition:none}}
 
 /* Zen */
 body.zen .rail,body.zen .picker,body.zen .mini,body.zen .widgets,body.zen .wbar,body.zen .wmenu,body.zen .view>h1,body.zen .view>.sub{display:none}
@@ -950,6 +976,7 @@ const DEFAULT={tasks:[],events:[],accounts:[],history:[],sessions:{},
   settings:{v2:true,skin:"dash",accent:"",font:"sans",clock:"flip",h24:false,secs:true,currency:"CAD",hideNw:false,subs:{},uiFont:"bricolage",clockFont:"shoulders",radius:14,clockScale:100,surface:"solid",refract:true,bg:{type:"none",color:"#2a2440",grad:0,image:"",dim:35,blur:0,match:true,pal:null},stage:{type:"theme",color:"#101020",grad:0,image:"",dim:30,ink:""}},
   schemes:[],
   presets:[],
+  timers:[{id:"t25",name:"Focus",sec:1500,kind:"focus"},{id:"t50",name:"Deep",sec:3000,kind:"focus"},{id:"t5",name:"Break",sec:300,kind:"break"},{id:"t15",name:"Break",sec:900,kind:"break"}],
   widgets:[{id:"w1",type:"open",size:"s"},{id:"w2",type:"today",size:"s"},{id:"w3",type:"sessions",size:"s"},{id:"w4",type:"networth",size:"s"}]};
 let S=structuredClone(DEFAULT);
 
@@ -1476,11 +1503,19 @@ function buildClock(k){
     const ring=(id,label)=>`<div class="ring"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" fill="none" stroke="currentColor" stroke-opacity=".12" stroke-width="10"/><circle id="rg-${id}" cx="60" cy="60" r="50" fill="none" stroke="var(--accent)" stroke-width="10" stroke-linecap="round" stroke-dasharray="314.16" stroke-dashoffset="314.16" transform="rotate(-90 60 60)" style="stroke-dashoffset:314.16"/></svg><b id="rp-${id}">0%</b><small>${label}</small></div>`;
     w.innerHTML=`<div class="rings">${ring("h","of this hour")}${ring("d","of today")}${ring("w","of this week")}${ring("mo","of this month")}${ring("y","of this year")}</div>`;
   }else if(k==="timer"){
-    w.innerHTML=`<div class="timer"><div class="seg modes" id="tm-modes">${[[25,"Focus 25"],[50,"Deep 50"],[5,"Break 5"],[15,"Break 15"]].map(([m,n])=>`<button data-m="${m}" aria-pressed="${T.len===m*60}">${n}</button>`).join("")}</div><div class="t" id="tm-t"></div><div class="ctl"><button class="btn" id="tm-go"></button><button class="btn ghost" id="tm-reset">Reset</button></div><div class="note" id="tm-note"></div></div>`;
-    initSeg($("#tm-modes"));
-    $("#tm-modes").addEventListener("click",e=>{const b=e.target.closest("button[data-m]");if(!b)return;T.len=+b.dataset.m*60;T.left=T.len;T.end=0;T.running=false;$$("#tm-modes button").forEach(x=>x.setAttribute("aria-pressed",x===b));updTimer();});
+    w.innerHTML=`<div class="timer"><div class="tm-top"><div class="seg modes" id="tm-modes" role="group" aria-label="Timer"></div><button class="icon-btn tm-editbtn" id="tm-editbtn" type="button" aria-expanded="false" aria-controls="tm-edit" aria-label="Add or remove timers" title="Add or remove timers"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button></div><div class="t" id="tm-t"></div><div class="ctl"><button class="btn" id="tm-go"></button><button class="btn ghost" id="tm-reset">Reset</button></div><div class="note" id="tm-note"></div><div class="tm-edit" id="tm-edit" hidden></div></div>`;
+    if(!T.running){const t=timerById(S.settings.timerId)||timerById(T.id)||S.timers[0];if(t)useTimer(t,true);}
+    initSeg($("#tm-modes"));renderTimerModes();
+    $("#tm-modes").addEventListener("click",e=>{const b=e.target.closest("button[data-tid]");if(!b)return;const t=timerById(b.dataset.tid);if(t)useTimer(t);});
     $("#tm-go").addEventListener("click",()=>{if(T.running){T.left=Math.max(0,Math.round((T.end-Date.now())/1000));T.running=false;}else{if(T.left<=0)T.left=T.len;T.end=Date.now()+T.left*1000;T.running=true;ensureAudio();}updTimer();});
     $("#tm-reset").addEventListener("click",()=>{T.running=false;T.left=T.len;updTimer();});
+    $("#tm-editbtn").addEventListener("click",e=>{const ed=$("#tm-edit"),open=ed.hidden;ed.hidden=!open;e.currentTarget.setAttribute("aria-expanded",open);if(open){renderTimerEdit();$("#tm-name").focus();}fitClock();});
+    const ed=$("#tm-edit");
+    ed.addEventListener("submit",e=>{e.preventDefault();addTimer();});
+    ed.addEventListener("click",e=>{
+      const k=e.target.closest("#tm-kind button");if(k){$$("#tm-kind button").forEach(x=>x.setAttribute("aria-pressed",x===k));return;}
+      const d=e.target.closest("[data-tdel]");if(d)removeTimer(d.dataset.tdel);
+    });
   }
   if(k==="analog")syncAnalog();
   fitClock();
@@ -1531,18 +1566,67 @@ function fractions(d){
   return {h:(d.getMinutes()*60+d.getSeconds())/3600,d:(ms-sod)/864e5,w:(ms-sow)/(7*864e5),mo:(ms-som)/(eom-som),y:(ms-soy)/(eoy-soy)};
 }
 /* focus timer */
-const T={len:25*60,left:25*60,end:0,running:false};
+const T={len:25*60,left:25*60,end:0,running:false,id:"t25",kind:"focus"};
+/* ---------- custom timers ----------
+   S.timers holds every timer shown in the Focus timer: {id, name, sec, kind:"focus"|"break"}.
+   Focus timers count toward today's sessions when they finish; breaks don't. */
+const timerById=id=>(S.timers||[]).find(t=>t.id===id);
+const fmtDur=sec=>{const h=Math.floor(sec/3600),m=Math.floor(sec%3600/60),s=sec%60;return h?`${h}h${m?` ${m}m`:""}`:s?`${m}:${pad(s)}`:`${m}`;};
+const timerLabel=t=>`${t.name} ${fmtDur(t.sec)}`;
+function useTimer(t,quiet){
+  T.id=t.id;T.kind=t.kind;T.len=t.sec;T.left=t.sec;T.end=0;T.running=false;
+  if(S.settings.timerId!==t.id){S.settings.timerId=t.id;if(!quiet)save();}
+  $$("#tm-modes button[data-tid]").forEach(x=>x.setAttribute("aria-pressed",x.dataset.tid===t.id));
+  updTimer();fitClock();
+}
+function renderTimerModes(){
+  const seg=$("#tm-modes");if(!seg)return;
+  seg.querySelectorAll(":scope>button").forEach(b=>b.remove()); // keep the thumb and hover bead
+  S.timers.forEach(t=>{const b=document.createElement("button");b.type="button";b.dataset.tid=t.id;b.textContent=timerLabel(t);b.setAttribute("aria-pressed",t.id===T.id);seg.appendChild(b);});
+  glide(seg,true);
+}
+function renderTimerEdit(){
+  const el=$("#tm-edit");if(!el)return;
+  el.innerHTML=`<ul class="tm-list">${S.timers.map(t=>`<li><span class="tk ${t.kind}">${t.kind==="focus"?"Focus":"Break"}</span><span class="tn">${esc(t.name)}</span><span class="td">${esc(fmtDur(t.sec))}</span><button type="button" class="icon-btn" data-tdel="${t.id}" aria-label="Remove ${esc(timerLabel(t))}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg></button></li>`).join("")}</ul>
+    <form class="tm-add" id="tm-add" autocomplete="off">
+      <label>Name<input type="text" id="tm-name" maxlength="16" placeholder="e.g. Reading"></label>
+      <label>Minutes<input type="number" id="tm-min" min="0" max="600" step="1" value="30" inputmode="numeric"></label>
+      <label>Seconds<input type="number" id="tm-sec" min="0" max="59" step="1" value="0" inputmode="numeric"></label>
+      <div class="seg tm-kind" id="tm-kind" role="group" aria-label="Timer type"><button type="button" data-k="focus" aria-pressed="true">Focus</button><button type="button" data-k="break" aria-pressed="false">Break</button></div>
+      <button class="btn" type="submit">Add timer</button>
+    </form>
+    <p class="tm-hint">Focus timers count toward today's sessions when they finish. Breaks don't.</p>`;
+  initSeg($("#tm-kind"));
+}
+function addTimer(){
+  const min=Math.floor(+$("#tm-min").value||0),sec=Math.floor(+$("#tm-sec").value||0),total=min*60+Math.min(59,Math.max(0,sec));
+  if(total<10){toast("Make it at least 10 seconds long");$("#tm-min").focus();return;}
+  if(total>10*3600){toast("Timers can be up to 10 hours");$("#tm-min").focus();return;}
+  if(S.timers.length>=10){toast("You can keep up to 10 timers. Remove one first.");return;}
+  const kind=($("#tm-kind button[aria-pressed=true]")||{}).dataset?.k||"focus";
+  const t={id:uid(),name:($("#tm-name").value.trim()||(kind==="focus"?"Focus":"Break")).slice(0,16),sec:total,kind};
+  S.timers.push(t);save();renderTimerModes();renderTimerEdit();useTimer(t);toast(`Added ${timerLabel(t)}`);
+}
+function removeTimer(id){
+  const at=S.timers.findIndex(t=>t.id===id);if(at<0)return;
+  if(S.timers.length===1){toast("Keep at least one timer");return;}
+  if(T.running&&T.id===id){toast("Pause this timer before removing it");return;}
+  const t=S.timers.splice(at,1)[0];save();
+  if(T.id===id)useTimer(S.timers[Math.min(at,S.timers.length-1)]);
+  renderTimerModes();renderTimerEdit();
+  toast(`Removed ${timerLabel(t)}`,{run(){S.timers.splice(Math.min(at,S.timers.length),0,t);save();renderTimerModes();renderTimerEdit();}});
+}
 let actx=null;
 function ensureAudio(){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();if(actx.state==="suspended")actx.resume();}catch(e){}}
 function chime(){if(!actx)return;try{[0,.18,.36].forEach((t,i)=>{const o=actx.createOscillator(),g=actx.createGain();o.frequency.value=[660,880,990][i];g.gain.setValueAtTime(.0001,actx.currentTime+t);g.gain.exponentialRampToValueAtTime(.25,actx.currentTime+t+.02);g.gain.exponentialRampToValueAtTime(.0001,actx.currentTime+t+.5);o.connect(g).connect(actx.destination);o.start(actx.currentTime+t);o.stop(actx.currentTime+t+.55);});}catch(e){}}
 function updTimer(){
-  if(T.running){T.left=Math.max(0,Math.round((T.end-Date.now())/1000));if(T.left===0){T.running=false;chime();if(T.len>=25*60){const k=dkey(new Date());S.sessions[k]=(S.sessions[k]||0)+1;save();renderMini();toast("Session done. Nice work.");}else toast("Break's over. Back at it.");T.left=T.len;}}
+  if(T.running){T.left=Math.max(0,Math.round((T.end-Date.now())/1000));if(T.left===0){T.running=false;chime();if(T.kind==="focus"){const k=dkey(new Date());S.sessions[k]=(S.sessions[k]||0)+1;save();renderMini();toast("Session done. Nice work.");}else toast("Break's over. Back at it.");T.left=T.len;}}
   if(clockKind!=="timer")return;
   const t=$("#tm-t");if(!t)return;
-  t.textContent=pad(Math.floor(T.left/60))+":"+pad(T.left%60);
+  const hh=Math.floor(T.left/3600);t.textContent=(hh?hh+":"+pad(Math.floor(T.left%3600/60)):pad(Math.floor(T.left/60)))+":"+pad(T.left%60);
   $("#tm-go").textContent=T.running?"Pause":(T.left<T.len?"Resume":"Start");
   const n=S.sessions[dkey(new Date())]||0;
-  $("#tm-note").textContent=n?`${n} focus session${n>1?"s":""} done today`:"Finish a 25 or 50 minute block to log a session";
+  $("#tm-note").textContent=n?`${n} focus session${n>1?"s":""} done today`:"Finish a focus timer to log a session";
 }
 
 let lastSec=-1;
