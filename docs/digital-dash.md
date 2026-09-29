@@ -88,6 +88,7 @@ The goal is that nothing teleports and nothing waits on you. Rules the code foll
 - **Toasts** use transitions, not keyframes, so rapid toasts retarget instead of restarting.
 - **Hover motion** is gated behind `(hover: hover) and (pointer: fine)`.
 - **Liquid glass** (`S.settings.surface = "glass"`, class `lg` on `<html>`): translucent panels with `backdrop-filter: blur() saturate()`, a bright top inset and a 1px gradient rim (masked `::after`) for light catching the edge. The rail is a heavier material than content. Anything inside a glass panel gets a tint (`--glass-tint`), never a second blur. With no background set, `#bg-layer` shows an accent-coloured glow so the glass has something to refract. `prefers-reduced-transparency` and `prefers-contrast: more` fall back to solid panels. Toggling it runs as a view transition.
+- **Glass hover** (mouse only, `(hover: hover) and (pointer: fine)`): light rather than movement. The rim goes from 70% to full, a top sheen fades in under the content (`::before`, `z-index:-1` inside the glass stacking context), widgets rise 2px and tasks 1px, and a glass pill wells up under hovered tabs and options. With reduced motion the lift is dropped and the light stays.
 - **Reduced motion** means gentler, not none: movement is dropped and fades are kept. `anim()` strips transforms automatically; the analog second hand ticks with `steps(60)`.
 
 ## Conventions
