@@ -6,6 +6,8 @@ import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPa
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
 import { RectAreaLightUniformsLib } from "three/examples/jsm/lights/RectAreaLightUniformsLib.js";
+import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
+import { createFigure } from "./createFigure";
 
 /*
  * A late-night study room, built entirely from primitives and canvas textures:
@@ -401,9 +403,7 @@ export function createRoomScene(container: HTMLElement): RoomSceneHandle {
   const deskMat = mat({ color: "#ffffff", map: deskWoodTex, roughness: 0.55 });
   const darkWoodMat = mat({ color: "#3b2817", roughness: 0.7 });
   const metalMat = mat({ color: "#1d1f24", roughness: 0.4, metalness: 0.7 });
-  const figureMat = mat({ color: "#16171b", roughness: 0.85 });
-  const hairMat = mat({ color: "#0f0d0c", roughness: 0.95 });
-  const chairMat = mat({ color: "#1a1c22", roughness: 0.6 });
+  const chairMat = mat({ color: "#1c1e24", roughness: 0.75 });
   const frameMat = mat({ color: "#16181d", roughness: 0.5 });
   const paperMat = mat({ color: "#d9cfb6", roughness: 0.95 });
   const leafMat = mat({ color: "#2f4a2c", roughness: 0.75, side: THREE.DoubleSide });
@@ -764,11 +764,24 @@ export function createRoomScene(container: HTMLElement): RoomSceneHandle {
   seat.position.set(-2.25, 0, -1.45);
   seat.rotation.y = -0.12;
   scene.add(seat);
-  box(0.5, 0.07, 0.48, chairMat, 0, 0.5, 0, seat);
-  const back = box(0.5, 0.62, 0.06, chairMat, 0, 0.92, 0.26, seat);
+  const cushion = new THREE.Mesh(track(new RoundedBoxGeometry(0.5, 0.075, 0.48, 4, 0.03)), chairMat);
+  cushion.position.y = 0.5;
+  const backGeo = track(new RoundedBoxGeometry(0.48, 0.6, 0.06, 4, 0.028));
+  {
+    // curve the backrest around the sitter
+    const p = backGeo.attributes.position as THREE.BufferAttribute;
+    for (let i = 0; i < p.count; i++) p.setZ(i, p.getZ(i) + p.getX(i) ** 2 * 0.5);
+    backGeo.computeVertexNormals();
+  }
+  const back = new THREE.Mesh(backGeo, chairMat);
+  back.position.set(0, 0.93, 0.27);
   back.rotation.x = 0.1;
-  box(0.05, 0.25, 0.05, chairMat, -0.24, 0.66, 0.24, seat);
-  box(0.05, 0.25, 0.05, chairMat, 0.24, 0.66, 0.24, seat);
+  for (const m of [cushion, back]) {
+    m.castShadow = m.receiveShadow = true;
+    seat.add(m);
+  }
+  box(0.035, 0.26, 0.035, metalMat, -0.2, 0.66, 0.26, seat);
+  box(0.035, 0.26, 0.035, metalMat, 0.2, 0.66, 0.26, seat);
   const post = new THREE.Mesh(track(new THREE.CylinderGeometry(0.03, 0.03, 0.4, 10)), metalMat);
   post.position.y = 0.26;
   seat.add(post);
@@ -779,49 +792,11 @@ export function createRoomScene(container: HTMLElement): RoomSceneHandle {
   }
 
   // A seated figure seen from behind — the anchor of the scene
-  const figure = new THREE.Group();
-  figure.position.set(-2.22, 0.53, -1.55);
+  const person = createFigure(track, rand);
+  const figure = person.group;
+  figure.position.set(-2.22, 0.535, -1.55);
   figure.rotation.y = -0.12;
   scene.add(figure);
-  const part = (geo: THREE.BufferGeometry, x: number, y: number, z: number, rx = 0, ry = 0, rz = 0, m: THREE.Material = figureMat) => {
-    const mesh = new THREE.Mesh(track(geo), m);
-    mesh.position.set(x, y, z);
-    mesh.rotation.set(rx, ry, rz);
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    figure.add(mesh);
-    return mesh;
-  };
-  const torso = part(new THREE.CapsuleGeometry(0.19, 0.36, 8, 16), 0, 0.36, -0.02, -0.18);
-  torso.scale.set(1.2, 1, 0.75);
-  part(new THREE.CylinderGeometry(0.05, 0.06, 0.12, 12), 0, 0.72, -0.1, -0.35);
-  const head = part(new THREE.SphereGeometry(0.105, 24, 18), 0, 0.84, -0.14);
-  head.scale.set(0.95, 1.08, 1);
-  // curly hair: a cloud of small spheres over the back/top of the head
-  const hairGeo = track(new THREE.SphereGeometry(1, 10, 8));
-  const hair = new THREE.InstancedMesh(hairGeo, hairMat, 110);
-  const tmp = new THREE.Object3D();
-  for (let i = 0; i < 110; i++) {
-    const theta = rr(0, Math.PI * 2);
-    const phi = rr(0, Math.PI * 0.62);
-    const r = 0.108 + rr(0.0, 0.03);
-    const dir = new THREE.Vector3(Math.sin(phi) * Math.cos(theta), Math.cos(phi), Math.sin(phi) * Math.sin(theta));
-    if (dir.z < -0.55 && dir.y < 0.4) dir.z *= 0.6; // keep the face mostly clear
-    tmp.position.set(dir.x * r, 0.86 + dir.y * r, -0.14 + dir.z * r);
-    tmp.scale.setScalar(rr(0.026, 0.042));
-    tmp.updateMatrix();
-    hair.setMatrixAt(i, tmp.matrix);
-  }
-  hair.castShadow = true;
-  figure.add(hair);
-  // arms: right forearm toward the keyboard, left hand raised to the chin
-  part(new THREE.CapsuleGeometry(0.055, 0.26, 6, 10), 0.24, 0.5, -0.1, 0.5, 0, 0.25);
-  part(new THREE.CapsuleGeometry(0.045, 0.28, 6, 10), 0.3, 0.33, -0.36, 1.35, 0, 0.35);
-  part(new THREE.CapsuleGeometry(0.055, 0.26, 6, 10), -0.24, 0.5, -0.1, 0.45, 0, -0.25);
-  part(new THREE.CapsuleGeometry(0.045, 0.24, 6, 10), -0.12, 0.6, -0.35, 0.35, 0, -0.9);
-  // thighs forward under the desk
-  part(new THREE.CapsuleGeometry(0.075, 0.3, 6, 10), -0.1, 0.02, -0.25, Math.PI / 2, 0, 0);
-  part(new THREE.CapsuleGeometry(0.075, 0.3, 6, 10), 0.1, 0.02, -0.25, Math.PI / 2, 0, 0);
 
   // ---------- bed ----------
 
@@ -1231,8 +1206,7 @@ export function createRoomScene(container: HTMLElement): RoomSceneHandle {
     fairyLights.forEach((l, i) => (l.intensity = 0.8 + (reducedMotion ? 0 : Math.sin(t * 0.8 + i * 1.7) * 0.06)));
 
     // subtle breathing
-    figure.position.y = 0.53 + Math.sin(t * 1.4) * 0.004;
-    torso.scale.x = 1.2 + Math.sin(t * 1.4) * 0.008;
+    person.update(t, reducedMotion);
 
     // distant lightning
     if (t > nextLightning) {
