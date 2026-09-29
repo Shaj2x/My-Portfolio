@@ -22,7 +22,7 @@ The file has three parts: `<style>`, the markup, and one IIFE `<script>`. The sc
 | theme | Skins, fonts (`UIF`, `CLF`), gradients (`GRADS`), custom schemes, backgrounds, clock stage background, image storage helpers, background colour matching |
 | motion | `anim()`, `vt()`, `flipRender()`, `initSeg()`/`glide()`, `moveInd()`, `tweenNum()` (see Motion below) |
 | navigation | `show(view)` switches between the 5 tabs |
-| CLOCKS | Flip, Digital, Analog, Words, Progress rings, Focus timer (Pomodoro with chime) |
+| CLOCKS | Flip, Digital, Analog, Words, Progress rings, Focus timer (chime; custom timers via the + button: `useTimer`, `addTimer`, `removeTimer`; focus timers log a session, breaks don't) |
 | TASKS | Urgency 0 to 3 (Critical, High, Medium, Low), due dates, sort by urgency then due |
 | CALENDAR | Month grid, events plus tasks with due dates |
 | NET WORTH | Assets and debts accounts, daily history snapshots, SVG line chart, privacy eye (`setPrivacy()`: masks every amount, shows growth as a percentage; stored as `settings.hideNw`) |
@@ -40,7 +40,8 @@ S = {
   events:   [{id, date, time, title}],
   accounts: [{id, name, kind:"asset"|"debt", cat, value}],
   history:  [{d:"YYYY-MM-DD", v:netWorth}],        // one point per day
-  sessions: {"YYYY-MM-DD": count},                  // finished focus blocks
+  sessions: {"YYYY-MM-DD": count},                  // finished focus timers
+  timers:   [{id, name, sec, kind:"focus"|"break"}],  // Focus timer choices (settings.timerId = last used)
   schemes:  [{id, name, c:{bg,panel,ink,accent,card,cardInk}}],
   widgets:  [{id, type, size:"s"|"w", title?, cfg?}],
   settings: {
