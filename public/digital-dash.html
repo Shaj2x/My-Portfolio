@@ -440,11 +440,16 @@ input[type=range]{accent-color:var(--accent);width:170px;max-width:50vw}
 }
 @keyframes fade-in{from{opacity:0}}
 
-/* ---------- Liquid glass surfaces (html.lg) ----------
-   Translucent material over whatever is behind it, lit from above.
-   Hierarchy: the rail is a heavier, darker material than content; things inside
-   a glass panel get a tint, never a second blur (glass on glass kills legibility). */
-html.lg{--glass-hi:color-mix(in srgb,#fff 34%,transparent);--glass-edge:color-mix(in srgb,#fff 14%,transparent);--glass-tint:color-mix(in srgb,var(--ink) 7%,transparent)}
+/* ---------- Liquid glass (html.lg) ----------
+   Modelled on the Liquid Glass Room. Real refraction through a curved bezel where the browser
+   can do it (html.lgr, Chromium: an SVG displacement filter per shape, built in JS), a rim lit
+   from the top-left, a screen-blended sheen with a cursor hotspot, a two-layer lift shadow and
+   droplet highlights for tabs. Elsewhere the same material falls back to a frosted blur.
+   The rail is heavier than content; things inside a glass panel get a tint, never a second glass. */
+@property --hov{syntax:"<number>";inherits:true;initial-value:0}
+html.lg{--glass-hi:color-mix(in srgb,#fff 34%,transparent);--glass-edge:color-mix(in srgb,#fff 14%,transparent);--glass-tint:color-mix(in srgb,var(--ink) 7%,transparent);
+  --rim:inset 1.5px 1.5px .5px -.5px rgba(255,255,255,.75),inset -1px -1px .5px -.5px rgba(255,255,255,.45),inset 0 0 0 .5px rgba(255,255,255,.25),inset 0 0 18px rgba(255,255,255,.06);
+  --lift:0 2px 6px rgba(0,0,0,.3),0 18px 40px -12px rgba(0,0,0,.5)}
 /* Glass needs something to refract. With no background chosen, glow with the accent. */
 html.lg:not(.has-bg) #bg-layer{background:
   radial-gradient(55% 45% at 12% 6%,color-mix(in srgb,var(--accent) 38%,transparent),transparent 72%),
@@ -453,64 +458,66 @@ html.lg:not(.has-bg) #bg-layer{background:
   var(--bg)}
 html.lg body{background:transparent;--muted:color-mix(in srgb,var(--ink) 70%,var(--bg))}
 html.lg .panel,html.lg .task,html.lg .picker .seg,html.lg .filters .seg,html.lg .toast{
+  position:relative;isolation:isolate;
   background:color-mix(in srgb,var(--panel) 40%,transparent);
   -webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);
-  border:1px solid var(--glass-edge);
-  box-shadow:inset 0 1px 0 var(--glass-hi),inset 0 -1px 0 color-mix(in srgb,#fff 5%,transparent),0 18px 40px -22px rgba(0,0,0,.55)}
+  border-color:transparent;
+  box-shadow:var(--rim),var(--lift)}
 html.lg .rail{
-  background:color-mix(in srgb,var(--panel) 62%,transparent);
+  background:color-mix(in srgb,var(--panel) 58%,transparent);
   -webkit-backdrop-filter:blur(32px) saturate(160%);backdrop-filter:blur(32px) saturate(160%);
-  border-color:var(--glass-edge);box-shadow:inset -1px 0 0 color-mix(in srgb,#fff 6%,transparent)}
-/* Bright rim where light catches the edge: a 1px gradient ring, strongest top-left */
-html.lg .panel::after,html.lg .task::after{content:"";position:absolute;inset:0;border-radius:inherit;padding:1px;pointer-events:none;
-  background:linear-gradient(140deg,color-mix(in srgb,#fff 45%,transparent),transparent 30%,transparent 70%,color-mix(in srgb,#fff 16%,transparent));
-  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
-html.lg .panel{position:relative}
-html.lg .mini .panel::after{width:auto;height:auto;top:-1px;right:-1px}
-html.lg .task:hover{background:color-mix(in srgb,var(--panel) 55%,transparent)}
+  border-color:transparent;box-shadow:inset -1.5px 0 .5px -.5px rgba(255,255,255,.5),inset -1px 0 0 rgba(255,255,255,.1)}
+/* With real refraction the pane is nearly clear, like the Room; text gets a soft shadow to stay legible */
+html.lgr .panel,html.lgr .task,html.lgr .picker .seg,html.lgr .filters .seg{background:color-mix(in srgb,var(--panel) 22%,transparent)}
+html.lgr .rail{background:color-mix(in srgb,var(--panel) 36%,transparent)}
+html.lgr .toast{background:color-mix(in srgb,var(--panel) 45%,transparent)}
+html.lgr .panel,html.lgr .task,html.lgr .rail{text-shadow:0 1px 8px color-mix(in srgb,var(--bg) 55%,transparent)}
+/* Sheen: a soft band across the top plus a hotspot that follows the cursor (--lx/--ly, faded by --hov).
+   Sits under the content (z-index -1 inside the isolated pane) and screens onto the glass. */
+html.lg .panel::after,html.lg .task::after,html.lg .skin::after{content:"";position:absolute;inset:0;width:auto;height:auto;border-radius:inherit;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(circle at var(--lx,50%) var(--ly,0%),rgba(255,255,255,calc(.24*var(--hov))),transparent var(--spot,120px)),
+    radial-gradient(120% 60% at 30% -10%,rgba(255,255,255,.14),transparent 55%),
+    linear-gradient(to bottom,rgba(255,255,255,.05),transparent 40%);
+  mix-blend-mode:screen}
+html.lg .skin{position:relative;isolation:isolate}
+html.lg .lit{--hov:1}
+html.lg .panel,html.lg .skin{transition:--hov 240ms ease}
+html.lg .task{transition:background-color var(--t-fast) ease,opacity var(--t-ui) ease,--hov 240ms ease}
 /* Inside glass: tints, not blur */
 html.lg .panel input[type=text],html.lg .panel input[type=number],html.lg .panel input[type=date],html.lg .panel input[type=time],html.lg .panel select,html.lg .panel textarea,
 html.lg .day,html.lg .ditem,html.lg .fontopt,html.lg .cgrid label,html.lg .wmenu button,html.lg .panel .seg,html.lg .pbar i{background:var(--glass-tint);border-color:var(--glass-edge)}
 html.lg .addbar input[type=text]{background:transparent;border-color:transparent}
 html.lg .btn.ghost{background:var(--glass-tint);box-shadow:inset 0 1px 0 color-mix(in srgb,#fff 16%,transparent),inset 0 0 0 1px var(--glass-edge)}
 html.lg .btn:not(.ghost){background-image:linear-gradient(180deg,color-mix(in srgb,#fff 22%,transparent),transparent 55%);box-shadow:inset 0 1px 0 color-mix(in srgb,#fff 40%,transparent),0 8px 20px -10px var(--accent)}
-/* The moving highlights become lenses */
-html.lg .seg .thumb{background:linear-gradient(180deg,color-mix(in srgb,#fff 24%,transparent),color-mix(in srgb,#fff 9%,transparent))}
+/* Tabs: the selected highlight is a droplet whose two edges run on separate springs, so it
+   stretches toward the new tab and the trailing edge catches up. A fainter hover bead swells
+   in under the pointer. Both are real boxes in glass mode (JS sets translate + size). */
+html.lg .seg .thumb{inset:auto;left:0;top:0;clip-path:none!important;transition:none;border-radius:9px;
+  background:rgba(255,255,255,.15);box-shadow:inset .5px .5px 0 rgba(255,255,255,.45),inset -.5px -.5px 0 rgba(255,255,255,.15),0 1px 4px rgba(0,0,0,.18)}
 html.lg .timer .modes .thumb{background:var(--accent)}
-html.lg .rail .ind{background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 26%,color-mix(in srgb,#fff 10%,transparent)),color-mix(in srgb,var(--accent) 12%,transparent));
-  box-shadow:inset 0 1px 0 var(--glass-hi),inset 0 0 0 1px var(--glass-edge),0 6px 16px -8px rgba(0,0,0,.5)}
+html.lg .rail .ind{transition:none;background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 24%,rgba(255,255,255,.1)),color-mix(in srgb,var(--accent) 10%,rgba(255,255,255,.04)));
+  box-shadow:inset .5px .5px 0 rgba(255,255,255,.45),inset -.5px -.5px 0 rgba(255,255,255,.15),0 4px 14px -6px rgba(0,0,0,.45)}
+.hbead{display:none;position:absolute;left:0;top:0;z-index:0;pointer-events:none;border-radius:9px;opacity:0}
+.rail .hbead{border-radius:10px}
+html.lg .hbead{display:block;background:var(--glass-tint);box-shadow:inset .5px .5px 0 rgba(255,255,255,.2)}
 html.lg .stage{box-shadow:0 30px 60px -30px color-mix(in srgb,var(--accent) 35%,transparent),inset 0 1px 0 color-mix(in srgb,#fff 16%,transparent),inset 0 0 0 1px color-mix(in srgb,#fff 9%,transparent)}
-html.lg .toast{color:var(--ink);font-weight:500}
+html.lg .toast{position:fixed;color:var(--ink);font-weight:500}
 html.lg h1,html.lg .sec{text-shadow:0 1px 12px color-mix(in srgb,var(--bg) 60%,transparent)}
-/* Liquid glass hover. Driven by pointer-tracked springs in JS (see "liquid glass pointer"):
-   cards tilt toward the cursor, controls are pulled a few px and settle back with a slight wobble,
-   and a light follows the cursor across glass. Mouse only; reduced motion keeps the light, drops the movement.
-   JS writes transform (cards) and the translate/scale properties (controls), so press scale still composes. */
+/* Liquid glass hover (mouse only), driven by damped springs in JS ("liquid glass engine"):
+   panes lean a few px toward the cursor and bulge that way like a droplet drawn to a fingertip,
+   entering and leaving send a small ripple through them, and the sheen's hotspot follows the cursor.
+   Cards get transform; buttons get the translate property so :active press scale still composes.
+   Reduced motion keeps the hotspot and drops the movement. */
 @media (hover:hover) and (pointer:fine){
-  html.lg .panel::after,html.lg .task::after{opacity:.7;transition:opacity var(--t-ui) ease}
-  html.lg .widget:hover::after,html.lg .task:hover::after,html.lg .panel.lit::after{opacity:1}
-  /* The light: a soft disc under the content, placed at the cursor by --lx/--ly set on the element itself */
-  html.lg .panel,html.lg .skin{position:relative;isolation:isolate;overflow:clip}
-  html.lg .panel::before,html.lg .skin::before{content:"";position:absolute;left:0;top:0;width:420px;height:420px;margin:-210px 0 0 -210px;z-index:-1;pointer-events:none;border-radius:50%;
-    background:radial-gradient(closest-side,color-mix(in srgb,#fff 15%,transparent),color-mix(in srgb,#fff 5%,transparent) 55%,transparent);
-    opacity:0;transform:translate(var(--lx,50%),var(--ly,0px));transition:opacity var(--t-ui) ease}
-  html.lg .lit::before{opacity:1}
-  html.lg .task.lit{background-image:radial-gradient(240px circle at var(--lx) var(--ly),color-mix(in srgb,#fff 9%,transparent),transparent 70%)}
-  /* JS owns these transforms while glass is on: no CSS transform transition, or it would smear every frame */
-  html.lg .skin{transition:border-color var(--t-fast) ease}
+  html.lg .skin{transition:border-color var(--t-fast) ease,--hov 240ms ease}
   html.lg .skin:hover{transform:none}
   html.lg .fontopt:hover,html.lg .wmenu button:hover{border-color:color-mix(in srgb,#fff 28%,transparent)}
-  /* A glass pill wells up under a hovered tab or option; the selected one already has its lens */
-  html.lg .nav::before,html.lg .seg button::before{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;pointer-events:none;
-    background:var(--glass-tint);box-shadow:inset 0 1px 0 color-mix(in srgb,#fff 14%,transparent),inset 0 0 0 1px color-mix(in srgb,#fff 7%,transparent);
-    opacity:0;transform:scale(.94);transition:opacity var(--t-fast) ease,transform var(--t-ui) var(--ease-out)}
-  html.lg .nav:not([aria-current="true"]):hover::before,html.lg .seg button:not([aria-pressed="true"]):hover::before{opacity:1;transform:none}
-  html.lg .btn.ghost:hover{box-shadow:inset 0 1px 0 color-mix(in srgb,#fff 26%,transparent),inset 0 0 0 1px color-mix(in srgb,#fff 16%,transparent)}
+  html.lg .btn.ghost:hover{box-shadow:inset 1px 1px .5px -.5px rgba(255,255,255,.6),inset 0 0 0 .5px rgba(255,255,255,.25)}
   html.lg .btn.ghost{transition:transform var(--t-press) var(--ease-out),filter var(--t-fast) ease,box-shadow var(--t-fast) ease}
 }
 @media (hover:hover) and (pointer:fine) and (prefers-reduced-motion:reduce){
   .skin:hover{transform:none}
-  html.lg .nav::before,html.lg .seg button::before{transform:none}
 }
 /* Accessibility: frostier / solid when asked */
 @media (prefers-reduced-transparency:reduce){
@@ -518,8 +525,28 @@ html.lg h1,html.lg .sec{text-shadow:0 1px 12px color-mix(in srgb,var(--bg) 60%,t
 }
 @media (prefers-contrast:more){
   html.lg .panel,html.lg .task,html.lg .rail,html.lg .picker .seg,html.lg .filters .seg,html.lg .toast{background:var(--panel);-webkit-backdrop-filter:none;backdrop-filter:none;border-color:var(--ink)}
-  html.lg .panel::after,html.lg .task::after{display:none}
+  html.lg .panel::after,html.lg .task::after,html.lg .skin::after{display:none}
 }
+
+/* ---------- Presets ---------- */
+.presets{position:relative;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.preset{position:relative;display:flex;flex-direction:column;gap:10px;padding:10px;border:2px solid var(--line);border-radius:calc(var(--r) + 6px);background:var(--panel);transition:border-color var(--t-fast) ease}
+.preset.on{border-color:var(--accent)}
+.preset .badge{position:absolute;top:18px;right:18px;z-index:1;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--accent);color:var(--accent-ink);opacity:0;transform:scale(.9);transition:opacity var(--t-fast) ease,transform var(--t-ui) var(--ease-out);pointer-events:none}
+.preset.on .badge{opacity:1;transform:none}
+.preset .pv{height:86px;border:0;border-radius:var(--r);padding:12px;display:flex;align-items:flex-end;justify-content:space-between;cursor:pointer;overflow:hidden;transition:transform var(--t-press) var(--ease-out)}
+.preset .pv:active{transform:scale(.98)}
+.pclock{font-weight:800;font-size:26px;line-height:1;padding:5px 9px;border-radius:9px}
+.preset .pv i{width:14px;height:14px;border-radius:50%;box-shadow:0 0 0 2px rgba(255,255,255,.55)}
+.preset input.pname{width:calc(100% + 6px);margin-left:-6px;background:transparent;border:1px solid transparent;padding:4px 6px;font-weight:600;font-size:15px}
+.preset input.pname:hover,.preset input.pname:focus{border-color:var(--line)}
+.pmeta small{display:block;color:var(--muted);font-size:12px;padding-top:2px}
+.pact{display:flex;gap:6px;align-items:center}.pact .icon-btn{margin-left:auto}
+.pr-form{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;padding:12px}
+.pr-form input{flex:1;min-width:160px}
+html.lg .preset{background:var(--glass-tint);border-color:var(--glass-edge)}
+html.lg .preset.on{border-color:var(--accent)}
+@media (prefers-reduced-motion:reduce){.preset .badge{transform:none}}
 
 /* ---------- Privacy eye (Net worth) ---------- */
 .totrow{display:flex;align-items:center;gap:14px;min-width:0}
@@ -694,6 +721,11 @@ html.lg .eye{background:var(--glass-tint);box-shadow:inset 0 1px 0 color-mix(in 
     <section class="view" id="v-themes">
       <h1 data-sub="t-themes">Themes</h1>
       <p class="sub" data-sub="themes">Colours, backgrounds, fonts and more. Changes apply everywhere instantly.</p>
+      <h2 class="sec">Presets</h2>
+      <p class="hint" style="margin:0 0 12px">Save the whole look under a name: colour scheme, fonts, background, clock and glass. Apply it any time.</p>
+      <div class="presets" id="presets"></div>
+      <form class="panel pr-form" id="pr-form" autocomplete="off"><input type="text" id="pr-name" placeholder="Name this look, e.g. Late night" aria-label="Preset name" maxlength="40"><button class="btn" type="submit">Save current look</button></form>
+
       <h2 class="sec">Colour scheme</h2>
       <p class="hint" id="match-note" hidden style="margin:0 0 12px"></p>
       <div class="skins" id="skins"></div>
@@ -743,6 +775,7 @@ html.lg .eye{background:var(--glass-tint);box-shadow:inset 0 1px 0 color-mix(in 
           <div class="field"><span>Accent colour</span><span class="row"><input type="color" id="accent"><button class="btn ghost small" id="accent-reset">Reset</button></span></div>
           <div class="field"><span>Corner roundness</span><input type="range" id="radius" min="0" max="28"></div>
           <div class="field"><span>Clock size</span><input type="range" id="csize" min="60" max="140"></div>
+          <div class="field" id="refract-f" hidden><span>Real refraction<small class="muted" style="display:block;font-size:12.5px">Glass bends the background at its edges. Chrome and Edge only. Turn off if scrolling feels heavy.</small></span><input type="checkbox" id="refract"></div>
           <div class="field"><span>Surfaces</span><div class="seg" id="surface" role="group" aria-label="Surface style"><button data-s="solid" aria-pressed="false">Solid</button><button data-s="glass" aria-pressed="false">Liquid glass</button></div></div>
           <div class="field"><span>Default clock</span><select id="def-clock"></select></div>
         </div>
@@ -812,11 +845,14 @@ function flipRender(el,render,mode){
 const segRO=typeof ResizeObserver!=="undefined"?new ResizeObserver(es=>es.forEach(e=>glide(e.target,true))):null;
 function initSeg(seg){
   if(seg._thumb)return;const th=document.createElement("span");th.className="thumb";th.setAttribute("aria-hidden","true");
-  seg.prepend(th);seg._thumb=th;seg.classList.add("has-thumb");if(segRO)segRO.observe(seg);glide(seg,true);
+  seg.prepend(th);seg._thumb=th;seg.classList.add("has-thumb");
+  const bd=document.createElement("span");bd.className="hbead";bd.setAttribute("aria-hidden","true");seg.prepend(bd);seg._bead=bd; // glass-mode hover bead
+  if(segRO)segRO.observe(seg);glide(seg,true);
 }
 function glide(seg,snap){
   const th=seg._thumb;if(!th||!seg.offsetParent)return;
   const b=seg.querySelector(':scope>button[aria-pressed="true"]');
+  if(document.documentElement.classList.contains("lg")){if(b)dropTo(th,boxOf(b),{snap,axis:"x"});return;} // liquid droplet
   const v=b?`inset(${b.offsetTop}px ${seg.clientWidth-b.offsetLeft-b.offsetWidth}px ${seg.clientHeight-b.offsetTop-b.offsetHeight}px ${b.offsetLeft}px round 9px)`:"inset(50% 50% 50% 50% round 9px)";
   if(snap||!th._placed){th.classList.add("snap");th.style.clipPath=v;void th.offsetWidth;th.classList.remove("snap");th._placed=true;}
   else th.style.clipPath=v;
@@ -827,6 +863,7 @@ new MutationObserver(ms=>{const s=new Set();ms.forEach(m=>{const p=m.target.pare
 let railInd=null;
 function moveInd(snap){
   if(!railInd)return;const b=document.querySelector('.nav[aria-current="true"]');if(!b||!b.offsetParent)return;
+  if(document.documentElement.classList.contains("lg")){dropTo(railInd,boxOf(b),{snap,axis:railAxis()});return;} // liquid droplet
   railInd.style.width=b.offsetWidth+"px";railInd.style.height=b.offsetHeight+"px";
   if(snap)railInd.classList.add("snap");
   railInd.style.transform=`translate(${b.offsetLeft}px,${b.offsetTop}px)`;
@@ -855,8 +892,9 @@ const SKINS=[
 const CLOCKS=[["flip","Flip"],["digital","Digital"],["analog","Analog"],["words","Words"],["rings","Progress"],["timer","Focus timer"]];
 
 const DEFAULT={tasks:[],events:[],accounts:[],history:[],sessions:{},
-  settings:{v2:true,skin:"dash",accent:"",font:"sans",clock:"flip",h24:false,secs:true,currency:"CAD",hideNw:false,subs:{},uiFont:"bricolage",clockFont:"shoulders",radius:14,clockScale:100,surface:"solid",bg:{type:"none",color:"#2a2440",grad:0,image:"",dim:35,blur:0,match:true,pal:null},stage:{type:"theme",color:"#101020",grad:0,image:"",dim:30,ink:""}},
+  settings:{v2:true,skin:"dash",accent:"",font:"sans",clock:"flip",h24:false,secs:true,currency:"CAD",hideNw:false,subs:{},uiFont:"bricolage",clockFont:"shoulders",radius:14,clockScale:100,surface:"solid",refract:true,bg:{type:"none",color:"#2a2440",grad:0,image:"",dim:35,blur:0,match:true,pal:null},stage:{type:"theme",color:"#101020",grad:0,image:"",dim:30,ink:""}},
   schemes:[],
+  presets:[],
   widgets:[{id:"w1",type:"open",size:"s"},{id:"w2",type:"today",size:"s"},{id:"w3",type:"sessions",size:"s"},{id:"w4",type:"networth",size:"s"}]};
 let S=structuredClone(DEFAULT);
 
@@ -971,7 +1009,7 @@ function applyBg(){
   let css="";
   if(b.type==="color")css=b.color;
   else if(b.type==="gradient")css=GRADS[b.grad]||GRADS[0];
-  else if(b.type==="image"){const src=b.image==="local"?bgData:b.image;if(src)css=`center / cover no-repeat url("${src}")`;}
+  else if(b.type==="image"){const src=resolveImg(b.image);if(src)css=`center / cover no-repeat url("${src}")`;}
   L.style.background=css;
   L.style.filter=css&&b.blur?`blur(${b.blur}px)`:"";
   L.style.inset=css&&b.blur?`-${b.blur*2}px`:"0";
@@ -1002,10 +1040,13 @@ function applyTheme(){
   $("#accent").value=isHex(s.accent)?s.accent:(isHex(acc)?acc:"#FFB547");
   $("#currency").value=s.currency;$("#hide-nw").checked=s.hideNw;
   $("#radius").value=s.radius;$("#csize").value=s.clockScale;
-  h.classList.toggle("lg",s.surface==="glass");
+  const wasLg=h.classList.contains("lg");h.classList.toggle("lg",s.surface==="glass");
+  if(wasLg!==h.classList.contains("lg"))lgModeChanged();
   // Native pop-ups (select menus, date and colour pickers) follow the theme's lightness
   {const bgc=getComputedStyle(h).getPropertyValue("--bg").trim();h.style.colorScheme=isHex(bgc)&&lum(bgc)>.4?"light":"dark";}
   $$("#surface button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.s===s.surface));
+  $("#refract-f").hidden=!(LGR_OK&&s.surface==="glass");$("#refract").checked=s.refract!==false;
+  if(typeof markPresets==="function")markPresets();
   const ma=matchActive();$$(".skin").forEach(b=>b.setAttribute("aria-pressed",!ma&&b.dataset.skin===s.skin));
   $("#bg-match").checked=!!s.bg.match;
   const mn=$("#match-note");mn.hidden=!ma;if(ma)mn.textContent="Your colours are matched to your background right now. Pick a theme below to switch back to a fixed scheme, or tweak the matched colours in the editor and save them as your own.";
@@ -1105,7 +1146,7 @@ function buildThemes(){
   $("#def-clock").innerHTML=CLOCKS.map(([v,n])=>`<option value="${v}">${n}</option>`).join("");
   $("#accent").addEventListener("input",e=>{S.settings.accent=e.target.value;previewScheme=null;applyTheme();save();});
   $("#accent-reset").addEventListener("click",()=>{S.settings.accent="";applyTheme();save();});
-  $("#surface").addEventListener("click",e=>{const b=e.target.closest("button[data-s]");if(!b||b.dataset.s===S.settings.surface)return;S.settings.surface=b.dataset.s;save();if(b.dataset.s!=="glass")lgResetAll();vt(applyTheme);});
+  $("#surface").addEventListener("click",e=>{const b=e.target.closest("button[data-s]");if(!b||b.dataset.s===S.settings.surface)return;S.settings.surface=b.dataset.s;save();vt(applyTheme);});
   $("#radius").addEventListener("input",e=>{S.settings.radius=+e.target.value;applyTheme();save();});
   $("#csize").addEventListener("input",e=>{S.settings.clockScale=+e.target.value;applyTheme();save();});
   $("#def-clock").addEventListener("change",e=>{setClock(e.target.value);});
@@ -1113,7 +1154,23 @@ function buildThemes(){
   $("#hide-nw").addEventListener("change",e=>{setPrivacy(e.target.checked);});
   $("#export").addEventListener("click",()=>{$("#backup").value=JSON.stringify(S,null,1);$("#backup").select();toast("Backup ready to copy");});
   $("#import").addEventListener("click",()=>{try{const d=JSON.parse($("#backup").value);if(!d||typeof d!=="object")throw 0;merge(d);save();buildSkins();renderAll();toast("Backup restored");}catch(e){toast("That backup isn't valid JSON");}});
-  $("#wipe").addEventListener("click",()=>{if(confirm("Erase all tasks, events, accounts, widgets and settings? This can't be undone.")){S=structuredClone(DEFAULT);bgData="";try{localStorage.removeItem(BGK);}catch(e){}save();buildSkins();renderAll();toast("Everything erased");}});
+  $("#wipe").addEventListener("click",()=>{if(confirm("Erase all tasks, events, accounts, widgets and settings? This can't be undone.")){S=structuredClone(DEFAULT);bgData="";try{localStorage.removeItem(BGK);}catch(e){}save();buildSkins();renderAll();renderPresets();toast("Everything erased");}});
+  $("#refract").addEventListener("change",e=>{S.settings.refract=e.target.checked;save();lgRefractAll();});
+  // presets
+  $("#pr-form").addEventListener("submit",e=>{e.preventDefault();savePreset($("#pr-name").value);$("#pr-name").value="";});
+  $("#presets").addEventListener("click",e=>{
+    const b=e.target.closest("[data-pr]");if(!b||b.dataset.pr==="name")return;
+    const p=S.presets.find(x=>x.id===b.closest(".preset").dataset.id);if(!p)return;
+    if(b.dataset.pr==="apply")applyPreset(p);
+    else if(b.dataset.pr==="update"){Object.assign(p,presetSnapshot(p.id));save();renderPresets();toast(`Updated "${p.name}"`);}
+    else if(b.dataset.pr==="del"&&confirm(`Delete the preset "${p.name}"?`)){S.presets=S.presets.filter(x=>x!==p);[p.s.bg.image,p.s.stage.image].forEach(src=>{if(/^local:p/.test(src||"")&&S.settings.bg.image!==src&&S.settings.stage.image!==src)removeImage(src);});save();renderPresets();toast("Preset deleted");}
+  });
+  $("#presets").addEventListener("change",e=>{
+    if(e.target.dataset.pr!=="name")return;const p=S.presets.find(x=>x.id===e.target.closest(".preset").dataset.id);if(!p)return;
+    const v=e.target.value.trim().slice(0,40);if(!v){e.target.value=p.name;return;}p.name=v;save();toast("Preset renamed");
+  });
+  $("#presets").addEventListener("keydown",e=>{if(e.target.dataset.pr==="name"&&e.key==="Enter"){e.preventDefault();e.target.blur();}});
+  renderPresets();
 }
 function shrink(file,max,q,mime){mime=mime||"image/jpeg";
   return new Promise((res,rej)=>{
@@ -1169,6 +1226,7 @@ async function storeImage(file,key,maxSide,mime){
 }
 async function removeImage(src){
   if(!src)return;
+  if((S.presets||[]).some(p=>p.s.bg.image===src||p.s.stage.image===src))return; // a saved preset still uses it
   try{
     if(src.startsWith("/_blob/")){const a=window.claude&&window.claude.use?await window.claude.use("assets"):null;if(a)await a.delete(src.slice(7));}
     else if(src==="local"){bgData="";try{localStorage.removeItem(BGK);}catch(e){}if(bgImgRef)await bgImgRef.delete();}
@@ -1709,81 +1767,248 @@ $$("[data-sub]").forEach(p=>{
   });
 });
 
-/* ---------- liquid glass pointer ----------
-   One passive pointermove listener and one rAF loop that runs only while something is settling.
-   Every value is a damped spring (Apple-style response + damping ratio), so motion starts from
-   where it is, follows the cursor continuously, and can be redirected at any instant. */
+/* ---------- liquid glass engine ----------
+   Ported from the Liquid Glass Room. Three parts share one rAF loop that sleeps when everything
+   is at rest: refraction filters (built once per shape size), droplet highlights for tabs, and
+   hover lean/bulge/ripple on panes. Every value is a damped spring (semi-implicit Euler), so motion
+   always starts from where it is and can be redirected mid-flight. */
+const HTML=document.documentElement, lgOn=()=>HTML.classList.contains("lg");
 const fineHover=matchMedia("(hover: hover) and (pointer: fine)");
-const LG_TILT=".widget,.skin", LG_MAG=".btn,.nav,.seg>button,.icon-btn", LG_LIT=".panel,.skin,.task";
-// zeta 1 = settle with no overshoot; controls use .62 for a small liquid wobble when released
-const SPRING={tilt:{resp:.38,zeta:1},mag:{resp:.3,zeta:.62},lit:{resp:.16,zeta:1}};
-const REST={tilt:{rx:0,ry:0,z:0},mag:{x:0,y:0,s:1}};
-const lgS=new Map();let lgRAF=0,lgT=0,lgTilt=null,lgMag=null,lgLit=null;
-function lgState(el,kind,init){
-  let m=lgS.get(el);if(!m){m={};lgS.set(el,m);}
-  if(!m[kind]){const v={};for(const k in init)v[k]=0;m[kind]={x:Object.assign({},init),t:Object.assign({},init),v};}
-  return m[kind];
-}
+const rtMQ=matchMedia("(prefers-reduced-transparency: reduce)"), hcMQ=matchMedia("(prefers-contrast: more)");
+function sp(x,k,c){return {x,v:0,t:x,k,c};}
+function sstep(s,dt){if(reduced){s.x=s.t;s.v=0;return;}s.v+=(-s.k*(s.x-s.t)-s.c*s.v)*dt;s.x+=s.v*dt;}
+const still=s=>Math.abs(s.x-s.t)<.01&&Math.abs(s.v)<.01;
+let lgRAF=0,lgT=0;
 function lgKick(){if(!lgRAF){lgT=performance.now();lgRAF=requestAnimationFrame(lgFrame);}}
-function lgApply(el,kind,x){
-  if(kind==="tilt")el.style.transform=`perspective(900px) rotateX(${x.rx.toFixed(3)}deg) rotateY(${x.ry.toFixed(3)}deg) translateY(${x.z.toFixed(2)}px)`;
-  else if(kind==="mag"){el.style.translate=`${x.x.toFixed(2)}px ${x.y.toFixed(2)}px`;el.style.scale=x.s.toFixed(4);}
-  else{el.style.setProperty("--lx",x.lx.toFixed(1)+"px");el.style.setProperty("--ly",x.ly.toFixed(1)+"px");}
-}
-function lgClear(el,kind){if(kind==="tilt")el.style.transform="";else if(kind==="mag"){el.style.translate="";el.style.scale="";}}
-function lgFrame(now){
-  const dt=Math.min(1/30,(now-lgT)/1000);lgT=now;let busy=false;
-  lgS.forEach((m,el)=>{
-    for(const kind in m){
-      if(!el.isConnected){delete m[kind];continue;}
-      const st=m[kind],{resp,zeta}=SPRING[kind],k=Math.pow(2*Math.PI/resp,2),c=4*Math.PI*zeta/resp;let moving=false;
-      for(const p in st.x){
-        st.v[p]+=(-k*(st.x[p]-st.t[p])-c*st.v[p])*dt;st.x[p]+=st.v[p]*dt;
-        if(Math.abs(st.x[p]-st.t[p])>.005||Math.abs(st.v[p])>.005)moving=true;else{st.x[p]=st.t[p];st.v[p]=0;}
-      }
-      lgApply(el,kind,st.x);
-      const rest=REST[kind],atRest=rest&&Object.keys(rest).every(p=>st.t[p]===rest[p]);
-      if(!moving&&atRest){lgClear(el,kind);delete m[kind];}
-      else if(moving)busy=true;
+
+/* -- refraction: an SVG displacement filter per shape, used as the pane's backdrop-filter.
+   The map comes from the rounded rectangle's signed distance field: inside the bezel each pixel
+   points toward the centre, with strength following the slope of a convex squircle profile.
+   Red, green and blue are displaced by slightly different amounts for the thin colour fringe.
+   Only Chromium can use an SVG filter as a backdrop-filter; other browsers keep the frosted blur. */
+const LGR_OK=(()=>{try{return !!(navigator.userAgentData&&navigator.userAgentData.brands.some(b=>/Chrom/.test(b.brand)))&&CSS.supports("backdrop-filter","url(#x)");}catch(e){return false;}})();
+const LG_GLASS=".panel,.task,.rail,.picker .seg,.filters .seg,.toast";
+let lgDefs=null;const lgFilters=new Map();
+function lgSdf(px,py,hw,hh,r){const qx=Math.abs(px)-(hw-r),qy=Math.abs(py)-(hh-r);return Math.hypot(Math.max(qx,0),Math.max(qy,0))+Math.min(Math.max(qx,qy),0)-r;}
+const lgH=d=>Math.pow(1-Math.pow(1-d,4),.25);
+function lgMap(w,h,r,bez){
+  const s=Math.min(1,Math.sqrt(160000/(w*h))),cw=Math.max(2,Math.round(w*s)),ch=Math.max(2,Math.round(h*s)); // big panes: half-res map, scaled up
+  const cv=document.createElement("canvas");cv.width=cw;cv.height=ch;const ctx=cv.getContext("2d"),img=ctx.createImageData(cw,ch),D=img.data;
+  const hw=w/2,hh=h/2,b=Math.max(1,Math.min(bez,hw-1,hh-1)),e=.5;let maxS=0;
+  for(let i=1;i<=64;i++){const t=i/64,sl=(lgH(t)-lgH(t-1/64))*64;if(sl>maxS)maxS=sl;}
+  for(let y=0;y<ch;y++)for(let x=0;x<cw;x++){
+    const px=(x+.5)/s-hw,py=(y+.5)/s-hh,depth=-lgSdf(px,py,hw,hh,r);let dx=0,dy=0;
+    if(depth>0&&depth<b){
+      const t=depth/b,t0=Math.max(0,t-.02),mag=Math.min(1,((lgH(t)-lgH(t0))/(t-t0||1))/maxS);
+      const gx=lgSdf(px+e,py,hw,hh,r)-lgSdf(px-e,py,hw,hh,r),gy=lgSdf(px,py+e,hw,hh,r)-lgSdf(px,py-e,hw,hh,r),gl=Math.hypot(gx,gy)||1;
+      dx=-gx/gl*mag;dy=-gy/gl*mag;
     }
-    if(!Object.keys(m).length)lgS.delete(el);
+    const k=(y*cw+x)*4;D[k]=Math.round(128+dx*127);D[k+1]=Math.round(128+dy*127);D[k+2]=128;D[k+3]=255;
+  }
+  ctx.putImageData(img,0,0);return cv.toDataURL();
+}
+// Big panes get a single displacement pass and no frost (cost scales with area); small pieces get the colour fringe
+const LG_KIND={rail:{bez:22,str:46,frost:0,chroma:false},panel:{bez:24,str:56,frost:0,chroma:false},task:{bez:14,str:34,frost:0,chroma:false},seg:{bez:12,str:26,frost:.5,chroma:true},toast:{bez:12,str:28,frost:.6,chroma:true}};
+function lgFilter(w,h,r,kind){
+  const K=LG_KIND[kind],key=`${kind}-${w}x${h}-${Math.round(r)}`;
+  if(lgFilters.has(key))return lgFilters.get(key);
+  if(!lgDefs){const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");svg.setAttribute("width","0");svg.setAttribute("height","0");svg.setAttribute("aria-hidden","true");svg.style.position="absolute";lgDefs=document.createElementNS(svg.namespaceURI,"defs");svg.appendChild(lgDefs);document.body.appendChild(svg);}
+  const NS="http://www.w3.org/2000/svg",mk=(tag,at,par)=>{const n=document.createElementNS(NS,tag);for(const a in at)n.setAttribute(a,at[a]);par.appendChild(n);return n;};
+  const id="lgf-"+lgFilters.size, str=K.str*Math.max(.55,Math.min(1,w/300));
+  const f=mk("filter",{id,x:0,y:0,width:w,height:h,filterUnits:"userSpaceOnUse",primitiveUnits:"userSpaceOnUse","color-interpolation-filters":"sRGB"},lgDefs);
+  mk("feImage",{href:lgMap(w,h,r,K.bez),x:0,y:0,width:w,height:h,preserveAspectRatio:"none",result:"map"},f);
+  if(K.frost)mk("feGaussianBlur",{in:"SourceGraphic",stdDeviation:K.frost,result:"src"},f);
+  const src=K.frost?"src":"SourceGraphic";
+  if(!K.chroma){mk("feDisplacementMap",{in:src,in2:"map",scale:str.toFixed(2),xChannelSelector:"R",yChannelSelector:"G"},f);lgFilters.set(key,id);return id;}
+  const ISO={R:"1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0",G:"0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 1 0",B:"0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 1 0"};
+  [["R",1],["G",1.06],["B",1.13]].forEach(([c,m])=>{ // blue bends most, red least, like real dispersion
+    mk("feDisplacementMap",{in:src,in2:"map",scale:(str*m).toFixed(2),xChannelSelector:"R",yChannelSelector:"G",result:"d"+c},f);
+    mk("feColorMatrix",{in:"d"+c,type:"matrix",values:ISO[c],result:"c"+c},f);
+  });
+  mk("feComposite",{in:"cR",in2:"cG",operator:"arithmetic",k1:0,k2:1,k3:1,k4:0,result:"rg"},f);
+  mk("feComposite",{in:"rg",in2:"cB",operator:"arithmetic",k1:0,k2:1,k3:1,k4:0,result:"out"},f);
+  lgFilters.set(key,id);return id;
+}
+const refractOn=()=>LGR_OK&&lgOn()&&S.settings.refract!==false&&!rtMQ.matches&&!hcMQ.matches;
+function lgKindOf(el){return el.classList.contains("rail")?"rail":el.classList.contains("task")?"task":el.classList.contains("toast")?"toast":el.classList.contains("seg")?"seg":"panel";}
+function lgRefract(el){
+  if(!refractOn()){if(el._lgf){el.style.backdropFilter="";el._lgf="";}return;}
+  const w=el.offsetWidth,h=el.offsetHeight;if(!w||!h)return;
+  const r=Math.min(parseFloat(getComputedStyle(el).borderTopLeftRadius)||0,w/2,h/2);
+  const v=`url(#${lgFilter(w,h,r,lgKindOf(el))})`;
+  if(el._lgf!==v){el.style.backdropFilter=v;el._lgf=v;}
+}
+const lgRO=typeof ResizeObserver!=="undefined"?new ResizeObserver(es=>es.forEach(e=>lgRefract(e.target))):null;
+let lgScanQ=0;
+function lgRefractAll(){
+  HTML.classList.toggle("lgr",refractOn());
+  document.querySelectorAll(LG_GLASS).forEach(el=>{lgRefract(el);if(lgRO&&!el._lgObs&&refractOn()){lgRO.observe(el);el._lgObs=true;}});
+}
+// Tasks, widgets and accounts re-render: pick up new panes once per frame
+new MutationObserver(()=>{if(!refractOn()||lgScanQ)return;lgScanQ=requestAnimationFrame(()=>{lgScanQ=0;lgRefractAll();});})
+  .observe(document.querySelector(".app"),{childList:true,subtree:true});
+[rtMQ,hcMQ].forEach(m=>m.addEventListener&&m.addEventListener("change",lgRefractAll));
+
+/* -- droplets: selected-tab highlight and hover bead. Four edges on springs; along the direction of
+   travel the leading edge is stiffer than the trailing one, so the droplet stretches toward the new
+   tab and then catches up, squashing a little across while its edges disagree. */
+const drops=new Map();
+const boxOf=b=>({l:b.offsetLeft,t:b.offsetTop,r:b.offsetLeft+b.offsetWidth,b:b.offsetTop+b.offsetHeight});
+const railAxis=()=>getComputedStyle($(".rail")).flexDirection==="row"?"x":"y";
+function dropTo(el,box,o){
+  let d=drops.get(el);const fresh=!d;
+  if(!d){d={L:sp(box.l,340,28),T:sp(box.t,340,28),R:sp(box.r,340,28),B:sp(box.b,340,28),O:sp(o.hover?0:1,200,22),hover:!!o.hover,axis:"x"};drops.set(el,d);}
+  d.axis=o.axis||d.axis;
+  const X=d.axis==="x",a=X?d.L:d.T,b=X?d.R:d.B,na=X?box.l:box.t,nb=X?box.r:box.b,fwd=na>=a.t;
+  const soft=d.hover?170:140,stiff=d.hover?380:340;
+  a.k=fwd?soft:stiff;a.c=fwd?19:28;b.k=fwd?stiff:soft;b.c=fwd?28:19;
+  if(d.hover&&d.O.x<.05){const m=(na+nb)/2;a.x=b.x=m;a.v=b.v=0;const ca=X?d.T:d.L,cb=X?d.B:d.R;ca.x=X?box.t:box.l;cb.x=X?box.b:box.r;ca.v=cb.v=0;} // appear as a bead in the middle, then swell
+  d.L.t=box.l;d.T.t=box.t;d.R.t=box.r;d.B.t=box.b;
+  if(d.hover)d.O.t=1;
+  if(o.snap||(fresh&&!d.hover)||reduced)[d.L,d.T,d.R,d.B].forEach(s=>{s.x=s.t;s.v=0;});
+  dropDraw(el,d);lgKick();
+}
+function dropHide(el){const d=el&&drops.get(el);if(d){d.O.t=0;lgKick();}}
+function dropDraw(el,d){
+  const w=Math.max(4,d.R.x-d.L.x),h=Math.max(4,d.B.x-d.T.x),dv=d.axis==="x"?Math.abs(d.L.v-d.R.v):Math.abs(d.T.v-d.B.v),sq=1-Math.min(.12,dv/9000);
+  el.style.width=w.toFixed(2)+"px";el.style.height=h.toFixed(2)+"px";
+  el.style.transform=`translate(${d.L.x.toFixed(2)}px,${d.T.x.toFixed(2)}px) ${d.axis==="x"?"scaleY":"scaleX"}(${sq.toFixed(4)})`;
+  if(d.hover)el.style.opacity=Math.max(0,Math.min(1,d.O.x)).toFixed(3);
+}
+
+/* -- panes: lean toward the cursor and bulge that way (scaled down for big panes), a small ripple
+   on entering and a flick outward on leaving so they wobble back. Hotspot follows on its own spring. */
+const LG_LEAN=".widget,.skin,.task", LG_NUDGE=".btn,.icon-btn", LG_LIT=".panel,.skin,.task";
+const lgP=new Map();let pLean=null,pNudge=null,pLit=null,beadBtn=null;
+function pieceOf(el){let p=lgP.get(el);if(!p){p={px:sp(0,150,11),py:sp(0,150,11),sx:sp(0,90,14),sy:sp(0,90,14),mode:null,hov:false,lit:false,w:el.offsetWidth,h:el.offsetHeight};lgP.set(el,p);}return p;}
+function pieceDraw(el,p){
+  if(p.mode){
+    const reach=Math.min(1,160/Math.max(p.w,p.h,1))*.6+.4,ox=p.px.x*6*reach,oy=p.py.x*5*reach;
+    if(p.mode==="nudge")el.style.translate=`${(ox*.5).toFixed(2)}px ${(oy*.5).toFixed(2)}px`;
+    else{const pm=Math.min(1.4,Math.hypot(p.px.x,p.py.x)),pa=Math.atan2(p.py.x,p.px.x)*180/Math.PI,ps=1+.035*pm*reach;
+      el.style.transform=`translate(${ox.toFixed(2)}px,${oy.toFixed(2)}px) rotate(${pa.toFixed(2)}deg) scale(${ps.toFixed(4)},${(1/ps).toFixed(4)}) rotate(${(-pa).toFixed(2)}deg)`;}
+  }
+  if(p.lit){el.style.setProperty("--lx",p.sx.x.toFixed(1)+"px");el.style.setProperty("--ly",p.sy.x.toFixed(1)+"px");}
+}
+const aimAt=(el,e)=>{const r=el.getBoundingClientRect();return [Math.max(-1,Math.min(1,((e.clientX-r.left)/r.width)*2-1)),Math.max(-1,Math.min(1,((e.clientY-r.top)/r.height)*2-1)),r];};
+function releasePiece(el){const p=el&&lgP.get(el);if(!p)return;p.hov=false;p.px.v+=p.px.x*4;p.py.v+=p.py.x*4;p.px.t=0;p.py.t=0;}
+function track(mode,el,e){
+  const cur=mode==="lean"?pLean:pNudge;
+  if(cur!==el)releasePiece(cur);
+  if(el&&!(mode==="lean"&&el.closest(".widgets.editing"))){
+    const p=pieceOf(el),[nx,ny]=aimAt(el,e);p.mode=mode;
+    if(!p.hov){p.hov=true;p.w=el.offsetWidth;p.h=el.offsetHeight;p.px.v-=nx*6;p.py.v-=ny*6;} // touching the surface sends a ripple from the entry side
+    p.px.t=nx;p.py.t=ny;
+  }
+  if(mode==="lean")pLean=el;else pNudge=el;
+}
+function trackLit(el,e){
+  if(pLit&&pLit!==el){pLit.classList.remove("lit");const p=lgP.get(pLit);if(p)p.lit=false;}
+  if(el){
+    const p=pieceOf(el),r=el.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
+    if(!p.lit){p.lit=true;p.sx.x=x;p.sy.x=y;p.sx.v=p.sy.v=0;el.style.setProperty("--spot",Math.round(Math.min(260,Math.min(r.width,r.height)*.9+40))+"px");el.classList.add("lit");}
+    p.sx.t=x;p.sy.t=y;
+  }
+  pLit=el;
+}
+function beadTo(btn){
+  if(btn===beadBtn)return;
+  const prev=beadBtn&&beadBtn.parentElement,host=btn&&btn.parentElement;
+  if(prev&&prev!==host)dropHide(prev._bead);
+  if(btn&&host&&host._bead)dropTo(host._bead,boxOf(btn),{hover:true,axis:host.classList.contains("rail")?railAxis():"x"});
+  else if(!btn&&prev)dropHide(prev._bead);
+  beadBtn=btn;
+}
+function lgFrame(now){
+  const dt=Math.min(.032,(now-lgT)/1000);lgT=now;let busy=false;
+  drops.forEach((d,el)=>{
+    if(!el.isConnected){drops.delete(el);return;}
+    const ss=[d.L,d.T,d.R,d.B,d.O];ss.forEach(s=>sstep(s,dt));
+    if(ss.every(still))ss.forEach(s=>{s.x=s.t;s.v=0;});else busy=true;
+    dropDraw(el,d);
+  });
+  lgP.forEach((p,el)=>{
+    if(!el.isConnected){lgP.delete(el);return;}
+    const ss=[p.px,p.py,p.sx,p.sy];ss.forEach(s=>sstep(s,dt));
+    const rest=ss.every(still);if(!rest)busy=true;
+    pieceDraw(el,p);
+    if(rest&&!p.hov&&!p.lit){if(p.mode==="nudge")el.style.translate="";else if(p.mode)el.style.transform="";lgP.delete(el);}
   });
   lgRAF=busy?requestAnimationFrame(lgFrame):0;
 }
-function lgRelease(el,kind){const m=lgS.get(el);if(m&&m[kind])Object.assign(m[kind].t,REST[kind]);lgKick();}
-function lgUnlight(el){el.classList.remove("lit");const m=lgS.get(el);if(m){delete m.lit;if(!Object.keys(m).length)lgS.delete(el);}}
-function lgResetAll(){lgS.forEach((m,el)=>{for(const k in m)lgClear(el,k);el.classList.remove("lit");});lgS.clear();lgTilt=lgMag=lgLit=null;}
 document.addEventListener("pointermove",e=>{
-  if(e.pointerType!=="mouse"||!fineHover.matches||!document.documentElement.classList.contains("lg"))return;
+  if(e.pointerType!=="mouse"||!fineHover.matches||!lgOn())return;
   const t=e.target instanceof Element?e.target:null;
-  const tilt=!reduced&&t?t.closest(LG_TILT):null, mag=!reduced&&t?t.closest(LG_MAG):null, lit=t?t.closest(LG_LIT):null;
-  if(tilt!==lgTilt){if(lgTilt)lgRelease(lgTilt,"tilt");lgTilt=tilt;}
-  if(tilt&&!tilt.closest(".widgets.editing")){
-    // Lean toward the cursor; bigger cards are heavier, so they lean less
-    const r=tilt.getBoundingClientRect(),nx=((e.clientX-r.left)/r.width-.5)*2,ny=((e.clientY-r.top)/r.height-.5)*2,max=3*Math.min(1,320/r.width);
-    Object.assign(lgState(tilt,"tilt",REST.tilt).t,{rx:-ny*max,ry:nx*max,z:-2});
-  }
-  if(mag!==lgMag){if(lgMag)lgRelease(lgMag,"mag");lgMag=mag;}
-  if(mag){
-    // Pulled a few px toward the cursor, never more than 3
-    const r=mag.getBoundingClientRect(),cl=v=>Math.max(-3,Math.min(3,v));
-    Object.assign(lgState(mag,"mag",REST.mag).t,{x:cl((e.clientX-r.left-r.width/2)*.12),y:cl((e.clientY-r.top-r.height/2)*.2),s:mag.matches(".nav,.seg>button")?1:1.03});
-  }
-  if(lit!==lgLit){if(lgLit)lgUnlight(lgLit);lgLit=lit;}
-  if(lit){
-    const r=lit.getBoundingClientRect(),p={lx:e.clientX-r.left,ly:e.clientY-r.top},st=lgState(lit,"lit",p);
-    Object.assign(st.t,p);
-    if(!lit.classList.contains("lit")){Object.assign(st.x,p);lgApply(lit,"lit",st.x);lit.classList.add("lit");} // appear under the cursor, then follow
-  }
+  track("lean",!reduced&&t?t.closest(LG_LEAN):null,e);
+  track("nudge",!reduced&&t?t.closest(LG_NUDGE):null,e);
+  trackLit(t?t.closest(LG_LIT):null,e);
+  beadTo(t?t.closest(".seg>button,.rail>.nav"):null);
   lgKick();
 },{passive:true});
-document.documentElement.addEventListener("pointerleave",()=>{
-  if(lgTilt)lgRelease(lgTilt,"tilt");if(lgMag)lgRelease(lgMag,"mag");if(lgLit)lgUnlight(lgLit);lgTilt=lgMag=lgLit=null;
-});
+HTML.addEventListener("pointerleave",()=>{releasePiece(pLean);releasePiece(pNudge);if(pLit){pLit.classList.remove("lit");const p=lgP.get(pLit);if(p)p.lit=false;}beadTo(null);pLean=pNudge=pLit=null;lgKick();});
+/* ---------- presets ----------
+   A preset is a named copy of every look-related setting. Photos are copied under their own
+   image key so replacing the live background later doesn't change a saved preset, and a custom
+   colour scheme travels with the preset so it still works if the scheme is deleted. */
+const PRESET_KEYS=["skin","accent","uiFont","clockFont","radius","clockScale","surface","refract","clock","h24","secs","bg","stage"];
+function copyImg(src,key){
+  const data=src==="local"?bgData:resolveImg(src);if(!data||!/^(local)/.test(src))return src; // remote/blob images are already stable
+  try{localStorage.setItem("digitaldash.img."+key,data);imgCache[key]=data;if(dbH&&userId)dbH.doc("data/users/"+userId+"/img-"+key).set({img:data}).catch(()=>{});return "local:"+key;}
+  catch(e){toast("That photo is too big to keep in a preset, so the preset will use whatever photo is set");return src;}
+}
+function presetSnapshot(id){
+  const s={};PRESET_KEYS.forEach(k=>{s[k]=structuredClone(S.settings[k]);});
+  if(s.bg.image&&!/^local:p/.test(s.bg.image))s.bg.image=copyImg(s.bg.image,"p"+id+"bg");
+  if(s.stage.image&&!/^local:p/.test(s.stage.image))s.stage.image=copyImg(s.stage.image,"p"+id+"st");
+  const sc=String(s.skin).startsWith("custom:")?S.schemes.find(x=>"custom:"+x.id===s.skin):null;
+  return {s,scheme:sc?structuredClone(sc):null,sw:currentColors()};
+}
+function savePreset(name){
+  const id=uid();name=(name||"").trim().slice(0,40)||"My look "+(S.presets.length+1);
+  S.presets.push(Object.assign({id,name,created:Date.now()},presetSnapshot(id)));
+  save();renderPresets();toast(`Saved "${name}"`);
+}
+function applyPreset(p){
+  if(p.scheme&&!S.schemes.some(x=>x.id===p.scheme.id))S.schemes.push(structuredClone(p.scheme));
+  vt(()=>{PRESET_KEYS.forEach(k=>{if(k in p.s)S.settings[k]=structuredClone(p.s[k]);});previewScheme=null;editingScheme=null;buildSkins();renderAll();buildSchemeEditor(currentColors());});
+  save();toast(`Applied "${p.name}"`);
+}
+// Compare looks without the fields that differ only because a photo was copied
+const presetSig=s=>JSON.stringify(PRESET_KEYS.map(k=>k==="bg"||k==="stage"?Object.assign({},s[k],{image:!!s[k].image,pal:0,iw:0,ih:0}):s[k]));
+function markPresets(){
+  if(!S.presets)return;const cur=presetSig(S.settings);
+  document.querySelectorAll("#presets .preset").forEach(el=>{const p=S.presets.find(x=>x.id===el.dataset.id);el.classList.toggle("on",!!p&&presetSig(p.s)===cur);});
+}
+function renderPresets(){
+  const el=$("#presets");if(!el)return;S.presets=S.presets||[];
+  flipRender(el,()=>{
+    if(!S.presets.length){el.innerHTML=`<div class="empty" style="grid-column:1/-1">No presets yet. Set things up the way you like, name the look below and save it.</div>`;return;}
+    el.innerHTML=S.presets.map(p=>{
+      const s=p.s,sw=p.sw||{},uf=UIF.find(f=>f[0]===s.uiFont)||UIF[0],cf=CLF.find(f=>f[0]===s.clockFont)||CLF[0];
+      const img=s.bg.type==="image"?resolveImg(s.bg.image):"",bg=s.bg.type==="gradient"?(GRADS[s.bg.grad]||GRADS[0]):s.bg.type==="color"?s.bg.color:img?`center/cover no-repeat url("${img}") ${sw.bg}`:sw.bg;
+      const skin=String(s.skin).startsWith("custom:")?(p.scheme?p.scheme.name:"Custom"):((SKINS.find(k=>k.id===s.skin)||{}).name||"Theme");
+      return `<div class="preset" data-id="${p.id}">
+        <span class="badge">In use</span>
+        <button class="pv" data-pr="apply" aria-label="Apply ${esc(p.name)}" style="background:${bg}"><span class="pclock" style="font-family:'${cf[2]}',${cf[3]};background:${sw.card};color:${sw.cardInk}">12:45</span><i style="background:${sw.accent}"></i></button>
+        <div class="pmeta"><input type="text" class="pname" data-pr="name" value="${esc(p.name)}" maxlength="40" aria-label="Preset name" style="font-family:${uf[0]==="system"?"system-ui":`'${uf[2]}',${uf[3]}`}"><small>${esc(skin)} · ${esc(uf[1])} / ${esc(cf[1])}${s.surface==="glass"?" · Liquid glass":""}</small></div>
+        <div class="pact"><button class="btn small" data-pr="apply">Apply</button><button class="btn ghost small" data-pr="update" title="Replace this preset with the current look">Update</button><button class="icon-btn" data-pr="del" aria-label="Delete ${esc(p.name)}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+      </div>`;}).join("");
+  });
+  markPresets();
+}
+// Glass on/off: hand the highlights back to their CSS versions (or take them over), refilter panes
+function lgModeChanged(){
+  drops.forEach((d,el)=>{el.style.width=el.style.height=el.style.transform=el.style.opacity="";});drops.clear();
+  lgP.forEach((p,el)=>{el.style.transform="";el.style.translate="";el.classList.remove("lit");});lgP.clear();
+  pLean=pNudge=pLit=beadBtn=null;
+  document.querySelectorAll(".seg").forEach(s=>glide(s,true));moveInd(true);
+  lgRefractAll();
+}
 
 buildThemes();fillCats();
 railInd=document.createElement("div");railInd.className="ind";railInd.setAttribute("aria-hidden","true");
 $(".rail").prepend(railInd);$(".rail").classList.add("has-ind");
+{const bd=document.createElement("div");bd.className="hbead";bd.setAttribute("aria-hidden","true");$(".rail").prepend(bd);$(".rail")._bead=bd;}
 if(typeof ResizeObserver!=="undefined")new ResizeObserver(()=>moveInd(true)).observe($(".rail"));
 ["#clock-seg","#task-filter","#bg-type","#st-type","#surface"].forEach(q=>initSeg($(q)));
 if(S.accounts.length)snapshot();
