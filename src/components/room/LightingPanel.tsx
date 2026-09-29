@@ -2,7 +2,43 @@ import * as SliderPrimitive from "@radix-ui/react-slider";
 import { X } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
-import { LIGHTING_PRESETS, type LightingSettings } from "./createRoomScene";
+import { LIGHTING_PRESETS, type Conditions, type LightingSettings, type TimeMode, type Weather } from "./createRoomScene";
+
+const TIMES: { value: TimeMode; label: string }[] = [
+  { value: "auto", label: "Your time" },
+  { value: "day", label: "Day" },
+  { value: "sunset", label: "Sunset" },
+  { value: "night", label: "Night" },
+];
+const WEATHERS: { value: Weather; label: string }[] = [
+  { value: "rain", label: "Rain" },
+  { value: "snow", label: "Snow" },
+  { value: "clear", label: "Clear" },
+];
+
+function Segmented<T extends string>({ label, options, value, onChange }: { label: string; options: { value: T; label: string }[]; value: T; onChange: (v: T) => void }) {
+  return (
+    <div className="grid gap-2">
+      <span className="text-sm text-white/80">{label}</span>
+      <div role="radiogroup" aria-label={label} className="grid auto-cols-fr grid-flow-col gap-1 rounded-full border border-white/10 bg-white/5 p-1">
+        {options.map((o) => (
+          <button
+            key={o.value}
+            role="radio"
+            aria-checked={value === o.value}
+            onClick={() => onChange(o.value)}
+            className={cn(
+              "rounded-full px-2 py-1 text-xs transition-colors",
+              value === o.value ? "bg-amber-300/20 text-amber-100" : "text-white/60 hover:text-white",
+            )}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 const FAIRY_COLORS = [
   { name: "Warm white", value: "#ffb36b" },
@@ -63,10 +99,14 @@ const same = (a: LightingSettings, b: LightingSettings) =>
 export function LightingPanel({
   settings,
   onChange,
+  conditions,
+  onConditions,
   onClose,
 }: {
   settings: LightingSettings;
   onChange: (next: Partial<LightingSettings>) => void;
+  conditions: Conditions;
+  onConditions: (next: Partial<Conditions>) => void;
   onClose: () => void;
 }) {
   const activePreset = Object.entries(LIGHTING_PRESETS).find(([, p]) => same(p, settings))?.[0];
@@ -79,7 +119,7 @@ export function LightingPanel({
       <div className="mb-4 flex items-center justify-between">
         <div>
           <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-amber-300/70">Light switch</p>
-          <h2 className="text-lg font-semibold">Lighting</h2>
+          <h2 className="text-lg font-semibold">Lighting &amp; weather</h2>
         </div>
         <button onClick={onClose} className="rounded-full p-1.5 text-white/60 transition-colors hover:bg-white/10 hover:text-white" aria-label="Close lighting">
           <X size={18} />
@@ -149,6 +189,12 @@ export function LightingPanel({
             className="data-[state=checked]:bg-amber-400 data-[state=unchecked]:bg-white/15"
           />
         </label>
+
+        <div className="mt-1 grid gap-4 border-t border-white/10 pt-4">
+          <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-white/40">Outside</p>
+          <Segmented label="Time of day" options={TIMES} value={conditions.timeMode} onChange={(timeMode) => onConditions({ timeMode })} />
+          <Segmented label="Weather" options={WEATHERS} value={conditions.weather} onChange={(weather) => onConditions({ weather })} />
+        </div>
       </div>
     </div>
   );

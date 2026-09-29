@@ -9,7 +9,8 @@ import { RectAreaLightUniformsLib } from "three/examples/jsm/lights/RectAreaLigh
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { createFigure } from "./createFigure";
 import { createCampus } from "./createCampus";
-import { createCat, createPhoneScreen, createSteam, createWallClock } from "./createDetails";
+import { createCat, createPhoneScreen, createRadio, createSteam, createWallClock } from "./createDetails";
+import { createAudio, type Weather } from "./createAudio";
 
 /*
  * A late-night study room, built entirely from primitives and canvas textures:
@@ -21,12 +22,24 @@ import { createCat, createPhoneScreen, createSteam, createWallClock } from "./cr
  */
 
 export type RoomView = "doorway" | "explore" | "telescope";
+/** "auto" follows the visitor's own clock */
+export type TimeMode = "auto" | "day" | "sunset" | "night";
+export type { Weather };
+export interface Conditions {
+  weather: Weather;
+  timeMode: TimeMode;
+}
 type RoomCameraView = Exclude<RoomView, "telescope">;
 
 export interface RoomSceneHandle {
   setView: (view: RoomView) => void;
   /** flip the bedside lamp; returns the new state */
   toggleLamp: () => boolean;
+  setWeather: (weather: Weather) => void;
+  setTimeMode: (mode: TimeMode) => void;
+  setMuted: (muted: boolean) => void;
+  /** turn the shelf radio on or off; returns the new state */
+  toggleRadio: () => boolean;
   /** change any lighting settings; lights fade to the new values */
   setLighting: (settings: Partial<LightingSettings>) => void;
   getLighting: () => LightingSettings;
@@ -123,6 +136,10 @@ export interface RoomSceneOptions {
   onLightingChange?: (settings: LightingSettings) => void;
   /** the light switch on the wall was clicked */
   onLightSwitch?: () => void;
+  /** start in a remembered state instead of the defaults */
+  initial?: { lighting?: Partial<LightingSettings>; weather?: Weather; timeMode?: TimeMode; muted?: boolean };
+  onConditionsChange?: (c: Conditions) => void;
+  onRadioChange?: (on: boolean) => void;
   /** the wall clock's time, e.g. "2:48 AM", whenever the minute changes */
   onClockChange?: (label: string) => void;
 }
@@ -480,28 +497,59 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
   scene.add(campus.group);
   scene.fog = new THREE.FogExp2("#070b12", 0.0055);
 
-  const nightTex = track(
-    canvasTexture(1024, 512, (c, w, h) => {
-      const g = c.createLinearGradient(0, 0, 0, h);
-      g.addColorStop(0, "#020308");
-      g.addColorStop(0.6, "#060a12");
-      g.addColorStop(1, "#0b0f17");
-      c.fillStyle = g;
-      c.fillRect(0, 0, w, h);
-      // a few far, rain-blurred lights: the campus, too soft to make out
-      c.filter = "blur(14px)";
-      for (let i = 0; i < 26; i++) {
-        const r = rr(6, 16);
-        const tone = rand();
-        c.fillStyle =
-          tone < 0.65 ? `rgba(255,170,90,${rr(0.12, 0.3)})` : tone < 0.85 ? `rgba(150,90,230,${rr(0.12, 0.25)})` : `rgba(140,190,255,${rr(0.1, 0.2)})`;
-        c.beginPath();
-        c.arc(rand() * w, rr(h * 0.55, h * 0.95), r, 0, Math.PI * 2);
-        c.fill();
+  // What you see through the glass from inside: soft and out of focus, repainted for time and weather
+  const backdropLights = Array.from({ length: 26 }, () => ({ x: rand(), y: rr(0.55, 0.95), r: rr(6, 16), tone: rand(), a: rr(0.5, 1) }));
+  const backdropStars = Array.from({ length: 140 }, () => ({ x: rand(), y: rr(0.02, 0.5), a: rr(0.3, 1) }));
+  const nightTex = track(canvasTexture(1024, 512, () => undefined));
+  const paintBackdrop = (day: number, dusk: number, weather: Weather) => {
+    const cv = nightTex.image as HTMLCanvasElement;
+    const c = cv.getContext("2d")!;
+    const w = cv.width;
+    const h = cv.height;
+    const overcast = weather !== "clear";
+    const pal = (night: string[], noon: string[], eve: string[]) =>
+      [0, 1, 2].map((i) => `#${new THREE.Color(night[i]).lerp(new THREE.Color(noon[i]), day).lerp(new THREE.Color(eve[i]), dusk).getHexString()}`);
+    const cols = overcast
+      ? pal(["#020308", "#060a12", "#0b0f17"], weather === "snow" ? ["#aab2bc", "#c3c9d0", "#d8dce1"] : ["#77828e", "#949ea8", "#a9b0b8"], ["#2b2a3a", "#6a5060", "#a07468"])
+      : pal(["#01030b", "#06112a", "#101c34"], ["#3a70b4", "#79a7d8", "#c3dbef"], ["#232a5c", "#8a5078", "#f3a060"]);
+    c.filter = "none";
+    const g = c.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, cols[0]);
+    g.addColorStop(0.6, cols[1]);
+    g.addColorStop(1, cols[2]);
+    c.fillStyle = g;
+    c.fillRect(0, 0, w, h);
+    if (weather === "clear" && day < 0.4) {
+      for (const st of backdropStars) {
+        c.fillStyle = `rgba(230,236,255,${st.a * (1 - day * 2.5) * (1 - dusk)})`;
+        c.fillRect(st.x * w, st.y * h, 1.6, 1.6);
       }
-      c.filter = "none";
-    }),
-  );
+    }
+    // campus beyond, too soft to make out: silhouettes by day, a scatter of lights by night
+    c.filter = `blur(${overcast ? 16 : 9}px)`;
+    const land = new THREE.Color("#0a0d12").lerp(new THREE.Color(weather === "snow" ? "#b9bfc6" : "#4c5a4a"), day);
+    c.fillStyle = `#${land.getHexString()}`;
+    c.fillRect(0, h * 0.78, w, h);
+    c.fillStyle = `#${land.clone().multiplyScalar(0.8).getHexString()}`;
+    c.fillStyle = `#${new THREE.Color("#0a0d12").lerp(new THREE.Color("#7a6e60"), day).getHexString()}`;
+    c.fillRect(w * 0.42, h * 0.46, w * 0.06, h * 0.4); // the tower, just a shape in the haze
+    c.fillRect(w * 0.2, h * 0.66, w * 0.5, h * 0.2);
+    const lightsK = Math.max(0, 1 - day * 1.4);
+    for (const l of backdropLights) {
+      c.fillStyle =
+        l.tone < 0.65 ? `rgba(255,170,90,${0.25 * l.a * lightsK})` : l.tone < 0.85 ? `rgba(150,90,230,${0.2 * l.a * lightsK})` : `rgba(140,190,255,${0.15 * l.a * lightsK})`;
+      c.beginPath();
+      c.arc(l.x * w, l.y * h, l.r, 0, Math.PI * 2);
+      c.fill();
+    }
+    if (overcast) {
+      // a veil of rain or snow haze over everything
+      c.fillStyle = `rgba(${weather === "snow" ? "230,235,242" : "150,160,175"},${0.08 + day * 0.12})`;
+      c.fillRect(0, 0, w, h);
+    }
+    c.filter = "none";
+    nightTex.needsUpdate = true;
+  };
   const nightBackdrop = new THREE.Mesh(track(new THREE.PlaneGeometry(60, 30)), track(new THREE.MeshBasicMaterial({ map: nightTex, fog: false })));
   nightBackdrop.position.set(winCx, 1.5, ROOM.back - 22);
   scene.add(nightBackdrop);
@@ -520,21 +568,21 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
   const rainPos = new Float32Array(RAIN * 6);
   const rainSpeed = new Float32Array(RAIN);
   const rainBox = { x0: win.x0 - 1.5, x1: win.x1 + 1.5, y0: -1, y1: 4, z0: ROOM.back - 3, z1: ROOM.back - 0.15 };
+  let weather: Weather = options.initial?.weather ?? "rain";
   const resetDrop = (i: number, y?: number) => {
     const x = rr(rainBox.x0, rainBox.x1);
     const yy = y ?? rr(rainBox.y0, rainBox.y1);
     const z = rr(rainBox.z0, rainBox.z1);
-    const len = rr(0.08, 0.18);
-    rainPos.set([x, yy, z, x - 0.01, yy - len, z], i * 6);
-    rainSpeed[i] = rr(5, 8);
+    const snow = weather === "snow";
+    const len = snow ? rr(0.012, 0.02) : rr(0.08, 0.18);
+    rainPos.set([x, yy, z, x - (snow ? 0.004 : 0.01), yy - len, z], i * 6);
+    rainSpeed[i] = snow ? rr(0.35, 0.8) : rr(5, 8);
   };
   for (let i = 0; i < RAIN; i++) resetDrop(i);
   const rainGeo = track(new THREE.BufferGeometry());
   rainGeo.setAttribute("position", new THREE.BufferAttribute(rainPos, 3));
-  const rain = new THREE.LineSegments(
-    rainGeo,
-    track(new THREE.LineBasicMaterial({ color: "#8fb2d6", transparent: true, opacity: 0.16 })),
-  );
+  const rainMat = track(new THREE.LineBasicMaterial({ color: "#8fb2d6", transparent: true, opacity: 0.16 }));
+  const rain = new THREE.LineSegments(rainGeo, rainMat);
   scene.add(rain);
 
   // Curtains — a wavy plane on each side of the window
@@ -733,10 +781,11 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
   }
   // Top of shelf: hanging plant, a small globe, stacked books
   makePlant(-1.05, shelf.h + 0.015, shelfCz, { potR: 0.09, vines: 7, vineLen: 1.3, bushy: 70 });
-  const globe = new THREE.Mesh(track(new THREE.SphereGeometry(0.07, 24, 16)), mat({ color: "#3b4a50", roughness: 0.5, metalness: 0.2 }));
-  globe.position.set(-0.3, shelf.h + 0.1, shelfCz);
-  globe.castShadow = true;
-  scene.add(globe);
+  // a little radio on top of the shelf; click it to play
+  const radio = createRadio(track);
+  radio.group.position.set(-0.3, shelf.h + 0.015, shelfCz + 0.02);
+  radio.group.rotation.y = -0.12;
+  scene.add(radio.group);
   let ty = shelf.h + 0.015;
   for (let i = 0; i < 3; i++) {
     const hh = rr(0.03, 0.05);
@@ -880,7 +929,7 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
   scene.add(cat.group);
 
   // Wall clock between the bookshelf and the window; it keeps real time from 2:47
-  const wallClock = createWallClock(track, 2 * 3600 + 47 * 60);
+  const wallClock = createWallClock(track, 2 * 3600 + 47 * 60); // re-synced to the visitor's time below
   wallClock.group.position.set(0.32, 2.3, ROOM.back + 0.03);
   scene.add(wallClock.group);
 
@@ -1024,7 +1073,12 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
 
   // ---------- lighting ----------
 
-  scene.add(new THREE.HemisphereLight("#2a3047", "#1c1109", 0.55));
+  const hemi = new THREE.HemisphereLight("#2a3047", "#1c1109", 0.55);
+  scene.add(hemi);
+  // daylight bouncing in from the window, scaled by time of day (off at night)
+  const daylightFill = new THREE.PointLight("#dfe8f5", 0, 14, 1.2);
+  daylightFill.position.set(winCx, 1.9, ROOM.back + 1.3);
+  scene.add(daylightFill);
 
   // The laptop is the key light
   const laptopLight = new THREE.PointLight("#ffa04a", 4.5, 8, 1.5);
@@ -1226,14 +1280,21 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
   };
 
   // ---------- lighting settings (the light switch panel) ----------
-  const lighting: LightingSettings = { ...LIGHTING_PRESETS["Late night"] };
-  let lampBrightness = lighting.lamp; // remembered while the lamp is switched off
-  // current (animated) values chase the settings so every change fades smoothly
-  const live = { ceiling: 0, fairy: 1, candle: 1, warmth: 0 };
-  const fairyTarget = new THREE.Color("#ffb36b");
-  const fairyNow = new THREE.Color("#ffb36b");
+  const lighting: LightingSettings = { ...LIGHTING_PRESETS["Late night"], ...options.initial?.lighting };
+  let lampBrightness = lighting.lamp > 0 ? lighting.lamp : 1; // remembered while the lamp is switched off
+  lampOn = lighting.lamp > 0;
+  lampLevel = lampOn ? lampBrightness : 0;
+  applyLamp(lampLevel);
+  // current (animated) values chase the settings so every change fades smoothly; a remembered
+  // setup starts in place rather than fading in
+  const live = { ceiling: lighting.ceiling, fairy: lighting.fairy, candle: lighting.candle ? 1 : 0, warmth: lighting.warmth };
+  const startFairy = lighting.fairyColor === "rainbow" ? "#ffb36b" : lighting.fairyColor;
+  const fairyTarget = new THREE.Color(startFairy);
+  const fairyNow = new THREE.Color(startFairy);
   const emitLighting = () => options.onLightingChange?.({ ...lighting });
   const setLighting = (next: Partial<LightingSettings>) => {
+    // an audible click when the overhead light goes on or off
+    if (next.ceiling !== undefined && (next.ceiling > 0.01) !== (lighting.ceiling > 0.01)) audio.click("switch");
     Object.assign(lighting, next);
     if (next.lamp !== undefined) {
       if (next.lamp > 0) lampBrightness = next.lamp;
@@ -1247,6 +1308,7 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
     emitLighting();
   };
   const toggleLamp = () => {
+    audio.click("lamp");
     lampOn = !lampOn;
     lighting.lamp = lampOn ? lampBrightness : 0;
     options.onLampChange?.(lampOn);
@@ -1254,16 +1316,135 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
     return lampOn;
   };
 
+  // ---------- sound ----------
+  const audio = createAudio();
+  let muted = options.initial?.muted ?? false;
+  audio.setMuted(muted);
+  audio.setWeather(weather);
+  // browsers only allow sound after the visitor interacts with the page
+  const unlockAudio = () => audio.unlock();
+  window.addEventListener("pointerdown", unlockAudio);
+  window.addEventListener("keydown", unlockAudio);
+  let radioOn = false;
+  const toggleRadio = () => {
+    audio.unlock();
+    audio.click("radio");
+    radioOn = !radioOn;
+    audio.setRadio(radioOn);
+    options.onRadioChange?.(radioOn);
+    return radioOn;
+  };
+
+  // ---------- time of day and weather ----------
+  let timeMode: TimeMode = options.initial?.timeMode ?? "auto";
+  const MODE_SECONDS: Record<Exclude<TimeMode, "auto">, number> = { day: 14 * 3600 + 10 * 60, sunset: 19 * 3600 + 22 * 60, night: 2 * 3600 + 47 * 60 };
+  const localSeconds = () => {
+    const d = new Date();
+    return d.getHours() * 3600 + d.getMinutes() * 60 + d.getSeconds();
+  };
+  const smoothstep = (a: number, b: number, x: number) => {
+    const k = Math.min(1, Math.max(0, (x - a) / (b - a)));
+    return k * k * (3 - 2 * k);
+  };
+  // daylight from the hour: sunrise around 6–7, sunset around 7–8 pm, with a warm band at each
+  const skyAt = (seconds: number) => {
+    const hr = (seconds / 3600) % 24;
+    const day = smoothstep(5.8, 7.4, hr) * (1 - smoothstep(18.4, 20.2, hr));
+    const dusk = Math.max(Math.exp(-(((hr - 6.7) / 0.55) ** 2)), Math.exp(-(((hr - 19.3) / 0.6) ** 2)));
+    return { day, dusk };
+  };
+  interface Env { hemi: number; sky: string; ground: string; win: number; winColor: string; sun: number; sunColor: string; exposure: number }
+  const ENV: Record<Weather, { night: Env; day: Env; dusk: Env }> = {
+    rain: {
+      night: { hemi: 0.55, sky: "#2a3047", ground: "#1c1109", win: 1.8, winColor: "#4a78b8", sun: 0.3, sunColor: "#4c6a9a", exposure: 1.25 },
+      day: { hemi: 2.4, sky: "#a8b3c0", ground: "#4a3e32", win: 30, winColor: "#d0dcea", sun: 0.9, sunColor: "#c6d2e0", exposure: 1.1 },
+      dusk: { hemi: 1.1, sky: "#6a5a76", ground: "#2a1a12", win: 11, winColor: "#d88a78", sun: 1.0, sunColor: "#d88a6a", exposure: 1.18 },
+    },
+    snow: {
+      night: { hemi: 0.6, sky: "#34405a", ground: "#1c1611", win: 2.6, winColor: "#7f98c8", sun: 0.35, sunColor: "#6a82b0", exposure: 1.25 },
+      day: { hemi: 2.8, sky: "#dfe6ef", ground: "#5a5048", win: 36, winColor: "#eef3ff", sun: 1.1, sunColor: "#e6ecf6", exposure: 1.05 },
+      dusk: { hemi: 1.15, sky: "#7a6a88", ground: "#2a1c14", win: 12, winColor: "#e0a090", sun: 1.1, sunColor: "#e0a080", exposure: 1.15 },
+    },
+    clear: {
+      night: { hemi: 0.5, sky: "#1e2a48", ground: "#140e0a", win: 1.4, winColor: "#5a7ad0", sun: 0.45, sunColor: "#7b95d6", exposure: 1.25 },
+      day: { hemi: 2.6, sky: "#bcd3f2", ground: "#5a4632", win: 32, winColor: "#fff1dc", sun: 4.5, sunColor: "#fff0d6", exposure: 1.02 },
+      dusk: { hemi: 1.2, sky: "#7a6a98", ground: "#2a160c", win: 13, winColor: "#ff9a60", sun: 2.6, sunColor: "#ff8a48", exposure: 1.12 },
+    },
+  };
+  const envTarget = { hemi: 0.55, sky: new THREE.Color(), ground: new THREE.Color(), win: 1.8, winColor: new THREE.Color(), sun: 0.3, sunColor: new THREE.Color(), exposure: 1.25 };
+  const envNow = { hemi: 0.55, sky: new THREE.Color("#2a3047"), ground: new THREE.Color("#1c1109"), win: 1.8, winColor: new THREE.Color("#4a78b8"), sun: 0.3, sunColor: new THREE.Color("#4c6a9a"), exposure: 1.25 };
+  let skyState = { day: 0, dusk: 0 };
+  let conditionsKey = "";
+  const applyConditions = (seconds: number, snap = false) => {
+    skyState = skyAt(seconds);
+    const { day, dusk } = skyState;
+    // only repaint textures when something visible changes (time is quantised to ~2% steps)
+    const key = `${weather}|${Math.round(day * 50)}|${Math.round(dusk * 50)}`;
+    if (key !== conditionsKey) {
+      conditionsKey = key;
+      const fog = campus.setConditions({ day, dusk, weather });
+      (scene.fog as THREE.FogExp2).color.copy(fog.fogColor);
+      (scene.fog as THREE.FogExp2).density = fog.fogDensity;
+      paintBackdrop(day, dusk, weather);
+    }
+    const e = ENV[weather];
+    const mix = (k: "hemi" | "win" | "sun" | "exposure") => THREE.MathUtils.lerp(THREE.MathUtils.lerp(e.night[k], e.day[k], day), e.dusk[k], dusk);
+    const mixC = (k: "sky" | "ground" | "winColor" | "sunColor", out: THREE.Color) =>
+      out.set(e.night[k]).lerp(new THREE.Color(e.day[k]), day).lerp(new THREE.Color(e.dusk[k]), dusk);
+    envTarget.hemi = mix("hemi");
+    envTarget.win = mix("win");
+    envTarget.sun = mix("sun");
+    envTarget.exposure = mix("exposure");
+    mixC("sky", envTarget.sky);
+    mixC("ground", envTarget.ground);
+    mixC("winColor", envTarget.winColor);
+    mixC("sunColor", envTarget.sunColor);
+    if (snap) {
+      Object.assign(envNow, { hemi: envTarget.hemi, win: envTarget.win, sun: envTarget.sun, exposure: envTarget.exposure });
+      envNow.sky.copy(envTarget.sky);
+      envNow.ground.copy(envTarget.ground);
+      envNow.winColor.copy(envTarget.winColor);
+      envNow.sunColor.copy(envTarget.sunColor);
+    }
+    // glass and near rain
+    const rainy = weather === "rain";
+    dropsMat.opacity = rainy ? 0.45 : weather === "snow" ? 0.12 : 0;
+    streakMat.opacity = rainy ? 0.55 : 0;
+    rain.visible = weather !== "clear";
+    rainMat.color.set(weather === "snow" ? "#f2f6ff" : "#8fb2d6");
+    rainMat.opacity = weather === "snow" ? 0.55 : 0.16 + day * 0.06;
+  };
+  const clockSeconds = (t: number) => (timeMode === "auto" ? localSeconds() : MODE_SECONDS[timeMode] + t - modeStartedAt);
+  let modeStartedAt = 0;
+  const emitConditions = () => options.onConditionsChange?.({ weather, timeMode });
+  const setWeather = (w: Weather) => {
+    if (w === weather) return;
+    weather = w;
+    for (let i = 0; i < RAIN; i++) resetDrop(i);
+    audio.setWeather(w);
+    applyConditions(wallClock.secondsAt(clock.elapsedTime));
+    emitConditions();
+  };
+  const setTimeMode = (m: TimeMode) => {
+    timeMode = m;
+    modeStartedAt = clock.elapsedTime;
+    const secs = clockSeconds(clock.elapsedTime);
+    wallClock.sync(clock.elapsedTime, secs);
+    applyConditions(secs);
+    emitConditions();
+  };
+
   // ---------- clicking things in the room ----------
   const raycaster = new THREE.Raycaster();
   const ndc = new THREE.Vector2();
-  const pickTarget = (e: PointerEvent): "lamp" | "telescope" | "cat" | "switch" | null => {
+  const pickTarget = (e: PointerEvent): "lamp" | "telescope" | "cat" | "switch" | "radio" | null => {
     if (view === "telescope") return null;
     const r = renderer.domElement.getBoundingClientRect();
     ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     raycaster.setFromCamera(ndc, camera);
-    const hit = raycaster.intersectObjects([...lampParts, ...telescopeParts, ...cat.parts, ...switchParts], false)[0];
+    const hit = raycaster.intersectObjects([...lampParts, ...telescopeParts, ...cat.parts, ...switchParts, ...radio.parts], false)[0];
     if (!hit) return null;
+    if (radio.parts.includes(hit.object)) return "radio";
     if (lampParts.includes(hit.object)) return "lamp";
     if (switchParts.includes(hit.object)) return "switch";
     return (cat.parts as THREE.Object3D[]).includes(hit.object) ? "cat" : "telescope";
@@ -1280,7 +1461,10 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
       const hit = pickTarget(e);
       if (hit === "lamp") toggleLamp();
       else if (hit === "cat") cat.stir();
-      else if (hit === "switch") options.onLightSwitch?.();
+      else if (hit === "switch") {
+        audio.click("switch");
+        options.onLightSwitch?.();
+      } else if (hit === "radio") toggleRadio();
       else if (hit === "telescope") setView("telescope");
     }
     downAt = dragFrom = null;
@@ -1395,6 +1579,7 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
     nightBackdrop.visible = false;
     camera.near = 3.2; // past the rain falling just outside the window
     finish.uniforms.uScope.value = 1;
+    audio.setOutside(1);
     zoom = { t: 0, dur: reducedMotion ? 0.01 : 2.6 };
     updateScope(0);
   };
@@ -1405,6 +1590,7 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
     nightBackdrop.visible = true;
     finish.uniforms.uRadius.value = 0.46;
     finish.uniforms.uScope.value = 0;
+    audio.setOutside(0);
     camera.near = 0.05;
     camera.position.copy(eyePose.pos);
     controls.target.copy(eyePose.target);
@@ -1512,6 +1698,7 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
   const tmpColor = new THREE.Color();
   const rainbowColor = new THREE.Color();
   let frame = 0;
+  let conditionsTick = 0;
   let lastClockLabel = "";
   const PHONE_X = phone.position.x;
   let shadowTick = 0;
@@ -1558,6 +1745,11 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
       const dy = rainSpeed[i] * dt;
       rainPos[o + 1] -= dy;
       rainPos[o + 4] -= dy;
+      if (weather === "snow") {
+        const sway = Math.sin(t * 0.8 + i * 1.7) * 0.12 * dt;
+        rainPos[o] += sway;
+        rainPos[o + 3] += sway;
+      }
       if (rainPos[o + 4] < rainBox.y0) resetDrop(i, rainBox.y1);
     }
     rainGeo.attributes.position.needsUpdate = true;
@@ -1646,18 +1838,44 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
     // the figure moves, so refresh shadow maps ~10 times a second rather than baking them once
     if (!reducedMotion && ++shadowTick % 6 === 0) renderer.shadowMap.needsUpdate = true;
 
-    // distant lightning
+    // time of day: follow the clock (re-evaluated a few times a minute) and ease the room toward it
+    if (++conditionsTick % 240 === 0) applyConditions(wallClock.secondsAt(t));
+    const ek = damp(1.5, dt);
+    envNow.hemi += (envTarget.hemi - envNow.hemi) * ek;
+    envNow.win += (envTarget.win - envNow.win) * ek;
+    envNow.sun += (envTarget.sun - envNow.sun) * ek;
+    envNow.exposure += (envTarget.exposure - envNow.exposure) * ek;
+    envNow.sky.lerp(envTarget.sky, ek);
+    envNow.ground.lerp(envTarget.ground, ek);
+    envNow.winColor.lerp(envTarget.winColor, ek);
+    envNow.sunColor.lerp(envTarget.sunColor, ek);
+    hemi.intensity = envNow.hemi;
+    hemi.color.copy(envNow.sky);
+    hemi.groundColor.copy(envNow.ground);
+    windowLight.color.copy(envNow.winColor);
+    daylightFill.color.copy(envNow.winColor);
+    daylightFill.intensity = envNow.win * 0.28;
+    moon.color.copy(envNow.sunColor);
+    renderer.toneMappingExposure = envNow.exposure;
+
+    // distant lightning (and thunder a moment later), only in the rain and mostly at night
     if (t > nextLightning) {
-      lightning = 1;
+      if (weather === "rain" && skyState.day < 0.7) {
+        lightning = 1;
+        audio.thunder(rr(0.8, 2.6));
+      }
       nextLightning = t + rr(12, 24);
     }
+    let strobe = 0;
     if (lightning > 0) {
       lightning = Math.max(0, lightning - dt * 2.2);
-      const strobe = lightning * (0.6 + 0.4 * Math.sin(lightning * 40));
-      campus.sky.color.setScalar(1 + strobe * 1.6);
-      windowLight.intensity = 1.8 + strobe * 10;
-      moon.intensity = 0.3 + strobe * 2;
+      strobe = lightning * (0.6 + 0.4 * Math.sin(lightning * 40));
     }
+    campus.sky.color.setScalar(1 + strobe * 1.6);
+    windowLight.intensity = envNow.win + strobe * 10;
+    moon.intensity = envNow.sun + strobe * 2;
+
+    radio.update(dt, radioOn, audio.radioPulse());
 
     // camera
     pointer.lerp(pointerTarget, damp(3, dt));
@@ -1697,6 +1915,14 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
     composer.render(dt);
   };
 
+  // open already matching the visitor's time and the remembered weather, with no fade
+  wallClock.sync(0, clockSeconds(0));
+  applyConditions(clockSeconds(0), true);
+  hemi.intensity = envNow.hemi;
+  windowLight.intensity = envNow.win;
+  moon.intensity = envNow.sun;
+  renderer.toneMappingExposure = envNow.exposure;
+
   // Compile every shader before the first frame so the scene opens without a hitch
   let disposed = false;
   renderer
@@ -1716,6 +1942,13 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
     toggleLamp,
     setLighting,
     getLighting: () => ({ ...lighting }),
+    setWeather,
+    setTimeMode,
+    setMuted: (m: boolean) => {
+      muted = m;
+      audio.setMuted(m); // the engine itself starts on the visitor's first click or key press
+    },
+    toggleRadio,
     dispose: () => {
       disposed = true;
       cancelAnimationFrame(frame);
@@ -1726,6 +1959,9 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
       renderer.domElement.removeEventListener("pointerup", onPointerUp);
       renderer.domElement.removeEventListener("pointermove", onHover);
       renderer.domElement.removeEventListener("wheel", onWheel);
+      window.removeEventListener("pointerdown", unlockAudio);
+      window.removeEventListener("keydown", unlockAudio);
+      audio.dispose();
       controls.dispose();
       composer.dispose();
       rt.dispose();

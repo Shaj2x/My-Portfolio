@@ -331,7 +331,8 @@ export function createPhoneScreen(track: Track) {
 // ---------- wall clock ----------
 
 /** A round wall clock that starts at the scene's 2:47 and keeps real time, second hand ticking. */
-export function createWallClock(track: Track, startSeconds: number) {
+export function createWallClock(track: Track, initialSeconds: number) {
+  let startSeconds = initialSeconds;
   const group = new THREE.Group();
   const c = document.createElement("canvas");
   c.width = c.height = 256;
@@ -394,6 +395,10 @@ export function createWallClock(track: Track, startSeconds: number) {
 
   /** time in seconds since midnight for elapsed scene time t */
   const secondsAt = (t: number) => startSeconds + t;
+  /** make the clock read `seconds` (since midnight) at scene time t */
+  const sync = (t: number, seconds: number) => {
+    startSeconds = seconds - t;
+  };
   const update = (t: number) => {
     const s = secondsAt(t);
     const whole = Math.floor(s);
@@ -413,5 +418,102 @@ export function createWallClock(track: Track, startSeconds: number) {
     const h = h24 % 12 || 12;
     return { hm: `${h}:${String(m).padStart(2, "0")}`, full: `${h}:${String(m).padStart(2, "0")} ${h24 < 12 ? "AM" : "PM"}` };
   };
-  return { group, update, label };
+  return { group, update, label, sync, secondsAt };
+}
+
+// ---------- radio ----------
+
+/** A small wooden valve-style radio with a glowing dial. */
+export function createRadio(track: Track) {
+  const group = new THREE.Group();
+  const wood = track(new THREE.MeshStandardMaterial({ color: "#6b4426", roughness: 0.45 }));
+  const brass = track(new THREE.MeshStandardMaterial({ color: "#b58a48", metalness: 0.85, roughness: 0.3 }));
+  const dark = track(new THREE.MeshStandardMaterial({ color: "#1a1512", roughness: 0.6 }));
+
+  const grilleC = document.createElement("canvas");
+  grilleC.width = grilleC.height = 128;
+  const g = grilleC.getContext("2d")!;
+  g.fillStyle = "#3b2a1c";
+  g.fillRect(0, 0, 128, 128);
+  g.strokeStyle = "rgba(255,230,190,0.08)";
+  for (let i = 0; i < 128; i += 3) {
+    g.beginPath();
+    g.moveTo(i, 0);
+    g.lineTo(i, 128);
+    g.stroke();
+    g.beginPath();
+    g.moveTo(0, i);
+    g.lineTo(128, i);
+    g.stroke();
+  }
+  const grilleTex = track(new THREE.CanvasTexture(grilleC));
+  grilleTex.colorSpace = THREE.SRGBColorSpace;
+
+  const dialC = document.createElement("canvas");
+  dialC.width = 256;
+  dialC.height = 64;
+  const d = dialC.getContext("2d")!;
+  d.fillStyle = "#f3d9a0";
+  d.fillRect(0, 0, 256, 64);
+  d.fillStyle = "#3a2512";
+  d.font = "600 13px Georgia, serif";
+  d.textAlign = "center";
+  [88, 92, 96, 100, 104, 108].forEach((f, i) => {
+    const x = 22 + i * 42;
+    d.fillText(String(f), x, 44);
+    d.fillRect(x - 0.5, 12, 1, 14);
+  });
+  d.fillStyle = "#a3281c";
+  d.fillRect(22 + ((94.9 - 88) / 20) * 210, 6, 2.5, 34); // the needle, on 94.9
+  const dialTex = track(new THREE.CanvasTexture(dialC));
+  dialTex.colorSpace = THREE.SRGBColorSpace;
+
+  const add = (m: THREE.Mesh) => {
+    m.castShadow = true;
+    m.receiveShadow = true;
+    group.add(m);
+    return m;
+  };
+  const W = 0.26;
+  const H = 0.15;
+  const D = 0.12;
+  const bodyGeo = track(new THREE.BoxGeometry(W, H, D));
+  const body = add(new THREE.Mesh(bodyGeo, wood));
+  body.position.y = H / 2;
+  const top = add(new THREE.Mesh(track(new THREE.CylinderGeometry(D / 2, D / 2, W, 24, 1, false, 0, Math.PI)), wood));
+  // a half cylinder laid along the width makes the rounded top; flatten it into a gentle arch
+  top.rotation.z = Math.PI / 2;
+  top.scale.set(0.45, 1, 1);
+  top.position.y = H;
+  const grille = add(new THREE.Mesh(track(new THREE.PlaneGeometry(W * 0.52, H * 0.72)), track(new THREE.MeshStandardMaterial({ map: grilleTex, roughness: 0.9 }))));
+  grille.position.set(-W * 0.19, H * 0.5, D / 2 + 0.001);
+  const dialMat = track(new THREE.MeshStandardMaterial({ map: dialTex, emissive: "#ffb45a", emissiveMap: dialTex, emissiveIntensity: 0.05, roughness: 0.4 }));
+  const dial = add(new THREE.Mesh(track(new THREE.PlaneGeometry(W * 0.36, H * 0.26)), dialMat));
+  dial.position.set(W * 0.25, H * 0.66, D / 2 + 0.001);
+  for (const x of [0.16, 0.34]) {
+    const knob = add(new THREE.Mesh(track(new THREE.CylinderGeometry(0.014, 0.016, 0.014, 20)), brass));
+    knob.rotation.x = Math.PI / 2;
+    knob.position.set(W * x, H * 0.28, D / 2 + 0.007);
+  }
+  const antenna = add(new THREE.Mesh(track(new THREE.CylinderGeometry(0.0022, 0.003, 0.34, 6)), brass));
+  antenna.position.set(W * 0.38, H + 0.02 + 0.15, -D * 0.2);
+  antenna.rotation.z = -0.5;
+  const feet = add(new THREE.Mesh(track(new THREE.BoxGeometry(W * 0.9, 0.008, D * 0.8)), dark));
+  feet.position.y = 0.004;
+  const glow = new THREE.PointLight("#ffab55", 0, 0.9, 2);
+  glow.position.set(W * 0.25, H * 0.66, D / 2 + 0.05);
+  group.add(glow);
+
+  const parts: THREE.Object3D[] = [];
+  group.traverse((o) => {
+    if ((o as THREE.Mesh).isMesh) parts.push(o);
+  });
+  let level = 0;
+  const update = (dt: number, on: boolean, pulse: number) => {
+    level += ((on ? 1 : 0) - level) * (1 - Math.exp(-6 * dt));
+    dialMat.emissiveIntensity = 0.05 + level * (1.2 + pulse * 0.6);
+    glow.intensity = level * (0.25 + pulse * 0.2);
+    body.scale.y = 1 + pulse * 0.008 * level; // the cabinet thumps with the kick
+  };
+  return { group, parts, update };
 }
