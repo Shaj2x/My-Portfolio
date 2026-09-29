@@ -1012,7 +1012,7 @@ export function createRoomScene(container: HTMLElement): RoomSceneHandle {
   hallFill.position.set(door.x1 + 0.15, 1.3, ROOM.front + 0.5);
   doorway.add(hallFill);
 
-  // Nothing that casts a shadow moves, so render shadow maps once instead of every frame
+  // Shadow maps are refreshed on a slow tick in the loop rather than every frame
   renderer.shadowMap.autoUpdate = false;
   renderer.shadowMap.needsUpdate = true;
 
@@ -1135,6 +1135,7 @@ export function createRoomScene(container: HTMLElement): RoomSceneHandle {
   const desired = new THREE.Vector3();
   const bulbColor = new THREE.Color();
   let frame = 0;
+  let shadowTick = 0;
   let slowFrames = 0;
   let sampled = 0;
 
@@ -1207,6 +1208,8 @@ export function createRoomScene(container: HTMLElement): RoomSceneHandle {
 
     // subtle breathing
     person.update(t, reducedMotion);
+    // the figure moves, so refresh shadow maps ~10 times a second rather than baking them once
+    if (!reducedMotion && ++shadowTick % 6 === 0) renderer.shadowMap.needsUpdate = true;
 
     // distant lightning
     if (t > nextLightning) {

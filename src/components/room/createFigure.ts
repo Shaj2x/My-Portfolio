@@ -158,24 +158,28 @@ export function createFigure(track: Track, rand: () => number): Figure {
   const shoeMat = track(new THREE.MeshStandardMaterial({ color: "#1a1a1c", roughness: 0.6 }));
   const soleMat = track(new THREE.MeshStandardMaterial({ color: "#c9c3b8", roughness: 0.8 }));
 
-  const add = (geo: THREE.BufferGeometry, material: THREE.Material, parent: THREE.Object3D = group) => {
+  // everything above the hips hangs off this pivot so the body can lean as one piece
+  const upper = new THREE.Group();
+  group.add(upper);
+
+  const add = (geo: THREE.BufferGeometry, material: THREE.Material, parent: THREE.Object3D = upper) => {
     const m = new THREE.Mesh(track(geo), material);
     m.castShadow = true;
     m.receiveShadow = true;
     parent.add(m);
     return m;
   };
-  const cap = (p: THREE.Vector3, r: number, material: THREE.Material, parent: THREE.Object3D = group) => {
+  const cap = (p: THREE.Vector3, r: number, material: THREE.Material, parent: THREE.Object3D = upper) => {
     const m = add(new THREE.SphereGeometry(r, 20, 14), material, parent);
     m.position.copy(p);
     return m;
   };
-  const limb = (points: THREE.Vector3[], radii: number[], material: THREE.Material, caps = true) => {
+  const limb = (points: THREE.Vector3[], radii: number[], material: THREE.Material, caps = true, parent: THREE.Object3D = upper) => {
     const { geo, startR, endR } = limbGeometry(points, radii);
-    const mesh = add(geo, material);
+    const mesh = add(geo, material, parent);
     if (caps) {
-      cap(points[0], startR, material);
-      cap(points[points.length - 1], endR, material);
+      cap(points[0], startR, material, parent);
+      cap(points[points.length - 1], endR, material, parent);
     }
     return mesh;
   };
@@ -250,7 +254,7 @@ export function createFigure(track: Track, rand: () => number): Figure {
   head.position.set(0, 0.8, -0.155);
   const HEAD_BASE = new THREE.Euler(0.14, -0.3, 0.02);
   head.rotation.copy(HEAD_BASE);
-  group.add(head);
+  upper.add(head);
 
   const HX = 0.074;
   const HY = 0.098;
@@ -369,7 +373,8 @@ export function createFigure(track: Track, rand: () => number): Figure {
     // lookAt points local +z away from the target, so aiming at `forward` runs the fingers (-z) along it
     const m = new THREE.Matrix4().lookAt(new THREE.Vector3(), forward, up);
     hand.quaternion.setFromRotationMatrix(m);
-    group.add(hand);
+    upper.add(hand);
+    const fingers: THREE.Group[] = [];
     const palm = add(new THREE.SphereGeometry(1, 20, 14), skinMat, hand);
     palm.scale.set(0.036, 0.015, 0.045);
     palm.position.z = -0.04;
@@ -381,9 +386,16 @@ export function createFigure(track: Track, rand: () => number): Figure {
         const a = (k / 3) * curl;
         pts.push(new THREE.Vector3(x, -Math.sin(a) * len * 0.6, -0.075 - Math.cos(a) * len * (k / 3)));
       }
+      // each finger hinges at its knuckle so it can tap
+      const knuckle = pts[0].clone();
+      const finger = new THREE.Group();
+      finger.position.copy(knuckle);
+      hand.add(finger);
+      fingers.push(finger);
+      for (const pt of pts) pt.sub(knuckle);
       const { geo } = limbGeometry(pts, [0.0085, 0.0078, 0.007], 12, 10);
-      add(geo, skinMat, hand);
-      const tip = add(new THREE.SphereGeometry(0.007, 10, 8), skinMat, hand);
+      add(geo, skinMat, finger);
+      const tip = add(new THREE.SphereGeometry(0.007, 10, 8), skinMat, finger);
       tip.position.copy(pts[pts.length - 1]);
     }
     const thumb = limbGeometry(
@@ -393,10 +405,11 @@ export function createFigure(track: Track, rand: () => number): Figure {
       10,
     );
     add(thumb.geo, skinMat, hand);
-    return hand;
+    return { hand, fingers };
   };
   const rWrist = rightArm[rightArm.length - 1];
-  makeHand(rWrist.clone().add(new THREE.Vector3(0.004, -0.012, -0.012)), new THREE.Vector3(0.28, -0.05, -1).normalize(), new THREE.Vector3(0, 1, 0), 0.5, -1);
+  const rWristRest = rWrist.clone().add(new THREE.Vector3(0.004, -0.012, -0.012));
+  const typingHand = makeHand(rWrist.clone().add(new THREE.Vector3(0.004, -0.012, -0.012)), new THREE.Vector3(0.28, -0.05, -1).normalize(), new THREE.Vector3(0, 1, 0), 0.5, -1);
   const lWrist = leftArm[leftArm.length - 1];
   // left hand cupped under the chin, palm facing the face
   makeHand(lWrist.clone().add(new THREE.Vector3(0.008, 0.02, 0.004)), new THREE.Vector3(0.35, 0.8, 0.1).normalize(), new THREE.Vector3(0, 0, -1), 1.1, 1);
@@ -414,24 +427,72 @@ export function createFigure(track: Track, rand: () => number): Figure {
       ],
       [0.086, 0.08, 0.062, 0.052, 0.046],
       pantsMat,
+      true,
+      group,
     );
-    const shoe = add(new THREE.SphereGeometry(1, 24, 16), shoeMat);
+    const shoe = add(new THREE.SphereGeometry(1, 24, 16), shoeMat, group);
     shoe.scale.set(0.048, 0.042, 0.13);
     shoe.position.set(x * 1.25, -0.49, -0.53);
-    const sole = add(new THREE.CylinderGeometry(1, 1, 1, 24), soleMat);
+    const sole = add(new THREE.CylinderGeometry(1, 1, 1, 24), soleMat, group);
     sole.scale.set(0.05, 0.018, 0.135);
     sole.position.set(x * 1.25, -0.52, -0.53);
   }
+
+  // ---------- idle behaviour ----------
+  // Head glances: every so often look down at the phone or out of the window, hold, and come back.
+  const GLANCES = [
+    { x: 0.32, y: -0.52, z: 0.0 }, // phone, down and to the right
+    { x: -0.06, y: -0.62, z: -0.03 }, // window, up and further right
+    { x: 0.05, y: 0.12, z: 0.04 }, // a moment of thought, looking away from the screen
+  ];
+  let glance = { x: 0, y: 0, z: 0 };
+  let glanceStart = 7;
+  let glanceHold = 2.4;
+  const glanceMove = 0.9;
+  const easeInOut = (x: number) => (x < 0.5 ? 4 * x ** 3 : 1 - (-2 * x + 2) ** 3 / 2);
+  // Typing comes in bursts with pauses to read
+  const typingAt = (t: number) => {
+    const cycle = t % 9;
+    return smooth(0.3, 0.8, cycle) * (1 - smooth(4.6, 5.2, cycle));
+  };
+  const FINGER_PHASE = [0, 2.1, 4.3, 1.2];
+  const FINGER_RATE = [11.3, 13.7, 12.1, 10.4];
 
   const update = (t: number, still: boolean) => {
     const b = Math.sin(t * 1.35);
     torso.scale.set(1 + b * 0.006, 1 + b * 0.004, 1 + b * 0.012);
     if (still) return;
+
+    // slow lean toward the screen and back, with a slight weight shift
+    const lean = Math.sin(t * 0.11) * 0.5 + Math.sin(t * 0.047 + 2) * 0.5;
+    upper.rotation.set(0.025 + lean * 0.03 + b * 0.004, Math.sin(t * 0.07) * 0.012, Math.sin(t * 0.09 + 1) * 0.01);
+
+    // head glance state
+    if (t > glanceStart + glanceMove * 2 + glanceHold) {
+      glance = GLANCES[Math.floor(rand() * GLANCES.length)];
+      glanceStart = t + 6 + rand() * 9;
+      glanceHold = 1.6 + rand() * 1.8;
+    }
+    const since = t - glanceStart;
+    let g = 0;
+    if (since > 0) {
+      if (since < glanceMove) g = easeInOut(since / glanceMove);
+      else if (since < glanceMove + glanceHold) g = 1;
+      else g = 1 - easeInOut(Math.min(1, (since - glanceMove - glanceHold) / glanceMove));
+    }
     head.rotation.set(
-      HEAD_BASE.x + Math.sin(t * 0.45) * 0.018 + b * 0.004,
-      HEAD_BASE.y + Math.sin(t * 0.21 + 1) * 0.035,
-      HEAD_BASE.z + Math.sin(t * 0.33) * 0.01,
+      HEAD_BASE.x + Math.sin(t * 0.45) * 0.018 + b * 0.004 + glance.x * g,
+      HEAD_BASE.y + Math.sin(t * 0.21 + 1) * 0.035 + glance.y * g,
+      HEAD_BASE.z + Math.sin(t * 0.33) * 0.01 + glance.z * g,
     );
+
+    // typing: fingers tap in quick, uneven strokes; they rest while he looks away
+    const typing = typingAt(t) * (1 - g);
+    typingHand.fingers.forEach((f, i) => {
+      const tap = Math.max(0, Math.sin(t * FINGER_RATE[i] + FINGER_PHASE[i])) ** 6;
+      f.rotation.x = -0.05 - tap * 0.4 * typing;
+    });
+    typingHand.hand.position.x = rWristRest.x + Math.sin(t * 0.8) * 0.006 * typing;
   };
 
   return { group, torso, head, update };
