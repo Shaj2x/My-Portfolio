@@ -8,6 +8,7 @@ import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
 import { RectAreaLightUniformsLib } from "three/examples/jsm/lights/RectAreaLightUniformsLib.js";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { createFigure } from "./createFigure";
+import { createCampus } from "./createCampus";
 
 /*
  * A late-night study room, built entirely from primitives and canvas textures:
@@ -18,7 +19,8 @@ import { createFigure } from "./createFigure";
  * The back wall is at z = -3; the camera starts in the doorway at z ≈ 5.
  */
 
-export type RoomView = "doorway" | "explore";
+export type RoomView = "doorway" | "explore" | "telescope";
+type RoomCameraView = Exclude<RoomView, "telescope">;
 
 export interface RoomSceneHandle {
   setView: (view: RoomView) => void;
@@ -29,7 +31,7 @@ export interface RoomSceneHandle {
 
 const ROOM = { left: -4.3, right: 4.2, back: -3, front: 4.2, height: 3.2 };
 
-const VIEWS: Record<RoomView, { pos: THREE.Vector3; target: THREE.Vector3; fov: number }> = {
+const VIEWS: Record<RoomCameraView, { pos: THREE.Vector3; target: THREE.Vector3; fov: number }> = {
   doorway: { pos: new THREE.Vector3(0.3, 1.5, 5.4), target: new THREE.Vector3(-0.1, 1.25, -3), fov: 36 },
   explore: { pos: new THREE.Vector3(0.9, 1.6, 1.3), target: new THREE.Vector3(-1.5, 1.05, -2.3), fov: 50 },
 };
@@ -85,6 +87,10 @@ function noiseFill(ctx: CanvasRenderingContext2D, w: number, h: number, base: st
 export interface RoomSceneOptions {
   /** called when the lamp is switched, including by clicking it in the scene */
   onLampChange?: (on: boolean) => void;
+  /** called when the view changes, including by clicking the telescope in the scene */
+  onViewChange?: (view: RoomView) => void;
+  /** the campus landmark nearest the centre of the telescope, or null */
+  onScopeTarget?: (landmark: { name: string; detail: string } | null) => void;
 }
 
 export function createRoomScene(container: HTMLElement, options: RoomSceneOptions = {}): RoomSceneHandle {
@@ -113,7 +119,7 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
   const scene = new THREE.Scene();
   scene.background = new THREE.Color("#030407");
 
-  const camera = new THREE.PerspectiveCamera(VIEWS.doorway.fov, container.clientWidth / container.clientHeight, 0.05, 60);
+  const camera = new THREE.PerspectiveCamera(VIEWS.doorway.fov, container.clientWidth / container.clientHeight, 0.05, 1500);
   camera.position.copy(VIEWS.doorway.pos);
 
   const controls = new OrbitControls(camera, renderer.domElement);
@@ -307,63 +313,6 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
     }),
   );
 
-  // City skyline with lit windows and bokeh, slightly blurred for depth of field
-  const cityTex = track(
-    canvasTexture(2048, 1024, (c, w, h) => {
-      const sky = c.createLinearGradient(0, 0, 0, h);
-      sky.addColorStop(0, "#050b16");
-      sky.addColorStop(0.5, "#0c1a2d");
-      sky.addColorStop(1, "#16263a");
-      c.fillStyle = sky;
-      c.fillRect(0, 0, w, h);
-      // Draw sharp into a scratch layer, then composite it once with a blur —
-      // filtering every individual draw call is extremely slow.
-      const layer = document.createElement("canvas");
-      layer.width = w;
-      layer.height = h;
-      const l = layer.getContext("2d")!;
-      const drawLayer = (count: number, minH: number, maxH: number, tone: number, winAlpha: number) => {
-        for (let i = 0; i < count; i++) {
-          const bw = rr(50, 160);
-          const bh = rr(minH, maxH);
-          const bx = rr(-50, w);
-          const by = h - bh;
-          l.fillStyle = `rgb(${tone},${tone + 6},${tone + 16})`;
-          l.fillRect(bx, by, bw, bh);
-          for (let wy = by + 10; wy < h - 6; wy += 14) {
-            for (let wx = bx + 6; wx < bx + bw - 8; wx += 12) {
-              if (rand() < 0.3) {
-                const warm = rand() < 0.75;
-                l.fillStyle = warm
-                  ? `rgba(255,${Math.floor(rr(150, 200))},${Math.floor(rr(70, 120))},${winAlpha * rr(0.4, 1)})`
-                  : `rgba(110,210,255,${winAlpha * rr(0.4, 1)})`;
-                l.fillRect(wx, wy, 6, 7);
-              }
-            }
-          }
-        }
-      };
-      drawLayer(40, 250, 700, 14, 0.55);
-      drawLayer(55, 150, 500, 10, 0.8);
-      drawLayer(30, 80, 260, 7, 1);
-      c.filter = "blur(2px)";
-      c.drawImage(layer, 0, 0);
-
-      l.clearRect(0, 0, w, h);
-      for (let i = 0; i < 90; i++) {
-        const warm = rand() < 0.7;
-        const r = rr(6, 20);
-        l.fillStyle = warm ? `rgba(255,170,90,${rr(0.25, 0.7)})` : `rgba(90,200,255,${rr(0.25, 0.6)})`;
-        l.beginPath();
-        l.arc(rand() * w, rr(h * 0.55, h), r, 0, Math.PI * 2);
-        l.fill();
-      }
-      c.filter = "blur(6px)";
-      c.drawImage(layer, 0, 0);
-      c.filter = "none";
-    }),
-  );
-
   // Droplets stuck to the glass
   const dropsTex = track(
     canvasTexture(512, 512, (c, w, h) => {
@@ -491,10 +440,10 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
   box(0.035, winH, 0.1, frameMat, winCx, winCy, ROOM.back, scene, false);
   box(winW + 0.2, 0.04, 0.22, frameMat, winCx, win.y0 - 0.06, ROOM.back + 0.07, scene, false); // sill
 
-  const cityMat = track(new THREE.MeshBasicMaterial({ map: cityTex, color: "#d8e0ee" }));
-  const city = new THREE.Mesh(track(new THREE.PlaneGeometry(14, 7)), cityMat);
-  city.position.set(winCx, 1.2, ROOM.back - 5.5);
-  scene.add(city);
+  // Western's campus, out past the rain
+  const campus = createCampus(track, rand);
+  scene.add(campus.group);
+  scene.fog = new THREE.FogExp2("#0b1320", 0.0032);
 
   const dropsMat = track(new THREE.MeshBasicMaterial({ map: dropsTex, transparent: true, depthWrite: false, opacity: 0.45 }));
   const streakMat = track(new THREE.MeshBasicMaterial({ map: streakTex, transparent: true, depthWrite: false, opacity: 0.55 }));
@@ -1061,14 +1010,24 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
   composer.addPass(new OutputPass());
   // Final grade: warm vignette, fine film grain, and a fade in from black
   const finish = new ShaderPass({
-    uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uFade: { value: 0 } },
+    uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uFade: { value: 0 }, uScope: { value: 0 }, uAspect: { value: 1 } },
     vertexShader: /* glsl */ `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
     fragmentShader: /* glsl */ `
-      uniform sampler2D tDiffuse; uniform float uTime; uniform float uFade; varying vec2 vUv;
+      uniform sampler2D tDiffuse; uniform float uTime; uniform float uFade; uniform float uScope; uniform float uAspect; varying vec2 vUv;
       float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
       void main() {
         vec4 c = texture2D(tDiffuse, vUv);
         vec2 d = vUv - 0.5;
+        // telescope eyepiece: round aperture, darkened rim, a touch of colour fringing at the edge
+        float r = length(d * vec2(uAspect, 1.0));
+        float R = 0.46;
+        if (uScope > 0.0) {
+          float ca = smoothstep(R * 0.45, R, r) * 0.006 * uScope;
+          c.r = texture2D(tDiffuse, vUv + d * ca).r;
+          c.b = texture2D(tDiffuse, vUv - d * ca).b;
+        }
+        float aperture = smoothstep(R, R - 0.01, r) * (0.35 + 0.65 * smoothstep(R, R * 0.6, r));
+        c.rgb *= mix(1.0, aperture, uScope);
         float vig = smoothstep(0.85, 0.2, length(d * vec2(1.1, 1.25)));
         c.rgb *= mix(vec3(0.55, 0.45, 0.4), vec3(1.0), vig);
         c.rgb += (hash(vUv * 1000.0 + fract(uTime * 7.0)) - 0.5) * 0.022;
@@ -1076,6 +1035,54 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
       }`,
   });
   composer.addPass(finish);
+
+  // ---------- telescope ----------
+  // Brass refractor on a wooden tripod, aimed out of the window toward campus
+  const scopeMount = new THREE.Vector3(0.72, 1.22, -2.42);
+  const scopeDir = new THREE.Vector3(winCx, winCy + 0.1, ROOM.back).sub(scopeMount).normalize();
+  const brassMat = mat({ color: "#b58a48", metalness: 0.9, roughness: 0.28 });
+  const blackMat = mat({ color: "#121214", roughness: 0.45, metalness: 0.3 });
+  const tripodWood = mat({ color: "#5a3a22", roughness: 0.55 });
+  const telescopeParts: THREE.Mesh[] = [];
+  const scopePart = (geo: THREE.BufferGeometry, material: THREE.Material, parent: THREE.Object3D) => {
+    const m = new THREE.Mesh(track(geo), material);
+    m.castShadow = true;
+    m.receiveShadow = true;
+    parent.add(m);
+    telescopeParts.push(m);
+    return m;
+  };
+  const tube = new THREE.Group();
+  tube.position.copy(scopeMount);
+  tube.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), scopeDir);
+  scene.add(tube);
+  scopePart(new THREE.CylinderGeometry(0.043, 0.036, 0.78, 32), brassMat, tube).position.y = 0.1;
+  scopePart(new THREE.CylinderGeometry(0.05, 0.05, 0.16, 32, 1, true), blackMat, tube).position.y = 0.44; // dew shield
+  for (const y of [-0.2, 0.1, 0.36]) scopePart(new THREE.TorusGeometry(0.041, 0.006, 8, 32), brassMat, tube).position.y = y;
+  tube.children.slice(-3).forEach((m) => (m.rotation.x = Math.PI / 2));
+  const lensMat = mat({ color: "#0c1624", roughness: 0.05, metalness: 0.2, emissive: "#1c2c48", emissiveIntensity: 0.4 });
+  const lens = scopePart(new THREE.CircleGeometry(0.044, 32), lensMat, tube);
+  lens.position.y = 0.47;
+  lens.rotation.x = -Math.PI / 2;
+  scopePart(new THREE.CylinderGeometry(0.02, 0.024, 0.09, 20), blackMat, tube).position.y = -0.33; // focuser
+  scopePart(new THREE.CylinderGeometry(0.013, 0.013, 0.06, 16), blackMat, tube).position.y = -0.4; // eyepiece
+  const finder = scopePart(new THREE.CylinderGeometry(0.012, 0.012, 0.22, 16), blackMat, tube);
+  finder.position.set(0.055, 0.02, 0.03);
+  scopePart(new THREE.BoxGeometry(0.06, 0.06, 0.09), blackMat, tube).position.set(0, 0, -0.05); // mount saddle
+  // tripod
+  const head = scopeMount.clone().add(new THREE.Vector3(0, -0.07, 0));
+  scopePart(new THREE.CylinderGeometry(0.035, 0.04, 0.06, 20), brassMat, scene).position.copy(head);
+  const up = new THREE.Vector3(0, 1, 0);
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * Math.PI * 2 + 0.4;
+    const foot = new THREE.Vector3(head.x + Math.cos(a) * 0.36, 0, head.z + Math.sin(a) * 0.36);
+    const len = head.distanceTo(foot);
+    const leg = scopePart(new THREE.CylinderGeometry(0.014, 0.011, len, 10), tripodWood, scene);
+    leg.position.copy(head).lerp(foot, 0.5);
+    leg.quaternion.setFromUnitVectors(up, foot.clone().sub(head).normalize());
+    const tip = scopePart(new THREE.SphereGeometry(0.014, 10, 8), brassMat, scene);
+    tip.position.copy(foot).setY(0.012);
+  }
 
   // ---------- interaction ----------
 
@@ -1092,7 +1099,7 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
   // Clicking the lamp (or calling toggleLamp) fades it like a real bulb: fast on, a short filament glow off.
   let lampOn = true;
   let lampLevel = 1;
-  const lampParts = [lampBase, lampStem, shade, bulbGlow];
+  const lampParts: THREE.Object3D[] = [lampBase, lampStem, shade, bulbGlow];
   const BULB_ON = new THREE.Color(3, 2, 1.1);
   const BULB_OFF = new THREE.Color(0.16, 0.13, 0.1);
   const SHADE_ON = new THREE.Color("#e8cfa6");
@@ -1108,51 +1115,201 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
     options.onLampChange?.(lampOn);
     return lampOn;
   };
+
+  // ---------- clicking things in the room ----------
   const raycaster = new THREE.Raycaster();
   const ndc = new THREE.Vector2();
-  const hitsLamp = (e: PointerEvent) => {
+  const pickTarget = (e: PointerEvent): "lamp" | "telescope" | null => {
+    if (view === "telescope") return null;
     const r = renderer.domElement.getBoundingClientRect();
     ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     raycaster.setFromCamera(ndc, camera);
-    return raycaster.intersectObjects(lampParts, false).length > 0;
+    const hit = raycaster.intersectObjects([...lampParts, ...telescopeParts], false)[0];
+    if (!hit) return null;
+    return lampParts.includes(hit.object) ? "lamp" : "telescope";
   };
-  // a press that drags (orbiting) shouldn't count as a click
+  // a press that drags (orbiting, aiming the telescope) shouldn't count as a click
   let downAt: { x: number; y: number } | null = null;
-  const onPointerDown = (e: PointerEvent) => (downAt = { x: e.clientX, y: e.clientY });
+  let dragFrom: { x: number; y: number } | null = null;
+  const onPointerDown = (e: PointerEvent) => {
+    downAt = { x: e.clientX, y: e.clientY };
+    dragFrom = { x: e.clientX, y: e.clientY };
+  };
   const onPointerUp = (e: PointerEvent) => {
-    if (downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < 6 && hitsLamp(e)) toggleLamp();
-    downAt = null;
+    if (downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < 6) {
+      const hit = pickTarget(e);
+      if (hit === "lamp") toggleLamp();
+      else if (hit === "telescope") setView("telescope");
+    }
+    downAt = dragFrom = null;
   };
   const onHover = (e: PointerEvent) => {
+    if (view === "telescope") {
+      renderer.domElement.style.cursor = e.buttons ? "grabbing" : "grab";
+      if (e.buttons && dragFrom && scopeActive) {
+        // drag the view: the scene follows the pointer, scaled to the current magnification
+        const h = renderer.domElement.clientHeight;
+        const fovRad = THREE.MathUtils.degToRad(scope.fov);
+        scope.yawT -= ((e.clientX - dragFrom.x) / h) * fovRad;
+        scope.pitchT += ((e.clientY - dragFrom.y) / h) * fovRad;
+        scope.yawT = THREE.MathUtils.clamp(scope.yawT, -0.45, 0.75);
+        scope.pitchT = THREE.MathUtils.clamp(scope.pitchT, -0.2, 0.3);
+        dragFrom = { x: e.clientX, y: e.clientY };
+      }
+      return;
+    }
     if (e.buttons) return;
-    renderer.domElement.style.cursor = hitsLamp(e) ? "pointer" : "";
+    renderer.domElement.style.cursor = pickTarget(e) ? "pointer" : "";
+  };
+  const onWheel = (e: WheelEvent) => {
+    if (view !== "telescope" || !scopeActive) return;
+    e.preventDefault();
+    scope.fovT = THREE.MathUtils.clamp(scope.fovT * Math.exp(e.deltaY * 0.0012), 2.5, 18);
   };
   renderer.domElement.addEventListener("pointerdown", onPointerDown);
   renderer.domElement.addEventListener("pointerup", onPointerUp);
   renderer.domElement.addEventListener("pointermove", onHover);
   renderer.domElement.addEventListener("pointermove", onPointerMove);
   renderer.domElement.addEventListener("pointerleave", onPointerLeave);
+  renderer.domElement.addEventListener("wheel", onWheel, { passive: false });
+
+  // ---------- fades ----------
+  let fadeTarget = 1;
+  let fadeSpeed = 1 / 1.8;
+  let onFaded: (() => void) | null = null;
+  const fadeTo = (target: number, seconds: number, done?: () => void) => {
+    fadeTarget = target;
+    fadeSpeed = 1 / Math.max(0.01, seconds);
+    onFaded = done ?? null;
+  };
+
+  // ---------- views and the telescope ----------
+  // Looking through the telescope: glide to the eyepiece, fade, then view campus through a
+  // narrow-field camera placed just outside the glass (so rain on the window doesn't block it).
+  const eyePose = {
+    pos: scopeMount.clone().addScaledVector(scopeDir, -0.62).add(new THREE.Vector3(0, 0.03, 0)),
+    target: scopeMount.clone().addScaledVector(scopeDir, 3),
+    fov: 45,
+  };
+  const scopePos = new THREE.Vector3(winCx, winCy, ROOM.back - 0.35);
+  const aimAt = (p: THREE.Vector3) => {
+    const d = p.clone().sub(scopePos).normalize();
+    return { yaw: Math.atan2(d.x, -d.z), pitch: Math.asin(d.y) };
+  };
+  const home = aimAt(campus.landmarks[0].position.clone().add(new THREE.Vector3(0, -4, 0)));
+  const scope = { yaw: home.yaw, yawT: home.yaw, pitch: home.pitch, pitchT: home.pitch, fov: 9, fovT: 9 };
+  let scopeActive = false;
+  let currentLandmark: string | null = null;
+  const scopeLook = new THREE.Vector3();
+  const updateScope = (dt: number) => {
+    const k = damp(8, dt);
+    scope.yaw += (scope.yawT - scope.yaw) * k;
+    scope.pitch += (scope.pitchT - scope.pitch) * k;
+    scope.fov += (scope.fovT - scope.fov) * damp(6, dt);
+    camera.position.copy(scopePos);
+    scopeLook.set(Math.sin(scope.yaw) * Math.cos(scope.pitch), Math.sin(scope.pitch), -Math.cos(scope.yaw) * Math.cos(scope.pitch));
+    camera.lookAt(scopeLook.clone().add(scopePos));
+    camera.fov = scope.fov;
+    camera.updateProjectionMatrix();
+    // name what's in the middle of the view
+    const limit = THREE.MathUtils.degToRad(scope.fov) * 0.45;
+    let best: (typeof campus.landmarks)[number] | null = null;
+    let bestAngle = limit;
+    for (const l of campus.landmarks) {
+      const a = scopeLook.angleTo(l.position.clone().sub(scopePos));
+      if (a < bestAngle) {
+        bestAngle = a;
+        best = l;
+      }
+    }
+    const name = best?.name ?? null;
+    if (name !== currentLandmark) {
+      currentLandmark = name;
+      options.onScopeTarget?.(best ? { name: best.name, detail: best.detail } : null);
+    }
+  };
+  const enterScope = () => {
+    scopeActive = true;
+    Object.assign(scope, { yaw: home.yaw, yawT: home.yaw, pitch: home.pitch, pitchT: home.pitch, fov: 9, fovT: 9 });
+    camera.near = 3.2; // past the rain falling just outside the window
+    finish.uniforms.uScope.value = 1;
+    updateScope(1);
+  };
+  const leaveScope = () => {
+    scopeActive = false;
+    finish.uniforms.uScope.value = 0;
+    camera.near = 0.05;
+    camera.position.copy(eyePose.pos);
+    controls.target.copy(eyePose.target);
+    camera.fov = eyePose.fov;
+    camera.updateProjectionMatrix();
+    camera.lookAt(controls.target);
+    currentLandmark = null;
+    options.onScopeTarget?.(null);
+  };
 
   // camera tween between views
-  let tween: { from: THREE.Vector3; to: THREE.Vector3; tFrom: THREE.Vector3; tTo: THREE.Vector3; fovFrom: number; fovTo: number; t: number; dur: number } | null = null;
-  const setView = (next: RoomView) => {
-    if (next === view && !tween) return;
-    view = next;
-    controls.enabled = false;
-    if (next === "explore") {
+  let tween: {
+    from: THREE.Vector3; to: THREE.Vector3; tFrom: THREE.Vector3; tTo: THREE.Vector3;
+    fovFrom: number; fovTo: number; t: number; dur: number; onDone?: () => void;
+  } | null = null;
+  const startTween = (to: THREE.Vector3, target: THREE.Vector3, fov: number, dur: number, onDone?: () => void) => {
+    tween = {
+      from: camera.position.clone(),
+      to: to.clone(),
+      tFrom: controls.target.clone(),
+      tTo: target.clone(),
+      fovFrom: camera.fov,
+      fovTo: fov,
+      t: 0,
+      dur: reducedMotion ? 0.01 : dur,
+      onDone,
+    };
+  };
+  let seq = 0; // guards fade/tween callbacks from a view the user has since left
+  const goTo = (next: RoomView, id: number) => {
+    if (next !== "doorway") {
       doorway.visible = false;
       renderer.shadowMap.needsUpdate = true;
     }
-    tween = {
-      from: camera.position.clone(),
-      to: VIEWS[next].pos.clone(),
-      tFrom: controls.target.clone(),
-      tTo: VIEWS[next].target.clone(),
-      fovFrom: camera.fov,
-      fovTo: VIEWS[next].fov,
-      t: 0,
-      dur: reducedMotion ? 0.01 : 2.2,
-    };
+    if (next === "telescope") {
+      startTween(eyePose.pos, eyePose.target, eyePose.fov, 1.8, () =>
+        fadeTo(0, 0.35, () => {
+          if (id !== seq) return;
+          enterScope();
+          fadeTo(1, 0.6);
+        }),
+      );
+      return;
+    }
+    const v = VIEWS[next];
+    startTween(v.pos, v.target, v.fov, 2.2, () => {
+      if (id !== seq) return;
+      if (next === "explore") controls.enabled = true;
+      else {
+        doorway.visible = true;
+        renderer.shadowMap.needsUpdate = true;
+      }
+    });
+  };
+  const setView = (next: RoomView) => {
+    if (next === view) return;
+    const prev = view;
+    const id = ++seq;
+    view = next;
+    controls.enabled = false;
+    options.onViewChange?.(next);
+    if (prev === "telescope") {
+      tween = null;
+      fadeTo(0, 0.3, () => {
+        if (id !== seq) return;
+        leaveScope();
+        fadeTo(1, 0.5);
+        goTo(next, id);
+      });
+      return;
+    }
+    goTo(next, id);
   };
 
   let pixelRatio = Math.min(window.devicePixelRatio, 2);
@@ -1160,6 +1317,7 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
     const w = container.clientWidth;
     const h = container.clientHeight;
     camera.aspect = w / h;
+    finish.uniforms.uAspect.value = w / h;
     // keep the full scene in frame on narrow (portrait) screens
     camera.zoom = camera.aspect < 1 ? Math.max(0.55, camera.aspect * 1.1) : 1;
     camera.updateProjectionMatrix();
@@ -1179,7 +1337,6 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
   const clock = new THREE.Clock(false);
   let lightning = 0;
   let nextLightning = reducedMotion ? Infinity : rr(8, 16);
-  const baseCity = new THREE.Color("#d8e0ee");
   const clampMin = new THREE.Vector3(ROOM.left + 0.3, 0.3, ROOM.back + 0.4);
   const clampMax = new THREE.Vector3(ROOM.right - 0.3, ROOM.height - 0.2, ROOM.front - 0.3);
   const lookTarget = new THREE.Vector3();
@@ -1213,7 +1370,16 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
     }
 
     finish.uniforms.uTime.value = t;
-    finish.uniforms.uFade.value = Math.min(1, finish.uniforms.uFade.value + dt / 1.8);
+    const fade = finish.uniforms.uFade;
+    if (fade.value !== fadeTarget) {
+      const gap = fadeTarget - fade.value;
+      fade.value += Math.sign(gap) * Math.min(Math.abs(gap), fadeSpeed * dt);
+    } else if (onFaded) {
+      const done = onFaded;
+      onFaded = null;
+      done();
+    }
+    campus.update(t);
 
     // rain
     for (let i = 0; i < RAIN; i++) {
@@ -1277,7 +1443,7 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
     if (lightning > 0) {
       lightning = Math.max(0, lightning - dt * 2.2);
       const strobe = lightning * (0.6 + 0.4 * Math.sin(lightning * 40));
-      cityMat.color.copy(baseCity).multiplyScalar(1 + strobe * 1.2);
+      campus.sky.color.setScalar(1 + strobe * 1.6);
       windowLight.intensity = 1.8 + strobe * 10;
       moon.intensity = 0.3 + strobe * 2;
     }
@@ -1294,13 +1460,12 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
       camera.updateProjectionMatrix();
       camera.lookAt(controls.target);
       if (tween.t >= 1) {
+        const done = tween.onDone;
         tween = null;
-        if (view === "explore") controls.enabled = true;
-        else {
-          doorway.visible = true;
-          renderer.shadowMap.needsUpdate = true;
-        }
+        done?.();
       }
+    } else if (view === "telescope") {
+      if (scopeActive) updateScope(dt);
     } else if (view === "doorway") {
       // leaning in the doorway: cursor parallax plus a slow idle drift
       const m = reducedMotion ? 0 : 1;
@@ -1344,6 +1509,7 @@ export function createRoomScene(container: HTMLElement, options: RoomSceneOption
       renderer.domElement.removeEventListener("pointerdown", onPointerDown);
       renderer.domElement.removeEventListener("pointerup", onPointerUp);
       renderer.domElement.removeEventListener("pointermove", onHover);
+      renderer.domElement.removeEventListener("wheel", onWheel);
       controls.dispose();
       composer.dispose();
       rt.dispose();
