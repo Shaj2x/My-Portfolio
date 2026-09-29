@@ -4,6 +4,7 @@ import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
+import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
 import { RectAreaLightUniformsLib } from "three/examples/jsm/lights/RectAreaLightUniformsLib.js";
 
 /*
@@ -26,7 +27,7 @@ const ROOM = { left: -4.3, right: 4.2, back: -3, front: 4.2, height: 3.2 };
 
 const VIEWS: Record<RoomView, { pos: THREE.Vector3; target: THREE.Vector3; fov: number }> = {
   doorway: { pos: new THREE.Vector3(0.3, 1.5, 5.4), target: new THREE.Vector3(-0.1, 1.25, -3), fov: 36 },
-  explore: { pos: new THREE.Vector3(1.6, 1.7, 2.4), target: new THREE.Vector3(-1.2, 1.0, -2.1), fov: 55 },
+  explore: { pos: new THREE.Vector3(0.9, 1.6, 1.3), target: new THREE.Vector3(-1.5, 1.05, -2.3), fov: 50 },
 };
 
 // ---------- small helpers ----------
@@ -90,9 +91,10 @@ export function createRoomScene(container: HTMLElement): RoomSceneHandle {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(container.clientWidth, container.clientHeight);
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  // soft variance shadows: costly to filter, but maps are baked once (see autoUpdate below)
+  renderer.shadowMap.type = THREE.VSMShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.05;
+  renderer.toneMappingExposure = 1.25;
   container.appendChild(renderer.domElement);
   renderer.domElement.style.display = "block";
   renderer.domElement.style.touchAction = "none";
@@ -393,8 +395,8 @@ export function createRoomScene(container: HTMLElement): RoomSceneHandle {
 
   // ---------- materials ----------
 
-  const wallMat = mat({ color: "#3a404e", map: plasterTex, roughness: 0.95 });
-  const floorMat = mat({ color: "#8a8a8a", map: woodFloorTex, roughness: 0.7 });
+  const wallMat = mat({ color: "#443f46", map: plasterTex, roughness: 0.95 });
+  const floorMat = mat({ color: "#948a80", map: woodFloorTex, roughness: 0.55 });
   const ceilingMat = mat({ color: "#1c1f26", roughness: 1 });
   const deskMat = mat({ color: "#ffffff", map: deskWoodTex, roughness: 0.55 });
   const darkWoodMat = mat({ color: "#3b2817", roughness: 0.7 });
@@ -459,9 +461,10 @@ export function createRoomScene(container: HTMLElement): RoomSceneHandle {
   doorway.add(doorPivot);
   const doorMat = mat({ color: "#3a2a1c", roughness: 0.55 });
   box(door.x1 - door.x0 - 0.02, door.h - 0.02, 0.04, doorMat, -(door.x1 - door.x0) / 2, door.h / 2, -0.02, doorPivot);
-  const glowEdge = new THREE.Mesh(boxGeo, track(new THREE.MeshBasicMaterial({ color: "#ffb866" })));
-  glowEdge.scale.set(0.012, door.h - 0.04, 0.045);
-  glowEdge.position.set(-(door.x1 - door.x0) + 0.01, door.h / 2, -0.02);
+  const glowEdge = new THREE.Mesh(boxGeo, track(new THREE.MeshBasicMaterial({ color: new THREE.Color(1.7, 0.95, 0.42) })));
+  // tucked just past the leaf's free edge, thinner than the leaf so no faces are coplanar
+  glowEdge.scale.set(0.01, door.h - 0.04, 0.032);
+  glowEdge.position.set(-(door.x1 - door.x0) + 0.006, door.h / 2, -0.02);
   doorPivot.add(glowEdge);
   const knob = new THREE.Mesh(track(new THREE.SphereGeometry(0.03, 16, 12)), mat({ color: "#6a5a45", metalness: 0.8, roughness: 0.35 }));
   knob.position.set(-(door.x1 - door.x0) + 0.08, 1.0, -0.07);
@@ -559,7 +562,7 @@ export function createRoomScene(container: HTMLElement): RoomSceneHandle {
   lid.rotation.x = -0.28;
   laptop.add(lid);
   box(0.36, 0.24, 0.01, laptopMat, 0, 0.12, 0, lid);
-  const screenMat = track(new THREE.MeshBasicMaterial({ map: codeScreenTex, color: "#ffffff" }));
+  const screenMat = track(new THREE.MeshBasicMaterial({ map: codeScreenTex, color: new THREE.Color(1.5, 1.35, 1.15) }));
   const screen = new THREE.Mesh(track(new THREE.PlaneGeometry(0.33, 0.21)), screenMat);
   screen.position.set(0, 0.125, 0.0056);
   lid.add(screen);
@@ -881,20 +884,112 @@ export function createRoomScene(container: HTMLElement): RoomSceneHandle {
   scene.add(rug);
 
   // A trailing plant high on the left wall, near the doorway
-  makePlant(ROOM.left + 0.25, 2.25, 0.6, { potR: 0.1, vines: 8, vineLen: 1.1, bushy: 60 });
+  // (no shadows: the hallway spotlight would throw huge leaf shadows across the wall)
+  makePlant(ROOM.left + 0.25, 2.25, 0.6, { potR: 0.1, vines: 8, vineLen: 1.1, bushy: 60 }).traverse((o) => (o.castShadow = false));
   box(0.3, 0.025, 0.3, darkWoodMat, ROOM.left + 0.16, 2.24, 0.6); // wall shelf
+
+  // ---------- warm practical lights ----------
+
+  // Fairy lights: a sagging string of bulbs whose glow blooms in post
+  const bulbGeo = track(new THREE.SphereGeometry(0.022, 12, 10));
+  const bulbMat = track(new THREE.MeshBasicMaterial({ color: "#ffffff" }));
+  const wireMat = track(new THREE.LineBasicMaterial({ color: "#1a1410" }));
+  const fairyBulbs: { mesh: THREE.InstancedMesh; phase: Float32Array }[] = [];
+  const fairyLights: THREE.PointLight[] = [];
+  const BULB_COLOR = new THREE.Color(2.2, 0.95, 0.28); // HDR so it blooms
+  function stringLights(points: THREE.Vector3[], sag: number, count: number, lights: number) {
+    const path = new THREE.CurvePath<THREE.Vector3>();
+    for (let i = 0; i < points.length - 1; i++) {
+      const a = points[i];
+      const b = points[i + 1];
+      const mid = a.clone().lerp(b, 0.5);
+      mid.y -= sag;
+      path.add(new THREE.QuadraticBezierCurve3(a, mid, b));
+    }
+    const wire = new THREE.Line(track(new THREE.BufferGeometry().setFromPoints(path.getSpacedPoints(120))), wireMat);
+    scene.add(wire);
+    const inst = new THREE.InstancedMesh(bulbGeo, bulbMat, count);
+    const phase = new Float32Array(count);
+    const o = new THREE.Object3D();
+    for (let i = 0; i < count; i++) {
+      o.position.copy(path.getPointAt((i + 0.5) / count));
+      o.position.y -= 0.02;
+      o.updateMatrix();
+      inst.setMatrixAt(i, o.matrix);
+      inst.setColorAt(i, BULB_COLOR);
+      phase[i] = rand() * Math.PI * 2;
+    }
+    scene.add(inst);
+    fairyBulbs.push({ mesh: inst, phase });
+    for (let i = 0; i < lights; i++) {
+      const l = new THREE.PointLight("#ffac55", 0.8, 2.8, 2);
+      l.position.copy(path.getPointAt((i + 0.5) / lights));
+      l.position.z += 0.12;
+      scene.add(l);
+      fairyLights.push(l);
+    }
+  }
+  // above the corkboard and desk, pinned to the back wall
+  stringLights(
+    [new THREE.Vector3(ROOM.left + 0.05, 2.75, ROOM.back + 0.06), new THREE.Vector3(-2.7, 2.8, ROOM.back + 0.06), new THREE.Vector3(-1.35, 2.72, ROOM.back + 0.06)],
+    0.22, 34, 2,
+  );
+  // along the left wall toward the doorway
+  stringLights(
+    [new THREE.Vector3(ROOM.left + 0.06, 2.75, ROOM.back + 0.1), new THREE.Vector3(ROOM.left + 0.06, 2.85, 0.1), new THREE.Vector3(ROOM.left + 0.06, 2.8, 2.6)],
+    0.25, 40, 2,
+  );
+
+  // Bedside table and lamp
+  const stand = new THREE.Group();
+  stand.position.set(1.72, 0, -2.55);
+  scene.add(stand);
+  box(0.5, 0.52, 0.42, darkWoodMat, 0, 0.26, 0, stand);
+  box(0.46, 0.01, 0.005, mat({ color: "#0e0a07" }), 0, 0.36, 0.212, stand, false); // drawer seam
+  const lampBase = new THREE.Mesh(track(new THREE.CylinderGeometry(0.06, 0.075, 0.03, 24)), mat({ color: "#2c2520", roughness: 0.4, metalness: 0.5 }));
+  lampBase.position.y = 0.535;
+  const lampStem = new THREE.Mesh(track(new THREE.CylinderGeometry(0.008, 0.008, 0.24, 8)), metalMat);
+  lampStem.position.y = 0.66;
+  const shadeMat = mat({ color: "#e8cfa6", emissive: "#ffb366", emissiveIntensity: 1.6, roughness: 0.9, side: THREE.DoubleSide });
+  const shade = new THREE.Mesh(track(new THREE.CylinderGeometry(0.1, 0.16, 0.2, 32, 1, true)), shadeMat);
+  shade.position.y = 0.82;
+  const bulbGlow = new THREE.Mesh(track(new THREE.SphereGeometry(0.035, 16, 12)), track(new THREE.MeshBasicMaterial({ color: new THREE.Color(3, 2, 1.1) })));
+  bulbGlow.position.y = 0.8;
+  stand.add(lampBase, lampStem, shade, bulbGlow);
+  const bedLamp = new THREE.PointLight("#ffac5c", 2.6, 5, 1.7);
+  bedLamp.position.set(0, 0.8, 0.02);
+  stand.add(bedLamp);
+  // a book and glasses-case on the nightstand
+  box(0.16, 0.03, 0.22, pick(bookMats), -0.13, 0.535, 0.06, stand).rotation.y = 0.3;
+
+  // Candle on the desk, beside the books
+  const candle = new THREE.Group();
+  candle.position.set(-3.05, desk.top, -2.45);
+  scene.add(candle);
+  const wax = new THREE.Mesh(track(new THREE.CylinderGeometry(0.035, 0.035, 0.09, 20)), mat({ color: "#e9dcc4", roughness: 0.6, emissive: "#ff9a40", emissiveIntensity: 0.15 }));
+  wax.position.y = 0.045;
+  wax.castShadow = true;
+  const flameMat = track(new THREE.MeshBasicMaterial({ color: new THREE.Color(3.2, 1.9, 0.7), transparent: true, opacity: 0.95 }));
+  const flame = new THREE.Mesh(track(new THREE.SphereGeometry(0.011, 12, 10)), flameMat);
+  flame.scale.set(1, 2.3, 1);
+  flame.position.y = 0.118;
+  candle.add(wax, flame);
+  const candleLight = new THREE.PointLight("#ff9440", 0.9, 2.8, 2);
+  candleLight.position.y = 0.16;
+  candle.add(candleLight);
 
   // ---------- lighting ----------
 
-  scene.add(new THREE.HemisphereLight("#22314f", "#0a080a", 0.6));
+  scene.add(new THREE.HemisphereLight("#2a3047", "#1c1109", 0.55));
 
   // The laptop is the key light
   const laptopLight = new THREE.PointLight("#ffa04a", 4.5, 8, 1.5);
   laptopLight.position.set(0, 0.16, 0.14);
   laptopLight.castShadow = true;
   laptopLight.shadow.mapSize.set(1024, 1024);
-  laptopLight.shadow.bias = -0.003;
-  laptopLight.shadow.radius = 6;
+  laptopLight.shadow.bias = -0.0005;
+  laptopLight.shadow.radius = 10;
+  laptopLight.shadow.blurSamples = 16;
   laptop.add(laptopLight);
 
   // Soft fill from the screen onto the wall and the figure's face side
@@ -903,13 +998,13 @@ export function createRoomScene(container: HTMLElement): RoomSceneHandle {
   screenGlow.lookAt(new THREE.Vector3(0, 0.14, 1));
   lid.add(screenGlow);
 
-  // Cool light from the city through the window
-  const windowLight = new THREE.RectAreaLight("#4a78b8", 2.2, winW, winH);
+  // Cool light from the city through the window — the one cold note
+  const windowLight = new THREE.RectAreaLight("#4a78b8", 1.8, winW, winH);
   windowLight.position.set(winCx, winCy, ROOM.back - 0.02);
   windowLight.lookAt(winCx, winCy - 0.4, 0);
   scene.add(windowLight);
 
-  const moon = new THREE.DirectionalLight("#4c6a9a", 0.35);
+  const moon = new THREE.DirectionalLight("#4c6a9a", 0.3);
   moon.position.set(winCx, 3.5, ROOM.back - 4);
   moon.target.position.set(1.5, 0, 0);
   moon.castShadow = true;
@@ -918,7 +1013,9 @@ export function createRoomScene(container: HTMLElement): RoomSceneHandle {
   moon.shadow.camera.right = 4;
   moon.shadow.camera.top = 4;
   moon.shadow.camera.bottom = -4;
-  moon.shadow.bias = -0.002;
+  moon.shadow.bias = -0.0005;
+  moon.shadow.radius = 6;
+  moon.shadow.blurSamples = 12;
   scene.add(moon, moon.target);
 
   // Phone glow
@@ -927,16 +1024,22 @@ export function createRoomScene(container: HTMLElement): RoomSceneHandle {
   phone.add(phoneLight);
 
   // Warm hallway light spilling past the door
-  const hallLight = new THREE.SpotLight("#ffa458", 18, 12, 0.5, 0.7, 1.6);
+  const hallLight = new THREE.SpotLight("#ffa458", 22, 12, 0.55, 0.75, 1.6);
   hallLight.position.set(1.2, 2.0, ROOM.front + 1.2);
   hallLight.target.position.set(-0.3, 0, 1.2);
   hallLight.castShadow = true;
   hallLight.shadow.mapSize.set(1024, 1024);
-  hallLight.shadow.bias = -0.002;
+  hallLight.shadow.bias = -0.0005;
+  hallLight.shadow.radius = 8;
+  hallLight.shadow.blurSamples = 16;
   scene.add(hallLight, hallLight.target);
   const hallFill = new THREE.PointLight("#ff9a4a", 1.4, 3, 2);
   hallFill.position.set(door.x1 + 0.15, 1.3, ROOM.front + 0.5);
   doorway.add(hallFill);
+
+  // Nothing that casts a shadow moves, so render shadow maps once instead of every frame
+  renderer.shadowMap.autoUpdate = false;
+  renderer.shadowMap.needsUpdate = true;
 
   // ---------- dust motes in the lamp light ----------
 
@@ -966,29 +1069,54 @@ export function createRoomScene(container: HTMLElement): RoomSceneHandle {
 
   // ---------- post-processing ----------
 
-  const composer = new EffectComposer(renderer);
+  // Multisampled HDR target so edges stay clean and bright bulbs bloom without banding
+  const rt = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 });
+  const composer = new EffectComposer(renderer, rt);
   composer.addPass(new RenderPass(scene, camera));
-  const bloom = new UnrealBloomPass(new THREE.Vector2(container.clientWidth, container.clientHeight), 0.55, 0.7, 0.82);
+  const bloom = new UnrealBloomPass(new THREE.Vector2(container.clientWidth, container.clientHeight), 0.5, 0.75, 0.9);
   composer.addPass(bloom);
   composer.addPass(new OutputPass());
+  // Final grade: warm vignette, fine film grain, and a fade in from black
+  const finish = new ShaderPass({
+    uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uFade: { value: 0 } },
+    vertexShader: /* glsl */ `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: /* glsl */ `
+      uniform sampler2D tDiffuse; uniform float uTime; uniform float uFade; varying vec2 vUv;
+      float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+      void main() {
+        vec4 c = texture2D(tDiffuse, vUv);
+        vec2 d = vUv - 0.5;
+        float vig = smoothstep(0.85, 0.2, length(d * vec2(1.1, 1.25)));
+        c.rgb *= mix(vec3(0.55, 0.45, 0.4), vec3(1.0), vig);
+        c.rgb += (hash(vUv * 1000.0 + fract(uTime * 7.0)) - 0.5) * 0.022;
+        gl_FragColor = vec4(c.rgb * uFade, 1.0);
+      }`,
+  });
+  composer.addPass(finish);
 
   // ---------- interaction ----------
 
   let view: RoomView = "doorway";
+  const pointerTarget = new THREE.Vector2();
   const pointer = new THREE.Vector2();
   const onPointerMove = (e: PointerEvent) => {
     const r = renderer.domElement.getBoundingClientRect();
-    pointer.set(((e.clientX - r.left) / r.width) * 2 - 1, ((e.clientY - r.top) / r.height) * 2 - 1);
+    pointerTarget.set(((e.clientX - r.left) / r.width) * 2 - 1, ((e.clientY - r.top) / r.height) * 2 - 1);
   };
+  const onPointerLeave = () => pointerTarget.set(0, 0);
   renderer.domElement.addEventListener("pointermove", onPointerMove);
+  renderer.domElement.addEventListener("pointerleave", onPointerLeave);
 
   // camera tween between views
-  let tween: { from: THREE.Vector3; to: THREE.Vector3; tFrom: THREE.Vector3; tTo: THREE.Vector3; fovFrom: number; fovTo: number; t: number } | null = null;
+  let tween: { from: THREE.Vector3; to: THREE.Vector3; tFrom: THREE.Vector3; tTo: THREE.Vector3; fovFrom: number; fovTo: number; t: number; dur: number } | null = null;
   const setView = (next: RoomView) => {
     if (next === view && !tween) return;
     view = next;
     controls.enabled = false;
-    if (next === "explore") doorway.visible = false;
+    if (next === "explore") {
+      doorway.visible = false;
+      renderer.shadowMap.needsUpdate = true;
+    }
     tween = {
       from: camera.position.clone(),
       to: VIEWS[next].pos.clone(),
@@ -997,9 +1125,11 @@ export function createRoomScene(container: HTMLElement): RoomSceneHandle {
       fovFrom: camera.fov,
       fovTo: VIEWS[next].fov,
       t: 0,
+      dur: reducedMotion ? 0.01 : 2.2,
     };
   };
 
+  let pixelRatio = Math.min(window.devicePixelRatio, 2);
   const onResize = () => {
     const w = container.clientWidth;
     const h = container.clientHeight;
@@ -1008,8 +1138,8 @@ export function createRoomScene(container: HTMLElement): RoomSceneHandle {
     camera.zoom = camera.aspect < 1 ? Math.max(0.55, camera.aspect * 1.1) : 1;
     camera.updateProjectionMatrix();
     renderer.setSize(w, h);
+    composer.setPixelRatio(pixelRatio);
     composer.setSize(w, h);
-    bloom.setSize(w, h);
   };
   const resizeObserver = new ResizeObserver(onResize);
   resizeObserver.observe(container);
@@ -1017,19 +1147,46 @@ export function createRoomScene(container: HTMLElement): RoomSceneHandle {
 
   // ---------- animation loop ----------
 
-  const clock = new THREE.Clock();
+  // frame-rate independent exponential smoothing
+  const damp = (lambda: number, dt: number) => 1 - Math.exp(-lambda * dt);
+
+  const clock = new THREE.Clock(false);
   let lightning = 0;
-  let nextLightning = reducedMotion ? Infinity : rr(6, 14);
+  let nextLightning = reducedMotion ? Infinity : rr(8, 16);
   const baseCity = new THREE.Color("#d8e0ee");
   const clampMin = new THREE.Vector3(ROOM.left + 0.3, 0.3, ROOM.back + 0.4);
   const clampMax = new THREE.Vector3(ROOM.right - 0.3, ROOM.height - 0.2, ROOM.front - 0.3);
   const lookTarget = new THREE.Vector3();
+  const desired = new THREE.Vector3();
+  const bulbColor = new THREE.Color();
   let frame = 0;
+  let slowFrames = 0;
+  let sampled = 0;
+
+  const flickerNoise = (t: number, s: number) =>
+    Math.sin(t * 9.1 + s) * 0.5 + Math.sin(t * 23.7 + s * 2.1) * 0.3 + Math.sin(t * 3.3 + s * 0.7) * 0.2;
 
   const animate = () => {
     frame = requestAnimationFrame(animate);
-    const dt = Math.min(clock.getDelta(), 0.05);
+    const rawDt = clock.getDelta();
+    const dt = Math.min(rawDt, 0.05);
     const t = clock.elapsedTime;
+
+    // Adaptive resolution: if the device can't hold ~45fps, step the pixel ratio down once or twice
+    if (t > 2 && pixelRatio > 1) {
+      sampled++;
+      if (rawDt > 1 / 45) slowFrames++;
+      if (sampled === 90) {
+        if (slowFrames > 45) {
+          pixelRatio = Math.max(1, pixelRatio - 0.5);
+          onResize();
+        }
+        sampled = slowFrames = 0;
+      }
+    }
+
+    finish.uniforms.uTime.value = t;
+    finish.uniforms.uFade.value = Math.min(1, finish.uniforms.uFade.value + dt / 1.8);
 
     // rain
     for (let i = 0; i < RAIN; i++) {
@@ -1045,18 +1202,33 @@ export function createRoomScene(container: HTMLElement): RoomSceneHandle {
     // dust drift
     for (let i = 0; i < DUST; i++) {
       const s = dustSeed[i];
-      dustPos[i * 3] += Math.sin(t * 0.3 + s) * 0.0006;
-      dustPos[i * 3 + 1] += Math.cos(t * 0.2 + s * 1.3) * 0.0005 - 0.00008;
+      dustPos[i * 3] += Math.sin(t * 0.3 + s) * 0.036 * dt;
+      dustPos[i * 3 + 1] += (Math.cos(t * 0.2 + s * 1.3) * 0.03 - 0.005) * dt;
       if (dustPos[i * 3 + 1] < 0.8) dustPos[i * 3 + 1] = 2.2;
     }
     dustGeo.attributes.position.needsUpdate = true;
 
     // screen flicker and phone notification pulse
-    const flicker = 1 + Math.sin(t * 7.3) * 0.015 + Math.sin(t * 13.1) * 0.01;
-    laptopLight.intensity = 4.5 * flicker;
+    laptopLight.intensity = 4.5 * (1 + Math.sin(t * 7.3) * 0.015 + Math.sin(t * 13.1) * 0.01);
     const pulse = Math.max(0, Math.sin(t * 0.9)) ** 12;
     phoneScreenMat.color.setRGB(0.31 + pulse * 0.5, 0.84 + pulse * 0.16, 0.9 + pulse * 0.1);
     phoneLight.intensity = 0.15 + pulse * 0.6;
+
+    // candle flame
+    const cf = reducedMotion ? 0 : flickerNoise(t, 0);
+    candleLight.intensity = 0.9 + cf * 0.18;
+    flame.scale.set(1 - cf * 0.06, 2.3 + cf * 0.25, 1 - cf * 0.06);
+    flame.position.x = Math.sin(t * 2.1) * 0.0015;
+
+    // fairy lights breathe slowly, out of phase
+    for (const { mesh, phase } of fairyBulbs) {
+      for (let i = 0; i < phase.length; i++) {
+        const k = reducedMotion ? 1 : 0.82 + 0.18 * Math.sin(t * 0.8 + phase[i]);
+        mesh.setColorAt(i, bulbColor.copy(BULB_COLOR).multiplyScalar(k));
+      }
+      mesh.instanceColor!.needsUpdate = true;
+    }
+    fairyLights.forEach((l, i) => (l.intensity = 0.8 + (reducedMotion ? 0 : Math.sin(t * 0.8 + i * 1.7) * 0.06)));
 
     // subtle breathing
     figure.position.y = 0.53 + Math.sin(t * 1.4) * 0.004;
@@ -1065,20 +1237,22 @@ export function createRoomScene(container: HTMLElement): RoomSceneHandle {
     // distant lightning
     if (t > nextLightning) {
       lightning = 1;
-      nextLightning = t + rr(9, 20);
+      nextLightning = t + rr(12, 24);
     }
     if (lightning > 0) {
       lightning = Math.max(0, lightning - dt * 2.2);
       const strobe = lightning * (0.6 + 0.4 * Math.sin(lightning * 40));
-      cityMat.color.copy(baseCity).multiplyScalar(1 + strobe * 1.4);
-      windowLight.intensity = 2.2 + strobe * 14;
-      moon.intensity = 0.35 + strobe * 2.5;
+      cityMat.color.copy(baseCity).multiplyScalar(1 + strobe * 1.2);
+      windowLight.intensity = 1.8 + strobe * 10;
+      moon.intensity = 0.3 + strobe * 2;
     }
 
     // camera
+    pointer.lerp(pointerTarget, damp(3, dt));
     if (tween) {
-      tween.t = Math.min(1, tween.t + dt / 1.6);
-      const e = tween.t < 0.5 ? 4 * tween.t ** 3 : 1 - (-2 * tween.t + 2) ** 3 / 2;
+      tween.t = Math.min(1, tween.t + dt / tween.dur);
+      const x = tween.t;
+      const e = x < 0.5 ? 4 * x ** 3 : 1 - (-2 * x + 2) ** 3 / 2;
       camera.position.lerpVectors(tween.from, tween.to, e);
       controls.target.lerpVectors(tween.tFrom, tween.tTo, e);
       camera.fov = THREE.MathUtils.lerp(tween.fovFrom, tween.fovTo, e);
@@ -1087,34 +1261,53 @@ export function createRoomScene(container: HTMLElement): RoomSceneHandle {
       if (tween.t >= 1) {
         tween = null;
         if (view === "explore") controls.enabled = true;
-        else doorway.visible = true;
+        else {
+          doorway.visible = true;
+          renderer.shadowMap.needsUpdate = true;
+        }
       }
     } else if (view === "doorway") {
-      // gentle parallax, as if leaning in the doorway
-      const sway = reducedMotion ? 0 : 1;
-      const desired = VIEWS.doorway.pos.clone().add(new THREE.Vector3(pointer.x * 0.18 * sway, -pointer.y * 0.1 * sway, 0));
-      camera.position.lerp(desired, 0.05);
-      lookTarget.copy(VIEWS.doorway.target).add(new THREE.Vector3(pointer.x * 0.25 * sway, -pointer.y * 0.12 * sway, 0));
-      controls.target.lerp(lookTarget, 0.05);
+      // leaning in the doorway: cursor parallax plus a slow idle drift
+      const m = reducedMotion ? 0 : 1;
+      desired.copy(VIEWS.doorway.pos);
+      desired.x += (pointer.x * 0.2 + Math.sin(t * 0.21) * 0.04) * m;
+      desired.y += (-pointer.y * 0.1 + Math.sin(t * 0.17) * 0.02) * m;
+      camera.position.lerp(desired, damp(2.5, dt));
+      lookTarget.copy(VIEWS.doorway.target);
+      lookTarget.x += pointer.x * 0.28 * m;
+      lookTarget.y += -pointer.y * 0.12 * m;
+      controls.target.lerp(lookTarget, damp(2.5, dt));
       camera.lookAt(controls.target);
     } else {
-      controls.update();
+      controls.update(dt);
       camera.position.clamp(clampMin, clampMax);
     }
 
-    composer.render();
+    composer.render(dt);
   };
-  animate();
+
+  // Compile every shader before the first frame so the scene opens without a hitch
+  let disposed = false;
+  renderer
+    .compileAsync(scene, camera)
+    .catch(() => undefined)
+    .then(() => {
+      if (disposed) return;
+      clock.start();
+      animate();
+    });
 
   return {
     setView,
     dispose: () => {
+      disposed = true;
       cancelAnimationFrame(frame);
       resizeObserver.disconnect();
       renderer.domElement.removeEventListener("pointermove", onPointerMove);
+      renderer.domElement.removeEventListener("pointerleave", onPointerLeave);
       controls.dispose();
       composer.dispose();
-      bloom.dispose();
+      rt.dispose();
       disposables.forEach((d) => d.dispose());
       scene.traverse((o) => {
         if (o instanceof THREE.InstancedMesh) o.dispose();
