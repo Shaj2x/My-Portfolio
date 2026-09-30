@@ -1,13 +1,9 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>My Room, Plain</title>
 <style>
 /* One full-bleed WebGL stage with a row of view buttons. A single dark look, matching the scene. */
 :root { --ground: #0d0e11; --ink: rgba(240,236,228,.85); --ink-dim: rgba(240,236,228,.5); --amber: #f2b36b; color-scheme: dark; }
 html, body { height: 100%; margin: 0; }
+:root { background: var(--ground); }
 body { background: var(--ground); color: var(--ink); font-family: system-ui, -apple-system, "Segoe UI", sans-serif; overflow: hidden; }
 #stage { position: fixed; inset: 0; }
 .bar { position: fixed; left: 0; right: 0; bottom: 0; padding: 16px 16px calc(20px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none; }
@@ -18,8 +14,6 @@ button[aria-pressed="true"] { color: var(--amber); border-color: rgba(242,179,10
 button:focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; }
 .hint { margin: 0; font-size: 12px; color: var(--ink-dim); }
 </style>
-</head>
-<body>
 <div id="stage"></div>
 <div class="bar">
   <div class="row">
