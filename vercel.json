@@ -6,6 +6,11 @@
   "outputDirectory": "dist",
   "redirects": [
     {
+      "source": "/",
+      "destination": "/digital-dash.html",
+      "permanent": false
+    },
+    {
       "source": "/digital-dash",
       "destination": "/digital-dash.html",
       "permanent": false
@@ -14,12 +19,6 @@
       "source": "/smart-serve",
       "destination": "/smart-serve.html",
       "permanent": false
-    }
-  ],
-  "rewrites": [
-    {
-      "source": "/((?!assets/).*)",
-      "destination": "/index.html"
     }
   ],
   "headers": [
