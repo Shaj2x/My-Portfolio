@@ -169,7 +169,6 @@ Photo B is the best whole-room view, so the hero view reproduces **photo B** rat
 - Details modelled from the close-ups: about 22 named fragrances on a four-row riser (Breeze and Vintage Radio boxes, 9pm, Stronger With You, Marwa, the blue shield, the black V, Honor and others); Spider-Ham, the crying-cat pillow, the Chick-fil-A cow with its sign, the blue-jay squish and two leafy plants on the sill; the chain tray, Casio watch, purple lanyard, keys, wallet, lighter and AirPods on the dresser; the clock in the desk lamp's base, a coaster under the mug, a knob on the keyboard.
 
 **Removed**
-- The ceiling light fixture (left out on request).
 - The rugs and the ring light behind the desk lamp (in the photos, left out on request).
 - Wood floor → dark charcoal carpet.
 - Bookshelf, corkboard, poster, the wall clock on the wall, curtains and rod, the trailing and potted floor plants,

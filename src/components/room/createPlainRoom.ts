@@ -403,8 +403,18 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     slab(right - DOOR.x1 - 0.07, 0.1, 0.015, trim, (DOOR.x1 + 0.07 + right) / 2, 0.05, front - 0.0075, frontWall);
   }
 
-  // the sprinkler head (the ceiling light is left out on request)
+  // the ceiling light (off) and the sprinkler head
   {
+    const { pos, r } = LAYOUT.ceilingLight;
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(r, 32, 12, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: "#f4f1ea", roughness: 0.3 }));
+    dome.scale.y = 0.35;
+    dome.rotation.x = Math.PI;
+    dome.position.set(pos[0], height, pos[2]);
+    scene.add(dome);
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(r * 0.98, 0.012, 8, 48), new THREE.MeshStandardMaterial({ color: "#a9adb2", metalness: 0.8, roughness: 0.3, envMap: env, envMapIntensity: 0.7 }));
+    ring.rotation.x = Math.PI / 2;
+    ring.position.set(pos[0], height - 0.03, pos[2]);
+    scene.add(ring);
     const sp = LAYOUT.sprinkler.pos;
     const head = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.015, 24), new THREE.MeshStandardMaterial({ color: "#f0efeb", roughness: 0.5 }));
     head.position.set(sp[0], height - 0.008, sp[2]);

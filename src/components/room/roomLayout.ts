@@ -91,6 +91,8 @@ export const LAYOUT = {
   pcTower: { pos: [1.25, 0, 0.06] as Vec3 },
   chair: { pos: [0.55, 0, -0.33] as Vec3, yaw: Math.PI / 2 },
   tapestry: { pos: [1.49, 1.72, -0.2] as Vec3, w: 1.3, h: 1.2 },
+  /** flush-mount dome, off */
+  ceilingLight: { pos: [-0.2, 0, 0.7] as Vec3, r: 0.17 },
   sprinkler: { pos: [0.3, 0, -0.95] as Vec3 },
   /** things on the window sill, left to right */
   sill: [
