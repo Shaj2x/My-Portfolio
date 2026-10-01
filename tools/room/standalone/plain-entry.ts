@@ -6,6 +6,8 @@ const settingsBtn = $("settings") as HTMLButtonElement;
 const panel = $("panel");
 const onBox = $("lamp-on") as HTMLInputElement;
 const slider = $("lamp-brightness") as HTMLInputElement;
+const ceilingBox = $("light-ceiling") as HTMLInputElement;
+const sunsetBox = $("light-sunset") as HTMLInputElement;
 const bval = $("bval");
 const colors = $("colors");
 const label = $("label");
@@ -37,6 +39,8 @@ const showLamp = (s: LampSettings) => {
   lamp = s;
   lampBtn.setAttribute("aria-pressed", String(s.on));
   onBox.checked = s.on;
+  ceilingBox.checked = s.ceiling;
+  sunsetBox.checked = s.sunset;
   slider.value = String(Math.round(s.brightness * 100));
   bval.textContent = `${Math.round(s.brightness * 100)}%`;
   for (const b of swatches) b.setAttribute("aria-pressed", String(b.dataset.color === s.color));
@@ -61,7 +65,7 @@ const room = createPlainRoom($("stage"), {
     $("scoperow").hidden = !scope;
     label.hidden = !scope;
     if (scope) panel.hidden = true;
-    hint.textContent = scope ? "Drag to look around · scroll to zoom · Esc to step back" : "Drag to orbit · scroll to zoom · click the lamp (L) or the binoculars on the sill (B)";
+    hint.textContent = scope ? "Drag to look around · scroll to zoom · Esc to step back" : "Drag to orbit · scroll to zoom · click the lamp (L), the ceiling light, the sunset lamp or the binoculars (B)";
     for (const b of viewButtons) b.setAttribute("aria-pressed", String(b.dataset.view === v));
   },
   onScopeTarget: (t) => {
@@ -82,6 +86,8 @@ const openPanel = (open: boolean) => {
 settingsBtn.addEventListener("click", () => openPanel(panel.hidden));
 $("pclose").addEventListener("click", () => openPanel(false));
 onBox.addEventListener("change", () => room.setLamp({ on: onBox.checked }));
+ceilingBox.addEventListener("change", () => room.setLamp({ ceiling: ceilingBox.checked }));
+sunsetBox.addEventListener("change", () => room.setLamp({ sunset: sunsetBox.checked }));
 slider.addEventListener("input", () => room.setLamp({ brightness: Number(slider.value) / 100, on: true }));
 window.addEventListener("keydown", (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;

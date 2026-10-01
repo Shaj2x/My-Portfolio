@@ -18,7 +18,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--amber); out
 #label .eyebrow { margin: 0; font: 500 11px var(--mono); letter-spacing: .2em; text-transform: uppercase; color: var(--amber); opacity: .75; }
 #label h2 { margin: 4px 0 0; font-size: 16px; font-weight: 600; color: #fff; }
 #label p.detail { margin: 2px 0 0; font-size: 13px; color: var(--ink-dim); }
-#panel { position: fixed; right: 16px; bottom: calc(150px + env(safe-area-inset-bottom, 0px)); width: min(320px, calc(100% - 32px)); box-sizing: border-box; padding: 20px; border-radius: 16px; border: 1px solid rgba(255,255,255,.1); background: rgba(13,11,10,.8); backdrop-filter: blur(20px); display: grid; gap: 16px; }
+#panel { position: fixed; right: 16px; bottom: calc(150px + env(safe-area-inset-bottom, 0px)); width: min(320px, calc(100% - 32px)); max-height: calc(100% - 230px - env(safe-area-inset-bottom, 0px)); overflow-y: auto; overscroll-behavior: contain; box-sizing: border-box; padding: 20px; border-radius: 16px; border: 1px solid rgba(255,255,255,.1); background: rgba(13,11,10,.8); backdrop-filter: blur(20px); display: grid; gap: 16px; }
 #panel h2 { margin: 0; font-size: 16px; font-weight: 600; color: #fff; }
 .ph { display: flex; justify-content: space-between; align-items: center; }
 #pclose { background: none; border: 0; color: var(--ink-dim); font-size: 16px; cursor: pointer; padding: 6px; border-radius: 999px; }
@@ -30,6 +30,8 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--amber); out
 #colors { display: flex; flex-wrap: wrap; gap: 6px; }
 .swatch { display: inline-flex; align-items: center; gap: 6px; font: 12px var(--sans); color: rgba(255,255,255,.75); background: none; border: 1px solid rgba(255,255,255,.12); border-radius: 999px; padding: 5px 10px; cursor: pointer; }
 .swatch:hover { color: #fff; border-color: rgba(255,255,255,.3); }
+.eyebrow-s { margin: 0 0 -6px; font: 500 11px var(--mono); letter-spacing: .18em; text-transform: uppercase; color: var(--amber); opacity: .75; }
+.extras { display: grid; gap: 12px; border-top: 1px solid rgba(255,255,255,.1); padding-top: 14px; }
 .swatch i { width: 12px; height: 12px; border-radius: 50%; display: block; }
 </style>
 <div id="stage"></div>
@@ -38,12 +40,17 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--amber); out
   <h2 id="lname"></h2>
   <p class="detail" id="ldetail"></p>
 </div>
-<div id="panel" hidden role="dialog" aria-label="Lamp settings">
-  <div class="ph"><h2>Floor lamp</h2><button type="button" id="pclose" aria-label="Close lamp settings">✕</button></div>
+<div id="panel" hidden role="dialog" aria-label="Light settings">
+  <div class="ph"><h2>Lights</h2><button type="button" id="pclose" aria-label="Close light settings">✕</button></div>
+  <p class="eyebrow-s">Floor lamp</p>
   <label class="line" for="lamp-on">Switched on <input type="checkbox" id="lamp-on" checked></label>
   <label for="lamp-brightness"><span class="line">Brightness <span class="val" id="bval">100%</span></span>
     <input type="range" id="lamp-brightness" min="15" max="150" value="100"></label>
   <div><div class="line" style="margin-bottom:8px">Bulb colour</div><div id="colors"></div></div>
+  <div class="extras">
+    <label class="line" for="light-ceiling">Ceiling light <input type="checkbox" id="light-ceiling"></label>
+    <label class="line" for="light-sunset">Sunset lamp <input type="checkbox" id="light-sunset"></label>
+  </div>
 </div>
 <div class="bar">
   <div class="row" id="roomrow">
@@ -54,11 +61,11 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--amber); out
     <button type="button" data-view="dollhouse" aria-pressed="false">Dollhouse</button>
     <button type="button" id="binos">Binoculars (B)</button>
     <button type="button" id="lamp" aria-pressed="true">Lamp (L)</button>
-    <button type="button" id="settings" aria-pressed="false" aria-label="Lamp settings">Lamp settings</button>
+    <button type="button" id="settings" aria-pressed="false">Lights</button>
   </div>
   <div class="row" id="scoperow" hidden>
     <button type="button" id="leave">Back to the room (Esc)</button>
   </div>
-  <p class="hint" id="hint">Drag to orbit · scroll to zoom · click the lamp (L) or the binoculars on the sill (B)</p>
+  <p class="hint" id="hint">Drag to orbit · scroll to zoom · click the lamp (L), the ceiling light, the sunset lamp or the binoculars (B)</p>
 </div>
 <script>

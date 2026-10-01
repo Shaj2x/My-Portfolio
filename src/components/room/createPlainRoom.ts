@@ -16,15 +16,20 @@ import { CLOSET, COLORS, DOOR, HERO, LAYOUT, ROOM, WINDOW } from "./roomLayout";
 export type PlainRoomView = "photo" | "window" | "dollhouse" | "desk" | "door" | "binoculars";
 type CameraView = Exclude<PlainRoomView, "binoculars">;
 
+/** the room's switchable lights: the floor lamp (dimmable, any colour), the ceiling light and the sunset lamp */
 export interface LampSettings {
   on: boolean;
   /** 0.15 (dim) to 1.5 (bright); 1 is the lamp as photographed */
   brightness: number;
   /** bulb colour as a hex string */
   color: string;
+  /** the flush ceiling light */
+  ceiling: boolean;
+  /** the sunset lamp on the desk, projecting an orange disc onto the wall over the bed */
+  sunset: boolean;
 }
 
-export const LAMP_DEFAULT: LampSettings = { on: true, brightness: 1, color: "#ffd6a0" };
+export const LAMP_DEFAULT: LampSettings = { on: true, brightness: 1, color: "#ffd6a0", ceiling: false, sunset: false };
 
 /** bulb colours offered in the lamp panel */
 export const LAMP_COLORS: [string, string][] = [
@@ -51,6 +56,8 @@ export interface PlainRoomHandle {
   setView: (view: PlainRoomView) => void;
   /** switch the floor lamp; it fades like a real bulb. Returns the new state. */
   toggleLamp: () => boolean;
+  /** switch the ceiling light or the sunset lamp */
+  toggleLight: (which: "ceiling" | "sunset") => boolean;
   /** change any lamp settings; the light fades to them */
   setLamp: (settings: Partial<LampSettings>) => void;
   dispose: () => void;
@@ -403,10 +410,12 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     slab(right - DOOR.x1 - 0.07, 0.1, 0.015, trim, (DOOR.x1 + 0.07 + right) / 2, 0.05, front - 0.0075, frontWall);
   }
 
-  // the ceiling light (off) and the sprinkler head
+  // the ceiling light and the sprinkler head
+  const domeMat = new THREE.MeshStandardMaterial({ color: "#f4f1ea", roughness: 0.3, emissive: "#fff3df", emissiveIntensity: 0 });
+  const ceilingParts: THREE.Object3D[] = [];
   {
     const { pos, r } = LAYOUT.ceilingLight;
-    const dome = new THREE.Mesh(new THREE.SphereGeometry(r, 32, 12, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: "#f4f1ea", roughness: 0.3 }));
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(r, 32, 12, 0, Math.PI * 2, 0, Math.PI / 2), domeMat);
     dome.scale.y = 0.35;
     dome.rotation.x = Math.PI;
     dome.position.set(pos[0], height, pos[2]);
@@ -415,6 +424,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     ring.rotation.x = Math.PI / 2;
     ring.position.set(pos[0], height - 0.03, pos[2]);
     scene.add(ring);
+    ceilingParts.push(dome, ring);
     const sp = LAYOUT.sprinkler.pos;
     const head = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.015, 24), new THREE.MeshStandardMaterial({ color: "#f0efeb", roughness: 0.5 }));
     head.position.set(sp[0], height - 0.008, sp[2]);
@@ -462,6 +472,47 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   glowLight.position.copy(bulb);
   scene.add(glowLight);
 
+  // the ceiling light: a soft, shadowless wash from the dome
+  const cl = LAYOUT.ceilingLight.pos;
+  const ceilingLight = new THREE.PointLight("#fff1dc", 0, 0, 1.3);
+  ceilingLight.position.set(cl[0], height - 0.12, cl[2]);
+  scene.add(ceilingLight);
+
+  // the sunset lamp: a narrow projector with a painted disc (a bright amber core fading to red)
+  const sun = furniture.sunset;
+  const sunsetDisc = paintTexture(256, 256, (c, w, h) => {
+    c.fillStyle = "#000";
+    c.fillRect(0, 0, w, h);
+    const g = c.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w * 0.46);
+    g.addColorStop(0, "#ffc25a");
+    g.addColorStop(0.4, "#ff8a2a");
+    g.addColorStop(0.78, "#f04a1a");
+    g.addColorStop(0.97, "#c81e1e");
+    g.addColorStop(1, "#000");
+    c.fillStyle = g;
+    c.beginPath();
+    c.arc(w / 2, h / 2, w * 0.46, 0, Math.PI * 2);
+    c.fill();
+  });
+  const sunsetLight = new THREE.SpotLight("#ffffff", 0, 6, 0.26, 0.25, 1.2);
+  sunsetLight.map = sunsetDisc;
+  sunsetLight.position.copy(sun.lens);
+  sunsetLight.target.position.copy(sun.target);
+  // a projected texture needs a shadow map; the lamp only ever lights a wall, so a small one does
+  sunsetLight.castShadow = true;
+  sunsetLight.shadow.mapSize.set(512, 512);
+  sunsetLight.shadow.camera.near = 0.05;
+  sunsetLight.shadow.bias = -0.0005;
+  scene.add(sunsetLight, sunsetLight.target);
+  let ceilingLevel = 0;
+  let sunsetLevel = 0;
+  const applyExtras = () => {
+    ceilingLight.intensity = 4.2 * ceilingLevel;
+    domeMat.emissiveIntensity = 1.4 * ceilingLevel;
+    sunsetLight.intensity = 11 * sunsetLevel;
+    sun.setGlow(sunsetLevel);
+  };
+
   // ---------- the lamp switch and its settings ----------
   // Every change fades: switching on is quick, switching off leaves a short filament glow, and
   // colour and brightness glide to their new values.
@@ -480,7 +531,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     // the walls bounce less light, and the room falls back on the screens and the moon
     bounce.intensity = 0.25 + 1.15 * k;
     bounce.color.copy(bounceColor.copy(warmWhite).lerp(lampColor, 0.6));
-    hemi.intensity = 0.25 + 0.65 * Math.min(k, 1.2);
+    hemi.intensity = 0.25 + 0.65 * Math.min(k, 1.2) + 0.35 * ceilingLevel;
     furniture.lamp.setGlow(k, lampColor);
   };
   applyLamp();
@@ -494,6 +545,14 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     setLamp({ on: !lampSettings.on });
     return lampSettings.on;
   };
+  const toggleLight = (which: "ceiling" | "sunset") => {
+    setLamp({ [which]: !lampSettings[which] });
+    return lampSettings[which];
+  };
+  if (lampSettings.ceiling) ceilingLevel = 1;
+  if (lampSettings.sunset) sunsetLevel = 1;
+  applyExtras();
+  applyLamp();
 
   for (const s of furniture.screens) {
     const area = new THREE.RectAreaLight(s.color, s.strength, s.w, s.h);
@@ -689,13 +748,15 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   // ---------- pointer: click the lamp or the binoculars; drag to aim through the binoculars ----------
   const raycaster = new THREE.Raycaster();
   const ndc = new THREE.Vector2();
-  const pickTarget = (e: PointerEvent): "lamp" | "binoculars" | null => {
+  const pickTarget = (e: PointerEvent): "lamp" | "binoculars" | "ceiling" | "sunset" | null => {
     if (mode !== "room") return null;
     const r = renderer.domElement.getBoundingClientRect();
     ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     raycaster.setFromCamera(ndc, camera);
-    const hit = raycaster.intersectObjects(furniture.group.children, true).find((h) => (h.object as THREE.Mesh).isMesh);
+    const hit = raycaster.intersectObjects([...furniture.group.children, ...ceilingParts], true).find((h) => (h.object as THREE.Mesh).isMesh && h.object.visible);
     if (!hit) return null;
+    if (ceilingParts.includes(hit.object)) return "ceiling";
+    if (sun.parts.includes(hit.object)) return "sunset";
     if (furniture.lamp.parts.includes(hit.object)) return "lamp";
     if (binos.parts.includes(hit.object)) return "binoculars";
     return null;
@@ -709,6 +770,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       const hit = pickTarget(e);
       if (hit === "lamp") toggleLamp();
       else if (hit === "binoculars") enterBinoculars();
+      else if (hit === "ceiling" || hit === "sunset") toggleLight(hit);
     }
     downAt = dragFrom = null;
   };
@@ -771,6 +833,20 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       applyLamp();
     }
 
+    // the ceiling light and the sunset lamp fade like the floor lamp
+    const ceilingTarget = lampSettings.ceiling ? 1 : 0;
+    const sunsetTarget = lampSettings.sunset ? 1 : 0;
+    if (ceilingLevel !== ceilingTarget || sunsetLevel !== sunsetTarget) {
+      const step = (v: number, to: number) => {
+        const next = v + (to - v) * (reducedMotion ? 1 : 1 - Math.exp(-(to > v ? 14 : 8) * dt));
+        return Math.abs(to - next) < 0.002 ? to : next;
+      };
+      ceilingLevel = step(ceilingLevel, ceilingTarget);
+      sunsetLevel = step(sunsetLevel, sunsetTarget);
+      applyExtras();
+      applyLamp();
+    }
+
     if (fade) {
       fade.t = Math.min(1, fade.t + dt / 0.5);
       if (!fade.fired && fade.t >= 0.5) {
@@ -819,6 +895,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   return {
     setView,
     toggleLamp,
+    toggleLight,
     setLamp,
     dispose: () => {
       renderer.domElement.removeEventListener("pointerdown", onDown);

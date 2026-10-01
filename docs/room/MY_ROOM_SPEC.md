@@ -83,7 +83,6 @@ Positions are the object's centre on the floor (y = 0) unless a height is given.
 | Digital alarm clock | +1.36, 0.75, −1.12 | 0.10 × 0.06 | white, grey face | Shows real time; stands in for the wall clock |
 | Gooseneck desk lamp | +1.40, 0.75, −1.28 | round head 0.14 Ø at 1.15 | white `#ecedef` | Off in the photos |
 | Bluetooth speaker | +1.36, 0.75, −0.58 | 0.20 × 0.07 × 0.09 | black `#1a1a1a` | Becomes the **lo-fi radio** |
-| Small round speaker | +1.36, 0.75, −0.18 | 0.07 Ø | black with blue ring | |
 | PC tower | +1.25, 0, −0.10 | 0.20 × 0.45 × 0.42 | black, blue LED `#3050ff` | Under the front end of the desk |
 | Power bar | +1.49, 0.30, −0.05 | | white | Cables run up to the desk |
 
@@ -167,6 +166,8 @@ Photo B is the best whole-room view, so the hero view reproduces **photo B** rat
 - The lamp is three lights (a soft-shadowed cone down, a cone up the corner, a glow through the shade) with adjustable brightness and bulb colour.
 - Binoculars sit in the open on the sill above the pillow. Clicking them (or B) looks out at Western's campus through a wide two-field binocular view.
 - Details modelled from the close-ups: about 22 named fragrances on a four-row riser (Breeze and Vintage Radio boxes, 9pm, Stronger With You, Marwa, the blue shield, the black V, Honor and others); Spider-Ham, the crying-cat pillow, the Chick-fil-A cow with its sign, the blue-jay squish and two leafy plants on the sill; the chain tray, Casio watch, purple lanyard, keys, wallet, lighter and AirPods on the dresser; the clock in the desk lamp's base, a coaster under the mug, a knob on the keyboard.
+
+- The "small speaker" by the monitor is a sunset lamp. It projects an amber-to-red disc onto the wall above the bed. It and the ceiling light are off by default, and both switch by clicking them or from the Lights panel.
 
 **Removed**
 - The rugs and the ring light behind the desk lamp (in the photos, left out on request).

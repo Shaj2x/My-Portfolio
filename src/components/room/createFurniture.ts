@@ -27,6 +27,8 @@ export interface FurnitureHandle {
   lamp: { bulb: THREE.Vector3; parts: THREE.Object3D[]; setGlow: (k: number, color: THREE.Color) => void };
   /** the binoculars on the window sill: where they sit, which way they look, and the meshes that pick them up */
   binoculars: { position: THREE.Vector3; direction: THREE.Vector3; parts: THREE.Object3D[] };
+  /** the sunset lamp on the desk: where its lens is, the point on the wall it projects onto, its meshes, and its lens glow (0–1) */
+  sunset: { lens: THREE.Vector3; target: THREE.Vector3; parts: THREE.Object3D[]; setGlow: (k: number) => void };
   /** centre and facing of each glowing screen, for area lights */
   screens: { center: THREE.Vector3; normal: THREE.Vector3; w: number; h: number; color: string; strength: number }[];
 }
@@ -507,6 +509,7 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
   }
 
   // ---------- desk props ----------
+  let sunset!: FurnitureHandle["sunset"];
   {
     const facing = -Math.PI / 2;
     // keyboard: an off-white 75% board, white alphas, dusty-blue modifiers and a volume knob
@@ -581,15 +584,28 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     const sp = LAYOUT.speaker.pos;
     const spk = rounded(0.2, 0.08, 0.07, 0.03, std("#1a1a1a", 0.8), sp[0], deskTop + 0.04, sp[2]);
     spk.rotation.y = facing;
-    // small round speaker on a stand, its silver driver facing the chair
-    const ss = LAYOUT.smallSpeaker.pos;
-    const sg = anchor(ss[0], deskTop, ss[2], facing);
-    ball(0.035, std("#141414", 0.4), 0, 0.055, 0, sg);
-    cyl(0.012, 0.03, 0.022, std("#141414", 0.5), 0, 0.011, 0, sg, 20);
-    const driver = place(new THREE.Mesh(new THREE.CircleGeometry(0.022, 28), std("#c9ccd1", 0.3, 0.8)), 0, 0.055, 0.0335, sg, false);
-    driver.rotation.y = 0;
-    const surround = place(new THREE.Mesh(new THREE.TorusGeometry(0.023, 0.003, 8, 28), std("#b5b9bf", 0.3, 0.8)), 0, 0.055, 0.033, sg, false);
-    surround.rotation.y = 0;
+    // the sunset lamp: a black ball head on a short stand, its lens aimed at the wall over the bed
+    const ss = LAYOUT.sunsetLamp.pos;
+    const sunTarget = new THREE.Vector3(...LAYOUT.sunsetLamp.target);
+    const sunParts: THREE.Object3D[] = [cyl(0.03, 0.036, 0.012, std("#141414", 0.5), ss[0], deskTop + 0.006, ss[2], group, 24), cyl(0.008, 0.008, 0.04, std("#141414", 0.5), ss[0], deskTop + 0.03, ss[2], group, 12)];
+    const head = new THREE.Group();
+    head.position.set(ss[0], deskTop + 0.075, ss[2]);
+    group.add(head);
+    head.lookAt(sunTarget);
+    sunParts.push(ball(0.036, std("#141414", 0.35), 0, 0, 0, head));
+    const lensMat = new THREE.MeshStandardMaterial({ color: "#c9ccd1", roughness: 0.2, metalness: 0.6, envMap: env, envMapIntensity: 0.7, emissive: "#ff7a2e", emissiveIntensity: 0 });
+    const lensDisc = place(new THREE.Mesh(new THREE.CircleGeometry(0.024, 28), lensMat), 0, 0, 0.0335, head, false);
+    const bezel = place(new THREE.Mesh(new THREE.TorusGeometry(0.025, 0.003, 8, 28), std("#b5b9bf", 0.3, 0.8)), 0, 0, 0.033, head, false);
+    sunParts.push(lensDisc, bezel);
+    head.updateMatrixWorld(true);
+    sunset = {
+      lens: new THREE.Vector3(0, 0, 0.04).applyMatrix4(head.matrixWorld),
+      target: sunTarget,
+      parts: sunParts,
+      setGlow: (k) => {
+        lensMat.emissiveIntensity = 2.2 * k;
+      },
+    };
 
     // PC tower under the front end of the desk, blue light at its front edge
     const pc = LAYOUT.pcTower.pos;
@@ -733,5 +749,5 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     block(0.01, 0.12, 0.075, white, sw[0] + 0.005, sw[1], sw[2], group, false);
   }
 
-  return { group, lamp, binoculars, screens };
+  return { group, lamp, binoculars, sunset, screens };
 }

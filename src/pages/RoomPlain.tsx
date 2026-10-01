@@ -113,13 +113,14 @@ const RoomPlain = () => {
       </div>
 
       {panelOpen && !inBinoculars && (
-        <div className="pointer-events-auto absolute bottom-36 right-4 w-[min(320px,calc(100%-32px))] rounded-2xl border border-white/10 bg-black/70 p-5 backdrop-blur-xl">
+        <div className="pointer-events-auto absolute bottom-36 right-4 max-h-[calc(100%-13rem)] w-[min(320px,calc(100%-32px))] overflow-y-auto overscroll-contain rounded-2xl border border-white/10 bg-black/70 p-5 backdrop-blur-xl">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-base font-semibold">Floor lamp</h2>
-            <button type="button" aria-label="Close lamp settings" className="rounded-full p-1.5 text-white/60 hover:bg-white/10 hover:text-white" onClick={() => setPanelOpen(false)}>
+            <h2 className="text-base font-semibold">Lights</h2>
+            <button type="button" aria-label="Close light settings" className="rounded-full p-1.5 text-white/60 hover:bg-white/10 hover:text-white" onClick={() => setPanelOpen(false)}>
               <X className="h-4 w-4" />
             </button>
           </div>
+          <p className="mb-3 text-xs uppercase tracking-[0.18em] text-amber-200/70">Floor lamp</p>
           <label className="mb-4 flex items-center justify-between text-sm text-white/80">
             Switched on
             <input id="lamp-on" type="checkbox" className="h-4 w-4 accent-amber-300" checked={lamp.on} onChange={(e) => roomRef.current?.setLamp({ on: e.target.checked })} />
@@ -152,6 +153,16 @@ const RoomPlain = () => {
               </button>
             ))}
           </div>
+          <div className="mt-5 grid gap-3 border-t border-white/10 pt-4">
+            <label className="flex items-center justify-between text-sm text-white/80">
+              Ceiling light
+              <input id="light-ceiling" type="checkbox" className="h-4 w-4 accent-amber-300" checked={lamp.ceiling} onChange={() => roomRef.current?.toggleLight("ceiling")} />
+            </label>
+            <label className="flex items-center justify-between text-sm text-white/80">
+              Sunset lamp
+              <input id="light-sunset" type="checkbox" className="h-4 w-4 accent-amber-300" checked={lamp.sunset} onChange={() => roomRef.current?.toggleLight("sunset")} />
+            </label>
+          </div>
         </div>
       )}
 
@@ -174,14 +185,14 @@ const RoomPlain = () => {
               <button type="button" className={chip} aria-pressed={lamp.on} onClick={() => roomRef.current?.toggleLamp()}>
                 {lamp.on ? <Lightbulb className="h-4 w-4" /> : <LightbulbOff className="h-4 w-4" />} Lamp (L)
               </button>
-              <button type="button" className={chip} aria-pressed={panelOpen} aria-label="Lamp settings" onClick={() => setPanelOpen((o) => !o)}>
+              <button type="button" className={chip} aria-pressed={panelOpen} aria-label="Light settings" onClick={() => setPanelOpen((o) => !o)}>
                 <SlidersHorizontal className="h-4 w-4" />
               </button>
             </>
           )}
         </div>
         <p className="text-xs text-white/50">
-          {inBinoculars ? "Drag to look around · scroll to zoom · Esc to step back" : "Drag to orbit · scroll to zoom · click the lamp (L) or the binoculars on the sill (B)"}
+          {inBinoculars ? "Drag to look around · scroll to zoom · Esc to step back" : "Drag to orbit · scroll to zoom · click the lamp (L), the ceiling light, the sunset lamp or the binoculars (B)"}
         </p>
       </div>
     </main>
