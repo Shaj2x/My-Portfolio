@@ -1,6 +1,7 @@
 /**
  * The real room, as data. Every size and position is in metres: y up, +z toward the doorway,
- * origin at the centre of the floor. Values come from docs/room/MY_ROOM_SPEC.md and are
+ * x = 0 at the middle of the window wall, which stays fixed at z = -1.65; changing `depth`
+ * moves only the front wall (entry door and closet). Values come from docs/room/MY_ROOM_SPEC.md and are
  * estimates from photos until measured; nudge a number here and the geometry follows.
  */
 
@@ -8,7 +9,7 @@ export type Vec3 = [number, number, number];
 
 export const ROOM = {
   width: 3.0,
-  depth: 3.3,
+  depth: 3.8,
   height: 2.44,
   wall: 0.12,
   get left() {
@@ -17,11 +18,13 @@ export const ROOM = {
   get right() {
     return this.width / 2;
   },
-  get back() {
-    return -this.depth / 2;
-  },
+  back: -1.65,
   get front() {
-    return this.depth / 2;
+    return this.back + this.depth;
+  },
+  /** z of the middle of the floor */
+  get midZ() {
+    return this.back + this.depth / 2;
   },
 };
 
@@ -88,7 +91,7 @@ export const LAYOUT = {
   tapestry: { pos: [1.49, 1.72, -0.62] as Vec3, w: 1.3, h: 1.2 },
   webRug: { pos: [0.72, 0, -0.95] as Vec3, r: 0.38 },
   cartoonRug: { pos: [0.45, 0, -1.22] as Vec3, w: 0.7, l: 0.42 },
-  ceilingLight: { pos: [-0.2, 0, 0.45] as Vec3, r: 0.17 },
+  ceilingLight: { pos: [-0.2, 0, 0.7] as Vec3, r: 0.17 },
   sprinkler: { pos: [0.3, 0, -0.95] as Vec3 },
   /** things on the window sill, left to right */
   sill: [
@@ -102,12 +105,12 @@ export const LAYOUT = {
   ] as { kind: "plant" | "cow" | "spiderHam" | "cat" | "bird" | "remote"; x: number }[],
   outlets: [
     { pos: [0.6, 0.42, -1.65] as Vec3, facing: "back" },
-    { pos: [-1.5, 0.35, 0.8] as Vec3, facing: "left" },
+    { pos: [-1.5, 0.35, 1.1] as Vec3, facing: "left" },
     { pos: [1.5, 0.35, -1.25] as Vec3, facing: "right" },
   ] as { pos: Vec3; facing: "back" | "left" | "right" }[],
   /** on the closet's side face, facing the entry door alcove */
-  lightSwitch: { pos: [0.52, 1.2, 1.53] as Vec3 },
+  lightSwitch: { pos: [0.52, 1.2, ROOM.front - 0.12] as Vec3 },
 };
 
 /** the opening camera, matching photo B: standing in front of the closet, looking at the window wall */
-export const HERO = { pos: [0.62, 1.62, 1.0] as Vec3, target: [-0.2, 0.95, -1.65] as Vec3, fov: 68 };
+export const HERO = { pos: [0.62, 1.62, ROOM.front - CLOSET.depth - 0.12] as Vec3, target: [-0.2, 0.95, -1.65] as Vec3, fov: 68 };

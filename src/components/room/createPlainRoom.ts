@@ -24,10 +24,10 @@ const heroPos = vec(HERO.pos);
 const heroDir = vec(HERO.target).sub(heroPos).normalize();
 const VIEWS: Record<PlainRoomView, { pos: THREE.Vector3; target: THREE.Vector3 }> = {
   photo: { pos: heroPos, target: heroPos.clone().addScaledVector(heroDir, 2.2) },
-  dollhouse: { pos: new THREE.Vector3(-3.4, 4.6, 4.4), target: new THREE.Vector3(0.1, 0.5, -0.3) },
+  dollhouse: { pos: new THREE.Vector3(-3.4, 4.8, ROOM.midZ + 4.7), target: new THREE.Vector3(0.1, 0.5, ROOM.midZ) },
   desk: { pos: new THREE.Vector3(-0.6, 1.45, 0.6), target: new THREE.Vector3(1.2, 0.95, -0.75) },
   // matches photo E: from beside the desk, looking at the entry door and the closet
-  door: { pos: new THREE.Vector3(0.35, 1.5, -0.55), target: new THREE.Vector3(0.0, 1.0, 1.65) },
+  door: { pos: new THREE.Vector3(0.35, 1.5, -0.45), target: new THREE.Vector3(0.0, 1.0, ROOM.front) },
 };
 
 export function createPlainRoom(container: HTMLElement): PlainRoomHandle {
@@ -101,6 +101,7 @@ export function createPlainRoom(container: HTMLElement): PlainRoomHandle {
   }, [W * 2, D * 2]);
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(W, D), new THREE.MeshStandardMaterial({ map: carpet, roughness: 1 }));
   floor.rotation.x = -Math.PI / 2;
+  floor.position.z = ROOM.midZ;
   floor.receiveShadow = true;
   scene.add(floor);
 
@@ -116,7 +117,7 @@ export function createPlainRoom(container: HTMLElement): PlainRoomHandle {
   }, [3, 3]);
   const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(W, D), new THREE.MeshStandardMaterial({ map: popcorn, bumpMap: popcorn, bumpScale: 1.5, roughness: 1 }));
   ceiling.rotation.x = Math.PI / 2;
-  ceiling.position.y = height;
+  ceiling.position.set(0, height, ROOM.midZ);
   scene.add(ceiling);
 
   const wallMat = new THREE.MeshStandardMaterial({ color: COLORS.wall, roughness: 0.85 });
@@ -158,11 +159,11 @@ export function createPlainRoom(container: HTMLElement): PlainRoomHandle {
 
   // side walls, each with its skirting board
   const leftWall = wallGroup(new THREE.Vector3(left, 0, 0), new THREE.Vector3(1, 0, 0));
-  slab(t, height, D + t * 2, wallMat, left - t / 2, height / 2, 0, leftWall);
-  slab(0.015, 0.1, D, trim, left + 0.0075, 0.05, 0, leftWall);
+  slab(t, height, D + t * 2, wallMat, left - t / 2, height / 2, ROOM.midZ, leftWall);
+  slab(0.015, 0.1, D, trim, left + 0.0075, 0.05, ROOM.midZ, leftWall);
   const rightWall = wallGroup(new THREE.Vector3(right, 0, 0), new THREE.Vector3(-1, 0, 0));
-  slab(t, height, D + t * 2, wallMat, right + t / 2, height / 2, 0, rightWall);
-  slab(0.015, 0.1, D, trim, right - 0.0075, 0.05, 0, rightWall);
+  slab(t, height, D + t * 2, wallMat, right + t / 2, height / 2, ROOM.midZ, rightWall);
+  slab(0.015, 0.1, D, trim, right - 0.0075, 0.05, ROOM.midZ, rightWall);
 
   // front wall: the entry door in an alcove by the desk wall, and the closet jutting out beside it
   const frontWall = wallGroup(new THREE.Vector3(0, 0, front), new THREE.Vector3(0, 0, -1));
@@ -306,7 +307,7 @@ export function createPlainRoom(container: HTMLElement): PlainRoomHandle {
   scene.add(new THREE.HemisphereLight("#fff1dc", "#3b352e", 0.9));
   // light bouncing off the pale walls and ceiling: a soft, shadowless fill from above the room
   const bounce = new THREE.PointLight("#ffe2c0", 1.4, 0, 1.2);
-  bounce.position.set(0.1, height - 0.3, 0.1);
+  bounce.position.set(0.1, height - 0.3, ROOM.midZ);
   scene.add(bounce);
 
   // the floor lamp is the room's main light

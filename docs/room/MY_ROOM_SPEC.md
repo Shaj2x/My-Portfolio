@@ -26,7 +26,7 @@ Same as the reference scene: metres, **y up**, **+z toward the doorway camera**,
 | | Value | Source |
 |---|---|---|
 | Width (left → right) | 3.00 m | estimated: bed 1.45 + walkway 0.90 + desk 0.60 |
-| Depth (back → front) | 3.30 m | estimated: the bed (2.0 m) covers about 60 % of the left wall in photo A |
+| Depth (back → front) | 3.80 m | estimated, lengthened on request: about 1.2 m of open floor between the foot of the bed and the closet |
 | Ceiling height | 2.44 m (8 ft) | estimated, standard. Textured "popcorn" ceiling |
 | Window | 1.30 m wide × 1.03 m tall, sill at 1.02 m, from x −0.90 to +0.40 | estimated |
 | Entry door | 0.81 m × 2.03 m, front wall, x +0.61 to +1.42, hinged on the desk-wall side | estimated from photo E |
