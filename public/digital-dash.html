@@ -445,6 +445,35 @@ html.has-bg .day{background:color-mix(in srgb,var(--panel2) 70%,transparent)}
 .pbar{display:grid;grid-template-columns:50px 1fr 38px;gap:8px;align-items:center;font-size:13px;color:var(--muted);margin:3px 0}
 .pbar i{height:6px;border-radius:6px;background:var(--panel2);overflow:hidden;display:block}
 .pbar i b{display:block;height:100%;background:var(--accent);transform-origin:0 50%}
+.np{display:grid;gap:10px}
+.np-row{display:flex;gap:14px;align-items:center;min-width:0}
+.np-art{flex:none;width:76px;height:76px;border-radius:10px;overflow:hidden;background:var(--panel2);display:grid;place-items:center;color:var(--muted);box-shadow:0 6px 18px -8px rgba(0,0,0,.5)}
+.np-art img{width:100%;height:100%;object-fit:cover;display:block}
+.np-art svg,.np-empty svg,.np-lead svg{width:26px;height:26px}
+.np-meta{flex:1;min-width:0;display:grid;gap:2px}
+.np-state{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--muted)}
+.np-state.on{color:var(--accent)}
+.np-state:not(.on) .eq i{animation:none}
+.np-t{font-size:15.5px;line-height:1.25;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.np-a{font-size:13.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.np-bar{height:4px;border-radius:4px;background:color-mix(in srgb,var(--ink) 14%,transparent);overflow:hidden;margin-top:8px}
+.np-bar i{display:block;height:100%;background:var(--accent);transform-origin:0 50%;transition:transform 1s linear}
+.np-time{display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.np-empty{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:14px}
+.np-empty p{margin:0}
+.np-setup{display:grid;gap:8px;font-size:13.5px}
+.np-lead{display:flex;gap:10px;align-items:flex-start;margin:0}
+.np-lead svg{color:var(--accent);flex:none}
+.np-setup ol{margin:0;padding-left:20px;display:grid;gap:6px;color:var(--muted)}
+.np-setup ol b{color:var(--ink);font-weight:600}
+.np-setup a{color:var(--accent)}
+.np-uri{display:flex;align-items:center;gap:8px;margin-top:4px;flex-wrap:wrap}
+.np-uri code{font-size:12px;padding:4px 8px;border-radius:6px;background:var(--panel2);color:var(--ink);word-break:break-all;user-select:all}
+.np-form{display:flex;gap:8px;flex-wrap:wrap}
+.np-form input{flex:1 1 200px;min-width:0;font-family:ui-monospace,monospace;font-size:13px}
+.np-err{margin:0;color:var(--bad)}
+.np-disc{justify-self:start}
+@media (prefers-reduced-motion:reduce){.np-bar i{transition:none}}
 .wcfg{border-top:1px solid var(--line);margin-top:12px;padding-top:12px;display:grid;gap:8px}
 .wcfg label{display:grid;gap:4px;font-size:13px;color:var(--muted)}
 .wmenu{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;margin-top:10px}
@@ -802,28 +831,6 @@ html.lg .kpi{background:color-mix(in srgb,var(--panel) 40%,transparent);-webkit-
 .jb-tile.on .jb-on svg{color:var(--accent)}
 .jb-tile input[type=range]{width:100%}
 .jb-tile input:disabled{opacity:.35}
-.sp{border-top:1px solid var(--line);padding-top:12px}
-.sp summary{display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:600;font-size:14.5px;list-style:none;min-height:32px}
-.sp summary::-webkit-details-marker{display:none}
-.sp summary svg{width:20px;height:20px;color:var(--accent)}
-.sp summary::after{content:"";margin-left:auto;width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);transition:transform var(--t-ui) var(--ease-out)}
-.sp[open] summary::after{transform:rotate(-135deg)}
-.sp-on{font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;background:color-mix(in srgb,var(--good,#0ca30c) 22%,transparent)}
-.sp-on[hidden]{display:none}
-.sp-form{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
-.sp-form input{flex:1 1 220px;min-width:0}
-.sp .hint{margin:8px 0 0;font-size:12.5px}
-.sp-frame{margin-top:12px}
-.sp-frame[hidden]{display:none}
-.sp-frame iframe{display:block;width:100%;border:0;border-radius:12px}
-.sp-card{display:flex;align-items:center;gap:14px;padding:14px;border-radius:var(--r);background:var(--panel2);flex-wrap:wrap}
-html.lg .sp-card{background:var(--glass-tint);box-shadow:inset 0 0 0 1px var(--glass-edge)}
-.sp-card>svg{width:28px;height:28px;color:var(--accent);flex:none}
-.sp-card>div{flex:1 1 220px;min-width:0}
-.sp-card b{font-size:14.5px}
-.sp-card p{margin:2px 0 0;font-size:13px;color:var(--muted)}
-.sp-card .btn{text-decoration:none;flex:none}
-@media (prefers-reduced-motion:reduce){.sp summary::after{transition:none}}
 .jb-auto{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--ink);cursor:pointer;min-height:24px}
 .jb-mini{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 12px;border:1px solid color-mix(in srgb,var(--accent) 45%,var(--line));border-radius:999px;background:color-mix(in srgb,var(--accent) 12%,var(--panel));color:var(--ink);font-size:13px;max-width:220px}
 .jb-mini[hidden]{display:none}
@@ -974,12 +981,6 @@ html.lg .eye{background:var(--glass-tint);box-shadow:inset 0 1px 0 color-mix(in 
         <div class="jb-mixes" id="jb-mixes" role="group" aria-label="Quick mixes"></div>
         <div class="jb-grid" id="jb-grid"></div>
         <label class="jb-auto"><input type="checkbox" id="jb-auto"> Play during focus timers and pause for breaks</label>
-        <details class="sp" id="sp">
-          <summary><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>Play from Spotify<span class="sp-on" id="sp-on" hidden>Link saved</span></summary>
-          <form class="sp-form" id="sp-form" autocomplete="off"><input type="text" id="sp-url" inputmode="url" placeholder="Paste a Spotify playlist, album or song link" aria-label="Spotify link"><button class="btn" type="submit">Load</button><button class="btn ghost" type="button" id="sp-clear" hidden>Remove</button></form>
-          <p class="hint">In Spotify, use Share, then Copy link. Log in to Spotify in this browser for full songs; otherwise Spotify plays 30 second previews. With "Play during focus timers" on, Spotify starts and pauses with your timer too.</p>
-          <div class="sp-frame" id="sp-frame" hidden></div>
-        </details>
       </section>
       <div class="wbar"><button class="btn ghost small" id="w-add" hidden>Add widget</button><button class="btn ghost small" id="w-edit">Customize widgets</button></div>
       <div class="wmenu panel" id="w-menu" hidden></div>
@@ -2564,56 +2565,9 @@ function jbToggle(id){
   save();jbRender();
 }
 function jbTimerSync(){ // auto mode: play while a focus timer runs, pause for breaks and when it stops
-  const st=jbS();if(!st.auto)return;spTimerSync();
-  if(T.running&&T.kind==="focus"){if(!JB.playing&&(st.on.length||!SP.ctl)){jbPlay();JB.auto=true;}}
+  const st=jbS();if(!st.auto)return;
+  if(T.running&&T.kind==="focus"){if(!JB.playing){jbPlay();JB.auto=true;}}
   else if(JB.playing&&JB.auto)jbPause();
-}
-/* ---------- Spotify ----------
-   Spotify's embed player, driven through its iFrame API when it loads so the focus timer can start
-   and pause it. If the API script is blocked, a plain embed still plays. Saved as settings.sp.uri. */
-const SP={api:null,ctl:null,wait:null,blocked:false};
-const SP_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>';
-/* Some hosts (like the claude.ai preview) forbid embedding other sites. The browser reports that as a
-   CSP violation, so swap the broken frame for a card that opens Spotify in a new tab instead. */
-document.addEventListener("securitypolicyviolation",e=>{
-  if(!/spotify\.com/.test(e.blockedURI||""))return;
-  SP.blocked=true;const uri=S.settings.sp?.uri;if(uri&&/frame/.test(e.violatedDirective||e.effectiveDirective||""))spFallback(uri);
-});
-function spFallback(uri){
-  const box=$("#sp-frame"),[,type,id]=uri.split(":");SP.ctl=null;box.hidden=false;
-  const what={playlist:"playlist",album:"album",track:"song",episode:"episode",show:"podcast",artist:"artist"}[type]||"music";
-  box.innerHTML=`<div class="sp-card">${SP_ICON}<div><b>Your Spotify ${what} is ready</b><p>This page can't show Spotify's player here, so it opens in a new tab. Your timer and sounds keep running on this page.</p></div><a class="btn" href="https://open.spotify.com/${type}/${id}" target="_blank" rel="noopener">Open in Spotify</a></div>`;
-}
-function spParse(v){const m=String(v||"").trim().match(/(?:open\.spotify\.com\/(?:intl-[a-z-]+\/)?(?:embed\/)?|spotify:)(playlist|album|track|episode|show|artist)[\/:]([A-Za-z0-9]{22})/);return m?`spotify:${m[1]}:${m[2]}`:"";}
-function spApi(){
-  return new Promise(res=>{
-    if(SP.api)return res(SP.api);if(SP.wait){SP.wait.push(res);return;}SP.wait=[res];
-    const done=api=>{if(!SP.wait)return;SP.api=api;SP.wait.forEach(f=>f(api));SP.wait=null;};
-    window.onSpotifyIframeApiReady=done;
-    const sc=document.createElement("script");sc.src="https://open.spotify.com/embed/iframe-api/v1";sc.async=true;sc.onerror=()=>done(null);document.head.appendChild(sc);
-    setTimeout(()=>done(null),6000);
-  });
-}
-async function spShow(uri){
-  const box=$("#sp-frame");box.innerHTML="";SP.ctl=null;$("#sp-clear").hidden=!uri;$("#sp-on").hidden=!uri;
-  if(!uri){box.hidden=true;return;}box.hidden=false;
-  const [,type,id]=uri.split(":"),h=type==="track"||type==="episode"?152:352;
-  if(SP.blocked){spFallback(uri);return;}
-  const api=await spApi();
-  if(S.settings.sp?.uri!==uri)return; /* changed while the API loaded */
-  if(SP.blocked){spFallback(uri);return;}
-  if(api){const el=document.createElement("div");box.appendChild(el);try{api.createController(el,{uri,width:"100%",height:h},ctl=>{SP.ctl=ctl;});return;}catch(e){box.innerHTML="";}}
-  box.innerHTML=`<iframe title="Spotify player" src="https://open.spotify.com/embed/${type}/${id}?utm_source=generator" height="${h}" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>`;
-}
-$("#sp-form").addEventListener("submit",e=>{
-  e.preventDefault();const uri=spParse($("#sp-url").value);
-  if(!uri){toast("That doesn't look like a Spotify link. In Spotify, use Share, then Copy link.");$("#sp-url").focus();return;}
-  S.settings.sp={uri};save();spShow(uri);$("#sp-url").value="";
-});
-$("#sp-clear").addEventListener("click",()=>{const old=S.settings.sp;S.settings.sp=null;save();spShow("");toast("Spotify removed",{run(){S.settings.sp=old;save();spShow(old.uri);}});});
-function spTimerSync(){
-  if(!SP.ctl||!jbS().auto)return;
-  try{if(T.running&&T.kind==="focus")SP.ctl.resume();else SP.ctl.pause();}catch(e){}
 }
 function jbRender(){
   const st=jbS(),grid=$("#jb-grid");if(!grid)return;
@@ -2960,6 +2914,110 @@ function drawChart(){
 
 /* ---------- mini stats ---------- */
 const TZS=["America/Toronto","America/Vancouver","America/New_York","America/Chicago","America/Los_Angeles","America/Sao_Paulo","Europe/London","Europe/Paris","Europe/Berlin","Africa/Lagos","Asia/Dubai","Asia/Kolkata","Asia/Colombo","Asia/Singapore","Asia/Shanghai","Asia/Tokyo","Australia/Sydney","Pacific/Auckland"];
+/* ---------- Spotify: now playing ----------
+   Signs in with Spotify (Authorization Code + PKCE, so no secret and no server) and reads only what is
+   playing. You register your own free Spotify app and paste its Client ID once. Tokens live in their own
+   localStorage key, never in S, so they are not saved into presets or exports. Polls every 5 seconds
+   while the page is visible and a Now playing widget is on screen; the progress bar runs locally between polls. */
+const SPK="digitaldash.spotify",SP_TOKEN="https://accounts.spotify.com/api/token";
+const NP={tok:null,data:null,at:0,err:"",busy:false,backoff:0,sig:""};
+const npRedirect=()=>location.origin+location.pathname;
+const npEmbedded=()=>{try{return window.top!==window||!/^https?:$/.test(location.protocol);}catch(e){return true;}};
+const npHas=()=>S.widgets.some(w=>w.type==="spotify");
+const b64url=buf=>btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+const lsGet=k=>{try{return JSON.parse(localStorage.getItem(k)||"null");}catch(e){return null;}};
+const lsSet=(k,v)=>{try{v==null?localStorage.removeItem(k):localStorage.setItem(k,JSON.stringify(v));}catch(e){}};
+const mmss=ms=>{const t=Math.max(0,Math.floor(ms/1000));return Math.floor(t/60)+":"+pad(t%60);};
+async function npConnect(cid){
+  cid=String(cid||"").trim();
+  if(!/^[0-9a-f]{32}$/i.test(cid)){toast("A Client ID is 32 letters and numbers. Copy it from your Spotify app's Settings.");return;}
+  if(npEmbedded()){toast("Open Digital Dash on your own site to connect. This preview can't sign in to Spotify.");return;}
+  if(!window.crypto||!crypto.subtle){toast("Connecting needs the secure (https) version of the page");return;}
+  const ver=b64url(crypto.getRandomValues(new Uint8Array(48))),state=b64url(crypto.getRandomValues(new Uint8Array(12)));
+  const ch=b64url(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(ver)));
+  lsSet(SPK+".cid",cid);lsSet(SPK+".pkce",{ver,state,cid,at:Date.now()});
+  location.assign("https://accounts.spotify.com/authorize?"+new URLSearchParams({response_type:"code",client_id:cid,scope:"user-read-currently-playing user-read-playback-state",redirect_uri:npRedirect(),code_challenge_method:"S256",code_challenge:ch,state}));
+}
+async function npTokenReq(body){
+  const r=await fetch(SP_TOKEN,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams(body)});
+  const j=await r.json().catch(()=>({}));if(!r.ok){const e=new Error(j.error_description||j.error||("HTTP "+r.status));e.status=r.status;throw e;}return j;
+}
+async function npCallback(){ /* back from Spotify's sign-in page with ?code= */
+  const u=new URL(location.href),code=u.searchParams.get("code"),err=u.searchParams.get("error"),state=u.searchParams.get("state");
+  if(!code&&!err)return;const p=lsGet(SPK+".pkce");if(!p||p.state!==state)return;
+  lsSet(SPK+".pkce",null);try{history.replaceState(null,"",location.pathname+location.hash);}catch(e){}
+  if(err){toast(err==="access_denied"?"Spotify wasn't connected":"Spotify said: "+err);return;}
+  try{
+    const j=await npTokenReq({grant_type:"authorization_code",code,redirect_uri:npRedirect(),client_id:p.cid,code_verifier:p.ver});
+    NP.tok={cid:p.cid,access:j.access_token,refresh:j.refresh_token,exp:Date.now()+(j.expires_in-60)*1000};lsSet(SPK,NP.tok);NP.err="";
+    if(!npHas()){S.widgets.unshift({id:uid(),type:"spotify",size:"w"});save();}
+    toast("Spotify connected");renderWidgets(true);npFetch();
+  }catch(e){toast("Couldn't finish connecting to Spotify: "+e.message);}
+}
+async function npAccess(){
+  if(!NP.tok)return null;if(Date.now()<NP.tok.exp)return NP.tok.access;
+  try{const j=await npTokenReq({grant_type:"refresh_token",refresh_token:NP.tok.refresh,client_id:NP.tok.cid});
+    NP.tok.access=j.access_token;if(j.refresh_token)NP.tok.refresh=j.refresh_token;NP.tok.exp=Date.now()+(j.expires_in-60)*1000;lsSet(SPK,NP.tok);return NP.tok.access;}
+  catch(e){if(e.status===400||e.status===401){NP.tok=null;lsSet(SPK,null);NP.data=null;NP.err="Spotify signed you out. Connect again.";renderWidgets(true);}throw e;}
+}
+async function npFetch(){
+  if(NP.busy||!NP.tok||Date.now()<NP.backoff)return;NP.busy=true;
+  try{
+    const t=await npAccess();if(!t)return;
+    const r=await fetch("https://api.spotify.com/v1/me/player/currently-playing?additional_types=episode",{headers:{Authorization:"Bearer "+t}});
+    if(r.status===204){NP.data=null;NP.err="";}
+    else if(r.status===401){NP.tok.exp=0;}
+    else if(r.status===429){NP.backoff=Date.now()+((+r.headers.get("Retry-After"))||30)*1000;}
+    else if(r.status===403){NP.err="Spotify won't share this account with your app yet. In your Spotify app's User Management, add the email you log in with.";NP.data=null;}
+    else if(r.ok){const j=await r.json(),it=j.item;NP.err="";
+      if(!it)NP.data=null;
+      else{const imgs=(it.album&&it.album.images)||it.images||[];
+        NP.data={id:it.id||it.uri||it.name,title:it.name,artist:(it.artists||[]).map(a=>a.name).join(", ")||(it.show&&it.show.name)||"",album:(it.album&&it.album.name)||"",
+          art:(imgs.find(i=>i.width&&i.width<=320)||imgs[imgs.length-1]||{}).url||"",dur:it.duration_ms||0,prog:j.progress_ms||0,playing:!!j.is_playing};}}
+    NP.at=Date.now();
+  }catch(e){if(NP.tok)NP.err="Can't reach Spotify right now. Trying again.";}
+  finally{NP.busy=false;npPaint();}
+}
+function npProg(){const d=NP.data;if(!d)return 0;return Math.min(d.dur,d.prog+(d.playing?Date.now()-NP.at:0));}
+const NP_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>';
+function npHtml(){
+  if(!NP.tok){
+    if(npEmbedded())return `<div class="np-empty">${NP_ICON}<p>Connect Spotify from your own site to see what you're playing here. This preview can't sign in to Spotify.</p></div>`;
+    const cid=lsGet(SPK+".cid")||"";
+    return `<div class="np-setup">${NP.err?`<p class="np-err">${esc(NP.err)}</p>`:""}<p class="np-lead">${NP_ICON}<span>Show the song you're playing on Spotify while you work. One-time setup, about 2 minutes:</span></p>
+      <ol><li>Open the <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener">Spotify developer dashboard</a>, log in, and press <b>Create app</b>. Any name works. Tick <b>Web API</b>.</li>
+      <li>Under <b>Redirect URIs</b>, add this address exactly:<span class="np-uri"><code>${esc(npRedirect())}</code><button type="button" class="btn ghost small" data-npcopy>Copy</button></span></li>
+      <li>Save, then copy the app's <b>Client ID</b> and paste it here:</li></ol>
+      <form class="np-form" data-npform autocomplete="off"><input type="text" value="${esc(cid)}" placeholder="Client ID" aria-label="Spotify Client ID" spellcheck="false"><button class="btn" type="submit">Connect Spotify</button></form></div>`;
+  }
+  const d=NP.data,disc=wEdit?`<button type="button" class="btn ghost small np-disc" data-npdisc>Disconnect Spotify</button>`:"";
+  if(!d)return `<div class="np-empty">${NP_ICON}<p>${esc(NP.err||(NP.at?"Nothing playing on Spotify right now.":"Checking Spotify…"))}</p></div>${disc}`;
+  const pr=d.dur?npProg()/d.dur:0;
+  return `<div class="np-row"><div class="np-art">${d.art?`<img src="${esc(d.art)}" alt="" loading="lazy">`:NP_ICON}</div>
+    <div class="np-meta"><span class="np-state${d.playing?" on":""}">${d.playing?`<span class="eq" aria-hidden="true"><i></i><i></i><i></i></span>Playing`:"Paused"}</span>
+      <b class="np-t" title="${esc(d.title)}">${esc(d.title)}</b><span class="np-a" title="${esc(d.artist)}">${esc(d.artist)}</span>
+      <div class="np-bar" role="progressbar" aria-label="Song progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pr*100)}"><i style="transform:scaleX(${pr.toFixed(4)})"></i></div>
+      <div class="np-time"><span data-npcur>${mmss(npProg())}</span><span>${mmss(d.dur)}</span></div></div></div>${disc}`;
+}
+function npPaint(){ /* rebuild only when the song or state changes; otherwise just move the bar */
+  const d=NP.data,sig=[!!NP.tok,NP.err,wEdit,d&&d.id,d&&d.playing,d&&d.art,!!NP.at].join("|");
+  $$("[data-np]").forEach(el=>{
+    if(el._sig!==sig){el._sig=sig;const was=el.firstElementChild;el.innerHTML=npHtml();if(was&&d&&!rmq.matches)anim(el.firstElementChild,[{opacity:0,transform:"translateY(4px)"},{opacity:1,transform:"none"}],{duration:280,easing:EASE_OUT});return;}
+    if(!d||!d.dur)return;const p=npProg(),bar=el.querySelector(".np-bar i"),cur=el.querySelector("[data-npcur]");
+    if(bar)bar.style.transform=`scaleX(${(p/d.dur).toFixed(4)})`;if(cur)cur.textContent=mmss(p);
+  });
+}
+function npDisconnect(){const old=NP.tok;NP.tok=null;NP.data=null;NP.at=0;lsSet(SPK,null);renderWidgets(true);toast("Spotify disconnected",{run(){NP.tok=old;lsSet(SPK,old);renderWidgets(true);npFetch();}});}
+function npInit(){
+  NP.tok=lsGet(SPK);npCallback();
+  setInterval(()=>{
+    if(!NP.tok||document.hidden||!npHas())return;
+    const d=NP.data,due=Date.now()-NP.at>5000||(d&&d.playing&&d.dur&&npProg()>=d.dur-300);
+    if(due)npFetch();else npPaint();
+  },1000);
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden&&NP.tok&&npHas())npFetch();});
+  if(NP.tok&&npHas())npFetch();
+}
 const WT={
  open:{name:"Open tasks",title:"Open tasks",desc:"How many tasks are left"},
  today:{name:"Due today",title:"Due today",desc:"Tasks due today or overdue"},
@@ -2974,7 +3032,8 @@ const WT={
  progress:{name:"Time progress",title:"Time progress",desc:"Day, week, month, year"},
  image:{name:"Image",title:"Image",desc:"Your own photo or graphic",cfg:{src:"",fit:"cover",height:"m",caption:"",showTitle:false}},
  donewk:{name:"Done this week",title:"Done this week",desc:"Tasks you finished since Monday"},
- week:{name:"Week so far",title:"This week",desc:"Focus time, sessions and tasks done"}
+ week:{name:"Week so far",title:"This week",desc:"Focus time, sessions and tasks done"},
+ spotify:{name:"Now playing",title:"Now playing",desc:"The song you're playing on Spotify"}
 };
 let wEdit=false, wCfg=null, noteT;
 const ICON={left:'<path d="m15 6-6 6 6 6"/>',right:'<path d="m9 6 6 6-6 6"/>',size:'<path d="M4 9V4h5M20 15v5h-5M4 4l6 6M20 20l-6-6"/>',cfg:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1 7 17M17 7l2.1-2.1"/>',del:'<path d="M6 6l12 12M18 6 6 18"/>'};
@@ -2994,6 +3053,7 @@ function wBody(w){
       if(!src)return `<div class="wimg empty-img" style="height:${H}px"><span>${wEdit?"Open this widget's settings to upload an image":"Press Customize widgets to add an image"}</span></div>`;
       const fit=c.fit==="contain"?"contain":"cover";
       return `<div class="wimg" style="height:${H}px;background:url('${src}') center / ${fit} no-repeat ${fit==="contain"?"var(--panel2)":""}" role="img" aria-label="${esc(c.caption||w.title||"Image")}">${c.caption?`<span class="cap">${esc(c.caption)}</span>`:""}</div>`;}
+    case"spotify":return `<div class="np" data-np>${npHtml()}</div>`;
     case"quote":return `<p class="quote">${esc(c.text)}</p>`;
     case"note":return `<textarea class="wnote" data-note="${w.id}" placeholder="Jot something down" aria-label="Note">${esc(c.text)}</textarea>`;
     case"world":{let t="--:--";try{t=new Date().toLocaleTimeString(undefined,{timeZone:c.tz,hour:"numeric",minute:"2-digit",hour12:!S.settings.h24});}catch(e){}return `<div class="big">${t}</div><small>${esc(c.label)}</small>`;}
@@ -3039,8 +3099,11 @@ function updWidgetHints(){
 function renderMini(){renderWidgets();}
 $("#w-edit").addEventListener("click",()=>{wEdit=!wEdit;wCfg=null;renderWidgets(true);});
 $("#w-add").addEventListener("click",()=>{const m=$("#w-menu");m.hidden=!m.hidden;if(!m.hidden)m.innerHTML=Object.entries(WT).map(([k,t])=>`<button data-add="${k}">${t.name}<small>${t.desc}</small></button>`).join("");});
-$("#w-menu").addEventListener("click",e=>{const b=e.target.closest("[data-add]");if(!b)return;const w={id:uid(),type:b.dataset.add,size:"s"};if(WT[w.type].cfg)w.cfg=Object.assign({},WT[w.type].cfg);S.widgets.push(w);if(w.type==="countdown"||w.type==="world"||w.type==="quote"||w.type==="image")wCfg=w.id;$("#w-menu").hidden=true;save();renderWidgets(true);toast(WT[w.type].name+" added");});
+$("#w-menu").addEventListener("click",e=>{const b=e.target.closest("[data-add]");if(!b)return;const w={id:uid(),type:b.dataset.add,size:b.dataset.add==="spotify"?"w":"s"};if(WT[w.type].cfg)w.cfg=Object.assign({},WT[w.type].cfg);S.widgets.push(w);if(w.type==="countdown"||w.type==="world"||w.type==="quote"||w.type==="image")wCfg=w.id;$("#w-menu").hidden=true;save();renderWidgets(true);toast(WT[w.type].name+" added");});
+$("#widgets").addEventListener("submit",e=>{const f=e.target.closest("[data-npform]");if(!f)return;e.preventDefault();npConnect(f.querySelector("input").value);});
 $("#widgets").addEventListener("click",e=>{
+  if(e.target.closest("[data-npcopy]")){const v=npRedirect();(navigator.clipboard?navigator.clipboard.writeText(v):Promise.reject()).then(()=>toast("Copied"),()=>toast("Select the address and copy it"));return;}
+  if(e.target.closest("[data-npdisc]")){npDisconnect();return;}
   const tk=e.target.closest("[data-wtask]");
   if(tk){const t=S.tasks.find(x=>x.id===tk.dataset.wtask);if(t&&!t.done){t.done=true;t.doneAt=Date.now();tk.classList.add("on");save();toast("Done. Next one.");afterTaskChange(reduced?0:420);}return;}
   const b=e.target.closest("[data-w]");if(!b)return;
@@ -3391,7 +3454,7 @@ if(typeof ResizeObserver!=="undefined")new ResizeObserver(()=>moveInd(true)).obs
 ["#clock-seg","#task-filter","#bg-type","#st-type","#surface"].forEach(q=>initSeg($(q)));
 if(S.accounts.length)snapshot();
 renderAll();jbRender();renderCals();
-if(S.settings.sp?.uri){$("#sp").open=true;spShow(S.settings.sp.uri);}
+npInit();
 {const v=location.hash.slice(1);if(v==="week"){show("calendar");setCalMode("week",true);}else if(VIEWS.includes(v)&&v!=="focus")show(v);} // deep link, e.g. digital-dash.html#tasks
 moveInd(true);
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{moveInd(true);$$(".seg").forEach(x=>glide(x,true));});
