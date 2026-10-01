@@ -1,28 +1,63 @@
 <title>My Room, Plain</title>
 <style>
-/* One full-bleed WebGL stage with a row of view buttons. A single dark look, matching the scene. */
-:root { --ground: #0d0e11; --ink: rgba(240,236,228,.85); --ink-dim: rgba(240,236,228,.5); --amber: #f2b36b; color-scheme: dark; }
+/* One full-bleed WebGL stage with a row of view buttons, a lamp panel, and a label for the binoculars. A single dark look, matching the scene. */
+:root { --ground: #0d0e11; --ink: rgba(240,236,228,.85); --ink-dim: rgba(240,236,228,.5); --amber: #f2b36b; --chip: rgba(10,10,14,.55); color-scheme: dark;
+  --sans: system-ui, -apple-system, "Segoe UI", sans-serif; --mono: ui-monospace, "SFMono-Regular", Menlo, monospace; background: var(--ground); }
+[hidden] { display: none !important; }
 html, body { height: 100%; margin: 0; }
-:root { background: var(--ground); }
-body { background: var(--ground); color: var(--ink); font-family: system-ui, -apple-system, "Segoe UI", sans-serif; overflow: hidden; }
+body { background: var(--ground); color: var(--ink); font-family: var(--sans); overflow: hidden; }
 #stage { position: fixed; inset: 0; }
 .bar { position: fixed; left: 0; right: 0; bottom: 0; padding: 16px 16px calc(20px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none; }
 .row { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
-button { pointer-events: auto; font: 500 14px inherit; font-family: inherit; color: var(--ink); background: rgba(10,10,14,.55); border: 1px solid rgba(255,255,255,.08); border-radius: 999px; padding: 9px 18px; cursor: pointer; backdrop-filter: blur(8px); }
-button:hover { color: #fff; }
+.bar button { pointer-events: auto; font: 500 14px var(--sans); color: var(--ink); background: var(--chip); border: 1px solid rgba(255,255,255,.08); border-radius: 999px; padding: 9px 18px; cursor: pointer; backdrop-filter: blur(8px); }
+.bar button:hover { color: #fff; }
 button[aria-pressed="true"] { color: var(--amber); border-color: rgba(242,179,107,.4); }
-button:focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; }
-.hint { margin: 0; font-size: 12px; color: var(--ink-dim); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; }
+.hint { margin: 0; font-size: 12px; color: var(--ink-dim); text-align: center; }
+#label { position: fixed; top: calc(16px + env(safe-area-inset-top, 0px)); right: 16px; left: 16px; text-align: right; pointer-events: none; }
+#label .eyebrow { margin: 0; font: 500 11px var(--mono); letter-spacing: .2em; text-transform: uppercase; color: var(--amber); opacity: .75; }
+#label h2 { margin: 4px 0 0; font-size: 16px; font-weight: 600; color: #fff; }
+#label p.detail { margin: 2px 0 0; font-size: 13px; color: var(--ink-dim); }
+#panel { position: fixed; right: 16px; bottom: calc(150px + env(safe-area-inset-bottom, 0px)); width: min(320px, calc(100% - 32px)); box-sizing: border-box; padding: 20px; border-radius: 16px; border: 1px solid rgba(255,255,255,.1); background: rgba(13,11,10,.8); backdrop-filter: blur(20px); display: grid; gap: 16px; }
+#panel h2 { margin: 0; font-size: 16px; font-weight: 600; color: #fff; }
+.ph { display: flex; justify-content: space-between; align-items: center; }
+#pclose { background: none; border: 0; color: var(--ink-dim); font-size: 16px; cursor: pointer; padding: 6px; border-radius: 999px; }
+#pclose:hover { color: #fff; background: rgba(255,255,255,.08); }
+.line { display: flex; justify-content: space-between; align-items: center; font-size: 14px; }
+.val { font: 12px var(--mono); color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+#panel input[type=range] { width: 100%; accent-color: var(--amber); margin: 8px 0 0; }
+#panel input[type=checkbox] { accent-color: var(--amber); width: 16px; height: 16px; }
+#colors { display: flex; flex-wrap: wrap; gap: 6px; }
+.swatch { display: inline-flex; align-items: center; gap: 6px; font: 12px var(--sans); color: rgba(255,255,255,.75); background: none; border: 1px solid rgba(255,255,255,.12); border-radius: 999px; padding: 5px 10px; cursor: pointer; }
+.swatch:hover { color: #fff; border-color: rgba(255,255,255,.3); }
+.swatch i { width: 12px; height: 12px; border-radius: 50%; display: block; }
 </style>
 <div id="stage"></div>
+<div id="label" hidden>
+  <p class="eyebrow">Western University, London ON</p>
+  <h2 id="lname"></h2>
+  <p class="detail" id="ldetail"></p>
+</div>
+<div id="panel" hidden role="dialog" aria-label="Lamp settings">
+  <div class="ph"><h2>Floor lamp</h2><button type="button" id="pclose" aria-label="Close lamp settings">✕</button></div>
+  <label class="line" for="lamp-on">Switched on <input type="checkbox" id="lamp-on" checked></label>
+  <label for="lamp-brightness"><span class="line">Brightness <span class="val" id="bval">100%</span></span>
+    <input type="range" id="lamp-brightness" min="15" max="150" value="100"></label>
+  <div><div class="line" style="margin-bottom:8px">Bulb colour</div><div id="colors"></div></div>
+</div>
 <div class="bar">
-  <div class="row">
+  <div class="row" id="roomrow">
     <button type="button" data-view="photo" aria-pressed="true">Photo view</button>
     <button type="button" data-view="desk" aria-pressed="false">Desk</button>
     <button type="button" data-view="door" aria-pressed="false">Door &amp; closet</button>
     <button type="button" data-view="dollhouse" aria-pressed="false">Dollhouse</button>
+    <button type="button" id="binos">Binoculars (B)</button>
     <button type="button" id="lamp" aria-pressed="true">Lamp (L)</button>
+    <button type="button" id="settings" aria-pressed="false" aria-label="Lamp settings">Lamp settings</button>
   </div>
-  <p class="hint">Drag to orbit · scroll to zoom · right-drag to pan · click the lamp or press L</p>
+  <div class="row" id="scoperow" hidden>
+    <button type="button" id="leave">Back to the room (Esc)</button>
+  </div>
+  <p class="hint" id="hint">Drag to orbit · scroll to zoom · click the lamp (L) or the binoculars on the sill (B)</p>
 </div>
 <script>

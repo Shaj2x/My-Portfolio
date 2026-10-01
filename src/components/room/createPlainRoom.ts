@@ -1,21 +1,57 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RectAreaLightUniformsLib } from "three/examples/jsm/lights/RectAreaLightUniformsLib.js";
+import { createCampus } from "./createCampus";
 import { createFurniture, paintTexture } from "./createFurniture";
 import { CLOSET, COLORS, DOOR, HERO, LAYOUT, ROOM, WINDOW } from "./roomLayout";
 
 /**
  * A plain recreation of the real room: the shell, furniture and night lighting, with orbit
  * controls. Walls between the camera and the room hide themselves, so orbiting out gives a
- * dollhouse view. No effects, sound or animation beyond the camera.
+ * dollhouse view. The floor lamp can be switched, dimmed and recoloured, and the binoculars on
+ * the window sill look out at Western's campus.
  */
 
-export type PlainRoomView = "photo" | "dollhouse" | "desk" | "door";
+export type PlainRoomView = "photo" | "dollhouse" | "desk" | "door" | "binoculars";
+type CameraView = Exclude<PlainRoomView, "binoculars">;
+
+export interface LampSettings {
+  on: boolean;
+  /** 0.15 (dim) to 1.5 (bright); 1 is the lamp as photographed */
+  brightness: number;
+  /** bulb colour as a hex string */
+  color: string;
+}
+
+export const LAMP_DEFAULT: LampSettings = { on: true, brightness: 1, color: "#ffd6a0" };
+
+/** bulb colours offered in the lamp panel */
+export const LAMP_COLORS: [string, string][] = [
+  ["Warm white", "#ffd6a0"],
+  ["Soft white", "#ffe8cc"],
+  ["Daylight", "#eef2ff"],
+  ["Amber", "#ffa95c"],
+  ["Western purple", "#a47bff"],
+  ["Ice blue", "#8fd0ff"],
+  ["Rose", "#ff8fb4"],
+];
+
+export interface PlainRoomOptions {
+  initialLamp?: Partial<LampSettings>;
+  /** fires whenever the lamp's settings change, including by clicking the lamp */
+  onLampChange?: (settings: LampSettings) => void;
+  /** fires when the view changes, including by clicking the binoculars */
+  onViewChange?: (view: PlainRoomView) => void;
+  /** the campus landmark nearest the middle of the binoculars, or null */
+  onScopeTarget?: (landmark: { name: string; detail: string } | null) => void;
+}
 
 export interface PlainRoomHandle {
   setView: (view: PlainRoomView) => void;
   /** switch the floor lamp; it fades like a real bulb. Returns the new state. */
   toggleLamp: () => boolean;
+  /** change any lamp settings; the light fades to them */
+  setLamp: (settings: Partial<LampSettings>) => void;
   dispose: () => void;
 }
 
@@ -24,7 +60,7 @@ const vec = (v: [number, number, number]) => new THREE.Vector3(...v);
 // camera poses; the photo view keeps the hero framing but pivots about a point inside the room
 const heroPos = vec(HERO.pos);
 const heroDir = vec(HERO.target).sub(heroPos).normalize();
-const VIEWS: Record<PlainRoomView, { pos: THREE.Vector3; target: THREE.Vector3 }> = {
+const VIEWS: Record<CameraView, { pos: THREE.Vector3; target: THREE.Vector3 }> = {
   photo: { pos: heroPos, target: heroPos.clone().addScaledVector(heroDir, 2.2) },
   dollhouse: { pos: new THREE.Vector3(-3.4, 4.8, ROOM.midZ + 4.7), target: new THREE.Vector3(0.1, 0.5, ROOM.midZ) },
   // matches photo F: from the foot of the bed, looking into the corner with the lamp and the end of the desk
@@ -33,12 +69,13 @@ const VIEWS: Record<PlainRoomView, { pos: THREE.Vector3; target: THREE.Vector3 }
   door: { pos: new THREE.Vector3(0.35, 1.5, -0.45), target: new THREE.Vector3(0.0, 1.0, ROOM.front) },
 };
 
-export function createPlainRoom(container: HTMLElement, options: { onLampChange?: (on: boolean) => void } = {}): PlainRoomHandle {
+export function createPlainRoom(container: HTMLElement, options: PlainRoomOptions = {}): PlainRoomHandle {
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(container.clientWidth, container.clientHeight);
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  // soft variance shadows, blurred so the lamp's shadows fall off gently the way a shaded bulb's do
+  renderer.shadowMap.type = THREE.VSMShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.1;
   renderer.domElement.style.display = "block";
@@ -390,60 +427,62 @@ export function createPlainRoom(container: HTMLElement, options: { onLampChange?
   bounce.position.set(0.1, height - 0.3, ROOM.midZ);
   scene.add(bounce);
 
-  // the floor lamp is the room's main light
-  const lamp = new THREE.PointLight("#ffd6a0", 5.5, 0, 1.6);
-  lamp.position.copy(furniture.lamp.bulb);
-  lamp.castShadow = true;
-  lamp.shadow.mapSize.set(1024, 1024);
-  lamp.shadow.bias = -0.002;
-  lamp.shadow.radius = 4;
-  lamp.shadow.camera.near = 0.05;
-  scene.add(lamp);
-  // the bright scallop the open shade throws up the corner
-  const upLight = new THREE.SpotLight("#ffd9a8", 6, 2.2, 0.75, 0.8, 1.5);
-  upLight.position.copy(furniture.lamp.bulb).add(new THREE.Vector3(0, 0.1, 0));
-  upLight.target.position.copy(furniture.lamp.bulb).add(new THREE.Vector3(0, 2, 0));
+  // The floor lamp. A drum shade sends most light out of its open bottom and top, and only a soft
+  // glow through the fabric, so it's three lights: a shadowed cone down, a cone up the corner, and a
+  // dim shadowless glow. (One shadowed point light threw hard shadows of the desk across every wall.)
+  const bulb = furniture.lamp.bulb;
+  const downLight = new THREE.SpotLight("#ffd6a0", 7, 0, 1.1, 0.75, 1.5);
+  downLight.position.copy(bulb);
+  downLight.target.position.copy(bulb).add(new THREE.Vector3(0, -2, 0));
+  downLight.castShadow = true;
+  downLight.shadow.mapSize.set(1024, 1024);
+  downLight.shadow.camera.near = 0.05;
+  downLight.shadow.camera.far = 6;
+  downLight.shadow.radius = 7;
+  downLight.shadow.blurSamples = 16;
+  downLight.shadow.bias = -0.0004;
+  downLight.shadow.normalBias = 0.02;
+  scene.add(downLight, downLight.target);
+  const upLight = new THREE.SpotLight("#ffd6a0", 6, 2.4, 0.8, 0.85, 1.5);
+  upLight.position.copy(bulb).add(new THREE.Vector3(0, 0.1, 0));
+  upLight.target.position.copy(bulb).add(new THREE.Vector3(0, 2, 0));
   scene.add(upLight, upLight.target);
+  const glowLight = new THREE.PointLight("#ffd6a0", 2.2, 0, 1.6);
+  glowLight.position.copy(bulb);
+  scene.add(glowLight);
 
-  // ---------- the lamp switch ----------
-  // Clicking the lamp (or pressing L) fades it like a real bulb: quickly on, a short filament glow off.
-  let lampOn = true;
-  let lampLevel = 1;
-  const applyLamp = (k: number) => {
-    lamp.intensity = 5.5 * k;
+  // ---------- the lamp switch and its settings ----------
+  // Every change fades: switching on is quick, switching off leaves a short filament glow, and
+  // colour and brightness glide to their new values.
+  const lampSettings: LampSettings = { ...LAMP_DEFAULT, ...options.initialLamp };
+  let lampLevel = lampSettings.on ? lampSettings.brightness : 0;
+  const lampColor = new THREE.Color(lampSettings.color);
+  const lampColorTarget = lampColor.clone();
+  const warmWhite = new THREE.Color("#ffe2c0");
+  const bounceColor = new THREE.Color();
+  const applyLamp = () => {
+    const k = lampLevel;
+    for (const l of [downLight, upLight, glowLight]) l.color.copy(lampColor);
+    downLight.intensity = 7 * k;
     upLight.intensity = 6 * k;
+    glowLight.intensity = 2.2 * k;
     // the walls bounce less light, and the room falls back on the screens and the moon
     bounce.intensity = 0.25 + 1.15 * k;
-    hemi.intensity = 0.25 + 0.65 * k;
-    furniture.lamp.setGlow(k);
+    bounce.color.copy(bounceColor.copy(warmWhite).lerp(lampColor, 0.6));
+    hemi.intensity = 0.25 + 0.65 * Math.min(k, 1.2);
+    furniture.lamp.setGlow(k, lampColor);
+  };
+  applyLamp();
+  const setLamp = (next: Partial<LampSettings>) => {
+    Object.assign(lampSettings, next);
+    lampSettings.brightness = THREE.MathUtils.clamp(lampSettings.brightness, 0.15, 1.5);
+    lampColorTarget.set(lampSettings.color);
+    options.onLampChange?.({ ...lampSettings });
   };
   const toggleLamp = () => {
-    lampOn = !lampOn;
-    options.onLampChange?.(lampOn);
-    return lampOn;
+    setLamp({ on: !lampSettings.on });
+    return lampSettings.on;
   };
-  const raycaster = new THREE.Raycaster();
-  const ndc = new THREE.Vector2();
-  const overLamp = (e: PointerEvent) => {
-    const r = renderer.domElement.getBoundingClientRect();
-    ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
-    raycaster.setFromCamera(ndc, camera);
-    const hit = raycaster.intersectObjects(scene.children, true).find((h) => h.object.visible && (h.object as THREE.Mesh).isMesh);
-    return !!hit && furniture.lamp.parts.includes(hit.object);
-  };
-  // a press that drags (orbiting) isn't a click
-  let downAt: { x: number; y: number } | null = null;
-  const onDown = (e: PointerEvent) => (downAt = { x: e.clientX, y: e.clientY });
-  const onUp = (e: PointerEvent) => {
-    if (downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < 6 && overLamp(e)) toggleLamp();
-    downAt = null;
-  };
-  const onMove = (e: PointerEvent) => {
-    if (!e.buttons) renderer.domElement.style.cursor = overLamp(e) ? "pointer" : "";
-  };
-  renderer.domElement.addEventListener("pointerdown", onDown);
-  renderer.domElement.addEventListener("pointerup", onUp);
-  renderer.domElement.addEventListener("pointermove", onMove);
 
   for (const s of furniture.screens) {
     const area = new THREE.RectAreaLight(s.color, s.strength, s.w, s.h);
@@ -452,26 +491,250 @@ export function createPlainRoom(container: HTMLElement, options: { onLampChange?
     scene.add(area);
   }
 
+  // ---------- Western's campus, seen only through the binoculars ----------
+  const disposables: { dispose: () => void }[] = [];
+  const track = <T extends { dispose: () => void }>(d: T) => {
+    disposables.push(d);
+    return d;
+  };
+  let seed = 7;
+  const rand = () => {
+    seed = (seed * 16807) % 2147483647;
+    return (seed - 1) / 2147483646;
+  };
+  const campus = createCampus(track, rand);
+  campus.group.visible = false;
+  scene.add(campus.group);
+  // a clear night, matching the sky painted outside the window
+  const campusFog = campus.setConditions({ day: 0, dusk: 0, weather: "clear" });
+  const outsideFog = new THREE.FogExp2(campusFog.fogColor, campusFog.fogDensity);
+
+  // The mask: two overlapping round fields with darkened rims, drawn over the frame
+  const maskMat = new THREE.ShaderMaterial({
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+    uniforms: { uAspect: { value: 1 }, uRadius: { value: 0.42 }, uMask: { value: 0 }, uFade: { value: 0 } },
+    vertexShader: /* glsl */ `varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`,
+    fragmentShader: /* glsl */ `
+      uniform float uAspect; uniform float uRadius; uniform float uMask; uniform float uFade; varying vec2 vUv;
+      void main() {
+        vec2 d = (vUv - 0.5) * vec2(uAspect, 1.0);
+        float R = uRadius;
+        float sep = R * 0.6;
+        float r = min(length(d - vec2(-sep, 0.0)), length(d - vec2(sep, 0.0)));
+        float inside = smoothstep(R, R - 0.012, r) * (0.3 + 0.7 * smoothstep(R, R * 0.55, r));
+        float seen = mix(1.0, inside, uMask) * (1.0 - uFade);
+        gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0 - seen);
+      }`,
+  });
+  const overlay = new THREE.Scene();
+  const overlayQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), maskMat);
+  overlayQuad.frustumCulled = false;
+  overlay.add(overlayQuad);
+  const overlayCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+  // the binocular camera sits just outside the glass, so the window frame never crosses the view
+  const binos = furniture.binoculars;
+  const scopePos = new THREE.Vector3((WINDOW.x0 + WINDOW.x1) / 2, (WINDOW.y0 + WINDOW.y1) / 2, back - t - 0.35);
+  const aimAt = (p: THREE.Vector3) => {
+    const d = p.clone().sub(scopePos).normalize();
+    return { yaw: Math.atan2(d.x, -d.z), pitch: Math.asin(d.y) };
+  };
+  // binoculars magnify less than the telescope did, so the settled field is a little wider
+  const SCOPE_FOV = 13;
+  const home = aimAt(campus.landmarks[0].position.clone().add(new THREE.Vector3(0, -4, 0)));
+  const outward = aimAt(scopePos.clone().addScaledVector(binos.direction, 100));
+  const scope = { yaw: home.yaw, yawT: home.yaw, pitch: home.pitch, pitchT: home.pitch, fov: SCOPE_FOV, fovT: SCOPE_FOV };
+  // end the glide just behind the eyecups, looking along the binoculars and out of the window
+  const eyePose = {
+    pos: binos.position.clone().addScaledVector(binos.direction, -0.3).add(new THREE.Vector3(0, 0.07, 0)),
+    target: binos.position.clone().addScaledVector(binos.direction, 4).add(new THREE.Vector3(0, 0.25, 0)),
+  };
+  const ZOOM_FROM_FOV = 58;
+  let zoom: { t: number; dur: number } | null = null;
+  let currentLandmark: string | null = null;
+  const scopeLook = new THREE.Vector3();
+  const updateScope = (dt: number) => {
+    const fit = Math.min(1, camera.aspect / 1.45); // keep both fields on narrow screens
+    if (zoom) {
+      zoom.t = Math.min(1, zoom.t + dt / zoom.dur);
+      const x = zoom.t;
+      const e = x < 0.5 ? 4 * x ** 3 : 1 - (-2 * x + 2) ** 3 / 2;
+      // aim swings from straight out of the window onto the school while the field narrows
+      const ea = 1 - (1 - Math.min(1, x * 1.4)) ** 3;
+      scope.yaw = scope.yawT = THREE.MathUtils.lerp(outward.yaw, home.yaw, ea);
+      scope.pitch = scope.pitchT = THREE.MathUtils.lerp(outward.pitch, home.pitch, ea);
+      scope.fov = scope.fovT = THREE.MathUtils.lerp(ZOOM_FROM_FOV, SCOPE_FOV, e);
+      maskMat.uniforms.uRadius.value = THREE.MathUtils.lerp(1.6, 0.42 * fit, e);
+      if (zoom.t >= 1) zoom = null;
+    } else maskMat.uniforms.uRadius.value = 0.42 * fit;
+    scope.yaw += (scope.yawT - scope.yaw) * (1 - Math.exp(-8 * dt));
+    scope.pitch += (scope.pitchT - scope.pitch) * (1 - Math.exp(-8 * dt));
+    scope.fov += (scope.fovT - scope.fov) * (1 - Math.exp(-6 * dt));
+    camera.position.copy(scopePos);
+    scopeLook.set(Math.sin(scope.yaw) * Math.cos(scope.pitch), Math.sin(scope.pitch), -Math.cos(scope.yaw) * Math.cos(scope.pitch));
+    camera.lookAt(scopeLook.clone().add(scopePos));
+    camera.fov = scope.fov;
+    camera.updateProjectionMatrix();
+    // name what's in the middle of the view
+    let best: (typeof campus.landmarks)[number] | null = null;
+    let bestAngle = THREE.MathUtils.degToRad(scope.fov) * 0.45;
+    for (const l of campus.landmarks) {
+      const a = scopeLook.angleTo(l.position.clone().sub(scopePos));
+      if (a < bestAngle) {
+        bestAngle = a;
+        best = l;
+      }
+    }
+    const name = best?.name ?? null;
+    if (name !== currentLandmark) {
+      currentLandmark = name;
+      options.onScopeTarget?.(best ? { name: best.name, detail: best.detail } : null);
+    }
+  };
+
   // ---------- views ----------
-  let tween: { fromPos: THREE.Vector3; fromTarget: THREE.Vector3; to: (typeof VIEWS)[PlainRoomView]; t: number } | null = null;
+  type Mode = "room" | "toBinoculars" | "binoculars";
+  let mode: Mode = "room";
+  let roomView: CameraView = "photo";
+  let returnPose = { pos: VIEWS.photo.pos.clone(), target: VIEWS.photo.target.clone() };
+  let baseFov = HERO.fov;
+  let tween: { fromPos: THREE.Vector3; fromTarget: THREE.Vector3; toPos: THREE.Vector3; toTarget: THREE.Vector3; t: number; dur: number; done?: () => void } | null = null;
+  // a quick dip to black, used to cut between the room and the view through the binoculars
+  let fade: { t: number; mid: () => void; fired: boolean } | null = null;
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const setView = (view: PlainRoomView) => {
+  const moveTo = (pos: THREE.Vector3, target: THREE.Vector3, done?: () => void) => {
     if (reducedMotion) {
-      camera.position.copy(VIEWS[view].pos);
-      controls.target.copy(VIEWS[view].target);
+      camera.position.copy(pos);
+      controls.target.copy(target);
+      done?.();
       return;
     }
-    tween = { fromPos: camera.position.clone(), fromTarget: controls.target.clone(), to: VIEWS[view], t: 0 };
+    tween = { fromPos: camera.position.clone(), fromTarget: controls.target.clone(), toPos: pos.clone(), toTarget: target.clone(), t: 0, dur: 1.4, done };
   };
-  controls.addEventListener("start", () => (tween = null));
+  const cutWithFade = (mid: () => void) => {
+    if (reducedMotion) mid();
+    else fade = { t: 0, mid, fired: false };
+  };
+
+  const startBinoculars = () => {
+    mode = "binoculars";
+    campus.group.visible = true;
+    sky.visible = false;
+    scene.fog = outsideFog;
+    camera.near = 1;
+    camera.far = 1500;
+    maskMat.uniforms.uMask.value = 1;
+    zoom = { t: 0, dur: reducedMotion ? 0.01 : 2.6 };
+    updateScope(0);
+  };
+  const enterBinoculars = () => {
+    if (mode !== "room") return;
+    returnPose = { pos: camera.position.clone(), target: controls.target.clone() };
+    mode = "toBinoculars";
+    controls.enabled = false;
+    options.onViewChange?.("binoculars");
+    moveTo(eyePose.pos, eyePose.target, () => cutWithFade(startBinoculars));
+  };
+  const leaveBinoculars = (then: CameraView) => {
+    const returnToRoom = () => {
+      mode = "room";
+      zoom = null;
+      campus.group.visible = false;
+      scene.fog = null;
+      maskMat.uniforms.uMask.value = 0;
+      camera.near = 0.03;
+      camera.far = 60;
+      camera.fov = baseFov;
+      camera.updateProjectionMatrix();
+      camera.position.copy(eyePose.pos);
+      controls.target.copy(eyePose.target);
+      camera.lookAt(controls.target);
+      currentLandmark = null;
+      options.onScopeTarget?.(null);
+      const to = then === roomView ? returnPose : VIEWS[then];
+      roomView = then;
+      moveTo(to.pos, to.target, () => (controls.enabled = true));
+    };
+    if (mode === "binoculars") cutWithFade(returnToRoom);
+    else {
+      tween = null;
+      returnToRoom();
+    }
+    options.onViewChange?.(then);
+  };
+  const setView = (view: PlainRoomView) => {
+    if (view === "binoculars") return enterBinoculars();
+    if (mode !== "room") return leaveBinoculars(view);
+    roomView = view;
+    moveTo(VIEWS[view].pos, VIEWS[view].target);
+    options.onViewChange?.(view);
+  };
+  controls.addEventListener("start", () => {
+    if (mode === "room") tween = null;
+  });
+
+  // ---------- pointer: click the lamp or the binoculars; drag to aim through the binoculars ----------
+  const raycaster = new THREE.Raycaster();
+  const ndc = new THREE.Vector2();
+  const pickTarget = (e: PointerEvent): "lamp" | "binoculars" | null => {
+    if (mode !== "room") return null;
+    const r = renderer.domElement.getBoundingClientRect();
+    ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    raycaster.setFromCamera(ndc, camera);
+    const hit = raycaster.intersectObjects(furniture.group.children, true).find((h) => (h.object as THREE.Mesh).isMesh);
+    if (!hit) return null;
+    if (furniture.lamp.parts.includes(hit.object)) return "lamp";
+    if (binos.parts.includes(hit.object)) return "binoculars";
+    return null;
+  };
+  // a press that drags (orbiting, aiming) isn't a click
+  let downAt: { x: number; y: number } | null = null;
+  let dragFrom: { x: number; y: number } | null = null;
+  const onDown = (e: PointerEvent) => (downAt = dragFrom = { x: e.clientX, y: e.clientY });
+  const onUp = (e: PointerEvent) => {
+    if (downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < 6) {
+      const hit = pickTarget(e);
+      if (hit === "lamp") toggleLamp();
+      else if (hit === "binoculars") enterBinoculars();
+    }
+    downAt = dragFrom = null;
+  };
+  const onMove = (e: PointerEvent) => {
+    if (mode === "binoculars") {
+      renderer.domElement.style.cursor = e.buttons ? "grabbing" : "grab";
+      if (e.buttons && dragFrom && !zoom) {
+        // the view follows the pointer, scaled to the current magnification
+        const fovRad = THREE.MathUtils.degToRad(scope.fov);
+        const h = renderer.domElement.clientHeight;
+        scope.yawT = THREE.MathUtils.clamp(scope.yawT - ((e.clientX - dragFrom.x) / h) * fovRad, home.yaw - 0.6, home.yaw + 0.6);
+        scope.pitchT = THREE.MathUtils.clamp(scope.pitchT + ((e.clientY - dragFrom.y) / h) * fovRad, -0.2, 0.3);
+        dragFrom = { x: e.clientX, y: e.clientY };
+      }
+      return;
+    }
+    if (!e.buttons) renderer.domElement.style.cursor = pickTarget(e) ? "pointer" : "";
+  };
+  const onWheel = (e: WheelEvent) => {
+    if (mode !== "binoculars") return;
+    e.preventDefault();
+    if (!zoom) scope.fovT = THREE.MathUtils.clamp(scope.fovT * Math.exp(e.deltaY * 0.0012), 2.5, 18);
+  };
+  renderer.domElement.addEventListener("pointerdown", onDown);
+  renderer.domElement.addEventListener("pointerup", onUp);
+  renderer.domElement.addEventListener("pointermove", onMove);
+  renderer.domElement.addEventListener("wheel", onWheel, { passive: false });
 
   const onResize = () => {
     const w = container.clientWidth;
     const h = container.clientHeight;
     renderer.setSize(w, h);
     camera.aspect = w / h;
+    maskMat.uniforms.uAspect.value = w / h;
     // keep the room's width in frame on narrow screens
-    camera.fov = w / h < 1 ? Math.min(90, HERO.fov * 1.35) : HERO.fov;
+    baseFov = w / h < 1 ? Math.min(90, HERO.fov * 1.35) : HERO.fov;
+    if (mode !== "binoculars") camera.fov = baseFov;
     camera.updateProjectionMatrix();
   };
   const ro = new ResizeObserver(onResize);
@@ -482,35 +745,75 @@ export function createPlainRoom(container: HTMLElement, options: { onLampChange?
   const toCamera = new THREE.Vector3();
   renderer.setAnimationLoop(() => {
     const dt = Math.min(clock.getDelta(), 0.1);
-    const lampTarget = lampOn ? 1 : 0;
-    if (lampLevel !== lampTarget) {
-      lampLevel += (lampTarget - lampLevel) * (reducedMotion ? 1 : 1 - Math.exp(-(lampTarget > lampLevel ? 18 : 9) * dt));
+    const time = clock.elapsedTime;
+
+    // lamp: level and colour chase their settings
+    const lampTarget = lampSettings.on ? lampSettings.brightness : 0;
+    const colorMoving = !lampColor.equals(lampColorTarget);
+    if (lampLevel !== lampTarget || colorMoving) {
+      const rate = lampTarget > lampLevel ? 18 : 9;
+      lampLevel += (lampTarget - lampLevel) * (reducedMotion ? 1 : 1 - Math.exp(-rate * dt));
       if (Math.abs(lampTarget - lampLevel) < 0.002) lampLevel = lampTarget;
-      applyLamp(lampLevel);
+      lampColor.lerp(lampColorTarget, reducedMotion ? 1 : 1 - Math.exp(-6 * dt));
+      const dc = Math.abs(lampColor.r - lampColorTarget.r) + Math.abs(lampColor.g - lampColorTarget.g) + Math.abs(lampColor.b - lampColorTarget.b);
+      if (dc < 0.004) lampColor.copy(lampColorTarget);
+      applyLamp();
     }
-    if (tween) {
-      tween.t = Math.min(1, tween.t + dt / 1.4);
-      const e = tween.t < 0.5 ? 4 * tween.t ** 3 : 1 - (-2 * tween.t + 2) ** 3 / 2;
-      camera.position.lerpVectors(tween.fromPos, tween.to.pos, e);
-      controls.target.lerpVectors(tween.fromTarget, tween.to.target, e);
-      if (tween.t >= 1) tween = null;
+
+    if (fade) {
+      fade.t = Math.min(1, fade.t + dt / 0.5);
+      if (!fade.fired && fade.t >= 0.5) {
+        fade.fired = true;
+        fade.mid();
+      }
+      maskMat.uniforms.uFade.value = 1 - Math.abs(fade.t * 2 - 1);
+      if (fade.t >= 1) {
+        fade = null;
+        maskMat.uniforms.uFade.value = 0;
+      }
     }
-    controls.update();
-    // dollhouse cutaway: hide any wall the camera is behind, and the ceiling from above
-    for (const w of walls) w.group.visible = toCamera.subVectors(camera.position, w.point).dot(w.inward) > -0.05;
-    ceiling.visible = camera.position.y < height;
-    const p = camera.position;
-    sky.visible = p.x > left && p.x < right && p.z > back && p.z < front && p.y < height;
+
+    if (mode === "binoculars") {
+      updateScope(dt);
+      campus.update(time);
+    } else {
+      if (tween) {
+        tween.t = Math.min(1, tween.t + dt / tween.dur);
+        const e = tween.t < 0.5 ? 4 * tween.t ** 3 : 1 - (-2 * tween.t + 2) ** 3 / 2;
+        camera.position.lerpVectors(tween.fromPos, tween.toPos, e);
+        controls.target.lerpVectors(tween.fromTarget, tween.toTarget, e);
+        if (tween.t >= 1) {
+          const done = tween.done;
+          tween = null;
+          done?.();
+        }
+      }
+      if (mode === "room") controls.update();
+      else camera.lookAt(controls.target);
+      // dollhouse cutaway: hide any wall the camera is behind, and the ceiling from above
+      for (const w of walls) w.group.visible = toCamera.subVectors(camera.position, w.point).dot(w.inward) > -0.05;
+      ceiling.visible = camera.position.y < height;
+      const p = camera.position;
+      sky.visible = p.x > left && p.x < right && p.z > back && p.z < front && p.y < height;
+    }
+
     renderer.render(scene, camera);
+    if (maskMat.uniforms.uMask.value > 0 || maskMat.uniforms.uFade.value > 0) {
+      renderer.autoClear = false;
+      renderer.render(overlay, overlayCam);
+      renderer.autoClear = true;
+    }
   });
 
   return {
     setView,
     toggleLamp,
+    setLamp,
     dispose: () => {
       renderer.domElement.removeEventListener("pointerdown", onDown);
       renderer.domElement.removeEventListener("pointerup", onUp);
       renderer.domElement.removeEventListener("pointermove", onMove);
+      renderer.domElement.removeEventListener("wheel", onWheel);
       renderer.setAnimationLoop(null);
       ro.disconnect();
       controls.dispose();
@@ -523,6 +826,9 @@ export function createPlainRoom(container: HTMLElement, options: { onLampChange?
           m.dispose();
         }
       });
+      for (const d of disposables) d.dispose();
+      overlayQuad.geometry.dispose();
+      maskMat.dispose();
       renderer.dispose();
       renderer.domElement.remove();
     },

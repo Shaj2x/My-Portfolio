@@ -39,8 +39,10 @@ export function paintTexture(
 
 export interface FurnitureHandle {
   group: THREE.Group;
-  /** the floor lamp: its bulb position, the meshes that switch it when clicked, and its glow (0 off, 1 on) */
-  lamp: { bulb: THREE.Vector3; parts: THREE.Object3D[]; setGlow: (k: number) => void };
+  /** the floor lamp: its bulb position, the meshes that switch it when clicked, and its glow (0 off, 1 full) in a colour */
+  lamp: { bulb: THREE.Vector3; parts: THREE.Object3D[]; setGlow: (k: number, color: THREE.Color) => void };
+  /** the binoculars on the window sill: where they sit, which way they look, and the meshes that pick them up */
+  binoculars: { position: THREE.Vector3; direction: THREE.Vector3; parts: THREE.Object3D[] };
   /** centre and facing of each glowing screen, for area lights */
   screens: { center: THREE.Vector3; normal: THREE.Vector3; w: number; h: number; color: string; strength: number }[];
 }
@@ -351,22 +353,26 @@ export function createFurniture(): FurnitureHandle {
     const bulb = ball(0.03, bulbMat, sx, shadeY, sz, group);
     bulb.castShadow = false;
     parts.push(disc, bulb);
-    // glow colours at full and at off; a cooling filament passes through amber on its way down
-    const DISC_ON = discMat.color.clone();
-    const BULB_ON = bulbMat.color.clone();
+    // glow colours when off; when on they take the bulb's colour, paled toward white the way a lit shade looks
     const DISC_OFF = new THREE.Color("#8a8276").multiplyScalar(0.5);
     const BULB_OFF = new THREE.Color(0.16, 0.13, 0.1);
     const SHADE_OFF = new THREE.Color("#8d8578");
     const SHADE_ON = new THREE.Color("#ffffff");
+    const white = new THREE.Color("#ffffff");
+    const discOn = new THREE.Color();
+    const bulbOn = new THREE.Color();
     lamp = {
       bulb: new THREE.Vector3(sx, shadeY, sz),
       parts,
-      setGlow: (k) => {
+      setGlow: (k, color) => {
         const c = Math.min(1, Math.max(0, k));
-        shadeMat.emissiveIntensity = 0.9 * c;
+        shadeMat.emissive.copy(color).lerp(white, 0.25);
+        shadeMat.emissiveIntensity = 0.9 * k;
         shadeMat.color.copy(SHADE_OFF).lerp(SHADE_ON, c);
-        discMat.color.copy(DISC_OFF).lerp(DISC_ON, c);
-        bulbMat.color.copy(BULB_OFF).lerp(BULB_ON, c);
+        discOn.copy(color).lerp(white, 0.35).multiplyScalar(1.6 * Math.max(1, k));
+        bulbOn.copy(color).lerp(white, 0.55).multiplyScalar(3);
+        discMat.color.copy(DISC_OFF).lerp(discOn, c);
+        bulbMat.color.copy(BULB_OFF).lerp(bulbOn, c);
       },
     };
   }
@@ -699,7 +705,9 @@ export function createFurniture(): FurnitureHandle {
     place(cloth, pos[0] - 0.01, pos[1], pos[2], group, false);
   }
 
-  // ---------- window sill: plants and plushies ----------
+  // ---------- window sill: plants, plushies and the binoculars ----------
+  const binocularParts: THREE.Object3D[] = [];
+  let binoculars: FurnitureHandle["binoculars"] = { position: new THREE.Vector3(), direction: new THREE.Vector3(0, 0, -1), parts: binocularParts };
   {
     const y = WINDOW.y0 + 0.015;
     const z = ROOM.back - 0.035;
@@ -750,6 +758,34 @@ export function createFurniture(): FurnitureHandle {
           const ear = new THREE.Mesh(new THREE.ConeGeometry(0.018, 0.035, 4), std("#c98a5e", 0.9));
           place(ear, x + s * 0.03, y + 0.135, z, group, false);
         }
+      } else if (item.kind === "binoculars") {
+        // two black barrels joined by a hinge bridge, eyecups toward the room, looking out of the window
+        const body = std("#1b1c1e", 0.55);
+        const rubber = std("#0e0e0f", 0.9);
+        const lensMat = new THREE.MeshStandardMaterial({ color: "#2a3a5a", roughness: 0.05, metalness: 0.6 });
+        const bg = new THREE.Group();
+        bg.position.set(x, y + 0.03, z + 0.01);
+        bg.rotation.y = 0.12;
+        group.add(bg);
+        for (const sgn of [-1, 1]) {
+          const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.027, 0.03, 0.12, 20), body);
+          barrel.rotation.x = Math.PI / 2;
+          place(barrel, sgn * 0.034, 0, 0, bg);
+          const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.022, 0.025, 18), rubber);
+          cup.rotation.x = Math.PI / 2;
+          place(cup, sgn * 0.034, 0, 0.07, bg);
+          const lens = new THREE.Mesh(new THREE.CircleGeometry(0.025, 20), lensMat);
+          lens.rotation.y = Math.PI;
+          place(lens, sgn * 0.034, 0, -0.0605, bg, false);
+          binocularParts.push(barrel, cup);
+        }
+        const bridge = place(new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.01, 0.09, 12), body), 0, 0.012, 0.01, bg);
+        bridge.rotation.z = Math.PI / 2;
+        const knob = place(new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.02, 14), rubber), 0, 0.02, 0.035, bg);
+        knob.rotation.x = Math.PI / 2;
+        binocularParts.push(bridge, knob);
+        bg.updateMatrixWorld(true);
+        binoculars = { position: bg.getWorldPosition(new THREE.Vector3()), direction: new THREE.Vector3(0, 0, -1).transformDirection(bg.matrixWorld), parts: binocularParts };
       } else if (item.kind === "bird") {
         ball(0.035, std("#3a6fb8", 0.85), x, y + 0.03, z, group, [1, 0.85, 0.9]);
         ball(0.022, std("#eef2f6", 0.9), x, y + 0.025, z + 0.018, group, [1, 0.8, 0.6]);
@@ -777,5 +813,5 @@ export function createFurniture(): FurnitureHandle {
     block(0.01, 0.12, 0.075, white, sw[0] + 0.005, sw[1], sw[2], group, false);
   }
 
-  return { group, lamp, screens };
+  return { group, lamp, binoculars, screens };
 }

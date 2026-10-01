@@ -1,16 +1,95 @@
-import { createPlainRoom, type PlainRoomView } from "../../../src/components/room/createPlainRoom";
+import { createPlainRoom, LAMP_COLORS, LAMP_DEFAULT, type LampSettings, type PlainRoomView } from "../../../src/components/room/createPlainRoom";
 
-const lampBtn = document.getElementById("lamp") as HTMLButtonElement;
-const room = createPlainRoom(document.getElementById("stage")!, {
-  onLampChange: (on) => lampBtn.setAttribute("aria-pressed", String(on)),
+const $ = (id: string) => document.getElementById(id)!;
+const lampBtn = $("lamp") as HTMLButtonElement;
+const settingsBtn = $("settings") as HTMLButtonElement;
+const panel = $("panel");
+const onBox = $("lamp-on") as HTMLInputElement;
+const slider = $("lamp-brightness") as HTMLInputElement;
+const bval = $("bval");
+const colors = $("colors");
+const label = $("label");
+const hint = $("hint");
+
+// the lamp's settings are remembered in this browser only; storage can be unavailable, so it's optional
+const KEY = "portfolio-room-plain:lamp";
+let lamp: LampSettings = LAMP_DEFAULT;
+try {
+  lamp = { ...LAMP_DEFAULT, ...JSON.parse(localStorage.getItem(KEY) ?? "{}") };
+} catch {
+  // defaults
+}
+
+const swatches: HTMLButtonElement[] = [];
+for (const [name, hex] of LAMP_COLORS) {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = "swatch";
+  b.dataset.color = hex;
+  const dot = document.createElement("i");
+  dot.style.background = hex;
+  b.append(dot, name);
+  b.addEventListener("click", () => room.setLamp({ color: hex, on: true }));
+  colors.append(b);
+  swatches.push(b);
+}
+const showLamp = (s: LampSettings) => {
+  lamp = s;
+  lampBtn.setAttribute("aria-pressed", String(s.on));
+  onBox.checked = s.on;
+  slider.value = String(Math.round(s.brightness * 100));
+  bval.textContent = `${Math.round(s.brightness * 100)}%`;
+  for (const b of swatches) b.setAttribute("aria-pressed", String(b.dataset.color === s.color));
+  try {
+    localStorage.setItem(KEY, JSON.stringify(s));
+  } catch {
+    // not remembered
+  }
+};
+
+let view: PlainRoomView = "photo";
+let lastRoomView: Exclude<PlainRoomView, "binoculars"> = "photo";
+const viewButtons = document.querySelectorAll<HTMLButtonElement>("[data-view]");
+const room = createPlainRoom($("stage"), {
+  initialLamp: lamp,
+  onLampChange: showLamp,
+  onViewChange: (v) => {
+    view = v;
+    if (v !== "binoculars") lastRoomView = v;
+    const scope = v === "binoculars";
+    $("roomrow").hidden = scope;
+    $("scoperow").hidden = !scope;
+    label.hidden = !scope;
+    if (scope) panel.hidden = true;
+    hint.textContent = scope ? "Drag to look around · scroll to zoom · Esc to step back" : "Drag to orbit · scroll to zoom · click the lamp (L) or the binoculars on the sill (B)";
+    for (const b of viewButtons) b.setAttribute("aria-pressed", String(b.dataset.view === v));
+  },
+  onScopeTarget: (t) => {
+    $("lname").textContent = t?.name ?? "";
+    $("ldetail").textContent = t?.detail ?? "";
+  },
 });
-const buttons = document.querySelectorAll<HTMLButtonElement>("[data-view]");
-for (const b of buttons)
-  b.addEventListener("click", () => {
-    room.setView(b.dataset.view as PlainRoomView);
-    for (const o of buttons) o.setAttribute("aria-pressed", String(o === b));
-  });
+showLamp(lamp);
+
+for (const b of viewButtons) b.addEventListener("click", () => room.setView(b.dataset.view as PlainRoomView));
+$("binos").addEventListener("click", () => room.setView("binoculars"));
+$("leave").addEventListener("click", () => room.setView(lastRoomView));
 lampBtn.addEventListener("click", () => room.toggleLamp());
+const openPanel = (open: boolean) => {
+  panel.hidden = !open;
+  settingsBtn.setAttribute("aria-pressed", String(open));
+};
+settingsBtn.addEventListener("click", () => openPanel(panel.hidden));
+$("pclose").addEventListener("click", () => openPanel(false));
+onBox.addEventListener("change", () => room.setLamp({ on: onBox.checked }));
+slider.addEventListener("input", () => room.setLamp({ brightness: Number(slider.value) / 100, on: true }));
 window.addEventListener("keydown", (e) => {
-  if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key.toLowerCase() === "l") room.toggleLamp();
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const key = e.key.toLowerCase();
+  if (key === "l") room.toggleLamp();
+  else if (key === "b") room.setView(view === "binoculars" ? lastRoomView : "binoculars");
+  else if (key === "escape") {
+    if (view === "binoculars") room.setView(lastRoomView);
+    else openPanel(false);
+  }
 });

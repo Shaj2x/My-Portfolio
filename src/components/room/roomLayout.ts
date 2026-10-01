@@ -101,8 +101,9 @@ export const LAYOUT = {
     { kind: "cat", x: -0.24 },
     { kind: "bird", x: -0.06 },
     { kind: "plant", x: 0.1 },
-    { kind: "remote", x: 0.3 },
-  ] as { kind: "plant" | "cow" | "spiderHam" | "cat" | "bird" | "remote"; x: number }[],
+    { kind: "binoculars", x: 0.25 },
+    { kind: "remote", x: 0.36 },
+  ] as { kind: "plant" | "cow" | "spiderHam" | "cat" | "bird" | "binoculars" | "remote"; x: number }[],
   outlets: [
     { pos: [0.6, 0.42, -1.65] as Vec3, facing: "back" },
     { pos: [-1.5, 0.35, 1.1] as Vec3, facing: "left" },
