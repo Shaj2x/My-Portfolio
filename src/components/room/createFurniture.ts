@@ -659,13 +659,43 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
       },
     };
 
-    // PC tower under the front end of the desk, blue light at its front edge
+    // PS5 standing upright under the desk, its front toward the room (+z): a glossy black core
+    // between two white side panels that flare out at the top and bottom, with the blue light
+    // glowing in the gaps, on a round black stand
     const pc = LAYOUT.pcTower.pos;
-    block(0.2, 0.45, 0.42, std("#121214", 0.5), pc[0], 0.235, pc[2]);
-    const strip = new THREE.Mesh(new THREE.PlaneGeometry(0.012, 0.4), new THREE.MeshBasicMaterial({ color: new THREE.Color("#3050ff").multiplyScalar(2), toneMapped: false }));
-    strip.position.set(pc[0] - 0.085, 0.235, pc[2] + 0.211);
-    group.add(strip);
-    for (const fx of [0, 0.02]) cyl(0.012, 0.012, 0.012, std("#3a3a3a"), pc[0] + fx - 0.05, 0.006, pc[2] + 0.18);
+    const ps = new THREE.Group();
+    ps.position.set(pc[0], 0, pc[2]);
+    group.add(ps);
+    const H = 0.39;
+    const D = 0.26;
+    const core = std("#111114", 0.25);
+    cyl(0.06, 0.065, 0.014, core, 0, 0.007, 0, ps, 32); // stand
+    block(0.07, H - 0.02, D - 0.02, core, 0, 0.022 + (H - 0.02) / 2, 0, ps);
+    // a vent grille along the core's front edge, and the disc slot and buttons
+    for (let i = 0; i < 14; i++) block(0.05, 0.003, 0.004, std("#0a0a0b", 0.6), 0, 0.06 + i * 0.022, D / 2 - 0.008, ps, false);
+    block(0.006, 0.12, 0.004, std("#2a2a2e", 0.4), 0.0, 0.3, D / 2 - 0.004, ps, false);
+    // white side panels: a shape that narrows at the waist and flares at both ends, extruded thin
+    const panel = new THREE.Shape();
+    panel.moveTo(-D / 2 - 0.012, 0);
+    panel.quadraticCurveTo(-D / 2 + 0.02, H * 0.5, -D / 2 - 0.02, H);
+    panel.lineTo(D / 2 + 0.02, H);
+    panel.quadraticCurveTo(D / 2 - 0.02, H * 0.5, D / 2 + 0.012, 0);
+    panel.lineTo(-D / 2 - 0.012, 0);
+    const panelGeo = new THREE.ExtrudeGeometry(panel, { depth: 0.012, bevelEnabled: true, bevelThickness: 0.004, bevelSize: 0.004, bevelSegments: 3, curveSegments: 16 });
+    const whitePanel = std("#f4f4f2", 0.3);
+    const glowBlue = new THREE.MeshBasicMaterial({ color: new THREE.Color("#3a6bff").multiplyScalar(1.8), toneMapped: false });
+    for (const sgn of [-1, 1]) {
+      const m = new THREE.Mesh(panelGeo, whitePanel);
+      // shape x runs along depth (z), shape y is height; the panel sits just outside the core, bowed slightly outward
+      m.rotation.y = -Math.PI / 2;
+      m.position.set(sgn * 0.046 + (sgn > 0 ? 0 : 0.012), 0.022, 0);
+      m.castShadow = m.receiveShadow = true;
+      ps.add(m);
+      // the light bar in the gap between the panel and the core
+      const bar = new THREE.Mesh(new THREE.PlaneGeometry(0.004, H * 0.8), glowBlue);
+      bar.position.set(sgn * 0.037, 0.022 + H * 0.5, D / 2 + 0.002);
+      ps.add(bar);
+    }
   }
 
   // ---------- chair ----------

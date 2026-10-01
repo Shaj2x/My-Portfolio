@@ -89,6 +89,7 @@ export const LAYOUT = {
   speaker: { pos: [1.44, 0, -0.28] as Vec3 },
   /** a sunset lamp (it looked like a small speaker in the photos); it throws its orange disc onto the wall above the bed */
   sunsetLamp: { pos: [1.42, 0, 0.24] as Vec3, target: [-1.49, 1.6, 0.3] as Vec3 },
+  /** the PS5, standing under the front end of the desk */
   pcTower: { pos: [1.25, 0, 0.06] as Vec3 },
   chair: { pos: [0.55, 0, -0.33] as Vec3, yaw: Math.PI / 2 },
   tapestry: { pos: [1.49, 1.72, -0.2] as Vec3, w: 1.3, h: 1.2 },
