@@ -15,6 +15,7 @@ const chip =
 
 const VIEWS: [Exclude<PlainRoomView, "binoculars">, string][] = [
   ["photo", "Photo view"],
+  ["window", "Window"],
   ["desk", "Desk"],
   ["door", "Door & closet"],
   ["dollhouse", "Dollhouse"],

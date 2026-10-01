@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RectAreaLightUniformsLib } from "three/examples/jsm/lights/RectAreaLightUniformsLib.js";
+import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { createCampus } from "./createCampus";
 import { createFurniture, paintTexture } from "./createFurniture";
 import { CLOSET, COLORS, DOOR, HERO, LAYOUT, ROOM, WINDOW } from "./roomLayout";
@@ -12,7 +13,7 @@ import { CLOSET, COLORS, DOOR, HERO, LAYOUT, ROOM, WINDOW } from "./roomLayout";
  * the window sill look out at Western's campus.
  */
 
-export type PlainRoomView = "photo" | "dollhouse" | "desk" | "door" | "binoculars";
+export type PlainRoomView = "photo" | "window" | "dollhouse" | "desk" | "door" | "binoculars";
 type CameraView = Exclude<PlainRoomView, "binoculars">;
 
 export interface LampSettings {
@@ -62,6 +63,8 @@ const heroPos = vec(HERO.pos);
 const heroDir = vec(HERO.target).sub(heroPos).normalize();
 const VIEWS: Record<CameraView, { pos: THREE.Vector3; target: THREE.Vector3 }> = {
   photo: { pos: heroPos, target: heroPos.clone().addScaledVector(heroDir, 2.2) },
+  // close up on the window sill and the perfume shelf, from beside the bed
+  window: { pos: new THREE.Vector3(0.25, 1.38, -0.55), target: new THREE.Vector3(-0.15, 1.0, -1.7) },
   dollhouse: { pos: new THREE.Vector3(-3.4, 4.8, ROOM.midZ + 4.7), target: new THREE.Vector3(0.1, 0.5, ROOM.midZ) },
   // matches photo F: from the foot of the bed, looking into the corner with the lamp and the end of the desk
   desk: { pos: new THREE.Vector3(-0.15, 1.7, 0.6), target: new THREE.Vector3(1.0, 0.3, -1.2) },
@@ -82,6 +85,13 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   renderer.domElement.style.touchAction = "none";
   container.appendChild(renderer.domElement);
   RectAreaLightUniformsLib.init();
+
+  // a small studio environment, used only as reflections on glass and polished metal
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  const envScene = new RoomEnvironment();
+  const env = pmrem.fromScene(envScene, 0.04).texture;
+  envScene.dispose();
+  pmrem.dispose();
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color("#0d0e11");
@@ -282,7 +292,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     const closetZ = front - CLOSET.depth;
     const doorMat = new THREE.MeshStandardMaterial({ color: "#f1efea", roughness: 0.45 });
     // satin nickel; kept low on metalness since the scene has no reflections to show
-    const steelMat = new THREE.MeshStandardMaterial({ color: "#b4b7bb", metalness: 0.3, roughness: 0.35 });
+    const steelMat = new THREE.MeshStandardMaterial({ color: "#b4b7bb", metalness: 0.8, roughness: 0.3, envMap: env, envMapIntensity: 0.7 });
     /** casing around an opening, on the room side of a wall whose room face is at z */
     const casing = (x0: number, x1: number, h: number, z: number) => {
       for (const x of [x0 - 0.035, x1 + 0.035]) slab(0.07, h + 0.035, 0.015, trim, x, (h + 0.035) / 2, z - 0.0075, frontWall);
@@ -411,7 +421,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     scene.add(head);
   }
 
-  const furniture = createFurniture();
+  const furniture = createFurniture(env);
   scene.add(furniture.group);
 
   // ---------- night lighting ----------
@@ -521,9 +531,9 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       void main() {
         vec2 d = (vUv - 0.5) * vec2(uAspect, 1.0);
         float R = uRadius;
-        float sep = R * 0.6;
+        float sep = R * 0.48;
         float r = min(length(d - vec2(-sep, 0.0)), length(d - vec2(sep, 0.0)));
-        float inside = smoothstep(R, R - 0.012, r) * (0.3 + 0.7 * smoothstep(R, R * 0.55, r));
+        float inside = smoothstep(R, R - 0.012, r) * (0.6 + 0.4 * smoothstep(R, R * 0.6, r));
         float seen = mix(1.0, inside, uMask) * (1.0 - uFade);
         gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0 - seen);
       }`,
@@ -556,7 +566,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   let currentLandmark: string | null = null;
   const scopeLook = new THREE.Vector3();
   const updateScope = (dt: number) => {
-    const fit = Math.min(1, camera.aspect / 1.45); // keep both fields on narrow screens
+    const fit = Math.min(1, camera.aspect / 1.5); // keep both fields on narrow screens
     if (zoom) {
       zoom.t = Math.min(1, zoom.t + dt / zoom.dur);
       const x = zoom.t;
@@ -566,9 +576,9 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       scope.yaw = scope.yawT = THREE.MathUtils.lerp(outward.yaw, home.yaw, ea);
       scope.pitch = scope.pitchT = THREE.MathUtils.lerp(outward.pitch, home.pitch, ea);
       scope.fov = scope.fovT = THREE.MathUtils.lerp(ZOOM_FROM_FOV, SCOPE_FOV, e);
-      maskMat.uniforms.uRadius.value = THREE.MathUtils.lerp(1.6, 0.42 * fit, e);
+      maskMat.uniforms.uRadius.value = THREE.MathUtils.lerp(1.6, 0.6 * fit, e);
       if (zoom.t >= 1) zoom = null;
-    } else maskMat.uniforms.uRadius.value = 0.42 * fit;
+    } else maskMat.uniforms.uRadius.value = 0.6 * fit;
     scope.yaw += (scope.yawT - scope.yaw) * (1 - Math.exp(-8 * dt));
     scope.pitch += (scope.pitchT - scope.pitch) * (1 - Math.exp(-8 * dt));
     scope.fov += (scope.fovT - scope.fov) * (1 - Math.exp(-6 * dt));
@@ -827,6 +837,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
         }
       });
       for (const d of disposables) d.dispose();
+      env.dispose();
       overlayQuad.geometry.dispose();
       maskMat.dispose();
       renderer.dispose();

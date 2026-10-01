@@ -164,6 +164,10 @@ Photo B is the best whole-room view, so the hero view reproduces **photo B** rat
 - The floor lamp switches like the reference room's bedside lamp: click it, press L or use the button, and it fades like a real bulb.
 - The headboard top sits just under the window sill, and the desk props are spaced so nothing overlaps.
 
+- The lamp is three lights (a soft-shadowed cone down, a cone up the corner, a glow through the shade) with adjustable brightness and bulb colour.
+- Binoculars sit in the open on the sill above the pillow. Clicking them (or B) looks out at Western's campus through a wide two-field binocular view.
+- Details modelled from the close-ups: about 22 named fragrances on a four-row riser (Breeze and Vintage Radio boxes, 9pm, Stronger With You, Marwa, the blue shield, the black V, Honor and others); Spider-Ham, the crying-cat pillow, the Chick-fil-A cow with its sign, the blue-jay squish and two leafy plants on the sill; the chain tray, Casio watch, purple lanyard, keys, wallet, lighter and AirPods on the dresser; the clock in the desk lamp's base, a coaster under the mug, a knob on the keyboard.
+
 **Removed**
 - The rugs and the ring light behind the desk lamp (in the photos, left out on request).
 - Wood floor → dark charcoal carpet.

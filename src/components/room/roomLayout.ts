@@ -71,7 +71,8 @@ export const LAYOUT = {
     headboard: { w: 1.45, h: 0.97, t: 0.03 },
   },
   dresser: { pos: [0.28, 0, -1.42] as Vec3, w: 0.55, d: 0.45, unitH: 0.39 },
-  perfume: { pos: [0.26, 0, -1.51] as Vec3, w: 0.42, d: 0.2, h: 0.26 },
+  /** centre of the black riser (0.44 × 0.22 m, four rows); its back row clears the window sill */
+  perfume: { pos: [0.26, 0, -1.49] as Vec3 },
   candle: { pos: [0.05, 0, -1.3] as Vec3 },
   /** right in the corner of the window wall and the desk wall; the shade hangs out toward the room */
   floorLamp: { pos: [1.36, 0, -1.51] as Vec3, height: 1.62, shadeY: 1.48, shadeR: 0.15, shadeH: 0.22, shadeOffset: [-0.07, 0.07] as [number, number] },
@@ -84,7 +85,7 @@ export const LAYOUT = {
   mouse: { pos: [1.08, 0, 0.12] as Vec3 },
   controller: { pos: [1.0, 0, -0.62] as Vec3 },
   mug: { pos: [1.06, 0, -0.8] as Vec3 },
-  clock: { pos: [1.3, 0, -0.84] as Vec3 },
+  /** the gooseneck lamp, with the clock in its base */
   deskLamp: { pos: [1.42, 0, -0.84] as Vec3 },
   speaker: { pos: [1.44, 0, -0.28] as Vec3 },
   smallSpeaker: { pos: [1.42, 0, 0.24] as Vec3 },
@@ -95,14 +96,15 @@ export const LAYOUT = {
   sprinkler: { pos: [0.3, 0, -0.95] as Vec3 },
   /** things on the window sill, left to right */
   sill: [
-    { kind: "plant", x: -0.8 },
-    { kind: "cow", x: -0.64 },
-    { kind: "spiderHam", x: -0.44 },
-    { kind: "cat", x: -0.24 },
-    { kind: "bird", x: -0.06 },
-    { kind: "plant", x: 0.1 },
-    { kind: "binoculars", x: 0.25 },
-    { kind: "remote", x: 0.36 },
+    { kind: "plant", x: -0.84 },
+    { kind: "cow", x: -0.71 },
+    { kind: "spiderHam", x: -0.56 },
+    { kind: "cat", x: -0.4 },
+    { kind: "bird", x: -0.28 },
+    // in the open above the pillow, where they're easy to see and click from anywhere in the room
+    { kind: "binoculars", x: -0.12 },
+    { kind: "plant", x: 0.02 },
+    { kind: "remote", x: 0.33 },
   ] as { kind: "plant" | "cow" | "spiderHam" | "cat" | "bird" | "binoculars" | "remote"; x: number }[],
   outlets: [
     { pos: [0.6, 0.42, -1.65] as Vec3, facing: "back" },

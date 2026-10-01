@@ -1,6 +1,10 @@
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
+import { createDecor } from "./createDecor";
+import { paintTexture } from "./paintTexture";
 import { COLORS, LAYOUT, ROOM, WINDOW } from "./roomLayout";
+
+export { paintTexture };
 
 /**
  * Furniture and props of the real room, built procedurally from roomLayout.ts.
@@ -17,26 +21,6 @@ function seeded(seed: number) {
   };
 }
 
-export function paintTexture(
-  w: number,
-  h: number,
-  draw: (ctx: CanvasRenderingContext2D, w: number, h: number) => void,
-  repeat?: [number, number],
-) {
-  const c = document.createElement("canvas");
-  c.width = w;
-  c.height = h;
-  draw(c.getContext("2d")!, w, h);
-  const tex = new THREE.CanvasTexture(c);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = 8;
-  if (repeat) {
-    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(...repeat);
-  }
-  return tex;
-}
-
 export interface FurnitureHandle {
   group: THREE.Group;
   /** the floor lamp: its bulb position, the meshes that switch it when clicked, and its glow (0 off, 1 full) in a colour */
@@ -47,7 +31,8 @@ export interface FurnitureHandle {
   screens: { center: THREE.Vector3; normal: THREE.Vector3; w: number; h: number; color: string; strength: number }[];
 }
 
-export function createFurniture(): FurnitureHandle {
+/** `env` gives glass and polished metal something to reflect */
+export function createFurniture(env: THREE.Texture | null = null): FurnitureHandle {
   const rnd = seeded(11);
   const between = (a: number, b: number) => a + rnd() * (b - a);
   const group = new THREE.Group();
@@ -56,7 +41,8 @@ export function createFurniture(): FurnitureHandle {
   const std = (color: string, roughness = 0.8, metalness = 0) => {
     const key = `${color}|${roughness}|${metalness}`;
     let m = mats.get(key);
-    if (!m) mats.set(key, (m = new THREE.MeshStandardMaterial({ color, roughness, metalness })));
+    // metal needs something to reflect, or it renders near-black
+    if (!m) mats.set(key, (m = new THREE.MeshStandardMaterial({ color, roughness, metalness, envMap: metalness > 0.2 ? env : null, envMapIntensity: 0.7 })));
     return m;
   };
   const glow = (color: string, intensity = 1) => new THREE.MeshBasicMaterial({ color: new THREE.Color(color).multiplyScalar(intensity) });
@@ -102,6 +88,8 @@ export function createFurniture(): FurnitureHandle {
   const black = std("#161616", 0.55);
   const white = std("#ecebe8", 0.5);
   const screens: FurnitureHandle["screens"] = [];
+
+  const decor = createDecor({ env, rand: rnd });
 
   // ---------- bed ----------
   {
@@ -267,48 +255,14 @@ export function createFurniture(): FurnitureHandle {
     }
     const top = unitH * 2;
 
-    const pf = LAYOUT.perfume;
-    for (let s = 0; s < 3; s++) {
-      const sh = (pf.h * (3 - s)) / 3;
-      block(pf.w, 0.018, pf.d / 3, black, pf.pos[0], top + sh, pf.pos[2] - pf.d / 3 + (s * pf.d) / 3);
-      block(0.015, sh, pf.d / 3, black, pf.pos[0] - pf.w / 2 + 0.01, top + sh / 2, pf.pos[2] - pf.d / 3 + (s * pf.d) / 3);
-      block(0.015, sh, pf.d / 3, black, pf.pos[0] + pf.w / 2 - 0.01, top + sh / 2, pf.pos[2] - pf.d / 3 + (s * pf.d) / 3);
-    }
-    const bottleColors = ["#c9a24a", "#2a3560", "#c98a3c", "#1a1a1a", "#e9e4d8", "#6b2a2a", "#b8c4cc", "#3a3a3a"];
-    for (let s = 0; s < 3; s++) {
-      const baseY = top + (pf.h * (3 - s)) / 3 + 0.009;
-      const bz = pf.pos[2] - pf.d / 3 + (s * pf.d) / 3;
-      const n = 6 + s;
-      for (let i = 0; i < n; i++) {
-        const bx = pf.pos[0] - pf.w / 2 + 0.035 + (i / (n - 1)) * (pf.w - 0.07) + between(-0.008, 0.008);
-        const color = bottleColors[Math.floor(rnd() * bottleColors.length)];
-        const glass = new THREE.MeshStandardMaterial({ color, roughness: 0.15, metalness: 0.1, transparent: true, opacity: 0.88 });
-        const kind = Math.floor(rnd() * 4);
-        const h = between(0.07, 0.12);
-        if (kind === 0) rounded(0.045, h, 0.035, 0.006, glass, bx, baseY + h / 2, bz, group, false);
-        else if (kind === 1) cyl(0.022, 0.024, h, glass, bx, baseY + h / 2, bz, group, 16).castShadow = false;
-        else if (kind === 2) rounded(0.05, h * 0.8, 0.03, 0.012, glass, bx, baseY + (h * 0.8) / 2, bz, group, false);
-        else ball(0.03, glass, bx, baseY + 0.032, bz, group, [1, 1.15, 0.8]).castShadow = false;
-        const capH = between(0.02, 0.035);
-        const cap = rnd() > 0.5 ? std("#c9a24a", 0.3, 0.8) : std("#111111", 0.4);
-        const hh = kind === 3 ? 0.07 : kind === 2 ? h * 0.8 : h;
-        cyl(0.012, 0.012, capH, cap, bx, baseY + hh + capH / 2, bz, group, 12).castShadow = false;
-      }
-    }
-    // boxed bottles standing at the back of the top step
-    for (const [bx, c] of [[-0.12, "#f4f2ec"], [0.14, "#f1ede4"]] as const)
-      block(0.07, 0.11, 0.05, std(c, 0.7), pf.pos[0] + bx, top + pf.h + 0.064, pf.pos[2] - pf.d / 3, group, false);
+    const pf = LAYOUT.perfume.pos;
+    decor.perfumeShelf(group, new THREE.Vector3(pf[0], top, pf[2]));
 
-    // LED pillar candle, keys, lanyard, wallet, lighter, watch
+    // LED pillar candle: a soft-edged ivory block with a dipped top, then the everyday clutter
     const cd = LAYOUT.candle.pos;
-    cyl(0.04, 0.04, 0.1, std("#f1e7d2", 0.8), cd[0], top + 0.05, cd[2]);
-    block(0.26, 0.004, 0.03, std("#6a4aa0", 0.8), x + 0.02, top + 0.002, z + 0.13, group, false).rotation.y = 0.25;
-    block(0.1, 0.014, 0.08, std("#121212", 0.6), x - 0.02, top + 0.007, z + 0.18, group, false).rotation.y = -0.2;
-    block(0.07, 0.014, 0.022, std("#2a9ad8", 0.4), x + 0.16, top + 0.007, z + 0.12, group, false).rotation.y = 0.5;
-    const watch = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.008, 8, 24), std("#b8bcc2", 0.25, 0.9));
-    watch.rotation.x = -Math.PI / 2;
-    place(watch, x + 0.08, top + 0.008, z + 0.02, group, false);
-    rounded(0.05, 0.022, 0.045, 0.01, white, x + 0.18, top + 0.011, z - 0.04, group, false);
+    rounded(0.075, 0.1, 0.075, 0.012, std("#f1e7d2", 0.85), cd[0], top + 0.05, cd[2]);
+    cyl(0.026, 0.03, 0.006, std("#e2d4bb", 0.9), cd[0], top + 0.098, cd[2], group, 20);
+    decor.clutter(group, new THREE.Vector3(x + 0.02, top, -1.3));
   }
 
   // ---------- floor lamp ----------
@@ -555,26 +509,31 @@ export function createFurniture(): FurnitureHandle {
   // ---------- desk props ----------
   {
     const facing = -Math.PI / 2;
-    // keyboard: grey-white caps with slate-blue modifiers
+    // keyboard: an off-white 75% board, white alphas, dusty-blue modifiers and a volume knob
     const kb = LAYOUT.keyboard.pos;
     const kg = anchor(kb[0], deskTop, kb[2], facing);
     const caps = paintTexture(512, 192, (c, w, h) => {
-      c.fillStyle = "#dcdde1";
+      c.fillStyle = "#e7e5df";
       c.fillRect(0, 0, w, h);
-      const size = 30;
-      for (let r = 0; r < 5; r++)
+      const size = 27;
+      for (let r = 0; r < 6; r++)
         for (let k = 0; k < 15; k++) {
-          const mod = k === 0 || k >= 13 || r === 4;
-          c.fillStyle = mod ? "#4d5a78" : "#c9ccd3";
-          c.fillRect(14 + k * (size + 2.4), 18 + r * (size + 3), size, size);
+          if (r === 0 && k > 12) continue;
+          const mod = k === 0 || k >= 13 || r === 5 || r === 0;
+          c.fillStyle = mod ? "#8c9cb8" : "#f1f1ee";
+          c.fillRect(12 + k * (size + 3), 10 + r * (size + 2.5), size, size);
+          c.fillStyle = "rgba(0,0,0,0.12)";
+          c.fillRect(12 + k * (size + 3), 10 + r * (size + 2.5) + size - 3, size, 3);
         }
-      c.fillStyle = "#c9ccd3";
-      c.fillRect(14 + 4 * 32.4, 18 + 4 * 33, 6 * 32, 30);
+      c.fillStyle = "#f1f1ee";
+      c.fillRect(12 + 4 * 30, 10 + 5 * 29.5, 6 * 30 - 3, size);
     });
-    const kbMats = [white, white, new THREE.MeshStandardMaterial({ map: caps, roughness: 0.6 }), white, white, white];
+    const kbCase = std("#e7e5df", 0.5);
+    const kbMats = [kbCase, kbCase, new THREE.MeshStandardMaterial({ map: caps, roughness: 0.6 }), kbCase, kbCase, kbCase];
     const kbMesh = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.035, 0.13), kbMats);
     place(kbMesh, 0, 0.018, 0, kg);
     kbMesh.rotation.x = 0.05;
+    cyl(0.009, 0.009, 0.012, std("#9aa3b2", 0.35, 0.6), 0.155, 0.041, -0.048, kg, 20);
 
     const ms = LAYOUT.mouse.pos;
     ball(0.035, std("#101012", 0.4), ms[0], deskTop + 0.012, ms[2], group, [0.9, 0.45, 1.5]);
@@ -592,42 +551,45 @@ export function createFurniture(): FurnitureHandle {
 
     const mg = LAYOUT.mug.pos;
     const mugMat = std("#161616", 0.35);
-    cyl(0.04, 0.037, 0.1, mugMat, mg[0], deskTop + 0.05, mg[2], group, 28);
+    block(0.11, 0.002, 0.11, std("#f2f1ee", 0.9), mg[0], deskTop + 0.001, mg[2], group, false).rotation.y = 0.3; // napkin coaster
+    cyl(0.04, 0.037, 0.1, mugMat, mg[0], deskTop + 0.052, mg[2], group, 28);
     const handle = new THREE.Mesh(new THREE.TorusGeometry(0.028, 0.007, 8, 20), mugMat);
-    place(handle, mg[0], deskTop + 0.05, mg[2] + 0.045);
+    place(handle, mg[0], deskTop + 0.052, mg[2] + 0.045);
     handle.rotation.y = Math.PI / 2;
 
-    // alarm clock showing the time from the photo
-    const cl = LAYOUT.clock.pos;
-    const clockG = anchor(cl[0], deskTop, cl[2], facing);
-    rounded(0.1, 0.055, 0.045, 0.012, white, 0, 0.028, 0, clockG);
-    const face = paintTexture(128, 64, (c, w, h) => {
-      c.fillStyle = "#23272b";
+    // the white gooseneck lamp: a round base with a clock in its face, a bendy neck and a ring head
+    const dl = LAYOUT.deskLamp.pos;
+    const lampG = anchor(dl[0], deskTop, dl[2], facing);
+    cyl(0.062, 0.066, 0.05, white, 0, 0.025, 0, lampG, 36);
+    const face = paintTexture(128, 48, (c, w, h) => {
+      c.fillStyle = "#1d2124";
       c.fillRect(0, 0, w, h);
       c.fillStyle = "#cfe8ff";
       c.font = "600 34px ui-monospace, monospace";
       c.textAlign = "center";
-      c.fillText("3:46", w / 2, 44);
+      c.fillText("3:46", w / 2, 37);
     });
-    const faceMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.075, 0.035), new THREE.MeshBasicMaterial({ map: face, toneMapped: false }));
-    faceMesh.position.set(0, 0.03, 0.0231);
-    clockG.add(faceMesh);
-
-    // gooseneck lamp (off)
-    const dl = LAYOUT.deskLamp.pos;
-    cyl(0.05, 0.055, 0.02, white, dl[0], deskTop + 0.01, dl[2]);
-    tube([new THREE.Vector3(dl[0], deskTop + 0.02, dl[2]), new THREE.Vector3(dl[0], deskTop + 0.25, dl[2] + 0.02), new THREE.Vector3(dl[0] - 0.03, deskTop + 0.38, dl[2] + 0.05)], 0.008, white);
-    const headMesh = place(new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.012, 10, 32), white), dl[0] - 0.05, deskTop + 0.42, dl[2] + 0.06);
-    headMesh.rotation.y = -Math.PI / 2 + 0.4;
-    const lens = place(new THREE.Mesh(new THREE.CircleGeometry(0.06, 32), std("#dfe3e8", 0.2)), dl[0] - 0.052, deskTop + 0.42, dl[2] + 0.06, group, false);
-    lens.rotation.y = -Math.PI / 2 + 0.4;
+    const faceMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.05, 0.019), new THREE.MeshBasicMaterial({ map: face, toneMapped: false }));
+    faceMesh.position.set(0, 0.026, 0.0645);
+    lampG.add(faceMesh);
+    tube([new THREE.Vector3(0, 0.05, -0.02), new THREE.Vector3(0, 0.25, -0.03), new THREE.Vector3(0, 0.38, 0.0), new THREE.Vector3(0, 0.42, 0.04)], 0.008, white, lampG);
+    const headRing = place(new THREE.Mesh(new THREE.TorusGeometry(0.058, 0.012, 12, 40), white), 0, 0.46, 0.06, lampG);
+    headRing.rotation.x = -0.25;
+    const lens = place(new THREE.Mesh(new THREE.CircleGeometry(0.058, 36), std("#e3e6ea", 0.25)), 0, 0.46, 0.061, lampG, false);
+    lens.rotation.x = -0.25;
 
     const sp = LAYOUT.speaker.pos;
     const spk = rounded(0.2, 0.08, 0.07, 0.03, std("#1a1a1a", 0.8), sp[0], deskTop + 0.04, sp[2]);
     spk.rotation.y = facing;
+    // small round speaker on a stand, its silver driver facing the chair
     const ss = LAYOUT.smallSpeaker.pos;
-    ball(0.035, std("#141414", 0.5), ss[0], deskTop + 0.05, ss[2]);
-    cyl(0.02, 0.028, 0.02, std("#141414", 0.5), ss[0], deskTop + 0.01, ss[2]);
+    const sg = anchor(ss[0], deskTop, ss[2], facing);
+    ball(0.035, std("#141414", 0.4), 0, 0.055, 0, sg);
+    cyl(0.012, 0.03, 0.022, std("#141414", 0.5), 0, 0.011, 0, sg, 20);
+    const driver = place(new THREE.Mesh(new THREE.CircleGeometry(0.022, 28), std("#c9ccd1", 0.3, 0.8)), 0, 0.055, 0.0335, sg, false);
+    driver.rotation.y = 0;
+    const surround = place(new THREE.Mesh(new THREE.TorusGeometry(0.023, 0.003, 8, 28), std("#b5b9bf", 0.3, 0.8)), 0, 0.055, 0.033, sg, false);
+    surround.rotation.y = 0;
 
     // PC tower under the front end of the desk, blue light at its front edge
     const pc = LAYOUT.pcTower.pos;
@@ -709,63 +671,24 @@ export function createFurniture(): FurnitureHandle {
   const binocularParts: THREE.Object3D[] = [];
   let binoculars: FurnitureHandle["binoculars"] = { position: new THREE.Vector3(), direction: new THREE.Vector3(0, 0, -1), parts: binocularParts };
   {
-    const y = WINDOW.y0 + 0.015;
+    const y = WINDOW.y0;
     const z = ROOM.back - 0.035;
-    const leaf = std("#3f6b32", 0.7);
-    const leafGeo = new THREE.IcosahedronGeometry(0.02, 0);
     for (const item of LAYOUT.sill) {
       const x = item.x;
-      if (item.kind === "plant") {
-        cyl(0.035, 0.028, 0.055, std("#161616", 0.6), x, y + 0.028, z, group, 18);
-        for (let i = 0; i < 16; i++) {
-          const m = place(new THREE.Mesh(leafGeo, leaf), x + between(-0.05, 0.05), y + between(0.07, 0.14), z + between(-0.03, 0.03), group, false);
-          m.scale.set(1.4, 0.5, 0.9);
-          m.rotation.set(rnd() * 3, rnd() * 3, rnd() * 3);
-        }
-      } else if (item.kind === "cow") {
-        const cow = std("#f4f4f0", 0.9);
-        rounded(0.08, 0.07, 0.05, 0.02, cow, x, y + 0.035, z, group, false);
-        ball(0.03, cow, x, y + 0.095, z, group);
-        ball(0.012, std("#161616"), x + 0.02, y + 0.06, z + 0.024, group);
-        ball(0.01, std("#161616"), x - 0.025, y + 0.03, z + 0.024, group);
-      } else if (item.kind === "spiderHam") {
-        const red = std("#c4151c", 0.85);
-        ball(0.045, red, x, y + 0.045, z, group, [1, 0.9, 0.8]);
-        ball(0.05, red, x, y + 0.12, z, group, [1.1, 0.95, 0.85]);
-        for (const s of [-1, 1]) ball(0.016, std("#f4f4f4", 0.6), x + s * 0.02, y + 0.13, z + 0.04, group, [1, 1.3, 0.4]);
-        ball(0.012, std("#e98aa0", 0.8), x, y + 0.105, z + 0.045, group);
-      } else if (item.kind === "cat") {
-        const catFace = paintTexture(128, 160, (c, w, h) => {
-          c.fillStyle = "#e0b9a0";
-          c.fillRect(0, 0, w, h);
-          c.fillStyle = "#c98a5e";
-          c.fillRect(0, 0, w, 30);
-          c.fillStyle = "#20140e";
-          for (const ex of [40, 88]) {
-            c.beginPath();
-            c.ellipse(ex, 70, 14, 17, 0, 0, Math.PI * 2);
-            c.fill();
-          }
-          c.fillStyle = "#ffffff";
-          for (const ex of [36, 84]) c.fillRect(ex, 62, 5, 5);
-          c.fillStyle = "#d38f86";
-          c.fillRect(58, 96, 12, 7);
-        });
-        const catMats = Array.from({ length: 6 }, (_, i) => (i === 4 ? new THREE.MeshStandardMaterial({ map: catFace, roughness: 0.9 }) : std("#e0b9a0", 0.9)));
-        const body = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.12, 0.05), catMats);
-        place(body, x, y + 0.06, z, group);
-        for (const s of [-1, 1]) {
-          const ear = new THREE.Mesh(new THREE.ConeGeometry(0.018, 0.035, 4), std("#c98a5e", 0.9));
-          place(ear, x + s * 0.03, y + 0.135, z, group, false);
-        }
-      } else if (item.kind === "binoculars") {
+      const at = new THREE.Vector3(x, y, z);
+      if (item.kind === "plant") decor.plant(group, at);
+      else if (item.kind === "cow") decor.cow(group, at);
+      else if (item.kind === "spiderHam") decor.spiderHam(group, at);
+      else if (item.kind === "cat") decor.cryingCat(group, at);
+      else if (item.kind === "bird") decor.bird(group, at);
+      else if (item.kind === "binoculars") {
         // two black barrels joined by a hinge bridge, eyecups toward the room, looking out of the window
         const body = std("#1b1c1e", 0.55);
         const rubber = std("#0e0e0f", 0.9);
-        const lensMat = new THREE.MeshStandardMaterial({ color: "#2a3a5a", roughness: 0.05, metalness: 0.6 });
+        const lensMat = std("#2a3a5a", 0.05, 0.6);
         const bg = new THREE.Group();
         bg.position.set(x, y + 0.03, z + 0.01);
-        bg.rotation.y = 0.12;
+        bg.rotation.y = 0.05;
         group.add(bg);
         for (const sgn of [-1, 1]) {
           const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.027, 0.03, 0.12, 20), body);
@@ -786,9 +709,6 @@ export function createFurniture(): FurnitureHandle {
         binocularParts.push(bridge, knob);
         bg.updateMatrixWorld(true);
         binoculars = { position: bg.getWorldPosition(new THREE.Vector3()), direction: new THREE.Vector3(0, 0, -1).transformDirection(bg.matrixWorld), parts: binocularParts };
-      } else if (item.kind === "bird") {
-        ball(0.035, std("#3a6fb8", 0.85), x, y + 0.03, z, group, [1, 0.85, 0.9]);
-        ball(0.022, std("#eef2f6", 0.9), x, y + 0.025, z + 0.018, group, [1, 0.8, 0.6]);
       } else {
         rounded(0.05, 0.014, 0.025, 0.006, white, x, y + 0.007, z, group, false);
       }
