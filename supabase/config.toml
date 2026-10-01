@@ -2,3 +2,6 @@ project_id = "byztduagbykgtpekxomu"
 
 [functions.send-contact-email]
 verify_jwt = false
+
+[functions.dash-ai]
+verify_jwt = true
