@@ -37,7 +37,7 @@ REVOKE ALL ON FUNCTION public.dash_push_register(TEXT, TEXT, TEXT, TEXT) FROM PU
 GRANT EXECUTE ON FUNCTION public.dash_push_register(TEXT, TEXT, TEXT, TEXT) TO authenticated;
 
 CREATE TABLE IF NOT EXISTS public.dash_reminders (
-  id TEXT PRIMARY KEY,                       -- "<user id>:<tag>:<time>", so every device writes the same ids
+  id TEXT NOT NULL,                          -- "<user id>:<tag>:<time>", so every device writes the same ids
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   at TIMESTAMP WITH TIME ZONE NOT NULL,
   kind TEXT NOT NULL,                        -- due | event | morning | timer | test
@@ -45,7 +45,8 @@ CREATE TABLE IF NOT EXISTS public.dash_reminders (
   body TEXT NOT NULL DEFAULT '',
   tag TEXT,
   url TEXT,
-  sent_at TIMESTAMP WITH TIME ZONE
+  sent_at TIMESTAMP WITH TIME ZONE,
+  PRIMARY KEY (user_id, id)                  -- keyed per user, so nobody can claim another account's ids
 );
 CREATE INDEX IF NOT EXISTS dash_reminders_pending ON public.dash_reminders (at) WHERE sent_at IS NULL;
 ALTER TABLE public.dash_reminders ENABLE ROW LEVEL SECURITY;
