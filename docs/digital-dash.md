@@ -104,6 +104,37 @@ Optional sign-in so data saves to the cloud and follows you across devices. Sign
 - Upload a background photo; it shows on the other device.
 - Delete the account and confirm the row and files are gone.
 
+## Recurring tasks and checklists
+
+- `t.rep = {f, n, days}`: `f` is `d` (every n days), `wd` (weekdays), `w` (weekly on `days`, Sunday = 0, every `n` weeks) or `m` (monthly). Set from the task form (Repeat + day buttons) or the command bar: "gym every mon wed fri 6pm", "problem set every friday", "readings weekdays", "rent monthly", "water plants every other day", "review notes every 2 weeks".
+- Ticking a repeating task keeps it as done and adds the next one (`spawnNext`, `nextDate`); if it was finished late, the next one lands on the next date still ahead. Unticking removes that next one again. With no date given, the first one lands on the next matching day (`firstDue`).
+- `t.steps = [{id, t, done}]` is the checklist, opened with the list button on a task. The row shows a progress bar; finishing every step offers to tick off the task. The AI helper's "Add as checklist" puts its steps here.
+
+## Study tracking
+
+- `t.course` (task form Course field with suggestions, or `#ES1050` in the command bar).
+- The focus timer's "Working on" picker (`settings.tmTag`: `t:<task id>`, `c:<course>` or nothing) tags each finished focus session in `S.focusTags = [{d, sec, task, course}]`.
+- Tasks show "3 sessions · 1h 15m". The week review adds "Time by course" (sorted bars, one hue, value on every row, with untagged focus time shown separately so totals still add up) and "Most time on".
+
+## Reminders (Web Push)
+
+Phone and computer notifications, even when Digital Dash is closed: a task's due time (15 min to 1 day before), a morning summary of what's due, calendar events 15 minutes before, and "Focus session done".
+
+How it works:
+- Themes, Reminders, "Turn on reminders for this device" asks for permission, subscribes with the VAPID public key from `dash-push` (`{action:"key"}`) and saves the subscription with `dash_push_register()`.
+- The app works out the next 7 days of reminders (`remBuild`) and keeps them in `dash_reminders` (ids are `<user>:<tag>:<time>`, so every device writes the same rows; stale ones are deleted). It re-syncs about 4 seconds after changes. The focus timer's reminder is written when it starts and removed when paused.
+- `dash-push` with `{action:"run"}` (every minute from pg_cron, with the `x-cron-secret` header) sends what's due, marks it sent, skips anything more than 30 minutes stale and drops subscriptions the push service reports as gone. It encrypts with `web-push` and delivers with `fetch`.
+- `digital-dash-sw.js` shows the notification and opens or focuses the app at the right page when it's tapped.
+- Signing out turns reminders off on that device.
+- iPhone and iPad (iOS 16.4 or later) only allow web notifications for apps added to the Home Screen; the panel explains this when needed.
+
+**One-time setup**
+1. Run `supabase/migrations/20261001140000_digital_dash_push.sql`.
+2. Make VAPID keys: `npx web-push generate-vapid-keys`. Add secrets `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (`mailto:you@example.com`) and a long random `CRON_SECRET`.
+3. Deploy: `supabase functions deploy dash-push` (`verify_jwt = false` is set in `supabase/config.toml`, because the cron call uses the secret instead).
+4. Open `supabase/digital-dash-reminders-cron.sql`, put in your project ref and the same `CRON_SECRET`, and run it in the SQL editor. It enables `pg_cron` and `pg_net` and calls `dash-push` every minute.
+5. On your phone: open the site, add it to the Home Screen (needed on iPhone), open it from there, sign in, then Themes, Reminders, turn on, and press "Send a test".
+
 ## Study rooms (Supabase Realtime)
 
 Focus with friends: see who's in a session and start a shared timer. No tables; a room is the Realtime channel `dash-room-<CODE>`.
