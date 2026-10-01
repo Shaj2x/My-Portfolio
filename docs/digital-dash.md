@@ -162,6 +162,18 @@ How it works:
 3. Deploy: `supabase functions deploy dash-ai` (Lovable may deploy functions in `supabase/functions` for you). `verify_jwt = true` is set in `supabase/config.toml`.
 4. Cost: each request is one Claude call. The daily limit caps it per person; lower it if you share the app widely.
 
+## Privacy
+
+What leaves the device, and where it goes:
+- **Signed out:** nothing. Everything stays in this browser's storage.
+- **Signed in:** the whole dashboard (tasks, calendar, net worth, settings) and uploaded photos are stored in the site owner's Supabase project, readable only by that account (row level security). Deleting the account removes them.
+- **AI helper:** task titles, due dates, urgency, course names and the next 7 days of calendar event titles and times are sent to Anthropic's API through the `dash-ai` function, only when you press Break it down or Plan my week. Nothing else (no net worth, no notes).
+- **Reminders:** reminder titles and times (task and event titles) are stored in `dash_reminders` and sent through the browser's push service (Google, Apple or Mozilla) as encrypted messages.
+- **Study rooms:** your display name, focus status and time left are visible to anyone with the room code; your top task only if you turn that on.
+- **Spotify:** the app talks to Spotify directly from the browser with your own app's Client ID; tokens never reach the Supabase project.
+
+The same points are shown in short in the app: in the Account dialog, the AI helper and the study room card.
+
 ## Storage
 
 - `localStorage` key `grindboard.v1` holds `S` (kept for backward compatibility with the old name).
