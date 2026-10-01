@@ -521,7 +521,7 @@ input[type=range]{accent-color:var(--accent);width:170px;max-width:50vw}
   .addbar{grid-template-columns:1fr 1fr}
   .addbar input[type=text]{grid-column:1/-1}
   .task{grid-template-columns:auto 1fr auto;grid-template-areas:"ck tt x" ". du ur";row-gap:6px}
-  .task .check{grid-area:ck}.task .tt{grid-area:tt}.task .due{grid-area:du;align-self:center}.task .urg{grid-area:ur}.task .icon-btn{grid-area:x}
+  .task .check{grid-area:ck}.task .tt{grid-area:tt}.task .due{grid-area:du;align-self:center}.task .urg{grid-area:ur}.task .tact{grid-area:x}
   .day{min-height:58px}
   .chip{display:none}
   .day .dots{display:flex!important}
@@ -946,6 +946,81 @@ html.lg .acd-in{background:color-mix(in srgb,var(--panel) 88%,transparent);-webk
 html.lg .ac-stats div,html.lg .ac-list li,html.lg .acp-opt{background:var(--glass-tint)}
 @media (max-width:560px){.acd{margin:auto auto 0;width:100vw;max-width:100vw;max-height:92vh}.acd-in{border-radius:20px 20px 0 0}.ac-stats{grid-template-columns:repeat(2,1fr)}.acd-body{padding-bottom:calc(20px + env(safe-area-inset-bottom,0px))}}
 @media (prefers-reduced-motion:reduce){.acd[open] .acd-in{animation:none}.acct-dot[data-s="saving"]{animation:none}.acct-btn:active,.acp-opt:active{transform:none}}
+.room{position:relative;margin-top:18px;display:grid;gap:14px;overflow:hidden}
+.room[hidden]{display:none}
+.rm-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.rm-head h3{margin:0;font-size:16px}
+.rm-head p{margin:2px 0 0;font-size:13.5px}
+.rm-hact{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.rm-code{font:700 14px/1 var(--ui);letter-spacing:.08em;padding:8px 10px;border-radius:8px;background:var(--panel2);font-variant-numeric:tabular-nums}
+.rm-join{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+.rm-f{display:grid;gap:4px;font-size:12.5px;color:var(--muted);flex:1 1 160px}
+.rm-f input{width:100%}
+#rm-code{text-transform:uppercase;letter-spacing:.08em;font-variant-numeric:tabular-nums}
+.rm-btns{display:flex;gap:8px;flex-wrap:wrap}
+.rm-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
+.rm-p{display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;background:var(--panel2);border:1px solid transparent;min-width:0;transition:border-color var(--t-ui) ease}
+.rm-p.focus{border-color:color-mix(in srgb,var(--accent) 50%,transparent)}
+.rm-av{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font:700 14px/1 var(--ui);color:#fff;background:hsl(var(--h) 55% 45%)}
+.rm-who{flex:1;min-width:0;display:grid;gap:1px}
+.rm-who b{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rm-who small{font-weight:400;color:var(--muted)}
+.rm-st{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted)}
+.rm-p.focus .rm-st{color:var(--accent)}
+.rm-dot{width:7px;height:7px;border-radius:50%;background:currentColor;animation:ac-pulse 1.6s ease-in-out infinite}
+.rm-task{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rm-ring{flex:none;width:26px;height:26px;border-radius:50%;background:conic-gradient(var(--accent) calc(var(--p)*360deg),color-mix(in srgb,var(--ink) 12%,transparent) 0);-webkit-mask:radial-gradient(circle,transparent 8px,#000 9px);mask:radial-gradient(circle,transparent 8px,#000 9px)}
+.rm-p.break .rm-ring{background:conic-gradient(var(--good,#0ca30c) calc(var(--p)*360deg),color-mix(in srgb,var(--ink) 12%,transparent) 0)}
+.rm-group{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 12px;border-radius:12px;background:color-mix(in srgb,var(--accent) 9%,var(--panel2))}
+.rm-gl{display:grid;gap:1px;flex:1 1 200px;font-size:13px}
+.rm-gl b{font-size:14px}
+.rm-gl span{color:var(--muted)}
+.rm-tg{display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer}
+.rm-tg input{accent-color:var(--accent);width:16px;height:16px}
+.rm-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.rm-react{display:flex;gap:6px}
+.rm-react button{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--panel2);font-size:18px;line-height:1;transition:transform var(--t-press) var(--ease-out),border-color var(--t-fast) ease}
+.rm-react button:hover{border-color:var(--accent)}
+.rm-react button:active{transform:scale(.88)}
+.rm-float{position:absolute;bottom:20px;font-size:28px;pointer-events:none;z-index:3}
+html.lg .rm-p,html.lg .rm-code,html.lg .rm-react button{background:var(--glass-tint)}
+html.lg .rm-group{background:color-mix(in srgb,var(--accent) 12%,transparent)}
+@media (prefers-reduced-motion:reduce){.rm-dot{animation:none}.rm-react button:active{transform:none}}
+.tact{display:flex;align-items:center;gap:2px}
+.ai-btn{color:var(--muted)}
+.ai-btn:hover{color:var(--accent)}
+@media (hover:hover){.task .ai-btn{opacity:0;transition:opacity var(--t-fast) ease,color var(--t-fast) ease}.task:hover .ai-btn,.task:focus-within .ai-btn{opacity:1}}
+.ai-plan{display:inline-flex;align-items:center;gap:6px}
+.ai-plan svg{width:16px;height:16px;color:var(--accent)}
+.filters{flex-wrap:wrap}
+.ai-wait{display:grid;justify-items:center;gap:10px;padding:18px 0;text-align:center;color:var(--muted)}
+.ai-wait>svg{width:30px;height:30px;color:var(--accent);animation:ai-spin 2.4s var(--ease-in-out) infinite}
+@keyframes ai-spin{50%{transform:rotate(180deg) scale(1.15)}}
+.ai-skel{display:grid;gap:8px;width:100%}
+.ai-skel i{height:44px;border-radius:10px;background:linear-gradient(90deg,var(--panel2) 0,color-mix(in srgb,var(--ink) 9%,var(--panel2)) 50%,var(--panel2) 100%) 0 0/200% 100%;animation:ai-shim 1.4s linear infinite}
+.ai-skel i:nth-child(2){width:86%}.ai-skel i:nth-child(3){width:70%}
+@keyframes ai-shim{to{background-position:-200% 0}}
+.ai-list{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.ai-list li{display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:10px;background:var(--panel2);min-height:44px}
+.ai-list input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent);flex:none}
+.ai-list .ai-t{flex:1;min-width:0;border:0!important;background:none!important;padding:6px 0!important;box-shadow:none;font-size:14px}
+.ai-list li:has(input[type=checkbox]:not(:checked)) :is(.ai-t,.ai-t2,.ai-time){opacity:.45;text-decoration:line-through}
+.ai-m{flex:none;font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ai-time{flex:none;font-size:13px;font-variant-numeric:tabular-nums;font-weight:600;min-width:92px}
+.ai-t2{flex:1;min-width:0;font-size:14px;display:grid}
+.ai-t2 small{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ai-list .ai-day{background:none;min-height:0;padding:10px 2px 2px;font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.ai-tip{display:flex;gap:8px;align-items:flex-start;font-size:13.5px;padding:10px 12px;border-radius:10px;background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.ai-tip svg{width:18px;height:18px;flex:none;color:var(--accent)}
+.ai-sum{font-size:14.5px;line-height:1.5}
+.ai-warn{font-size:13px;padding:8px 12px;border-radius:10px;background:color-mix(in srgb,#fab219 18%,transparent)}
+.ai-err{color:var(--bad)}
+.ai-more summary{cursor:pointer;font-size:13px;color:var(--muted)}
+.ai-more[open]{display:grid;gap:8px}
+.ai-more textarea{width:100%;min-height:0}
+html.lg .ai-list li:not(.ai-day){background:var(--glass-tint)}
+@media (max-width:560px){.ai-time{min-width:0}.ai-m{font-size:11.5px}}
+@media (prefers-reduced-motion:reduce){.ai-wait>svg,.ai-skel i{animation:none}}
 html.lg .cmd-in{background:color-mix(in srgb,var(--panel) 62%,transparent);-webkit-backdrop-filter:blur(30px) saturate(180%);backdrop-filter:blur(30px) saturate(180%);border-color:transparent;box-shadow:var(--rim),0 30px 70px -20px rgba(0,0,0,.6)}
 @media (max-width:720px){.cmd{margin-top:10px;max-height:calc(100dvh - 120px)}.cmd-foot{display:none}.cmd-q input{font-size:16px}}
 
@@ -1041,6 +1116,10 @@ html.lg .eye{background:var(--glass-tint);box-shadow:inset 0 1px 0 color-mix(in 
           <label><input type="checkbox" id="opt-secs"> Seconds</label>
         </div>
       </div>
+      <section class="panel room" id="room" aria-labelledby="rm-h" hidden>
+        <div class="rm-head"><div><h3 id="rm-h">Study room</h3><p class="muted" id="rm-sub">Focus alongside friends. See who's working and start timers together.</p></div><div class="rm-hact" id="rm-hact"></div></div>
+        <div id="rm-body"></div>
+      </section>
       <section class="panel jukebox" id="jukebox" aria-labelledby="jb-h">
         <div class="jb-head">
           <div><h3 id="jb-h">Sounds</h3><p class="muted">Mix study music and background sounds. Made live in your browser, so it never repeats and nothing downloads.</p></div>
@@ -1072,6 +1151,7 @@ html.lg .eye{background:var(--glass-tint);box-shadow:inset 0 1px 0 color-mix(in 
         <div class="seg" id="task-filter" role="group" aria-label="Filter">
           <button data-f="open" aria-pressed="true">Open</button><button data-f="done" aria-pressed="false">Done</button><button data-f="all" aria-pressed="false">All</button>
         </div>
+        <button class="btn ghost small ai-plan" type="button" id="ai-plan"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l1.8 4.7 4.7 1.8-4.7 1.8L12 16.5l-1.8-4.7L5.5 10l4.7-1.8z"/><path d="M18.5 15.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></svg>Plan my week</button>
         <div class="legend">
           <span style="--c:var(--u0)">Critical</span><span style="--c:var(--u1)">High</span><span style="--c:var(--u2)">Medium</span><span style="--c:var(--u3)">Low</span>
         </div>
@@ -1239,6 +1319,12 @@ html.lg .eye{background:var(--glass-tint);box-shadow:inset 0 1px 0 color-mix(in 
   <div class="acd-in">
     <div class="acd-top"><h2 id="acd-h">Account</h2><button class="icon-btn" type="button" id="acd-x" aria-label="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
     <div class="acd-body" id="acd-body"></div>
+  </div>
+</dialog>
+<dialog class="acd" id="ai" aria-labelledby="ai-h">
+  <div class="acd-in">
+    <div class="acd-top"><h2 id="ai-h">AI helper</h2><button class="icon-btn" type="button" data-ai="close" aria-label="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+    <div class="acd-body" id="ai-body" aria-live="polite"></div>
   </div>
 </dialog>
 <dialog class="acd acd-sm" id="acct-pick" aria-labelledby="acp-h">
@@ -2207,6 +2293,7 @@ let lastSec=-1;
 function tick(force){
   const d=new Date(), s=d.getSeconds();
   if(s===lastSec&&!force)return; lastSec=s;
+  rmTick();
   if(clockKind==="analog"&&s===0)syncAnalog();
   {const stg=$("#stage");if(stg&&stg.offsetWidth&&(stg.offsetWidth!==lastStage.w||stg.offsetHeight!==lastStage.h)){lastStage={w:stg.offsetWidth,h:stg.offsetHeight};}}
   const hh=hours(d), mm=d.getMinutes(), ap=S.settings.h24?"":(d.getHours()<12?"AM":"PM");
@@ -2269,7 +2356,7 @@ function renderTasks(mode){
     <div class="tt"><span>${esc(t.title)}</span></div>
     <span class="due${dl.late&&!t.done?" late":""}">${dl.t}</span>
     <select class="urg" data-act="urg" aria-label="Urgency">${URG.map((u,i)=>`<option value="${i}"${i===t.urg?" selected":""}>${u}</option>`).join("")}</select>
-    <button class="icon-btn" data-act="del" aria-label="Delete task"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    <div class="tact">${t.done?"":`<button class="icon-btn ai-btn" data-act="ai" aria-label="Break down with AI" title="Break down with AI"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l1.8 4.7 4.7 1.8-4.7 1.8L12 16.5l-1.8-4.7L5.5 10l4.7-1.8z"/><path d="M18.5 15.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></svg></button>`}<button class="icon-btn" data-act="del" aria-label="Delete task"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
   </div>`;}).join("");
   },mode);
 }
@@ -2281,6 +2368,7 @@ $("#task-form").addEventListener("submit",e=>{e.preventDefault();const title=$("
   S.tasks.push({id:uid(),title,urg:+$("#t-urg").value,due,dueTime,done:false,created:Date.now()});
   $("#t-title").value="";$("#t-due").value="";$("#t-time").value="";save();renderTasks();renderNowTask();renderMini();});
 $("#task-list").addEventListener("click",e=>{const b=e.target.closest("[data-act]");if(!b||b.tagName==="SELECT")return;const id=b.closest(".task").dataset.id,t=S.tasks.find(x=>x.id===id);if(!t)return;
+  if(b.dataset.act==="ai"){aiBreakdown(t);return;}
   if(b.dataset.act==="toggle"){t.done=!t.done;t.doneAt=t.done?Date.now():null;if(t.done)toast("Done. Next one.");b.closest(".task").classList.toggle("done",t.done);b.setAttribute("aria-label",t.done?"Mark as not done":"Mark as done");save();afterTaskChange(reduced?0:420);return;}
   if(b.dataset.act==="del"){const at=S.tasks.indexOf(t);S.tasks.splice(at,1);
     toast("Task deleted",{run(){S.tasks.splice(Math.min(at,S.tasks.length),0,t);save();renderTasks();renderNowTask();renderMini();}});}
@@ -2326,7 +2414,7 @@ let calY,calM,selDay=dkey(new Date());
 (()=>{const d=new Date();calY=d.getFullYear();calM=d.getMonth();})();
 function itemsFor(k){
   const calOf=id=>(S.calendars||[]).find(x=>x.id===id);
-  const ev=S.events.filter(e=>e.date===k).sort((a,b)=>(a.time||"").localeCompare(b.time||"")).map(e=>{const c=e.src&&calOf(e.src);return {kind:"ev",id:e.id,title:e.title,time:e.time,cal:c?c.name:"",c:c?calColor(c):"var(--accent)"};});
+  const ev=S.events.filter(e=>e.date===k).sort((a,b)=>(a.time||"").localeCompare(b.time||"")).map(e=>{const c=e.src&&calOf(e.src);return {kind:"ev",id:e.id,title:e.title,time:e.time,cal:c?c.name:(e.src==="ai"?"AI plan":""),c:c?calColor(c):"var(--accent)"};});
   const tk=S.tasks.filter(t=>t.due===k).map(t=>({kind:"task",id:t.id,title:t.title,done:t.done,time:t.dueTime,c:`var(--u${t.urg})`}));
   return ev.concat(tk);
 }
@@ -2840,6 +2928,9 @@ function cmdResults(q){
     const k=m[1].replace(/\s+/g," ");if(k.startsWith("week"))R.push({ic:"go",label:"Week review",hint:"Go",run:()=>{show("calendar");setCalMode("week");}});
     else{const v=NAV[k]||NAV[k.replace(" ","")];go(v,({focus:"Focus",tasks:"Tasks",calendar:"Calendar",money:"Net worth",themes:"Themes"})[v]);}
   }
+  if(/^(room|study room|study with|create room|join room)/.test(lq)){const c=rmClean(lq.replace(/^(join )?(study )?room/,""));R.push({ic:"go",label:c.length===6?`Join room ${rmFmt(c)}`:"Study room",hint:"Go",run:()=>{show("focus");if(c.length===6)rmJoin(c);setTimeout(()=>$("#room").scrollIntoView({behavior:reduced?"auto":"smooth",block:"center"}),60);}});}
+  if(/^(plan( my)?( week| day)?|ai plan|schedule( my)? week)$/.test(lq))R.push({ic:"misc",label:"Plan my week with AI",hint:"AI",run:()=>aiPlan()});
+  if((m=lq.match(/^(?:break ?down|split|steps for|ai)\s+(.+)$/))){S.tasks.filter(t=>!t.done).map(t=>[t,fuzzy(m[1],t.title)]).filter(([,sc])=>sc>=40).sort((a,b)=>b[1]-a[1]).slice(0,3).forEach(([t])=>R.push({ic:"misc",label:`Break down: ${t.title}`,hint:"AI",run:()=>aiBreakdown(t)}));}
   if(/^(account|sign ?in|log ?in|sign ?out|profile|sync|cloud)/.test(lq))R.push({ic:"go",label:"Account",hint:"Go",run:()=>acOpen()});
   // timers
   if((m=lq.match(/^(timer|focus|break|pomodoro|study)\s+(\d{1,3})(?::(\d\d))?\s*(m|min|mins|minutes|h|hr|hours)?$/))){
@@ -3559,10 +3650,11 @@ function acBoot(){ /* take a sign-in result out of the address bar before the ro
 }
 async function acInit(){
   acBoot();acRenderBtn();
-  if(npEmbedded()){AC.state="unavailable";AC.why="preview";acRenderBtn();return;}
-  if(!window.DASH_CONFIG){try{await loadScript("/digital-dash-config.js");}catch(e){}}
+  if(npEmbedded()){AC.state="unavailable";AC.why="preview";acRenderBtn();rmRender();return;}
+  if(!window.DASH_CONFIG){ /* fetched and parsed rather than run: hosts that answer unknown paths with index.html would otherwise throw */
+    try{const r=await fetch("/digital-dash-config.js",{cache:"no-store"});const t=r.ok?await r.text():"";const m=t.match(/^window\.DASH_CONFIG=(\{.*\});?\s*$/s);if(m)window.DASH_CONFIG=JSON.parse(m[1]);}catch(e){}}
   const cf=window.DASH_CONFIG;
-  if(!cf||!cf.supabaseUrl||!cf.supabaseKey){AC.state="unavailable";AC.why="config";acRenderBtn();return;}
+  if(!cf||!cf.supabaseUrl||!cf.supabaseKey){AC.state="unavailable";AC.why="config";acRenderBtn();rmRender();return;}
   try{if(!window.supabase)await loadScript(SB_JS);}catch(e){AC.state="unavailable";AC.why="offline";acRenderBtn();return;}
   AC.sb=window.supabase.createClient(cf.supabaseUrl,cf.supabaseKey,{auth:{flowType:"implicit",detectSessionInUrl:false,persistSession:true,autoRefreshToken:true,storageKey:"digitaldash.auth"}});
   AC.state="out";
@@ -3576,6 +3668,7 @@ async function acInit(){
     if((u&&u.id)!==was)setTimeout(()=>u?acSignedIn():acSignedOut(),0);else acRenderBtn();
   });
   addEventListener("online",()=>{if(AC.user&&acMeta().dirty)acPush();});
+  rmInit();
   document.addEventListener("visibilitychange",()=>{if(!document.hidden)acPull();});
   setInterval(()=>{if(!document.hidden)acPull();},60000);
   acRenderBtn();
@@ -3586,7 +3679,8 @@ function acDirty(){
   clearTimeout(AC.timer);AC.timer=setTimeout(()=>acPush(),1200);
 }
 async function acSignedIn(){
-  const uid=AC.user.id;AC.state="saving";AC.err="";acRenderBtn();setSync("Syncing…");acRenderDlg();
+  if(RM.ch&&RM.me&&RM.me.id!==AC.user.id)rmJoin(RM.code); /* rejoin the room under the account's name */
+  const uid=AC.user.id;AC.state="saving";AC.err="";acRenderBtn();setSync("Syncing…");acRenderDlg();if(!RM.ch)rmRender();
   const {data:row,error}=await AC.sb.from("dash_state").select("data,rev,device,updated_at").eq("user_id",uid).maybeSingle();
   if(error){AC.state="error";AC.err=/relation|does not exist|schema cache|not find/i.test(error.message)?"Cloud saving isn't set up on this site yet. The Supabase database setup (dash_state) needs to be run once.":error.message;setSync("Saved on this device");acRenderBtn();acRenderDlg();return;}
   const m=acMeta(),same=m.uid===uid;
@@ -3601,7 +3695,7 @@ async function acSignedIn(){
 }
 function acSignedOut(){
   clearTimeout(AC.timer);clearTimeout(AC.retry);AC.rev=0;AC.state=AC.sb?"out":AC.state;AC.err="";AC.confirmDel=false;AC.imgGet.clear();
-  setSync("Saved on this device");acRenderBtn();acRenderDlg();
+  setSync("Saved on this device");acRenderBtn();acRenderDlg();if(!RM.ch)rmRender();
 }
 function acApply(row){
   AC.applying=true;
@@ -3792,6 +3886,248 @@ $("#acct").addEventListener("click",e=>{
     else{const i=S.schemes.indexOf(sc),wasSkin=S.settings.skin;S.schemes.splice(i,1);if(wasSkin==="custom:"+sc.id){S.settings.skin="dash";applyTheme();}save();buildSkins();acRenderDlg();toast(`Deleted "${sc.name}"`,{run(){S.schemes.splice(Math.min(i,S.schemes.length),0,sc);S.settings.skin=wasSkin;applyTheme();save();buildSkins();acRenderDlg();}});}}
   else if(a==="tm-del"){removeTimer(b.closest("[data-act]").dataset.act);acRenderDlg();}
 });
+
+/* ---------- study rooms ----------
+   Supabase Realtime, no tables: a room is the channel "dash-room-<CODE>". Presence carries each
+   person's state ({id, name, status, ends, len, task, group}); a person's own focus timer drives it.
+   Broadcast carries the shared room timer ("group") and reactions. Late joiners pick the room timer up
+   from presence (newest "started" wins). Signing in is optional; without an account a display name is
+   asked for and a random id is kept on the device. Codes are 6 characters from a 31-letter alphabet. */
+const RM={ch:null,code:"",peers:[],group:null,applied:0,sig:"",status:"",follow:true,share:false,me:null,sv:0};
+const RMK="digitaldash.room",RM_ABC="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const rmCode=()=>Array.from(crypto.getRandomValues(new Uint8Array(6)),b=>RM_ABC[b%RM_ABC.length]).join("");
+const rmFmt=c=>c.slice(0,3)+"-"+c.slice(3);
+const rmClean=v=>String(v||"").toUpperCase().replace(/[^A-Z0-9]/g,"").replace(/[IO01]/g,"").slice(0,6);
+function rmMe(){
+  const st=lsGet(RMK)||{};let id=AC.user?AC.user.id:st.id;if(!id){id="g"+uid();lsSet(RMK,Object.assign(st,{id}));}
+  const meta=AC.user&&AC.user.user_metadata||{},nm=AC.user?(meta.full_name||meta.name||(AC.user.email||"").split("@")[0]):(st.name||"");
+  return {id,name:String(nm||"").slice(0,24)};
+}
+function rmState(){
+  const running=T.running,kind=running?T.kind:"idle";
+  const nt=S.tasks.filter(t=>!t.done).sort((a,b)=>a.urg-b.urg||String(a.due||"9").localeCompare(String(b.due||"9")))[0];
+  return {id:RM.me.id,name:RM.me.name,status:kind,ends:running?T.end:0,len:running?T.len:0,task:RM.share&&running&&kind==="focus"&&nt?nt.title.slice(0,60):"",group:RM.group};
+}
+function rmPush(){if(!RM.ch)return;const st=rmState();const sig=JSON.stringify(st);if(sig===RM.sig)return;RM.sig=sig;RM.ch.track(st).catch(()=>{});}
+function rmJoin(code){
+  code=rmClean(code);if(code.length!==6){toast("Room codes are 6 letters and numbers");return;}
+  if(!AC.sb){toast("Study rooms need the account service, which isn't connected here");return;}
+  const me=rmMe();if(!me.name){const n=$("#rm-name");if(n){n.focus();toast("Add your name so friends know who you are");}return;}
+  rmLeave(true);RM.me=me;RM.code=code;RM.peers=[];RM.group=null;RM.sig="";RM.joined=Date.now();
+  const ch=AC.sb.channel("dash-room-"+code,{config:{presence:{key:me.id},broadcast:{self:false}}});
+  const gotGroup=(g,announce)=>{ /* a room timer arrived, by presence or broadcast; announce it once */
+    if(!g||g.ends<=Date.now()||(RM.group&&g.started<RM.group.started))return;
+    RM.group=g;
+    if(announce&&g.by!==RM.me.id&&RM.toasted!==g.started){RM.toasted=g.started;toast(`${g.name||"Someone"} started a ${Math.round(g.len/60)} min ${g.kind==="focus"?"focus":"break"} for the room`);}
+    rmFollow();
+  };
+  ch.on("presence",{event:"sync"},()=>{
+    const st=ch.presenceState();RM.peers=Object.values(st).map(metas=>metas[metas.length-1]).filter(Boolean);
+    gotGroup(RM.peers.map(p=>p.group).filter(Boolean).sort((a,b)=>b.started-a.started)[0],Date.now()-RM.joined>3000);
+    rmRender();
+  });
+  ch.on("broadcast",{event:"group"},({payload})=>{
+    if(!payload)return;
+    if(payload.stop){if(RM.group&&RM.group.started===payload.started){RM.group=null;if(T.id==="room"){T.running=false;T.left=T.len;updTimer();jbTimerSync();}toast(`${payload.name||"Someone"} ended the room timer`);}rmPush();rmRender();return;}
+    gotGroup(payload,true);rmPush();rmRender();
+  });
+  ch.on("broadcast",{event:"react"},({payload})=>{if(payload&&RM_EMO[payload.e]){rmFloat(payload.e);toast(`${payload.name||"Someone"} sent ${payload.e}`);}});
+  ch.subscribe(status=>{
+    if(status==="SUBSCRIBED"){RM.sig="";rmPush();rmRender();}
+    else if(status==="CHANNEL_ERROR"||status==="TIMED_OUT"){rmRender("Can't reach the room right now. Retrying…");}
+  });
+  RM.ch=ch;lsSet(RMK,Object.assign(lsGet(RMK)||{},{code,name:me.name}));rmRender();
+}
+function rmLeave(quiet){
+  if(!RM.ch)return;const ch=RM.ch;RM.ch=null;try{ch.untrack();}catch(e){}AC.sb.removeChannel(ch);
+  if(!quiet){const st=lsGet(RMK)||{};delete st.code;lsSet(RMK,st);toast("Left the room");}
+  RM.code="";RM.peers=[];RM.group=null;if(T.id==="room"&&!quiet){T.running=false;T.left=T.len;updTimer();}rmRender();
+}
+function rmFollow(){ /* run the shared timer on this device's focus timer */
+  const g=RM.group;if(!RM.follow||!g||g.ends<=Date.now()||RM.applied===g.started)return;
+  RM.applied=g.started;
+  if(clockKind!=="timer")setClock("timer");
+  T.id="room";T.kind=g.kind;T.len=g.len;T.end=g.ends;T.left=Math.max(0,Math.round((g.ends-Date.now())/1000));T.running=true;
+  $$("#tm-modes button[data-tid]").forEach(x=>x.setAttribute("aria-pressed",false));ensureAudio();updTimer();fitClock();jbTimerSync();
+}
+function rmStart(kind,min){
+  const now=Date.now(),g={kind,len:min*60,ends:now+min*60000,started:now,by:RM.me.id,name:RM.me.name};
+  RM.group=g;RM.applied=0;RM.follow=true;rmFollow(); /* whoever starts it runs it too */
+  RM.ch&&RM.ch.send({type:"broadcast",event:"group",payload:g});rmPush();rmRender();
+}
+function rmStop(){const g=RM.group;if(!g)return;RM.group=null;RM.ch&&RM.ch.send({type:"broadcast",event:"group",payload:{stop:true,started:g.started,name:RM.me.name}});if(T.id==="room"){T.running=false;T.left=T.len;updTimer();jbTimerSync();}rmPush();rmRender();}
+const RM_EMO={"👏":"Clap","🔥":"On fire","💪":"Keep going","☕":"Break time"};
+function rmReact(e){if(!RM.ch)return;RM.ch.send({type:"broadcast",event:"react",payload:{e,name:RM.me.name}});rmFloat(e);}
+function rmFloat(e){
+  if(rmq.matches)return;const host=$("#room"),f=document.createElement("span");f.className="rm-float";f.textContent=e;f.style.left=(20+Math.random()*60)+"%";host.appendChild(f);
+  const a=f.animate([{transform:"translateY(0) scale(.6)",opacity:0},{transform:"translateY(-30px) scale(1.15)",opacity:1,offset:.25},{transform:"translateY(-110px) scale(1)",opacity:0}],{duration:1600,easing:"cubic-bezier(0.23,1,0.32,1)"});a.onfinish=()=>f.remove();
+}
+const rmLeft=ends=>{const s=Math.max(0,Math.round((ends-Date.now())/1000));return s>=60?Math.ceil(s/60)+" min left":s+" s left";};
+const rmHue=id=>{let h=0;for(const c of String(id))h=(h*31+c.charCodeAt(0))%360;return h;};
+function rmPeerHtml(p){
+  const me=p.id===RM.me.id,run=p.status!=="idle"&&p.ends>Date.now(),pct=run&&p.len?Math.min(1,1-(p.ends-Date.now())/(p.len*1000)):0;
+  const label=run?(p.status==="focus"?"Focusing":"On a break")+" · "+rmLeft(p.ends):"Not in a session";
+  return `<li class="rm-p${run?" "+p.status:""}"><span class="rm-av" style="--h:${rmHue(p.id)}">${esc((p.name||"?").charAt(0).toUpperCase())}</span>
+    <span class="rm-who"><b>${esc(p.name||"Someone")}${me?" <small>(you)</small>":""}</b><span class="rm-st">${run?`<i class="rm-dot"></i>`:""}${esc(label)}</span>${p.task?`<span class="rm-task">${esc(p.task)}</span>`:""}</span>
+    ${run?`<span class="rm-ring" style="--p:${pct.toFixed(3)}" aria-hidden="true"></span>`:""}</li>`;
+}
+function rmRender(note){
+  const sec=$("#room");if(!sec)return;
+  const avail=AC.state!=="loading"&&AC.state!=="unavailable"&&AC.sb;sec.hidden=!avail&&AC.why!=="preview";if(sec.hidden)return;
+  const body=$("#rm-body"),hact=$("#rm-hact");
+  if(!avail){$("#rm-sub").textContent="Focus alongside friends. Study rooms work on your own site.";body.innerHTML="";hact.innerHTML="";return;}
+  if(!RM.ch){
+    const me=rmMe();$("#rm-sub").textContent="Focus alongside friends. See who's working and start timers together.";hact.innerHTML="";
+    body._html="";body.innerHTML=`<form class="rm-join" id="rm-join" autocomplete="off">${AC.user?"":`<label class="rm-f"><span>Your name</span><input type="text" id="rm-name" maxlength="24" value="${esc(me.name)}" placeholder="What friends see"></label>`}
+      <label class="rm-f"><span>Room code</span><input type="text" id="rm-code" maxlength="7" placeholder="ABC-123" autocapitalize="characters" spellcheck="false"></label>
+      <div class="rm-btns"><button class="btn ghost" type="submit">Join</button><button class="btn" type="button" data-rm="create">Create a room</button></div></form>`;
+    return;
+  }
+  $("#rm-sub").textContent=note||`${RM.peers.length||1} ${RM.peers.length===1||!RM.peers.length?"person":"people"} here · ${RM.peers.filter(p=>p.status==="focus"&&p.ends>Date.now()).length} focusing`;
+  hact.innerHTML=`<span class="rm-code">${rmFmt(RM.code)}</span><button type="button" class="btn ghost small" data-rm="invite">Copy invite</button><button type="button" class="btn ghost small" data-rm="leave">Leave</button>`;
+  const fa=document.activeElement,fk=fa&&sec.contains(fa)&&fa.dataset&&fa.dataset.rm?`[data-rm="${fa.dataset.rm}"]${fa.dataset.e?`[data-e="${fa.dataset.e}"]`:""}${fa.dataset.m?`[data-m="${fa.dataset.m}"]`:""}`:"";
+  const peers=RM.peers.length?RM.peers.slice().sort((a,b)=>(a.id===RM.me.id?-1:b.id===RM.me.id?1:0)||String(a.name).localeCompare(String(b.name))):[rmState()];
+  const g=RM.group&&RM.group.ends>Date.now()?RM.group:null;
+  const html=`<ul class="rm-list">${peers.map(rmPeerHtml).join("")}</ul>
+    <div class="rm-group">${g?`<div class="rm-gl"><b>Room timer</b><span>${g.kind==="focus"?"Focus":"Break"} · ${rmLeft(g.ends)} · started by ${esc(g.by===RM.me.id?"you":g.name||"someone")}</span></div>
+      <label class="rm-tg"><input type="checkbox" data-rm="follow" ${RM.follow?"checked":""}> Run it on my timer</label><button type="button" class="btn ghost small" data-rm="stop">End for everyone</button>`
+      :`<span class="rm-gl"><b>Start together</b><span>Everyone following gets the same timer</span></span><div class="rm-btns"><button type="button" class="btn small" data-rm="start" data-k="focus" data-m="25">Focus 25</button><button type="button" class="btn ghost small" data-rm="start" data-k="focus" data-m="50">Deep 50</button><button type="button" class="btn ghost small" data-rm="start" data-k="break" data-m="5">Break 5</button></div>`}</div>
+    <div class="rm-foot"><div class="rm-react" role="group" aria-label="Send a reaction">${Object.entries(RM_EMO).map(([e,l])=>`<button type="button" data-rm="react" data-e="${e}" aria-label="${l}" title="${l}">${e}</button>`).join("")}</div>
+      <label class="rm-tg"><input type="checkbox" data-rm="share" ${RM.share?"checked":""}> Show my top task while I focus</label></div>`;
+  if(html!==body._html){body._html=html;body.innerHTML=html;if(fk){const n=body.querySelector(fk);if(n)n.focus();}}
+}
+function rmTick(){
+  if(!RM.ch)return;rmPush();
+  if(RM.group&&RM.group.ends<=Date.now()){RM.group=null;rmPush();}
+  if(document.visibilityState==="visible"&&$("#v-focus").classList.contains("on"))rmRender();
+}
+function rmInit(){
+  const st=lsGet(RMK)||{};RM.share=!!st.share;RM.follow=st.follow!==false;
+  const q=new URLSearchParams(location.search),inv=rmClean(q.get("room"));
+  if(inv){q.delete("room");try{history.replaceState(null,"",location.pathname+(q.toString()?"?"+q:"")+location.hash);}catch(e){}}
+  rmRender();
+  const code=inv||st.code;if(!code)return;
+  if(rmMe().name)rmJoin(code);else{rmRender();const c=$("#rm-code");if(c)c.value=rmFmt(code);toast("Add your name to join the study room");}
+}
+$("#room").addEventListener("submit",e=>{if(e.target.id!=="rm-join")return;e.preventDefault();rmSaveName();rmJoin($("#rm-code").value);});
+function rmSaveName(){const n=$("#rm-name");if(n){const st=lsGet(RMK)||{};st.name=n.value.trim().slice(0,24);lsSet(RMK,st);}}
+$("#room").addEventListener("click",e=>{
+  const b=e.target.closest("[data-rm]");if(!b||b.tagName==="INPUT")return;const a=b.dataset.rm;
+  if(a==="create"){rmSaveName();rmJoin(rmCode());}
+  else if(a==="leave")rmLeave();
+  else if(a==="invite"){const url=location.origin+location.pathname+"?room="+RM.code;
+    if(navigator.share&&matchMedia("(hover:none)").matches)navigator.share({title:"Study with me",text:`Join my study room ${rmFmt(RM.code)} on Digital Dash`,url}).catch(()=>{});
+    else (navigator.clipboard?navigator.clipboard.writeText(url):Promise.reject()).then(()=>toast("Invite link copied"),()=>toast("Room code: "+rmFmt(RM.code)));}
+  else if(a==="start")rmStart(b.dataset.k,+b.dataset.m);
+  else if(a==="stop")rmStop();
+  else if(a==="react")rmReact(b.dataset.e);
+});
+$("#room").addEventListener("change",e=>{
+  const a=e.target.dataset.rm;if(!a)return;const st=lsGet(RMK)||{};
+  if(a==="follow"){RM.follow=e.target.checked;st.follow=RM.follow;if(RM.follow){RM.applied=0;rmFollow();}}
+  if(a==="share"){RM.share=e.target.checked;st.share=RM.share;rmPush();}
+  lsSet(RMK,st);
+});
+$("#room").addEventListener("input",e=>{if(e.target.id==="rm-code"){const v=rmClean(e.target.value);e.target.value=v.length>3?rmFmt(v):v;}});
+
+/* ---------- AI helper ----------
+   Calls the dash-ai Supabase Edge Function (supabase/functions/dash-ai), which talks to Claude with the
+   API key kept server-side. Needs a signed-in account; each account has a daily request limit.
+   Nothing is changed until the person picks what to add from the preview. */
+const AI={busy:false,last:null,mode:"",task:null,note:"",res:null,err:""};
+const aiOpenDlg=()=>{const d=$("#ai");if(!d.open){try{d.showModal();}catch(e){d.setAttribute("open","");}}};
+const hm2=d=>pad(d.getHours())+":"+pad(d.getMinutes());
+const addMin=(hhmm,m)=>{const [h,mi]=hhmm.split(":").map(Number),t=h*60+mi+m;return pad(Math.floor(t/60)%24)+":"+pad(t%60);};
+function aiGate(){
+  if(AC.state==="unavailable"||!AC.sb){return `<div class="ac-hero">${SPARK_ICON}<div><b>The AI helper isn't available here</b><p class="muted">${AC.why==="preview"?"Open Digital Dash on your own site to use it.":"This site isn't connected to the account service yet."}</p></div></div>`;}
+  if(!AC.user)return `<div class="ac-hero">${SPARK_ICON}<div><b>Sign in to use the AI helper</b><p class="muted">It can break a task into steps or plan your week around your deadlines. Signing in keeps it free from abuse.</p></div></div><button type="button" class="btn" data-ai="signin">Sign in</button>`;
+  return "";
+}
+async function aiCall(body){
+  AI.busy=true;AI.err="";AI.res=null;aiRender();
+  try{
+    const {data,error}=await AC.sb.functions.invoke("dash-ai",{body});
+    if(error){let msg="";try{const j=await error.context.json();msg=j.error;}catch(e){}throw new Error(msg||(/fetch|network/i.test(error.message)?"Can't reach the AI helper. Check your connection.":"The AI helper isn't set up on this site yet."));}
+    if(!data||!data.result)throw new Error("No answer came back. Try again.");
+    AI.res=data.result;
+  }catch(e){AI.err=e.message||"Something went wrong. Try again.";}
+  finally{AI.busy=false;aiRender();}
+}
+function aiBreakdown(t){
+  AI.mode="breakdown";AI.task=t;AI.res=null;AI.err="";AI.note="";aiOpenDlg();
+  if(aiGate()){aiRender();return;}
+  aiCall({mode:"breakdown",today:dkey(new Date()),task:{title:t.title,urg:t.urg,due:t.due||"",dueTime:t.dueTime||""}});
+}
+function aiPlan(){
+  AI.mode="plan";AI.task=null;AI.res=null;AI.err="";aiOpenDlg();
+  if(aiGate()){aiRender();return;}
+  const now=new Date(),today=dkey(now),end=dkey(addDays(now,7));
+  const open=S.tasks.filter(t=>!t.done).map(t=>({id:t.id,title:t.title,urg:t.urg,due:t.due||"",dueTime:t.dueTime||""}));
+  if(!open.length){AI.err="Add a few tasks first, then I can plan your week around them.";aiRender();return;}
+  const events=S.events.filter(e=>e.date>=today&&e.date<=end&&e.src!=="ai").map(e=>({date:e.date,time:e.time||"",title:e.title,minutes:e.dur||0}));
+  const avg=Math.round([0,1,2,3,4,5,6].map(i=>dayFocusMin(dkey(addDays(now,-i-1)))).reduce((a,b)=>a+b,0)/7);
+  aiCall({mode:"plan",today,weekday:now.toLocaleDateString("en",{weekday:"long"}),now:hm2(now),tasks:open,events,dailyMinutes:Math.min(360,Math.max(120,avg*1.3||240))});
+}
+function aiValidPlan(r){
+  const today=dkey(new Date()),end=dkey(addDays(new Date(),7)),ids=new Set(S.tasks.map(t=>t.id));
+  return (r.blocks||[]).filter(b=>/^\d{4}-\d\d-\d\d$/.test(b.date)&&b.date>=today&&b.date<=end&&/^\d\d:\d\d$/.test(b.start)&&b.minutes>=10&&b.minutes<=240)
+    .map(b=>Object.assign({},b,{task_id:ids.has(b.task_id)?b.task_id:""})).sort((a,b)=>(a.date+a.start).localeCompare(b.date+b.start));
+}
+function aiRender(){
+  const el=$("#ai-body");if(!el)return;const g=aiGate();
+  $("#ai-h").textContent=AI.mode==="plan"?"Plan my week":"Break it down";
+  if(g){el.innerHTML=g;return;}
+  if(AI.busy){el.innerHTML=`<div class="ai-wait">${SPARK_ICON}<p>${AI.mode==="plan"?"Planning your week around your deadlines…":`Breaking down “${esc(AI.task.title)}”…`}</p><div class="ai-skel"><i></i><i></i><i></i></div></div>`;return;}
+  if(AI.err){el.innerHTML=`<p class="ai-err">${esc(AI.err)}</p><div class="ac-row"><button type="button" class="btn ghost" data-ai="retry">Try again</button><button type="button" class="btn ghost" data-ai="close">Close</button></div>`;return;}
+  const r=AI.res;if(!r){el.innerHTML="";return;}
+  if(AI.mode==="breakdown"){
+    const steps=(r.steps||[]).slice(0,10);
+    el.innerHTML=`<p class="muted">Steps for <b>${esc(AI.task.title)}</b>${AI.task.due?`, due ${esc(dueLabel(AI.task.due,AI.task.dueTime).t)}`:""}. Untick anything you don't want, or edit a step.</p>
+      <ul class="ai-list">${steps.map((st,i)=>`<li><input type="checkbox" checked data-i="${i}" aria-label="Include step ${i+1}"><input type="text" class="ai-t" value="${esc(st.title)}" data-i="${i}" aria-label="Step ${i+1}" maxlength="120"><span class="ai-m">${st.minutes} min${st.date?` · ${esc(new Date(st.date+"T12:00").toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"}))}`:""}</span></li>`).join("")}</ul>
+      ${r.tip?`<p class="ai-tip">${SPARK_ICON}<span>${esc(r.tip)}</span></p>`:""}
+      <details class="ai-more"><summary>Add context and try again</summary><textarea id="ai-note" rows="2" placeholder="For example: needs two graphs and a 500 word discussion">${esc(AI.note)}</textarea><button type="button" class="btn ghost small" data-ai="retry">Try again</button></details>
+      <div class="ac-row"><button type="button" class="btn" data-ai="add">Add ${steps.length} tasks</button><button type="button" class="btn ghost" data-ai="close">Cancel</button></div>`;
+    aiCount();
+  }else{
+    const blocks=aiValidPlan(r);AI.blocks=blocks;let day="";
+    const tTitle=id=>(S.tasks.find(t=>t.id===id)||{}).title||"";
+    el.innerHTML=`<p class="ai-sum">${esc(r.summary||"")}</p>${(r.warnings||[]).map(w=>`<p class="ai-warn">${esc(w)}</p>`).join("")}
+      ${blocks.length?`<ul class="ai-list ai-plan-list">${blocks.map((b,i)=>{const h=b.date!==day?(day=b.date,`<li class="ai-day">${esc(new Date(b.date+"T12:00").toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"}))}</li>`):"";
+        return h+`<li><input type="checkbox" checked data-i="${i}" aria-label="Include ${esc(b.title)}"><span class="ai-time">${b.start}–${addMin(b.start,b.minutes)}</span><span class="ai-t2">${esc(b.title)}${b.task_id&&tTitle(b.task_id)!==b.title?`<small>${esc(tTitle(b.task_id))}</small>`:""}</span><span class="ai-m">${b.minutes} min</span></li>`;}).join("")}</ul>`:`<p class="muted">Nothing to schedule.</p>`}
+      <p class="hint">Sessions go on your calendar as “AI plan” events. Adding a new plan replaces the previous one from today on.</p>
+      <div class="ac-row">${blocks.length?`<button type="button" class="btn" data-ai="add">Add ${blocks.length} sessions</button>`:""}<button type="button" class="btn ghost" data-ai="retry">Try again</button><button type="button" class="btn ghost" data-ai="close">Cancel</button></div>`;
+    aiCount();
+  }
+}
+const SPARK_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l1.8 4.7 4.7 1.8-4.7 1.8L12 16.5l-1.8-4.7L5.5 10l4.7-1.8z"/><path d="M18.5 15.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></svg>';
+function aiCount(){const n=$$("#ai-body .ai-list input[type=checkbox]:checked").length,b=$("#ai-body [data-ai=add]");if(b){b.disabled=!n;b.textContent=AI.mode==="plan"?`Add ${n} session${n===1?"":"s"}`:`Add ${n} task${n===1?"":"s"}`;}}
+function aiAdd(){
+  const picked=$$("#ai-body .ai-list input[type=checkbox]:checked").map(c=>+c.dataset.i);if(!picked.length)return;
+  if(AI.mode==="breakdown"){
+    const p=AI.task,short=p.title.length>28?p.title.slice(0,27)+"…":p.title,steps=AI.res.steps,added=[];
+    picked.forEach(i=>{const title=($(`#ai-body .ai-t[data-i="${i}"]`)||{}).value||steps[i].title;const st=steps[i];
+      const t={id:uid(),title:`${short}: ${title.trim()}`,urg:p.urg,due:/^\d{4}-\d\d-\d\d$/.test(st.date)&&(!p.due||st.date<=p.due)?st.date:(p.due||""),dueTime:"",done:false,created:Date.now(),from:p.id};S.tasks.push(t);added.push(t);});
+    save();renderTasks();renderNowTask();renderMini();renderCal();$("#ai").close();
+    toast(`Added ${added.length} step${added.length===1?"":"s"}`,{run(){S.tasks=S.tasks.filter(t=>!added.includes(t));save();renderTasks();renderNowTask();renderMini();renderCal();}});
+  }else{
+    const prev=S.events.slice(),today=dkey(new Date());
+    S.events=S.events.filter(e=>!(e.src==="ai"&&e.date>=today));
+    picked.forEach(i=>{const b=AI.blocks[i];S.events.push({id:uid(),date:b.date,time:b.start,title:b.title,src:"ai",dur:b.minutes,task:b.task_id||""});});
+    save();renderCal();renderMini();$("#ai").close();
+    toast(`Added ${picked.length} focus session${picked.length===1?"":"s"} to your calendar`,{run(){S.events=prev;save();renderCal();renderMini();}});
+  }
+}
+$("#ai").addEventListener("click",e=>{
+  if(e.target===e.currentTarget){e.currentTarget.close();return;}
+  const b=e.target.closest("[data-ai]");if(!b)return;const a=b.dataset.ai;
+  if(a==="close")$("#ai").close();
+  else if(a==="signin"){$("#ai").close();acOpen();}
+  else if(a==="add")aiAdd();
+  else if(a==="retry"){const n=$("#ai-note");if(n)AI.note=n.value.trim();
+    if(AI.mode==="plan")aiPlan();else{const t=AI.task;AI.res=null;aiCall({mode:"breakdown",today:dkey(new Date()),note:AI.note,task:{title:t.title,urg:t.urg,due:t.due||"",dueTime:t.dueTime||""}});}}
+});
+$("#ai").addEventListener("change",e=>{if(e.target.type==="checkbox")aiCount();});
+$("#ai-plan").addEventListener("click",aiPlan);
 
 buildThemes();fillCats();
 railInd=document.createElement("div");railInd.className="ind";railInd.setAttribute("aria-hidden","true");

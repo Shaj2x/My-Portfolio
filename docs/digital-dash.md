@@ -104,6 +104,33 @@ Optional sign-in so data saves to the cloud and follows you across devices. Sign
 - Upload a background photo; it shows on the other device.
 - Delete the account and confirm the row and files are gone.
 
+## Study rooms (Supabase Realtime)
+
+Focus with friends: see who's in a session and start a shared timer. No tables; a room is the Realtime channel `dash-room-<CODE>`.
+
+- **Create or join**: Focus page, Study room card. Codes are 6 characters (`K86-VZ7`); "Copy invite" gives `digital-dash.html?room=CODE`, which joins straight away (asking for a display name first if you're signed out). The last room is rejoined on reload; Leave forgets it.
+- **Presence** carries `{id, name, status: focus|break|idle, ends, len, task, group}`. It comes from your own focus timer, and is re-sent only when it changes (`rmPush`).
+- **Room timer** (`group`): "Start together" broadcasts `{kind, len, ends, started, by, name}`; anyone with "Run it on my timer" on gets the same end time on their focus timer (`T.id = "room"`). Late joiners pick it up from presence (newest `started` wins). "End for everyone" broadcasts a stop.
+- **Reactions** (👏 🔥 💪 ☕) are broadcasts with a floating emoji and a toast. "Show my top task while I focus" is off by default.
+- Signed in, your account name is used; signed out, you type a name and a random id stays on the device (`digitaldash.room`).
+- **Setup**: nothing beyond the account setup, as long as Realtime allows public channels (Supabase, Project Settings, Realtime; on by default). Anyone with a code can join that room, so codes are random and unlisted.
+
+## AI helper (Supabase Edge Function + Claude)
+
+Two actions, both previews you confirm before anything changes:
+- **Break it down**: the sparkle button on a task (or "break down chem" in the command bar). Returns 3 to 8 steps with time estimates and dates before the deadline. You can untick or edit steps; picked ones are added as tasks named `Parent: step` with Undo.
+- **Plan my week**: button on the Tasks page (or "plan my week"). Sends open tasks and the next 7 days of calendar events, gets back timed focus sessions plus warnings, and adds the ones you keep as calendar events with `src: "ai"` (shown as "AI plan"). A new plan replaces earlier AI sessions from today on; Undo restores.
+
+How it works:
+- `supabase/functions/dash-ai/index.ts` (Deno) checks the caller is signed in, counts the request with `dash_ai_take()` (per-user daily limit, default 25, env `DASH_AI_DAILY_LIMIT`), then calls Claude with the official SDK (`npm:@anthropic-ai/sdk`): model `claude-opus-5-5`, `effort: "medium"`, structured JSON output (`output_config.format` json_schema), and `fallbacks: "default"` (beta `server-side-fallback-2026-07-01`) so a declined request is retried on Anthropic's recommended fallback model. Refusals, truncation and API errors become friendly messages.
+- The browser calls it with `AC.sb.functions.invoke("dash-ai", ...)`, so the API key never leaves the server. The client re-checks every returned date, time and task id before showing it.
+
+**One-time setup**
+1. Run `supabase/migrations/20261001130000_digital_dash_ai.sql` (usage table and `dash_ai_take`).
+2. Add the secret: `supabase secrets set ANTHROPIC_API_KEY=sk-ant-...` (or in Supabase, Edge Functions, Secrets). Optional: `DASH_AI_DAILY_LIMIT`.
+3. Deploy: `supabase functions deploy dash-ai` (Lovable may deploy functions in `supabase/functions` for you). `verify_jwt = true` is set in `supabase/config.toml`.
+4. Cost: each request is one Claude call. The daily limit caps it per person; lower it if you share the app widely.
+
 ## Storage
 
 - `localStorage` key `grindboard.v1` holds `S` (kept for backward compatibility with the old name).
