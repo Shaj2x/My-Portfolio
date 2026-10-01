@@ -75,6 +75,35 @@ S = {
 - `public/digital-dash-sw.js`: network first for the app, cache fallback so it opens offline; Google Fonts cache first. Bump `CACHE` when the precache list changes.
 - The Install button appears when the browser fires `beforeinstallprompt`; on iPhone, Your data shows the Share, Add to Home Screen steps.
 
+## Accounts (Supabase)
+
+Optional sign-in so data saves to the cloud and follows you across devices. Signed out, everything works as before and saves in the browser.
+
+**How it works**
+- Sign in with an email magic link or Google (Supabase Auth, implicit flow). The redirect lands back on `digital-dash.html#access_token=...`; `acBoot()` takes the token out of the address bar before the router reads the hash.
+- The whole state `S` is one row in `public.dash_state` (`user_id`, `data` jsonb, `rev`, `device`, `updated_at`). Row level security: only the owner can read or write their row.
+- Each `save()` marks the device dirty (`digitaldash.acct` in localStorage) and pushes about 1.2 s later. An update only lands if `rev` still matches the last one this device saw. If another device saved first, the newer version is loaded and the toast offers Undo to put this device's version back. The app also checks for newer saves when the tab regains focus and every 60 s.
+- First sign-in on a device: no row yet, so this device's data is uploaded. Device empty: account data is loaded. Both have data: a dialog asks which to keep.
+- Photos go to the private `dash-images` storage bucket under `<user id>/<image key>` and download on demand on other devices.
+- The account dialog (top bar avatar, `Account` in the command bar, or Themes, Your data) shows sync status, counts, presets, colour schemes, timers and imported calendars, plus Download backup, Sign out (optionally clearing this device) and Delete account (`delete_my_dash_account()` RPC after removing the user's photos).
+- Spotify tokens are kept out of `S`, so they never reach the account.
+
+**Config**: `vite.config.ts` has a small plugin that writes `/digital-dash-config.js` (`window.DASH_CONFIG = {supabaseUrl, supabaseKey}`) from `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`, the same publishable values the React app uses. In dev it's served by middleware; in builds it's emitted as an asset. Without it, the account dialog says the site isn't connected yet. supabase-js loads from jsDelivr only when the config exists.
+
+**One-time setup**
+1. Run `supabase/migrations/20261001120000_digital_dash_accounts.sql` on the project: either let Lovable apply the migration, or paste it into the Supabase SQL editor and run it. It creates `dash_state`, its policies, the `dash-images` bucket with policies, and `delete_my_dash_account()`.
+2. Supabase, Authentication, URL Configuration: add the dashboard's full address (for example `https://your-site/digital-dash.html`) to Redirect URLs. Also add the preview or local address you test on (`http://localhost:8080/digital-dash.html`).
+3. Email sign-in works with Supabase's built-in mailer for testing (it is rate limited). For real use, set up custom SMTP under Authentication, Emails.
+4. Google (optional): in Google Cloud create an OAuth client (Web), add `https://<project>.supabase.co/auth/v1/callback` as an authorized redirect URI, then paste the client ID and secret into Supabase, Authentication, Sign In / Providers, Google. Until then the Google button explains that it isn't turned on.
+
+**Testing checklist**
+- Sign in by email on a laptop with some tasks; the row appears in `dash_state` with `rev` 1.
+- Add a task; `rev` goes up and the avatar dot turns green.
+- Sign in on a phone; the laptop's data loads. Edit on the phone, come back to the laptop tab; it updates.
+- Edit on both before syncing to see the "Loaded newer changes" toast and Undo.
+- Upload a background photo; it shows on the other device.
+- Delete the account and confirm the row and files are gone.
+
 ## Storage
 
 - `localStorage` key `grindboard.v1` holds `S` (kept for backward compatibility with the old name).
