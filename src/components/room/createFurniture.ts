@@ -149,23 +149,23 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     block(0.04, 0.14, 0.06, steel, x0 + 0.05, frame.h - 0.02, ROOM.back + 0.04);
     block(0.04, 0.14, 0.06, steel, x0 + frame.w - 0.05, frame.h - 0.02, ROOM.back + 0.04);
 
+    // a red satin pillow, centred on the bed; a little deeper than the sheet so the two read apart
     const pillowMat = new THREE.MeshStandardMaterial({
       roughness: 0.35,
       metalness: 0.05,
       map: paintTexture(256, 256, (c, w, h) => {
         c.fillStyle = COLORS.pillow;
         c.fillRect(0, 0, w, h);
-        c.fillStyle = COLORS.pillowPrint;
-        c.beginPath();
-        c.moveTo(w * 0.35, 0);
-        c.bezierCurveTo(w * 0.55, h * 0.3, w * 0.45, h * 0.7, w * 0.8, h);
-        c.lineTo(w, h);
-        c.lineTo(w, 0);
-        c.fill();
+        // soft satin sheen across the middle
+        const sheen = c.createLinearGradient(0, 0, w, h);
+        sheen.addColorStop(0.3, "rgba(255,255,255,0)");
+        sheen.addColorStop(0.5, "rgba(255,190,190,0.18)");
+        sheen.addColorStop(0.7, "rgba(255,255,255,0)");
+        c.fillStyle = sheen;
+        c.fillRect(0, 0, w, h);
       }),
     });
-    const pillow = rounded(0.66, 0.12, 0.44, 0.06, pillowMat, cx + 0.22, frame.h + mattress.h + 0.05, z0 + 0.34);
-    pillow.rotation.y = -0.12;
+    const pillow = rounded(0.66, 0.12, 0.44, 0.06, pillowMat, cx, frame.h + mattress.h + 0.05, z0 + 0.34);
     pillow.scale.y = 0.9;
 
     // the throw, laid out neatly: flat over the mattress from just below the pillow, hanging evenly

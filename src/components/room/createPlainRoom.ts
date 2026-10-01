@@ -403,18 +403,8 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     slab(right - DOOR.x1 - 0.07, 0.1, 0.015, trim, (DOOR.x1 + 0.07 + right) / 2, 0.05, front - 0.0075, frontWall);
   }
 
-  // ceiling light (off) and the sprinkler head
+  // the sprinkler head (the ceiling light is left out on request)
   {
-    const { pos, r } = LAYOUT.ceilingLight;
-    const dome = new THREE.Mesh(new THREE.SphereGeometry(r, 32, 12, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: "#f4f1ea", roughness: 0.3 }));
-    dome.scale.y = 0.35;
-    dome.rotation.x = Math.PI;
-    dome.position.set(pos[0], height, pos[2]);
-    scene.add(dome);
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(r * 0.98, 0.012, 8, 48), new THREE.MeshStandardMaterial({ color: "#9c9fa3", metalness: 0.8, roughness: 0.35 }));
-    ring.rotation.x = Math.PI / 2;
-    ring.position.set(pos[0], height - 0.03, pos[2]);
-    scene.add(ring);
     const sp = LAYOUT.sprinkler.pos;
     const head = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.015, 24), new THREE.MeshStandardMaterial({ color: "#f0efeb", roughness: 0.5 }));
     head.position.set(sp[0], height - 0.008, sp[2]);
@@ -434,7 +424,8 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   scene.add(moon, moon.target);
   // light bouncing off the pale walls and ceiling: a soft, shadowless fill from above the room
   const bounce = new THREE.PointLight("#ffe2c0", 1.4, 0, 1.2);
-  bounce.position.set(0.1, height - 0.3, ROOM.midZ);
+  // kept well below the ceiling so it doesn't paint a hot spot onto it
+  bounce.position.set(0.1, 1.5, ROOM.midZ);
   scene.add(bounce);
 
   // The floor lamp. A drum shade sends most light out of its open bottom and top, and only a soft

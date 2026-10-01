@@ -54,7 +54,7 @@ Positions are the object's centre on the floor (y = 0) unless a height is given.
 | Bed headboard | −0.77, 0.52, −1.63 | 1.45 × 1.04 (top at 1.04) × 0.03 | maple `#c8955f` | Flat laminated panel, residence style |
 | Bed frame | −0.79, 0, −0.66 | 1.40 × 0.33 × 1.95 | black steel `#1c1c1e` | Low platform frame: four square legs, slats visible at the side |
 | Mattress + fitted sheet | −0.79, 0.33→0.53, −0.66 | 1.37 × 0.20 × 1.91 (double) | red `#9e2427` | Wrinkled satin sheet with folds near the pillow |
-| Pillow | −0.55, 0.58, −1.40 | 0.66 × 0.12 × 0.45 | satin peach `#d99a6c`, brown print `#5a3226` | Slightly off-centre toward the window side |
+| Pillow | centred at the head of the bed | 0.66 × 0.12 × 0.45 | red satin `#8f141b` | Centred and red on request |
 | Throw blanket | over the mattress from just below the pillow to the foot | 1.43 × 1.55 | red `#c8161c`, black-red stripes `#3a080c`, pink florals `#e46a8a` | Laid out neatly, with a folded-back cuff at the window end, hanging evenly over the open side and the foot |
 | Dresser (two stacked two-drawer units) | +0.28, 0, −1.42 | 0.55 × 0.78 × 0.45 | maple `#d2a877`, black recessed pulls `#141414` | Top holds the perfume shelf and clutter |
 | Perfume riser | +0.26, 0.78, −1.55 | 0.40 × 0.26 × 0.20 (3 steps) | black `#161616` | About 25 bottles, instanced from 6 shapes: square, round, tall, cap-heavy, gold `#c9a24a`, navy `#2a3560`, amber glass `#c98a3c` |
@@ -169,6 +169,7 @@ Photo B is the best whole-room view, so the hero view reproduces **photo B** rat
 - Details modelled from the close-ups: about 22 named fragrances on a four-row riser (Breeze and Vintage Radio boxes, 9pm, Stronger With You, Marwa, the blue shield, the black V, Honor and others); Spider-Ham, the crying-cat pillow, the Chick-fil-A cow with its sign, the blue-jay squish and two leafy plants on the sill; the chain tray, Casio watch, purple lanyard, keys, wallet, lighter and AirPods on the dresser; the clock in the desk lamp's base, a coaster under the mug, a knob on the keyboard.
 
 **Removed**
+- The ceiling light fixture (left out on request).
 - The rugs and the ring light behind the desk lamp (in the photos, left out on request).
 - Wood floor → dark charcoal carpet.
 - Bookshelf, corkboard, poster, the wall clock on the wall, curtains and rod, the trailing and potted floor plants,
