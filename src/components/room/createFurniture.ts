@@ -45,6 +45,8 @@ export interface FurnitureHandle {
     lightSwitch: THREE.Mesh;
     /** objects that open a section of the portfolio */
     spots: { id: PortfolioId; root: THREE.Object3D }[];
+    /** the keyboard, which opens the note pad */
+    keyboard: THREE.Group;
     /** the dresser's top drawer: its meshes, the resume lying in it, and how far out it is (0–1) */
     drawer: { parts: THREE.Object3D[]; paper: THREE.Mesh; setOpen: (k: number) => void };
     /** 0 = the PlayStation "who's using this controller" screen, 1 = signed in to the home screen */
@@ -118,6 +120,7 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
   let bottles: THREE.Group[] = [];
   const spots: FurnitureHandle["interact"]["spots"] = [];
   let drawer!: FurnitureHandle["interact"]["drawer"];
+  let keyboard!: THREE.Group;
   let speaker!: THREE.Mesh;
   let controller!: THREE.Group;
   let monitor!: THREE.Group;
@@ -681,7 +684,7 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     // keyboard: an off-white 75% board, white alphas, dusty-blue modifiers and a volume knob
     const kb = LAYOUT.keyboard.pos;
     const kg = anchor(kb[0], deskTop, kb[2], facing);
-    spots.push({ id: "skills", root: kg });
+    keyboard = kg;
     const caps = paintTexture(512, 192, (c, w, h) => {
       c.fillStyle = "#e7e5df";
       c.fillRect(0, 0, w, h);
@@ -706,7 +709,7 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     cyl(0.009, 0.009, 0.012, std("#9aa3b2", 0.35, 0.6), 0.155, 0.041, -0.048, kg, 20);
 
     const ms = LAYOUT.mouse.pos;
-    ball(0.035, std("#101012", 0.4), ms[0], deskTop + 0.012, ms[2], group, [0.9, 0.45, 1.5]);
+    spots.push({ id: "skills", root: ball(0.035, std("#101012", 0.4), ms[0], deskTop + 0.012, ms[2], group, [0.9, 0.45, 1.5]) });
 
     // DualSense: white wings and grips, a black centre with the sticks and PS button, a white
     // touchpad edged by its light bar, a D-pad and face buttons, bumpers and triggers at the front.
@@ -1008,5 +1011,5 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     block(0.008, 0.035, 0.016, std("#f6f5f2", 0.4), sw[0] + 0.012, sw[1], sw[2], group, false);
   }
 
-  return { group, lamp, binoculars, sunset, deskLamp, screens, interact: { plushies, bottles, speaker, controller, monitor, ps5, lightSwitch, setConsole, spots, drawer } };
+  return { group, lamp, binoculars, sunset, deskLamp, screens, interact: { plushies, bottles, speaker, controller, monitor, ps5, lightSwitch, setConsole, spots, drawer, keyboard } };
 }

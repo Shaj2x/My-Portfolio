@@ -13,7 +13,7 @@ trap 'rm -rf "$TMP"' EXIT
 if [ "$ENTRY" = "plain-app" ]; then
   npx tailwindcss -c tailwind.config.ts -i src/index.css -o "$TMP/app.css" --minify 2>/dev/null
   npx esbuild tools/room/standalone/plain-app.tsx --bundle --minify --format=iife --jsx=automatic \
-    --loader:.png=dataurl --loader:.jpg=dataurl --define:process.env.NODE_ENV='"production"' \
+    --loader:.png=dataurl --loader:.jpg=dataurl --define:process.env.NODE_ENV='"production"' --define:import.meta.env='{}' \
     --outfile="$TMP/room.js" --log-level=warning
   for f in "$TMP/room.js" "$TMP/app.css"; do
     if grep -qi "</script\|</style" "$f"; then echo "$f contains a closing tag; cannot inline safely" >&2; exit 1; fi

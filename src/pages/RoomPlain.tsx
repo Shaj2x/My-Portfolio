@@ -5,6 +5,7 @@ import { RADIO_STATION } from "@/components/room/createAudio";
 import { playlistEmbed } from "@/components/room/playlist";
 import { RoomConsole } from "@/components/room/console/RoomConsole";
 import { PortfolioPage } from "@/components/room/PortfolioPages";
+import { FidgetKeyboard } from "@/components/room/FidgetKeyboard";
 import { PORTFOLIO_IDS, PORTFOLIO_SPOTS, type PortfolioId } from "@/components/room/portfolioSpots";
 
 // which hidden sections of the portfolio this visitor has found; kept in this browser only
@@ -75,6 +76,9 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
   const lastRoomView = useRef<RoomView>("photo");
   const [consoleReady, setConsoleReady] = useState(false);
   const [section, setSection] = useState<PortfolioId | null>(null);
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const keyboardOpenRef = useRef(false);
+  keyboardOpenRef.current = keyboardOpen;
   const sectionRef = useRef<PortfolioId | null>(null);
   sectionRef.current = section;
   const [found, setFound] = useState<PortfolioId[]>(loadFound);
@@ -111,6 +115,10 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
         },
         onScopeTarget: setTarget,
         onConsoleReady: () => setConsoleReady(true),
+        onKeyboard: () => {
+          setSection(null);
+          setKeyboardOpen(true);
+        },
         onPortfolio: (id) => {
           setSection(id);
           setFound((f) => {
@@ -138,7 +146,7 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       const key = e.key.toLowerCase();
       // the console takes the keyboard while it's on screen
-      if (viewRef.current === "console") return;
+      if (viewRef.current === "console" || keyboardOpenRef.current) return;
       if (sectionRef.current) {
         if (key === "escape") setSection(null);
         return;
@@ -239,6 +247,7 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
         </div>
       )}
       <RoomConsole open={inConsole && consoleReady} onExit={() => roomRef.current?.setView(lastRoomView.current)} />
+      {keyboardOpen && !away && <FidgetKeyboard muted={muted} onClose={() => setKeyboardOpen(false)} />}
       {section && !away && (
         // a section of the portfolio, found in the room
         <div className="pointer-events-auto absolute inset-y-0 right-0 z-10 flex w-full max-w-xl flex-col border-l border-white/10 bg-[#0b0c10]/85 backdrop-blur-xl animate-in slide-in-from-right-8 fade-in duration-300" role="dialog" aria-label={PORTFOLIO_SPOTS[section].title}>

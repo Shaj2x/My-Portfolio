@@ -103,6 +103,8 @@ export interface PlainRoomOptions {
   onScopeTarget?: (landmark: { name: string; detail: string } | null) => void;
   /** the camera has reached the monitor: show the console on it */
   onConsoleReady?: () => void;
+  /** the keyboard was clicked: open the note pad */
+  onKeyboard?: () => void;
   /** an object hiding a section of the portfolio was clicked */
   onPortfolio?: (id: PortfolioId) => void;
   /** the light switch by the door was clicked */
@@ -895,7 +897,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   const raycaster = new THREE.Raycaster();
   const ndc = new THREE.Vector2();
   type Pick =
-    | { kind: "lamp" | "binoculars" | "ceiling" | "sunset" | "desk" | "switch" | "radio" | "console" | "blind" | "drawer" }
+    | { kind: "lamp" | "binoculars" | "ceiling" | "sunset" | "desk" | "switch" | "radio" | "console" | "blind" | "drawer" | "keyboard" }
     | { kind: "plushie"; target: (typeof inter.plushies)[number] }
     | { kind: "perfume"; target: THREE.Group }
     | { kind: "portfolio"; id: PortfolioId };
@@ -915,6 +917,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     console: "PS5 · pick up the controller and play",
     blind: "Blind · roll it up or down",
     drawer: "Dresser drawer · open it",
+    keyboard: "Keyboard · leave me a note",
     perfume: "Spray a fragrance",
   };
   const pickTarget = (e: PointerEvent): Pick | null => {
@@ -942,6 +945,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     // the resume is only reachable once the drawer is open
     if (o === inter.drawer.paper) return drawerTarget > 0.5 ? { kind: "portfolio", id: "resume" } : { kind: "drawer" };
     if (inter.drawer.parts.includes(o)) return { kind: "drawer" };
+    if (isIn(o, inter.keyboard)) return { kind: "keyboard" };
     const spot = [...inter.spots, ...roomSpots].find((r) => isIn(o, r.root));
     if (spot) return { kind: "portfolio", id: spot.id };
     const plush = inter.plushies.find((p) => isIn(o, p.group));
@@ -1036,6 +1040,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
         } else toggleRadio();
       }
       else if (kind === "console") enterConsole();
+      else if (kind === "keyboard") options.onKeyboard?.();
       else if (kind === "drawer") {
         drawerTarget = drawerTarget > 0.5 ? 0 : 1;
         audio.play("blind");
