@@ -21,58 +21,80 @@ const ROWS: Key[][] = [
   [k("Ctrl", "ControlLeft", 1.5, true), k("Alt", "AltLeft", 1.5, true), k("", "Space", 9, false, " "), k("Alt", "AltRight", 1.5, true), k("Ctrl", "ControlRight", 1.5, true)],
 ];
 
-/** a creamy thock: a damped low body under a short, soft, low-passed click; heavier for big keys */
-const useThock = (muted: boolean) => {
+/**
+ * Switch sounds, modelled instead of recorded: a short, soft burst of noise (the key bottoming
+ * out) rings through a few resonances of the case and plate, with a low thump underneath. No
+ * pitched tone, which is what makes synthesised keys sound like bloops. Each profile is a set of
+ * resonances: where they sit decides whether the board sounds creamy, thocky or clacky.
+ */
+const SOUND_PROFILES = {
+  Creamy: { modes: [380, 760, 1350], gains: [1, 0.55, 0.22], q: 7, thump: 120, bright: 1800, level: 1.5 },
+  Thocky: { modes: [240, 480, 820], gains: [1, 0.6, 0.25], q: 6, thump: 90, bright: 1200, level: 1.7 },
+  Clacky: { modes: [950, 2300, 4100], gains: [0.8, 1, 0.5], q: 9, thump: 170, bright: 5200, level: 0.95 },
+} as const;
+type SoundProfile = keyof typeof SOUND_PROFILES;
+
+const useKeySound = (muted: boolean, profile: SoundProfile) => {
   const ctx = useRef<AudioContext | null>(null);
+  const burst = useRef<AudioBuffer | null>(null);
   return useCallback(
-    (weight: number) => {
+    (weight: number, release = false) => {
       if (muted) return;
       const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       if (!AC) return;
       const c = (ctx.current ??= new AC());
       if (c.state === "suspended") void c.resume();
-      const t = c.currentTime;
-      const vary = 0.92 + Math.random() * 0.16;
-      // the body: a short sine drop, deeper for the spacebar and the long modifiers
-      const body = c.createOscillator();
-      body.type = "sine";
-      body.frequency.setValueAtTime((210 - weight * 18) * vary, t);
-      body.frequency.exponentialRampToValueAtTime((95 - weight * 6) * vary, t + 0.06);
-      const bodyGain = c.createGain();
-      bodyGain.gain.setValueAtTime(0.0001, t);
-      bodyGain.gain.exponentialRampToValueAtTime(0.32, t + 0.004);
-      bodyGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
-      body.connect(bodyGain).connect(c.destination);
-      body.start(t);
-      body.stop(t + 0.1);
-      // the creamy top: a burst of noise, low-passed so it's muted rather than clacky
-      const len = Math.floor(c.sampleRate * 0.04);
-      const buf = c.createBuffer(1, len, c.sampleRate);
-      const d = buf.getChannelData(0);
-      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) ** 3;
-      const noise = c.createBufferSource();
-      noise.buffer = buf;
+      if (!burst.current) {
+        // a few milliseconds of noise with a fast decay: the impulse of plastic meeting plastic
+        const len = Math.floor(c.sampleRate * 0.012);
+        burst.current = c.createBuffer(1, len, c.sampleRate);
+        const d = burst.current.getChannelData(0);
+        for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (len * 0.18));
+      }
+      const p = SOUND_PROFILES[profile];
+      const t = c.currentTime + 0.002;
+      // every key is a little different; big keys (space, shift) sit lower
+      const tune = (0.94 + Math.random() * 0.12) * (1 - Math.min(weight - 1, 3) * 0.07);
+      const level = p.level * (release ? 0.28 : 1) * (0.85 + Math.random() * 0.3);
+      const out = c.createGain();
+      out.gain.value = level;
+      out.connect(c.destination);
+      const src = c.createBufferSource();
+      src.buffer = burst.current;
+      src.playbackRate.value = release ? 1.3 : 1;
+      // the resonances of the case and plate
+      p.modes.forEach((f, i) => {
+        const bp = c.createBiquadFilter();
+        bp.type = "bandpass";
+        bp.frequency.value = f * tune * (release ? 1.25 : 1);
+        bp.Q.value = p.q;
+        const g = c.createGain();
+        g.gain.value = p.gains[i] * 2.2;
+        src.connect(bp).connect(g).connect(out);
+      });
+      // a little of the raw tap, softened, so it has an edge without clacking
       const lp = c.createBiquadFilter();
       lp.type = "lowpass";
-      lp.frequency.value = (1700 - weight * 120) * vary;
-      lp.Q.value = 1.2;
-      const ng = c.createGain();
-      ng.gain.value = 0.38;
-      noise.connect(lp).connect(ng).connect(c.destination);
-      noise.start(t);
-      // and a quiet bottom-out tick a moment later, the key landing
-      const tick = c.createOscillator();
-      tick.type = "triangle";
-      tick.frequency.value = 520 * vary;
-      const tg = c.createGain();
-      tg.gain.setValueAtTime(0.0001, t + 0.012);
-      tg.gain.exponentialRampToValueAtTime(0.05, t + 0.014);
-      tg.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
-      tick.connect(tg).connect(c.destination);
-      tick.start(t + 0.012);
-      tick.stop(t + 0.035);
+      lp.frequency.value = p.bright * tune;
+      const edge = c.createGain();
+      edge.gain.value = 0.25;
+      src.connect(lp).connect(edge).connect(out);
+      src.start(t);
+      // the low thump of the board on the desk, only on the way down
+      if (!release) {
+        const th = c.createOscillator();
+        th.type = "sine";
+        th.frequency.value = p.thump * tune;
+        const tg = c.createGain();
+        tg.gain.setValueAtTime(0.0001, t);
+        tg.gain.exponentialRampToValueAtTime(0.18 * level, t + 0.003);
+        tg.gain.exponentialRampToValueAtTime(0.0001, t + 0.035);
+        th.connect(tg).connect(c.destination);
+        th.start(t);
+        th.stop(t + 0.04);
+      }
     },
-    [muted],
+    [muted, profile],
   );
 };
 
@@ -95,7 +117,23 @@ export const FidgetKeyboard = ({ onClose, muted = false }: FidgetKeyboardProps) 
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [caps, setCaps] = useState(false);
   const area = useRef<HTMLTextAreaElement>(null);
-  const thock = useThock(muted);
+  const [profile, setProfile] = useState<SoundProfile>(() => {
+    try {
+      const v = localStorage.getItem("portfolio-room-plain:switches");
+      return v && v in SOUND_PROFILES ? (v as SoundProfile) : "Creamy";
+    } catch {
+      return "Creamy";
+    }
+  });
+  const keySound = useKeySound(muted, profile);
+  const pickProfile = (p: SoundProfile) => {
+    setProfile(p);
+    try {
+      localStorage.setItem("portfolio-room-plain:switches", p);
+    } catch {
+      // not remembered
+    }
+  };
 
   useEffect(() => {
     listNotes().then((r) => {
@@ -108,18 +146,22 @@ export const FidgetKeyboard = ({ onClose, muted = false }: FidgetKeyboardProps) 
   const keyWeight = (code: string) => (code === "Space" ? 3 : ROWS.flat().find((x) => x.code === code)?.w ?? 1);
   const press = useCallback(
     (code: string) => {
-      thock(keyWeight(code));
+      keySound(keyWeight(code));
       setDown((s) => new Set(s).add(code));
     },
-    [thock],
+    [keySound],
   );
-  const release = useCallback((code: string) => {
-    setDown((s) => {
-      const n = new Set(s);
-      n.delete(code);
-      return n;
-    });
-  }, []);
+  const release = useCallback(
+    (code: string) => {
+      keySound(keyWeight(code), true);
+      setDown((s) => {
+        const n = new Set(s);
+        n.delete(code);
+        return n;
+      });
+    },
+    [keySound],
+  );
 
   // the real keyboard moves the keys and makes the sound; typing itself lands in whichever field has focus
   useEffect(() => {
@@ -220,6 +262,25 @@ export const FidgetKeyboard = ({ onClose, muted = false }: FidgetKeyboardProps) 
             {status === "sending" ? "Pinning…" : status === "sent" ? "Pinned ✓" : "Pin it"}
           </button>
           {status === "error" && <p className="text-sm text-red-700 sm:col-span-2">That didn't go through. Check your connection and try again.</p>}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-label="Switch sound">
+          <span className="text-xs uppercase tracking-[0.18em] text-white/50">Switches</span>
+          {(Object.keys(SOUND_PROFILES) as SoundProfile[]).map((p) => (
+            <button
+              key={p}
+              type="button"
+              role="radio"
+              aria-checked={profile === p}
+              onClick={() => {
+                pickProfile(p);
+                area.current?.focus();
+              }}
+              className="rounded-full border border-white/15 px-3 py-1 text-xs text-white/75 hover:border-white/40 hover:text-white aria-checked:border-amber-200/60 aria-checked:bg-amber-200/10 aria-checked:text-amber-100"
+            >
+              {p}
+            </button>
+          ))}
         </div>
 
         {/* the board */}
