@@ -493,7 +493,7 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
       c.fillText("3:46", cw - 60, 56);
       c.textAlign = "left";
       // the tile row, the first one selected and larger
-      const tiles = ["#d4202c", "#1f9d55", "#ce1141", "#a1a1a4", "#e2a33a", "#7a4fdc", "#2f6fd6"];
+      const tiles = ["#d4202c", "#1f9d55", "#ce1141", "#a1a1a4", "#2f6fd6", "#e2a33a"];
       tiles.forEach((col, i) => {
         const size = i === 0 ? 120 : 92;
         const tx = 60 + (i === 0 ? 0 : 140 + (i - 1) * 104);

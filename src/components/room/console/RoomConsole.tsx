@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { ExternalLink, Gamepad2, Sparkles, Trophy, type LucideIcon } from "lucide-react";
+import { BarChart3, ExternalLink, Gamepad2, Sparkles, Trophy, type LucideIcon } from "lucide-react";
 import PongGame from "@/components/PongGame";
 import SnakeGame from "@/components/SnakeGame";
 import { customDescriptions, demoLinks, profile } from "@/data/portfolio";
@@ -12,7 +12,7 @@ import { customDescriptions, demoLinks, profile } from "@/data/portfolio";
  */
 
 interface Game {
-  id: "pong" | "snake" | "slots" | "blackjack" | "mercatus";
+  id: "pong" | "snake" | "slots" | "blackjack" | "mercatus" | "statstack";
   title: string;
   /** one line under the title on the home screen */
   blurb: string;
@@ -28,6 +28,7 @@ const GAMES: Game[] = [
   { id: "snake", title: "Snake", blurb: "Eat the SS logo to grow. Steer with WASD, the arrow keys, or the D-pad.", icon: Gamepad2, art: ["#1f9d55", "#03200f"] },
   { id: "slots", title: "Raptors Slot Machine", blurb: "A Toronto Raptors slot machine. Opens in a new tab.", icon: Trophy, art: ["#ce1141", "#1a0207"], site: demoLinks["Raptors-Slot-Machine"] },
   { id: "blackjack", title: "Raptors BlackJack", blurb: "Blackjack at a Raptors table. Opens in a new tab.", icon: Trophy, art: ["#a1a1a4", "#1c0b0d"], site: demoLinks["Raptors-BlackJack"] },
+  { id: "statstack", title: "StatStack", blurb: "Opens in a new tab.", icon: BarChart3, art: ["#2f6fd6", "#06122b"], site: demoLinks["StatStack"] },
   { id: "mercatus", title: "Mercatus", blurb: `${customDescriptions["Mercatus"]} Opens in a new tab.`, icon: Sparkles, art: ["#e2a33a", "#1d1204"], site: demoLinks["Mercatus"] },
 ];
 
