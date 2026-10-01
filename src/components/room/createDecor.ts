@@ -796,6 +796,7 @@ export function createDecor({ env, rand }: DecorContext) {
     lighter.rotation.y = 0.5;
     // AirPods case
     add(parent, rbox(0.05, 0.022, 0.044, 0.012), matte("#f1f1ef", 0.35), at.x + 0.23, y + 0.011, at.z - 0.02, false);
+    return { strap, wallet };
   };
 
   return { perfumeShelf, plant, spiderHam, cryingCat, cow, bird, clutter };

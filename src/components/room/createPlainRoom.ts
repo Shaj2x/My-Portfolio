@@ -5,6 +5,7 @@ import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment
 import { createAudio, RADIO_STATION } from "./createAudio";
 import { createCampus } from "./createCampus";
 import { createFurniture, paintTexture } from "./createFurniture";
+import { PORTFOLIO_SPOTS, type PortfolioId } from "./portfolioSpots";
 import { CLOSET, COLORS, DOOR, HERO, LAYOUT, ROOM, WINDOW } from "./roomLayout";
 
 /**
@@ -102,6 +103,8 @@ export interface PlainRoomOptions {
   onScopeTarget?: (landmark: { name: string; detail: string } | null) => void;
   /** the camera has reached the monitor: show the console on it */
   onConsoleReady?: () => void;
+  /** an object hiding a section of the portfolio was clicked */
+  onPortfolio?: (id: PortfolioId) => void;
   /** the light switch by the door was clicked */
   onLightSwitch?: () => void;
   /** the speaker was clicked; when given, this replaces the built-in radio (e.g. to open a playlist player) */
@@ -255,6 +258,8 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   };
 
   const blindParts: THREE.Object3D[] = [];
+  // the closet and the entry door hide sections of the portfolio too
+  const roomSpots: { id: PortfolioId; root: THREE.Object3D }[] = [];
   let setBlind: (k: number) => void = () => {};
   // back wall with the window opening, frame, sill and the blackout blind
   const backWall = wallGroup(new THREE.Vector3(0, 0, back), new THREE.Vector3(0, 0, 1));
@@ -408,7 +413,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       c.strokeRect(w * 0.14, h * 0.07, w * 0.72, h * 0.38);
       c.strokeRect(w * 0.14, h * 0.55, w * 0.72, h * 0.38);
     });
-    slab(DOOR.x1 - DOOR.x0, DOOR.h, 0.04, new THREE.MeshStandardMaterial({ map: entry, roughness: 0.4 }), (DOOR.x0 + DOOR.x1) / 2, DOOR.h / 2, front + 0.03, frontWall);
+    roomSpots.push({ id: "contact", root: slab(DOOR.x1 - DOOR.x0, DOOR.h, 0.04, new THREE.MeshStandardMaterial({ map: entry, roughness: 0.4 }), (DOOR.x0 + DOOR.x1) / 2, DOOR.h / 2, front + 0.03, frontWall) });
     casing(DOOR.x0, DOOR.x1, DOOR.h, front);
     hinges(DOOR.x1 - 0.005, front + 0.01, DOOR.h);
     lever(DOOR.x0 + 0.08, 0.98, front + 0.01, 1);
@@ -468,7 +473,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     const leafMat = new THREE.MeshStandardMaterial({ map: sixPanel, bumpMap: sixPanel, bumpScale: 2, roughness: 0.5 });
     for (const s of [-1, 1]) {
       const cx = (CLOSET.doorX0 + CLOSET.doorX1) / 2 + s * (leafW / 2 + 0.002);
-      slab(leafW - 0.006, CLOSET.doorH, 0.035, leafMat, cx, CLOSET.doorH / 2, closetZ + 0.03, frontWall);
+      roomSpots.push({ id: "experience", root: slab(leafW - 0.006, CLOSET.doorH, 0.035, leafMat, cx, CLOSET.doorH / 2, closetZ + 0.03, frontWall) });
       // lever beside the centre seam, its bar pointing toward the leaf's hinge
       lever(cx - s * (leafW / 2 - 0.07), 1.0, closetZ + 0.0125, s);
       hinges(cx + s * (leafW / 2 - 0.004), closetZ + 0.012, CLOSET.doorH);
@@ -892,7 +897,8 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   type Pick =
     | { kind: "lamp" | "binoculars" | "ceiling" | "sunset" | "desk" | "switch" | "radio" | "console" | "blind" }
     | { kind: "plushie"; target: (typeof inter.plushies)[number] }
-    | { kind: "perfume"; target: THREE.Group };
+    | { kind: "perfume"; target: THREE.Group }
+    | { kind: "portfolio"; id: PortfolioId };
   const inter = furniture.interact;
   const isIn = (o: THREE.Object3D, root: THREE.Object3D) => {
     for (let p: THREE.Object3D | null = o; p; p = p.parent) if (p === root) return true;
@@ -915,7 +921,12 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     const r = renderer.domElement.getBoundingClientRect();
     ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     raycaster.setFromCamera(ndc, camera);
-    const hit = raycaster.intersectObjects([...furniture.group.children, ...ceilingParts, ...blindParts], true).find((h) => (h.object as THREE.Mesh).isMesh && h.object.visible);
+    const hit = raycaster.intersectObjects([...furniture.group.children, ...ceilingParts, ...blindParts, ...roomSpots.map((r) => r.root)], true).find((h) => {
+      if (!(h.object as THREE.Mesh).isMesh) return false;
+      // skip anything hidden, including walls cut away for the dollhouse view
+      for (let p: THREE.Object3D | null = h.object; p; p = p.parent) if (!p.visible) return false;
+      return true;
+    });
     if (!hit) return null;
     const o = hit.object;
     if (ceilingParts.includes(o)) return { kind: "ceiling" };
@@ -927,6 +938,8 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     if (o === inter.lightSwitch) return { kind: "switch" };
     if (o === inter.speaker) return { kind: "radio" };
     if (isIn(o, inter.controller) || isIn(o, inter.monitor) || isIn(o, inter.ps5)) return { kind: "console" };
+    const spot = [...inter.spots, ...roomSpots].find((r) => isIn(o, r.root));
+    if (spot) return { kind: "portfolio", id: spot.id };
     const plush = inter.plushies.find((p) => isIn(o, p.group));
     if (plush) return { kind: "plushie", target: plush };
     const bottle = inter.bottles.find((g) => isIn(o, g));
@@ -1021,6 +1034,9 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       } else if (hit?.kind === "plushie") {
         bounces.set(hit.target.group, 0);
         audio.play("squeak");
+      } else if (hit?.kind === "portfolio") {
+        audio.play("chime");
+        options.onPortfolio?.(hit.id);
       } else if (hit?.kind === "perfume") {
         spritz(hit.target);
         audio.play("spritz");
@@ -1045,7 +1061,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     if (e.buttons) return;
     const hit = pickTarget(e);
     renderer.domElement.style.cursor = hit ? "pointer" : "";
-    const label = !hit ? null : hit.kind === "plushie" ? `${hit.target.name} · give it a squeeze` : LABELS[hit.kind];
+    const label = !hit ? null : hit.kind === "plushie" ? `${hit.target.name} · give it a squeeze` : hit.kind === "portfolio" ? `${PORTFOLIO_SPOTS[hit.id].object} · something's here` : LABELS[hit.kind];
     if (label !== hoverLabel) {
       hoverLabel = label;
       options.onHover?.(label);

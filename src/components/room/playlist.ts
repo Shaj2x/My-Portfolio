@@ -2,7 +2,7 @@
  * The playlist the desk speaker plays. Paste a share link from Spotify, YouTube (a playlist link)
  * or Apple Music. Leave it empty and the speaker plays the room's own synthesised lo-fi instead.
  */
-export const PLAYLIST_URL = "";
+export const PLAYLIST_URL = "https://open.spotify.com/playlist/60I8e3x8SyGyI12ifOdbjy";
 
 export interface PlaylistEmbed {
   service: "Spotify" | "YouTube" | "Apple Music";

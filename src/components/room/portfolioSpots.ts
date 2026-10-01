@@ -1,0 +1,18 @@
+/**
+ * The portfolio, hidden around the room: each section is behind an object that suits it, found by
+ * clicking things. The hover label names only the object, so the section is a small surprise.
+ */
+export type PortfolioId = "about" | "projects" | "experience" | "resume" | "leadership" | "skills" | "services" | "contact";
+
+export const PORTFOLIO_SPOTS: Record<PortfolioId, { object: string; title: string }> = {
+  about: { object: "The tapestry", title: "About Me" },
+  projects: { object: "The laptop", title: "Projects" },
+  experience: { object: "The closet", title: "Experience" },
+  resume: { object: "The dresser drawers", title: "Resume" },
+  leadership: { object: "The Western lanyard", title: "Leadership" },
+  skills: { object: "The keyboard", title: "Skills" },
+  services: { object: "The wallet", title: "Services" },
+  contact: { object: "The door", title: "Contact" },
+};
+
+export const PORTFOLIO_IDS = Object.keys(PORTFOLIO_SPOTS) as PortfolioId[];

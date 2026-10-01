@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { createDecor } from "./createDecor";
+import type { PortfolioId } from "./portfolioSpots";
 import { paintTexture } from "./paintTexture";
 import { COLORS, LAYOUT, ROOM, WINDOW } from "./roomLayout";
 
@@ -41,6 +42,8 @@ export interface FurnitureHandle {
     monitor: THREE.Group;
     ps5: THREE.Group;
     lightSwitch: THREE.Mesh;
+    /** objects that open a section of the portfolio */
+    spots: { id: PortfolioId; root: THREE.Object3D }[];
     /** 0 = the PlayStation "who's using this controller" screen, 1 = signed in to the home screen */
     setConsole: (k: number) => void;
   };
@@ -110,6 +113,7 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
 
   const decor = createDecor({ env, rand: rnd });
   let bottles: THREE.Group[] = [];
+  const spots: FurnitureHandle["interact"]["spots"] = [];
   let speaker!: THREE.Mesh;
   let controller!: THREE.Group;
   let monitor!: THREE.Group;
@@ -277,7 +281,7 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     for (let u = 0; u < 2; u++) {
       const y0 = u * unitH;
       block(w, unitH - 0.004, d, body, x, y0 + unitH / 2, z);
-      block(w - 0.03, unitH - 0.04, 0.012, front, x, y0 + unitH / 2, z + d / 2 + 0.002);
+      spots.push({ id: "resume", root: block(w - 0.03, unitH - 0.04, 0.012, front, x, y0 + unitH / 2, z + d / 2 + 0.002) });
       block(0.11, 0.022, 0.006, pull, x, y0 + unitH - 0.075, z + d / 2 + 0.009, group, false);
     }
     const top = unitH * 2;
@@ -289,7 +293,8 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     const cd = LAYOUT.candle.pos;
     rounded(0.075, 0.1, 0.075, 0.012, std("#f1e7d2", 0.85), cd[0], top + 0.05, cd[2]);
     cyl(0.026, 0.03, 0.006, std("#e2d4bb", 0.9), cd[0], top + 0.098, cd[2], group, 20);
-    decor.clutter(group, new THREE.Vector3(x + 0.02, top, -1.3));
+    const { strap, wallet } = decor.clutter(group, new THREE.Vector3(x + 0.02, top, -1.3));
+    spots.push({ id: "leadership", root: strap }, { id: "services", root: wallet });
   }
 
   // ---------- floor lamp ----------
@@ -557,6 +562,7 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
   {
     const [x, , z] = LAYOUT.laptop.pos;
     const g = anchor(x, deskTop, z, -Math.PI / 2 + 0.15);
+    spots.push({ id: "projects", root: g });
     const alu = std("#c9cacc", 0.35, 0.7);
     // stand: two raked rails
     for (const s of [-1, 1]) block(0.02, 0.012, 0.26, alu, s * 0.13, 0.05, 0, g).rotation.x = 0.28;
@@ -612,6 +618,7 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     // keyboard: an off-white 75% board, white alphas, dusty-blue modifiers and a volume knob
     const kb = LAYOUT.keyboard.pos;
     const kg = anchor(kb[0], deskTop, kb[2], facing);
+    spots.push({ id: "skills", root: kg });
     const caps = paintTexture(512, 192, (c, w, h) => {
       c.fillStyle = "#e7e5df";
       c.fillRect(0, 0, w, h);
@@ -861,6 +868,7 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     const cloth = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95 }));
     cloth.rotation.y = -Math.PI / 2;
     place(cloth, pos[0] - 0.01, pos[1], pos[2], group, false);
+    spots.push({ id: "about", root: cloth });
   }
 
   // ---------- window sill: plants, plushies and the binoculars ----------
@@ -937,5 +945,5 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     block(0.008, 0.035, 0.016, std("#f6f5f2", 0.4), sw[0] + 0.012, sw[1], sw[2], group, false);
   }
 
-  return { group, lamp, binoculars, sunset, deskLamp, screens, interact: { plushies, bottles, speaker, controller, monitor, ps5, lightSwitch, setConsole } };
+  return { group, lamp, binoculars, sunset, deskLamp, screens, interact: { plushies, bottles, speaker, controller, monitor, ps5, lightSwitch, setConsole, spots } };
 }

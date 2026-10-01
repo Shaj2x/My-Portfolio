@@ -4,6 +4,19 @@ import { ArrowLeft, Binoculars, Gamepad2, Lightbulb, LightbulbOff, Radio, Slider
 import { RADIO_STATION } from "@/components/room/createAudio";
 import { playlistEmbed } from "@/components/room/playlist";
 import { RoomConsole } from "@/components/room/console/RoomConsole";
+import { PortfolioPage } from "@/components/room/PortfolioPages";
+import { PORTFOLIO_IDS, PORTFOLIO_SPOTS, type PortfolioId } from "@/components/room/portfolioSpots";
+
+// which hidden sections of the portfolio this visitor has found; kept in this browser only
+const FOUND_KEY = "portfolio-room-plain:found";
+const loadFound = (): PortfolioId[] => {
+  try {
+    const v = JSON.parse(localStorage.getItem(FOUND_KEY) ?? "[]");
+    return Array.isArray(v) ? v.filter((x): x is PortfolioId => PORTFOLIO_IDS.includes(x)) : [];
+  } catch {
+    return [];
+  }
+};
 
 // the desk speaker plays this playlist when one is set in playlist.ts; otherwise the built-in lo-fi radio
 const playlist = playlistEmbed();
@@ -61,6 +74,10 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
   const viewRef = useRef<PlainRoomView>("photo");
   const lastRoomView = useRef<RoomView>("photo");
   const [consoleReady, setConsoleReady] = useState(false);
+  const [section, setSection] = useState<PortfolioId | null>(null);
+  const sectionRef = useRef<PortfolioId | null>(null);
+  sectionRef.current = section;
+  const [found, setFound] = useState<PortfolioId[]>(loadFound);
   const [error, setError] = useState(false);
   const [lamp, setLamp] = useState<LampSettings>(loadLamp);
   const [panelOpen, setPanelOpen] = useState(false);
@@ -94,6 +111,19 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
         },
         onScopeTarget: setTarget,
         onConsoleReady: () => setConsoleReady(true),
+        onPortfolio: (id) => {
+          setSection(id);
+          setFound((f) => {
+            if (f.includes(id)) return f;
+            const next = [...f, id];
+            try {
+              localStorage.setItem(FOUND_KEY, JSON.stringify(next));
+            } catch {
+              // not remembered
+            }
+            return next;
+          });
+        },
         onLightSwitch: () => setPanelOpen(true),
         onRadioChange: setRadioOn,
         onSpeaker: playlist ? () => setPlayerOpen((o) => !o) : undefined,
@@ -109,6 +139,10 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
       const key = e.key.toLowerCase();
       // the console takes the keyboard while it's on screen
       if (viewRef.current === "console") return;
+      if (sectionRef.current) {
+        if (key === "escape") setSection(null);
+        return;
+      }
       if (key === "l") roomRef.current?.toggleLamp();
       else if (key === "m") setMuted((m) => !m);
       else if (key === "b") roomRef.current?.setView(viewRef.current === "binoculars" ? lastRoomView.current : "binoculars");
@@ -135,7 +169,9 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
     }
   }, [muted]);
 
-  useEffect(() => roomRef.current?.setSpeakerPlaying(playerOpen), [playerOpen]);
+  useEffect(() => {
+    roomRef.current?.setSpeakerPlaying(playerOpen);
+  }, [playerOpen]);
 
   const inBinoculars = view === "binoculars";
   const inConsole = view === "console";
@@ -147,9 +183,16 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
       {error && <p className="absolute inset-0 grid place-items-center text-white/70">This browser can't show the 3D room.</p>}
 
       <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-4 p-4">
-        <Link to="/" className={chip}>
-          <ArrowLeft className="h-4 w-4" /> Home
-        </Link>
+        <div className="flex flex-col items-start gap-2">
+          <Link to="/" className={chip}>
+            <ArrowLeft className="h-4 w-4" /> Home
+          </Link>
+          {!away && (
+            <p className="rounded-full bg-black/40 px-4 py-1.5 text-xs text-white/75 backdrop-blur-md" aria-live="polite">
+              {found.length === PORTFOLIO_IDS.length ? "You found the whole portfolio" : `Portfolio found: ${found.length} of ${PORTFOLIO_IDS.length} · click around the room`}
+            </p>
+          )}
+        </div>
         <div className="flex flex-col items-end gap-2">
           <button type="button" className={chip} aria-pressed={!muted} aria-label={muted ? "Unmute (M)" : "Mute (M)"} onClick={() => setMuted((m) => !m)}>
             {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
@@ -195,7 +238,24 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
           )}
         </div>
       )}
-      <RoomConsole open={inConsole && consoleReady} embedSites={!hosted} onExit={() => roomRef.current?.setView(lastRoomView.current)} />
+      <RoomConsole open={inConsole && consoleReady} onExit={() => roomRef.current?.setView(lastRoomView.current)} />
+      {section && !away && (
+        // a section of the portfolio, found in the room
+        <div className="pointer-events-auto absolute inset-y-0 right-0 z-10 flex w-full max-w-xl flex-col border-l border-white/10 bg-[#0b0c10]/85 backdrop-blur-xl animate-in slide-in-from-right-8 fade-in duration-300" role="dialog" aria-label={PORTFOLIO_SPOTS[section].title}>
+          <div className="flex items-start justify-between gap-4 border-b border-white/10 px-6 pb-4 pt-6">
+            <div className="min-w-0">
+              <p className="text-xs uppercase tracking-[0.2em] text-amber-200/70">Found · {PORTFOLIO_SPOTS[section].object}</p>
+              <h2 className="mt-1 text-2xl font-bold">{PORTFOLIO_SPOTS[section].title}</h2>
+            </div>
+            <button type="button" aria-label="Close (Esc)" className="rounded-full p-2 text-white/60 hover:bg-white/10 hover:text-white" onClick={() => setSection(null)}>
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-5">
+            <PortfolioPage id={section} />
+          </div>
+        </div>
+      )}
       {hover && !away && (
         <p className="pointer-events-none absolute left-1/2 top-4 -translate-x-1/2 rounded-full bg-black/55 px-4 py-1.5 text-xs text-white/85 backdrop-blur-md">{hover}</p>
       )}
@@ -331,6 +391,9 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
               ))}
               <button type="button" className={chip} onClick={() => roomRef.current?.setView("console")}>
                 <Gamepad2 className="h-4 w-4" /> PlayStation
+              </button>
+              <button type="button" className={chip} aria-pressed={playlist ? playerOpen : radioOn} onClick={() => (playlist ? setPlayerOpen((o) => !o) : roomRef.current?.toggleRadio())}>
+                <Radio className="h-4 w-4" /> Music
               </button>
               <button type="button" className={chip} onClick={() => roomRef.current?.setView("binoculars")}>
                 <Binoculars className="h-4 w-4" /> Binoculars (B)
