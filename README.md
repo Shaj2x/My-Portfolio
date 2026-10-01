@@ -15,7 +15,7 @@ The repo includes `vercel.json`, so Vercel builds it as a Vite site (`npm ci`, `
    - Supabase, Authentication, URL Configuration: set the Site URL and add `https://<your-domain>/digital-dash.html` to the redirect URLs.
    - Your Spotify app's redirect URIs, if you use the Now playing widget: `https://<your-domain>/digital-dash.html`.
 
-`/digital-dash` and `/smart-serve` redirect to their pages, and every other path falls back to the React app.
+The Vercel site is Digital Dash: `/` and `/digital-dash` redirect to `/digital-dash.html` (the app keeps that address because sign-in, Spotify, reminders and the installable app are set up for it). `/smart-serve` redirects to its page. The React portfolio is still built but isn't linked from this site.
 
 ## How can I edit this code?
 
