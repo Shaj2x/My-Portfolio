@@ -15,7 +15,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@500;700;800&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,700&family=Fraunces:opsz,wght@9..144,400;9..144,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,700&family=Big+Shoulders+Display:wght@500;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
   box-sizing:border-box;
@@ -980,6 +980,16 @@ html.lg .cal-list li{background:var(--glass-tint)}
 .ac-dot{width:10px;height:10px;border-radius:50%;flex:none;margin:0 4px}
 .ac-empty{font-size:13px}
 .ac-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-top:4px;border-top:1px solid var(--line);padding-top:14px}
+.tour-ic{width:56px;height:56px;border-radius:16px;display:grid;place-items:center;background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent)}
+.tour-ic svg{width:28px;height:28px}
+#tour h2{margin:4px 0 0;font-size:20px}
+.tour-b{font-size:15px;line-height:1.55;margin:0}
+.tour-dots{display:flex;gap:6px}
+.tour-dots i{width:7px;height:7px;border-radius:4px;background:color-mix(in srgb,var(--ink) 20%,transparent);transition:width var(--t-ui) var(--ease-out),background-color var(--t-ui) ease}
+.tour-dots i.on{width:20px;background:var(--accent)}
+.tour-act{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+#tour .acd-body{padding-top:22px}
+@media (prefers-reduced-motion:reduce){.tour-dots i{transition:none}}
 .ac-priv{margin:0;font-size:12.5px;line-height:1.5;color:var(--muted)}
 .ac-clear{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);cursor:pointer}
 .ac-danger{font-size:13.5px;display:grid;gap:10px}
@@ -1369,7 +1379,7 @@ html.lg .eye{background:var(--glass-tint);box-shadow:inset 0 1px 0 color-mix(in 
         <div class="panel">
           <h3>Your data</h3>
           <p class="hint" style="margin:0 0 10px">Sign in to keep everything in your account and use it on any device. <button class="btn ghost small" type="button" id="acct-open2">Account</button></p>
-          <div class="row" style="margin-bottom:10px"><button class="btn ghost small" id="export">Show backup</button><button class="btn ghost small" id="import">Restore from backup</button><button class="btn ghost small" id="wipe" style="color:var(--bad)">Erase everything</button></div>
+          <div class="row" style="margin-bottom:10px"><button class="btn ghost small" id="export">Show backup</button><button class="btn ghost small" id="import">Restore from backup</button><button class="btn ghost small" id="wipe" style="color:var(--bad)">Erase everything</button><button class="btn ghost small" id="demo-rm" hidden>Remove example data</button><button class="btn ghost small" id="tour-again">Show the tour</button></div>
           <p class="hint" id="install-hint" style="margin:0 0 10px"></p>
           <textarea id="backup" placeholder="Your backup JSON appears here. Paste one in and press Restore to load it." aria-label="Backup data"></textarea>
         </div>
@@ -1389,6 +1399,9 @@ html.lg .eye{background:var(--glass-tint);box-shadow:inset 0 1px 0 color-mix(in 
     <div class="acd-top"><h2 id="ai-h">AI helper</h2><button class="icon-btn" type="button" data-ai="close" aria-label="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
     <div class="acd-body" id="ai-body" aria-live="polite"></div>
   </div>
+</dialog>
+<dialog class="acd acd-sm" id="tour" aria-labelledby="tour-h">
+  <div class="acd-in"><div class="acd-body" id="tour-body"></div></div>
 </dialog>
 <dialog class="acd acd-sm" id="acct-pick" aria-labelledby="acp-h">
   <div class="acd-in"><div class="acd-body" id="acp-body"></div></div>
@@ -1514,7 +1527,8 @@ let dbRef=null, saveTimer=null, bgImgRef=null;
 let dbH=null,userId=null,lastStage={w:900,h:520};const imgCache={},imgFetching=new Set();
 const BGK="digitaldash.bgimg"; let bgData="";try{bgData=localStorage.getItem(BGK)||"";}catch(e){}
 function merge(d){S=Object.assign(structuredClone(DEFAULT),d||{});S.settings=Object.assign({},DEFAULT.settings,(d&&d.settings)||{});if(d&&d.settings&&d.settings.font==="serif"&&!d.settings.uiFont)S.settings.uiFont="fraunces";S.settings.bg=Object.assign({},DEFAULT.settings.bg,(d&&d.settings&&d.settings.bg)||{});S.settings.stage=Object.assign({},DEFAULT.settings.stage,(d&&d.settings&&d.settings.stage)||{});if(!(d&&d.settings&&d.settings.v2)){S.settings.v2=true;if(S.settings.skin==="ledger"){S.settings.skin="dash";S.settings.accent="";}}}
-try{const raw=localStorage.getItem(LSK);if(raw)merge(JSON.parse(raw));}catch(e){}
+let firstRun=true;
+try{const raw=localStorage.getItem(LSK);if(raw){merge(JSON.parse(raw));firstRun=false;}}catch(e){firstRun=false;}
 function setSync(t){$("#sync").textContent=t;}
 function save(){
   try{localStorage.setItem(LSK,JSON.stringify(S));}catch(e){}
@@ -1696,6 +1710,11 @@ const readable=h=>lum(h)>.42?"#141414":"#FFFFFF";
 const isHex=v=>/^#[0-9a-f]{6}$/i.test(v||"");
 let previewScheme=null, editingScheme=null;
 const loadedFonts=new Set(), fontCss=new Map(); // Google Fonts spec -> promise that its stylesheet has loaded
+{ /* the default pair is already linked in <head>, so don't fetch that stylesheet a second time */
+  const head=document.querySelector('link[href^="https://fonts.googleapis.com/css2"]');
+  if(head){const ready=new Promise(res=>{if(head.sheet)res();else{head.addEventListener("load",res);head.addEventListener("error",res);setTimeout(res,4000);}});
+    decodeURIComponent(new URL(head.href).search).replace(/^\?/,"").split("&").filter(x=>x.startsWith("family=")).forEach(x=>{const g=x.slice(7);loadedFonts.add(g);fontCss.set(g,ready);});}
+}
 function loadFonts(list){
   const need=list.filter(g=>g&&!loadedFonts.has(g));if(!need.length)return;
   need.forEach(g=>loadedFonts.add(g));
@@ -3865,6 +3884,11 @@ async function acInit(){
     try{const r=await fetch("/digital-dash-config.js",{cache:"no-store"});const t=r.ok?await r.text():"";const m=t.match(/^window\.DASH_CONFIG=(\{.*\});?\s*$/s);if(m)window.DASH_CONFIG=JSON.parse(m[1]);}catch(e){}}
   const cf=window.DASH_CONFIG;
   if(!cf||!cf.supabaseUrl||!cf.supabaseKey){AC.state="unavailable";AC.why="config";acRenderBtn();rmRender();remRender();return;}
+  /* The sign-in library is ~50 KB. Someone who has never signed in and isn't opening a room or a sign-in
+     link doesn't need it for the first paint, so fetch it once the browser is idle. */
+  let hasSession=false;try{hasSession=!!localStorage.getItem("digitaldash.auth");}catch(e){}
+  if(!window.supabase&&!hasSession&&!acAuthHash&&!/[?&]room=/.test(location.search)&&!(lsGet(RMK)||{}).code)
+    await new Promise(r=>"requestIdleCallback" in window?requestIdleCallback(()=>r(),{timeout:2500}):setTimeout(r,1200));
   try{if(!window.supabase)await loadScript(SB_JS);}catch(e){AC.state="unavailable";AC.why="offline";acRenderBtn();return;}
   AC.sb=window.supabase.createClient(cf.supabaseUrl,cf.supabaseKey,{auth:{flowType:"implicit",detectSessionInUrl:false,persistSession:true,autoRefreshToken:true,storageKey:"digitaldash.auth"}});
   AC.state="out";remRender();
@@ -4379,6 +4403,70 @@ $("#rem-panel").addEventListener("change",e=>{
   save();remSync();
 });
 
+/* ---------- welcome tour and example data ----------
+   Shown once on a first visit (no saved data yet), and again from Themes, Your data. Example data is
+   tagged demo:true so it can be removed in one go without touching anything you added yourself. */
+const TOUR=[
+  {t:"Welcome to Digital Dash",b:"A calm home for studying: a clock that keeps you moving, a task list that plans itself, and a week review that shows your progress.",ic:'<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/>'},
+  {t:"Focus",b:"Pick a timer, choose what you're working on, and add study music or rain. Finished sessions are logged by course. Study rooms let friends focus with you.",ic:'<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>'},
+  {t:"Tasks that plan themselves",b:"Type naturally, like “gym every mon wed fri 6pm” or “lab report friday high”. Add checklists, or let the AI break a task into steps and plan your week.",ic:'<path d="M10 6h10M10 12h10M10 18h10"/><path d="m3 6 1.5 1.5L7 5M3 12l1.5 1.5L7 11M3 18l1.5 1.5L7 17"/>'},
+  {t:"Press Ctrl K or ⌘K anywhere",b:"The command bar adds tasks, starts timers, plays sounds and jumps between pages. Make it yours in Themes: colours, fonts, liquid glass and live backgrounds.",ic:'<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>'}
+];
+let tourStep=0;
+function tourOpen(){tourStep=0;tourRender();const d=$("#tour");try{d.showModal();}catch(e){d.setAttribute("open","");}}
+function tourRender(){
+  const st=TOUR[tourStep],last=tourStep===TOUR.length-1,hasDemo=S.tasks.some(t=>t.demo);
+  $("#tour-body").innerHTML=`<div class="tour-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${st.ic}</svg></div>
+    <h2 id="tour-h">${st.t}</h2><p class="tour-b">${st.b}</p>
+    <div class="tour-dots" aria-hidden="true">${TOUR.map((_,i)=>`<i class="${i===tourStep?"on":""}"></i>`).join("")}</div>
+    <p class="sr-only">Step ${tourStep+1} of ${TOUR.length}</p>
+    <div class="tour-act">${last?`${hasDemo?"":`<button type="button" class="btn ghost" data-tour="demo">Load example data</button>`}<button type="button" class="btn" data-tour="done">Start using it</button>`
+      :`<button type="button" class="btn ghost" data-tour="skip">Skip</button><button type="button" class="btn" data-tour="next">Next</button>`}</div>`;
+  if(!rmq.matches)anim($("#tour-body"),[{opacity:.4,transform:"translateX(8px)"},{opacity:1,transform:"none"}],{duration:220,easing:EASE_OUT});
+}
+function tourClose(){S.settings.welcomed=true;save();try{$("#tour").close();}catch(e){}}
+function loadDemo(){
+  const k=n=>dkey(addDays(new Date(),n)),dow=new Date().getDay();
+  const tasks=[
+    {title:"Chem lab report",urg:1,due:k(3),dueTime:"23:59",course:"CHEM 1301",steps:[{t:"Read the lab handout",done:true},{t:"Write the methods section",done:false},{t:"Make the two graphs",done:false},{t:"Proofread and submit",done:false}]},
+    {title:"Problem set 4",urg:2,due:k(5),dueTime:"17:00",course:"ES 1050",rep:{f:"w",n:1,days:[5]}},
+    {title:"Ivey case prep",urg:0,due:k(1),dueTime:"09:00",course:"Ivey"},
+    {title:"Gym",urg:3,due:k(0),dueTime:"18:00",rep:{f:"w",n:1,days:[1,3,5]}},
+    {title:"Email TA about midterm",urg:2,due:k(2)},
+    {title:"Readings for Calc",urg:2,due:k(-3),course:"MATH 1600",done:true,doneAt:Date.now()-3*864e5},
+    {title:"Group project meeting notes",urg:2,due:k(-1),done:true,doneAt:Date.now()-864e5}
+  ].map((t,i)=>Object.assign({id:uid(),done:false,created:Date.now()-i},t,{steps:(t.steps||[]).map(x=>({id:uid(),...x})),demo:true}));
+  const ids=Object.fromEntries(tasks.map(t=>[t.title,t.id]));
+  const events=[{date:k(1),time:"10:30",title:"ES 1050 lecture"},{date:k(2),time:"14:00",title:"Ivey section"},{date:k(4),time:"19:00",title:"Study group"}].map(e=>Object.assign({id:uid(),demo:true},e));
+  S.tasks.push(...tasks);S.events.push(...events);
+  S.sessions=S.sessions||{};S.focusLog=S.focusLog||{};S.focusTags=S.focusTags||[];
+  const plan=[["CHEM 1301","Chem lab report"],["Ivey","Ivey case prep"],["ES 1050","Problem set 4"],["MATH 1600",""]];
+  for(let i=1;i<=12;i++){const d=k(-i),n=[2,3,1,4,2,0,3,2,4,1,2,3][i-1];if(!n)continue;
+    S.sessions[d]=(S.sessions[d]||0)+n;S.focusLog[d]=(S.focusLog[d]||0)+n*1500;
+    for(let j=0;j<n;j++){const [c,t]=plan[(i+j)%plan.length];S.focusTags.push({d,sec:1500,task:t?ids[t]:"",course:c,demo:true});}}
+  if(!S.accounts.length){S.accounts.push({id:uid(),name:"Chequing",kind:"asset",cat:"Cash",value:1850,demo:true},{id:uid(),name:"TFSA",kind:"asset",cat:"Investments",value:6200,demo:true},{id:uid(),name:"Student loan",kind:"debt",cat:"Loan",value:4300,demo:true});
+    S.history=S.history||[];[[-28,3200],[-14,3480],[-1,3750]].forEach(([o,v])=>S.history.push({d:k(o),v,demo:true}));}
+  save();renderAll();renderCourses();renderTimerTag();$("#demo-rm").hidden=false;
+  toast("Example data added. Remove it any time in Themes, Your data.");
+}
+function removeDemo(){
+  const keep=x=>!x.demo;
+  S.tasks=S.tasks.filter(keep);S.events=S.events.filter(keep);S.accounts=S.accounts.filter(keep);S.history=(S.history||[]).filter(keep);
+  const tags=(S.focusTags||[]).filter(x=>x.demo);S.focusTags=(S.focusTags||[]).filter(keep);
+  tags.forEach(x=>{S.sessions[x.d]=Math.max(0,(S.sessions[x.d]||0)-1);S.focusLog[x.d]=Math.max(0,(S.focusLog[x.d]||0)-x.sec);if(!S.sessions[x.d])delete S.sessions[x.d];if(!S.focusLog[x.d])delete S.focusLog[x.d];});
+  save();renderAll();renderCourses();$("#demo-rm").hidden=true;toast("Example data removed");
+}
+$("#tour").addEventListener("click",e=>{
+  const b=e.target.closest("[data-tour]");if(!b)return;const a=b.dataset.tour;
+  if(a==="next"){tourStep++;tourRender();}
+  else if(a==="skip"||a==="done")tourClose();
+  else if(a==="demo"){loadDemo();tourClose();}
+});
+$("#tour").addEventListener("cancel",()=>{S.settings.welcomed=true;save();});
+$("#tour").addEventListener("keydown",e=>{if(e.key==="ArrowRight"&&tourStep<TOUR.length-1){tourStep++;tourRender();}else if(e.key==="ArrowLeft"&&tourStep>0){tourStep--;tourRender();}});
+$("#demo-rm").addEventListener("click",removeDemo);
+$("#tour-again").addEventListener("click",tourOpen);
+
 /* ---------- AI helper ----------
    Calls the dash-ai Supabase Edge Function (supabase/functions/dash-ai), which talks to Claude with the
    API key kept server-side. Needs a signed-in account; each account has a daily request limit.
@@ -4505,6 +4593,8 @@ if(S.settings.bg.type!=="none"&&!S.settings.bg.pal)computePal();
 loop();
 connect();
 acInit();
+$("#demo-rm").hidden=!S.tasks.some(t=>t.demo);
+if(firstRun&&!S.settings.welcomed&&!acAuthHash&&!/[?&]room=/.test(location.href)&&!(lsGet(RMK)||{}).code)setTimeout(()=>{if(!$("#acct-pick").open&&!$("#acct").open)tourOpen();},600); /* not over a sign-in or room link */
 })();
 </script>
 </body>
