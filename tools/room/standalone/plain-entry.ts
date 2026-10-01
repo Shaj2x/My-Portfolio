@@ -1,3 +1,5 @@
+import { RADIO_STATION } from "../../../src/components/room/createAudio";
+import { playlistEmbed } from "../../../src/components/room/playlist";
 import { createPlainRoom, CEILING_TONES, DESK_TONES, LAMP_COLORS, LAMP_DEFAULT, SUNSET_STYLES, type LampSettings, type PlainRoomView } from "../../../src/components/room/createPlainRoom";
 
 const $ = (id: string) => document.getElementById(id)!;
@@ -94,7 +96,46 @@ const showLamp = (s: LampSettings) => {
 let view: PlainRoomView = "photo";
 let lastRoomView: Exclude<PlainRoomView, "binoculars"> = "photo";
 const viewButtons = document.querySelectorAll<HTMLButtonElement>("[data-view]");
+const muteBtn = $("mute") as HTMLButtonElement;
+const onair = $("onair") as HTMLButtonElement;
+const hoverEl = $("hover");
+$("station").textContent = RADIO_STATION.name;
+$("show").textContent = RADIO_STATION.show;
+let muted = false;
+try {
+  muted = localStorage.getItem("portfolio-room-plain:muted") === "1";
+} catch {
+  // not remembered
+}
+const showMuted = () => {
+  muteBtn.textContent = muted ? "Sound off (M)" : "Sound on (M)";
+  try {
+    localStorage.setItem("portfolio-room-plain:muted", muted ? "1" : "0");
+  } catch {
+    // not remembered
+  }
+};
+// a hosted preview can't embed other sites' players, so the speaker links out to the playlist instead
+const playlist = playlistEmbed();
+const playlistLink = $("playlist") as HTMLAnchorElement;
+if (playlist) {
+  playlistLink.href = playlist.open;
+  playlistLink.textContent = `Open my playlist on ${playlist.service}`;
+}
 const room = createPlainRoom($("stage"), {
+  onSpeaker: playlist
+    ? () => {
+        playlistLink.hidden = !playlistLink.hidden;
+        room.setSpeakerPlaying(!playlistLink.hidden);
+      }
+    : undefined,
+  muted,
+  onLightSwitch: () => openPanel(true),
+  onRadioChange: (on) => (onair.hidden = !on),
+  onHover: (label) => {
+    hoverEl.hidden = !label;
+    hoverEl.textContent = label ?? "";
+  },
   initialLamp: lamp,
   onLampChange: showLamp,
   onViewChange: (v) => {
@@ -105,7 +146,11 @@ const room = createPlainRoom($("stage"), {
     $("scoperow").hidden = !scope;
     label.hidden = !scope;
     if (scope) panel.hidden = true;
-    hint.textContent = scope ? "Drag to look around · scroll to zoom · Esc to step back" : "Drag to orbit · scroll to zoom · click any light to switch it (L for the floor lamp) or the binoculars (B)";
+    hint.textContent = scope ? "Drag to look around · scroll to zoom · Esc to step back" : "Drag to orbit · scroll to zoom · click around the room: lights, the speaker, the plushies, the perfume, the controller, the blind, the binoculars (B)";
+    if (scope) {
+      hoverEl.hidden = true;
+      onair.hidden = true;
+    }
     for (const b of viewButtons) b.setAttribute("aria-pressed", String(b.dataset.view === v));
   },
   onScopeTarget: (t) => {
@@ -119,6 +164,14 @@ for (const b of viewButtons) b.addEventListener("click", () => room.setView(b.da
 $("binos").addEventListener("click", () => room.setView("binoculars"));
 $("leave").addEventListener("click", () => room.setView(lastRoomView));
 lampBtn.addEventListener("click", () => room.toggleLamp());
+const toggleMute = () => {
+  muted = !muted;
+  room.setMuted(muted);
+  showMuted();
+};
+muteBtn.addEventListener("click", toggleMute);
+onair.addEventListener("click", () => room.toggleRadio());
+showMuted();
 const openPanel = (open: boolean) => {
   panel.hidden = !open;
   settingsBtn.setAttribute("aria-pressed", String(open));
@@ -135,6 +188,7 @@ window.addEventListener("keydown", (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   const key = e.key.toLowerCase();
   if (key === "l") room.toggleLamp();
+  else if (key === "m") toggleMute();
   else if (key === "b") room.setView(view === "binoculars" ? lastRoomView : "binoculars");
   else if (key === "escape") {
     if (view === "binoculars") room.setView(lastRoomView);

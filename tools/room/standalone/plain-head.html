@@ -13,6 +13,13 @@ body { background: var(--ground); color: var(--ink); font-family: var(--sans); o
 .bar button:hover { color: #fff; }
 button[aria-pressed="true"] { color: var(--amber); border-color: rgba(242,179,107,.4); }
 button:focus-visible, input:focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; }
+#topright { position: fixed; top: calc(16px + env(safe-area-inset-top, 0px)); left: 16px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; z-index: 2; }
+#topright button { font: 500 13px var(--sans); color: var(--ink); background: var(--chip); border: 1px solid rgba(255,255,255,.08); border-radius: 999px; padding: 8px 16px; cursor: pointer; backdrop-filter: blur(8px); text-align: left; }
+#playlist { font: 500 13px var(--sans); color: var(--amber); background: var(--chip); border: 1px solid rgba(242,179,107,.4); border-radius: 999px; padding: 8px 16px; text-decoration: none; backdrop-filter: blur(8px); }
+#onair b { display: block; font-size: 12px; color: var(--amber); }
+#onair span { display: block; font-size: 11px; color: var(--ink-dim); }
+#hover { position: fixed; top: calc(16px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%); margin: 0; padding: 6px 14px; border-radius: 999px; background: rgba(0,0,0,.55); backdrop-filter: blur(8px); font-size: 12px; color: var(--ink); pointer-events: none; white-space: nowrap; max-width: calc(100% - 32px); overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 640px) { #hover { top: auto; bottom: calc(160px + env(safe-area-inset-bottom, 0px)); } }
 .hint { margin: 0; font-size: 12px; color: var(--ink-dim); text-align: center; }
 #label { position: fixed; top: calc(16px + env(safe-area-inset-top, 0px)); right: 16px; left: 16px; text-align: right; pointer-events: none; }
 #label .eyebrow { margin: 0; font: 500 11px var(--mono); letter-spacing: .2em; text-transform: uppercase; color: var(--amber); opacity: .75; }
@@ -35,6 +42,12 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--amber); out
 .swatch i { width: 12px; height: 12px; border-radius: 50%; display: block; }
 </style>
 <div id="stage"></div>
+<div id="topright">
+  <button type="button" id="mute" aria-label="Mute (M)">Sound on</button>
+  <button type="button" id="onair" hidden><b id="station"></b><span id="show"></span></button>
+  <a id="playlist" hidden target="_blank" rel="noopener">Open my playlist</a>
+</div>
+<p id="hover" hidden></p>
 <div id="label" hidden>
   <p class="eyebrow">Western University, London ON</p>
   <h2 id="lname"></h2>
@@ -78,6 +91,6 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--amber); out
   <div class="row" id="scoperow" hidden>
     <button type="button" id="leave">Back to the room (Esc)</button>
   </div>
-  <p class="hint" id="hint">Drag to orbit · scroll to zoom · click any light to switch it (L for the floor lamp) or the binoculars (B)</p>
+  <p class="hint" id="hint">Drag to orbit · scroll to zoom · click around the room: lights, the speaker, the plushies, the perfume, the controller, the blind, the binoculars (B)</p>
 </div>
 <script>

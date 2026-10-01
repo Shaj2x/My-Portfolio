@@ -392,7 +392,9 @@ export function createDecor({ env, rand }: DecorContext) {
   ];
 
   /** the black three-step riser and its bottles, standing on a surface at `at` (its centre) */
+  /** returns each bottle's group, so a click on any of its meshes can spritz it */
   const perfumeShelf = (parent: THREE.Object3D, at: THREE.Vector3) => {
+    const bottles: THREE.Group[] = [];
     const W = 0.44;
     const ROW = 0.055;
     const LIFT = [0.018, 0.075, 0.135, 0.195];
@@ -401,7 +403,7 @@ export function createDecor({ env, rand }: DecorContext) {
     for (let r = 0; r < 4; r++) {
       const zc = zFront - (r + 0.5) * ROW;
       add(parent, new THREE.BoxGeometry(W, LIFT[r], ROW), riser, at.x, at.y + LIFT[r] / 2, zc);
-      for (const b of ROWS[r]) buildBottle(parent, { ...b, x: at.x + b.x }, at.y + LIFT[r], zc);
+      for (const b of ROWS[r]) bottles.push(buildBottle(parent, { ...b, x: at.x + b.x }, at.y + LIFT[r], zc));
     }
     // the copper-domed bottle standing behind the Vintage Radio box, and the black cap behind Breeze
     const behind = new THREE.Group();
@@ -412,6 +414,7 @@ export function createDecor({ env, rand }: DecorContext) {
     behind2.position.set(at.x - 0.16, at.y + LIFT[3] + 0.11, zFront - 3.8 * ROW);
     parent.add(behind2);
     putCap(behind2, { kind: "cyl", r: 0.022, h: 0.02, m: blackCap }, 0);
+    return bottles;
   };
 
   // ---------- window sill: plushies and plants ----------

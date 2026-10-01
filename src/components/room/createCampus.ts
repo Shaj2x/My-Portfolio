@@ -81,6 +81,9 @@ export function createCampus(track: Track, rand: () => number): Campus {
     door?: boolean;
     clock?: number; // y (m from bottom) for a clock face
     bands?: boolean; // brutalist concrete bands (Weldon)
+    purpleEven?: boolean; // floodlit evenly to the top, as UC's tower is
+    belfry?: number; // y (m from bottom) of the base of a pair of tall lit lancet windows
+    slits?: number[]; // heights of small lit slit windows down the middle
   }
 
   // daylight stone: the night colour lifted to sunlit sandstone
@@ -139,9 +142,10 @@ export function createCampus(track: Track, rand: () => number): Campus {
     }
     if (o.purple && !day) {
       const g = ctx.createLinearGradient(0, H, 0, 0);
-      g.addColorStop(0, `rgba(150,70,255,${0.6 * o.purple})`);
-      g.addColorStop(0.55, `rgba(110,50,220,${0.35 * o.purple})`);
-      g.addColorStop(1, `rgba(60,20,140,${0.12 * o.purple})`);
+      const even = o.purpleEven ? 1 : 0;
+      g.addColorStop(0, `rgba(170,80,255,${0.6 * o.purple})`);
+      g.addColorStop(0.55, `rgba(140,60,240,${(0.35 + 0.25 * even) * o.purple})`);
+      g.addColorStop(1, `rgba(${even ? "120,50,220" : "60,20,140"},${(0.12 + 0.33 * even) * o.purple})`);
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, W, H);
     }
@@ -213,6 +217,52 @@ export function createCampus(track: Track, rand: () => number): Campus {
         ctx.stroke();
       }
     }
+
+    const warmGlass = (x: number, yTop: number, w: number, h: number) => {
+      const g = ctx.createLinearGradient(0, yTop, 0, yTop + h);
+      g.addColorStop(0, day ? "#3a4a66" : "#ffe2a8");
+      g.addColorStop(1, day ? "#556583" : "#ffbf6a");
+      ctx.fillStyle = g;
+      ctx.fillRect(x, yTop, w, h);
+    };
+    if (o.belfry !== undefined) {
+      // two tall lancets side by side, with a stone surround, a mullion and a transom
+      const lw = 1.5;
+      const lh = 6.2;
+      for (const cx of [o.w / 2 - 1.1, o.w / 2 + 1.1]) {
+        const x = m(cx - lw / 2);
+        const yTop = H - m(o.belfry + lh);
+        ctx.fillStyle = day ? "#6e6252" : "#2a1f2e";
+        ctx.beginPath();
+        ctx.moveTo(x - m(0.25), H - m(o.belfry - 0.2));
+        ctx.lineTo(x - m(0.25), yTop + m(1.2));
+        ctx.quadraticCurveTo(x - m(0.25), yTop - m(0.35), x + m(lw / 2), yTop - m(0.55));
+        ctx.quadraticCurveTo(x + m(lw + 0.25), yTop - m(0.35), x + m(lw + 0.25), yTop + m(1.2));
+        ctx.lineTo(x + m(lw + 0.25), H - m(o.belfry - 0.2));
+        ctx.fill();
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(x, H - m(o.belfry));
+        ctx.lineTo(x, yTop + m(1.2));
+        ctx.quadraticCurveTo(x, yTop, x + m(lw / 2), yTop - m(0.2));
+        ctx.quadraticCurveTo(x + m(lw), yTop, x + m(lw), yTop + m(1.2));
+        ctx.lineTo(x + m(lw), H - m(o.belfry));
+        ctx.clip();
+        warmGlass(x, yTop - m(0.3), m(lw), m(lh + 0.4));
+        ctx.restore();
+        ctx.strokeStyle = day ? "rgba(60,52,42,0.9)" : "rgba(70,40,30,0.8)";
+        ctx.lineWidth = Math.max(1, m(0.12));
+        ctx.beginPath();
+        ctx.moveTo(x + m(lw / 2), yTop + m(0.6));
+        ctx.lineTo(x + m(lw / 2), H - m(o.belfry));
+        for (const f of [0.45, 0.72]) {
+          ctx.moveTo(x, H - m(o.belfry + lh * f));
+          ctx.lineTo(x + m(lw), H - m(o.belfry + lh * f));
+        }
+        ctx.stroke();
+      }
+    }
+    for (const sy of o.slits ?? []) warmGlass(W / 2 - m(0.18), H - m(sy + 1.3), m(0.36), m(1.3));
 
     if (o.door) {
       // pointed-arch entrance glowing warm at the base of the tower
@@ -546,42 +596,80 @@ export function createCampus(track: Track, rand: () => number): Campus {
   // ---------- University College ----------
 
   const UC = { x: 30, z: -150 };
-  const towerH = 36;
-  const towerW = 8.5;
-  const towerFront = pair({ w: towerW, h: towerH, cols: 2, rows: 5, winW: 1.2, winH: 3.2, bottom: 9, top: 3, arch: true, lit: 0.35, flood: "rgba(255,196,130,0.55)", floodReach: 0.55, purple: 0.7, door: true, stone: "#3d3427" });
-  const towerSide = pair({ w: towerW, h: towerH, cols: 2, rows: 5, winW: 1.2, winH: 3.2, bottom: 9, top: 3, arch: true, lit: 0.25, flood: "rgba(255,196,130,0.4)", floodReach: 0.5, purple: 0.55, stone: "#352d22" });
-  block(towerW, towerH, towerW, UC.x, UC.z + 3, towerFront, towerSide);
+  // The tower: tall and slender, floodlit purple all the way up, a pair of lit lancets in its
+  // belfry, small lit slits below, a corner turret rising above the battlements, and a porch at
+  // its foot with the arched entrance. Built from the photo of UC at dusk.
+  const towerH = 40;
+  const towerW = 8;
+  const tz = UC.z + 3;
+  const towerOpts = { w: towerW, h: towerH, stone: "#3a3030", purple: 1.15, purpleEven: true, flood: "rgba(170,90,255,0.3)", floodReach: 0.9 };
+  const towerFront = pair({ ...towerOpts, belfry: 28.5, slits: [13, 17.5, 22] });
+  const towerSide = pair({ ...towerOpts, stone: "#40362e", belfry: 28.5, slits: [17.5] });
+  block(towerW, towerH, towerW, UC.x, tz, towerFront, towerSide);
   const towerTop = GROUND_Y + towerH;
-  battlements(towerW, towerW, UC.x, towerTop, UC.z + 3, stonePurple);
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) pinnacle(UC.x + sx * (towerW / 2 - 0.3), towerTop, UC.z + 3 + sz * (towerW / 2 - 0.3), 6.5, stonePurple);
-  // flag on the tower
-  const pole = new THREE.Mesh(track(new THREE.CylinderGeometry(0.06, 0.06, 6, 6)), darkMat);
-  pole.position.set(UC.x, towerTop + 3, UC.z + 3);
+  battlements(towerW, towerW, UC.x, towerTop, tz, stonePurple);
+  // a slender pinnacle on the left front corner, a turret on the right
+  pinnacle(UC.x - towerW / 2 + 0.4, towerTop, tz + towerW / 2 - 0.4, 5, stonePurple);
+  pinnacle(UC.x - towerW / 2 + 0.4, towerTop, tz - towerW / 2 + 0.4, 3.5, stonePurple);
+  pinnacle(UC.x + towerW / 2 - 0.4, towerTop, tz - towerW / 2 + 0.4, 3.5, stonePurple);
+  const turretX = UC.x + towerW / 2 - 0.9;
+  const turretZ = tz + towerW / 2 - 0.9;
+  const turret = new THREE.Mesh(track(new THREE.CylinderGeometry(1.5, 1.5, 9, 8)), stonePurple);
+  turret.position.set(turretX, towerTop - 4.5 + 4, turretZ);
+  group.add(turret);
+  const merlonGeo = track(new THREE.BoxGeometry(0.55, 0.8, 0.55));
+  const merlons = new THREE.InstancedMesh(merlonGeo, stonePurple, 8);
+  const mo = new THREE.Object3D();
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    mo.position.set(turretX + Math.cos(a) * 1.45, towerTop + 4 + 0.4, turretZ + Math.sin(a) * 1.45);
+    mo.rotation.y = -a;
+    mo.updateMatrix();
+    merlons.setMatrixAt(i, mo.matrix);
+  }
+  group.add(merlons);
+  // the flag, on its tall pole from the turret
+  const pole = new THREE.Mesh(track(new THREE.CylinderGeometry(0.06, 0.06, 9, 6)), darkMat);
+  pole.position.set(turretX, towerTop + 4 + 4.5, turretZ);
   group.add(pole);
   const flagGeo = track(new THREE.PlaneGeometry(2.6, 1.5, 12, 1));
   flagGeo.translate(1.3, 0, 0);
   const flag = new THREE.Mesh(flagGeo, basic({ color: new THREE.Color(0.5, 0.22, 0.85), side: THREE.DoubleSide }));
-  flag.position.set(UC.x, towerTop + 5.2, UC.z + 3);
+  flag.position.set(turretX, towerTop + 4 + 8.2, turretZ);
   flag.rotation.y = -0.3;
   group.add(flag);
+  // the porch: the arched entrance and a lit window band above it, battlemented
+  const porchW = 7.4;
+  const porchH = 9;
+  const porchFront = pair({ w: porchW, h: porchH, stone: "#3a3030", purple: 1.1, purpleEven: true, door: true, cols: 3, rows: 1, winW: 1.5, winH: 1.8, bottom: 6.4, top: 0.8, lit: 1 });
+  const porchSide = pair({ w: 3, h: porchH, stone: "#40362e", purple: 1.1 });
+  block(porchW, porchH, 3, UC.x, tz + towerW / 2 + 1.5, porchFront, porchSide);
+  battlements(porchW, 3, UC.x, GROUND_Y + porchH, tz + towerW / 2 + 1.5, stonePurple);
 
-  const wingW = 24;
-  const wingH = 14;
-  const wingFront = pair({ w: wingW, h: wingH, cols: 9, rows: 2, winW: 1.1, winH: 2.6, bottom: 2, top: 2.2, arch: true, lit: 0.45, flood: "rgba(255,190,120,0.5)", floodReach: 0.7, stone: "#3a3226" });
-  const wingSide = pair({ w: 13, h: wingH, cols: 4, rows: 2, arch: true, lit: 0.3, flood: "rgba(255,190,120,0.35)", stone: "#30291f" });
-  for (const side of [-1, 1]) {
-    const wx = UC.x + side * (towerW / 2 + wingW / 2);
-    block(wingW, wingH, 13, wx, UC.z, wingFront, wingSide);
-    gable(wingW, 5.5, 13, wx, GROUND_Y + wingH, UC.z, true);
-    // end pavilions with their gable ends facing the lawn
-    const px = UC.x + side * (towerW / 2 + wingW + 4);
-    const pav = pair({ w: 8, h: 16, cols: 2, rows: 3, winW: 1.2, winH: 2.4, bottom: 2, top: 3, arch: true, lit: 0.5, flood: "rgba(255,190,120,0.45)", stone: "#3a3226" });
-    block(8, 16, 16, px, UC.z + 1, pav, wingSide);
-    const gableMat = basic({ map: pav.night, color: new THREE.Color(0.7, 0.7, 0.7) });
-    swaps.push({ mat: gableMat, tex: pav });
-    gable(8, 6, 16, px, GROUND_Y + 16, UC.z + 1, false, gableMat);
-    pinnacle(px - 4, GROUND_Y + 16, UC.z + 9, 3.5, stoneLit);
-    pinnacle(px + 4, GROUND_Y + 16, UC.z + 9, 3.5, stoneLit);
+  // the wings: on the left the great hall, with tall arched windows lit gold and pinnacled
+  // buttresses under a low metal roof; on the right a plainer, lower range of square windows
+  const metalRoof = swapColor(basic({ color: "#2b3036" }), "#2b3036", "#7d8790", "#d6dce3");
+  const hallW = 26;
+  const hallH = 15;
+  const hallFront = pair({ w: hallW, h: hallH, cols: 6, rows: 2, winW: 2.2, winH: 4.2, bottom: 1.6, top: 1.6, arch: true, lit: 0.95, flood: "rgba(255,190,120,0.35)", floodReach: 0.5, stone: "#3d352b" });
+  const hallSide = pair({ w: 13, h: hallH, cols: 3, rows: 2, winW: 2, winH: 4, arch: true, lit: 0.8, stone: "#352e25" });
+  const hallX = UC.x - towerW / 2 - hallW / 2;
+  block(hallW, hallH, 13, hallX, UC.z, hallFront, hallSide);
+  gable(hallW, 2.6, 13, hallX, GROUND_Y + hallH, UC.z, true, metalRoof);
+  for (let i = 0; i <= 6; i++) pinnacle(hallX - hallW / 2 + (i / 6) * hallW, GROUND_Y + hallH, UC.z + 6.6, 2.8, stoneLit);
+  const rangeW = 26;
+  const rangeH = 12;
+  const rangeFront = pair({ w: rangeW, h: rangeH, cols: 9, rows: 3, winW: 1.1, winH: 1.9, bottom: 1.4, top: 1.2, lit: 0.55, flood: "rgba(255,190,120,0.3)", floodReach: 0.5, stone: "#3a3226" });
+  const rangeSide = pair({ w: 12, h: rangeH, cols: 4, rows: 3, winW: 1.1, winH: 1.9, lit: 0.4, stone: "#30291f" });
+  const rangeX = UC.x + towerW / 2 + rangeW / 2;
+  block(rangeW, rangeH, 12, rangeX, UC.z - 0.5, rangeFront, rangeSide);
+  battlements(rangeW, 12, rangeX, GROUND_Y + rangeH, UC.z - 0.5, stoneLit);
+  // a projecting bay at the far end of each range, as in the photo
+  for (const [side, h] of [[-1, hallH + 1], [1, rangeH + 1]] as const) {
+    const px = UC.x + side * (towerW / 2 + 26 + 4);
+    const pav = pair({ w: 8, h, cols: 2, rows: 3, winW: 1.2, winH: 2.2, bottom: 1.6, top: 2, arch: side < 0, lit: 0.5, flood: "rgba(255,190,120,0.35)", stone: "#3a3226" });
+    block(8, h, 16, px, UC.z + 1, pav, side < 0 ? hallSide : rangeSide);
+    battlements(8, 16, px, GROUND_Y + h, UC.z + 1, stoneLit);
   }
 
   // ---------- Middlesex College ----------

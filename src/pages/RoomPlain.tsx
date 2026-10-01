@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Binoculars, Lightbulb, LightbulbOff, SlidersHorizontal, X } from "lucide-react";
+import { ArrowLeft, Binoculars, Lightbulb, LightbulbOff, Radio, SlidersHorizontal, Volume2, VolumeX, X } from "lucide-react";
+import { RADIO_STATION } from "@/components/room/createAudio";
+import { playlistEmbed } from "@/components/room/playlist";
+
+// the desk speaker plays this playlist when one is set in playlist.ts; otherwise the built-in lo-fi radio
+const playlist = playlistEmbed();
 import {
   createPlainRoom,
   CEILING_TONES,
@@ -52,6 +57,17 @@ const RoomPlain = () => {
   const [lamp, setLamp] = useState<LampSettings>(loadLamp);
   const [panelOpen, setPanelOpen] = useState(false);
   const [target, setTarget] = useState<{ name: string; detail: string } | null>(null);
+  const [hover, setHover] = useState<string | null>(null);
+  const [radioOn, setRadioOn] = useState(false);
+  const [muted, setMuted] = useState(() => {
+    try {
+      return localStorage.getItem("portfolio-room-plain:muted") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const mutedRef = useRef(muted);
+  const [playerOpen, setPlayerOpen] = useState(false);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -68,6 +84,11 @@ const RoomPlain = () => {
           setView(v);
         },
         onScopeTarget: setTarget,
+        onLightSwitch: () => setPanelOpen(true),
+        onRadioChange: setRadioOn,
+        onSpeaker: playlist ? () => setPlayerOpen((o) => !o) : undefined,
+        onHover: setHover,
+        muted: mutedRef.current,
       });
     } catch (e) {
       console.error("Failed to start the room:", e);
@@ -77,6 +98,7 @@ const RoomPlain = () => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       const key = e.key.toLowerCase();
       if (key === "l") roomRef.current?.toggleLamp();
+      else if (key === "m") setMuted((m) => !m);
       else if (key === "b") roomRef.current?.setView(viewRef.current === "binoculars" ? lastRoomView.current : "binoculars");
       else if (key === "escape") {
         if (viewRef.current === "binoculars") roomRef.current?.setView(lastRoomView.current);
@@ -91,6 +113,18 @@ const RoomPlain = () => {
     };
   }, []);
 
+  useEffect(() => {
+    mutedRef.current = muted;
+    roomRef.current?.setMuted(muted);
+    try {
+      localStorage.setItem("portfolio-room-plain:muted", muted ? "1" : "0");
+    } catch {
+      // not remembered
+    }
+  }, [muted]);
+
+  useEffect(() => roomRef.current?.setSpeakerPlaying(playerOpen), [playerOpen]);
+
   const inBinoculars = view === "binoculars";
 
   return (
@@ -102,6 +136,20 @@ const RoomPlain = () => {
         <Link to="/" className={chip}>
           <ArrowLeft className="h-4 w-4" /> Home
         </Link>
+        <div className="flex flex-col items-end gap-2">
+          <button type="button" className={chip} aria-pressed={!muted} aria-label={muted ? "Unmute (M)" : "Mute (M)"} onClick={() => setMuted((m) => !m)}>
+            {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+          </button>
+          {radioOn && !inBinoculars && (
+            <button type="button" className={chip} onClick={() => roomRef.current?.toggleRadio()}>
+              <Radio className="h-4 w-4 text-amber-200" />
+              <span className="text-left">
+                <span className="block text-xs font-medium">{RADIO_STATION.name}</span>
+                <span className="block text-[11px] text-white/55">{RADIO_STATION.show}</span>
+              </span>
+            </button>
+          )}
+        </div>
         {inBinoculars && (
           <div className="min-w-0 text-right" aria-live="polite">
             <p className="text-xs uppercase tracking-[0.2em] text-amber-200/70">Western University, London ON</p>
@@ -115,6 +163,21 @@ const RoomPlain = () => {
         )}
       </div>
 
+      {playlist && playerOpen && (
+        // kept mounted while open so the music carries on when the lights panel or binoculars are used
+        <div className="pointer-events-auto absolute left-4 top-20 w-[min(360px,calc(100%-32px))] overflow-hidden rounded-2xl border border-white/10 bg-black/70 backdrop-blur-xl">
+          <div className="flex items-center justify-between px-4 py-2.5">
+            <p className="text-xs uppercase tracking-[0.18em] text-amber-200/70">Desk speaker · {playlist.service}</p>
+            <button type="button" aria-label="Close the player" className="rounded-full p-1.5 text-white/60 hover:bg-white/10 hover:text-white" onClick={() => setPlayerOpen(false)}>
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <iframe title={`My playlist on ${playlist.service}`} src={playlist.embed} className="block h-[352px] w-full border-0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" />
+        </div>
+      )}
+      {hover && !inBinoculars && (
+        <p className="pointer-events-none absolute left-1/2 top-4 -translate-x-1/2 rounded-full bg-black/55 px-4 py-1.5 text-xs text-white/85 backdrop-blur-md">{hover}</p>
+      )}
       {panelOpen && !inBinoculars && (
         <div className="pointer-events-auto absolute bottom-36 right-4 max-h-[calc(100%-13rem)] w-[min(320px,calc(100%-32px))] overflow-y-auto overscroll-contain rounded-2xl border border-white/10 bg-black/70 p-5 backdrop-blur-xl">
           <div className="mb-4 flex items-center justify-between">
@@ -258,7 +321,7 @@ const RoomPlain = () => {
           )}
         </div>
         <p className="text-xs text-white/50">
-          {inBinoculars ? "Drag to look around · scroll to zoom · Esc to step back" : "Drag to orbit · scroll to zoom · click any light to switch it (L for the floor lamp) or the binoculars (B)"}
+          {inBinoculars ? "Drag to look around · scroll to zoom · Esc to step back" : "Drag to orbit · scroll to zoom · click around the room: lights, the speaker, the plushies, the perfume, the controller, the blind, the binoculars (B)"}
         </p>
       </div>
     </main>

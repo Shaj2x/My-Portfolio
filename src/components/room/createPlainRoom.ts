@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RectAreaLightUniformsLib } from "three/examples/jsm/lights/RectAreaLightUniformsLib.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
+import { createAudio, RADIO_STATION } from "./createAudio";
 import { createCampus } from "./createCampus";
 import { createFurniture, paintTexture } from "./createFurniture";
 import { CLOSET, COLORS, DOOR, HERO, LAYOUT, ROOM, WINDOW } from "./roomLayout";
@@ -99,6 +100,16 @@ export interface PlainRoomOptions {
   onViewChange?: (view: PlainRoomView) => void;
   /** the campus landmark nearest the middle of the binoculars, or null */
   onScopeTarget?: (landmark: { name: string; detail: string } | null) => void;
+  /** the light switch by the door was clicked */
+  onLightSwitch?: () => void;
+  /** the speaker was clicked; when given, this replaces the built-in radio (e.g. to open a playlist player) */
+  onSpeaker?: () => void;
+  /** the speaker's radio was switched */
+  onRadioChange?: (on: boolean) => void;
+  /** the thing under the pointer, named for a hover label, or null */
+  onHover?: (label: string | null) => void;
+  /** start muted */
+  muted?: boolean;
 }
 
 export interface PlainRoomHandle {
@@ -109,6 +120,11 @@ export interface PlainRoomHandle {
   toggleLight: (which: "ceiling" | "sunset" | "desk") => boolean;
   /** change any lamp settings; the light fades to them */
   setLamp: (settings: Partial<LampSettings>) => void;
+  /** play or stop the lo-fi radio on the speaker; returns the new state */
+  toggleRadio: () => boolean;
+  setMuted: (muted: boolean) => void;
+  /** make the speaker pulse as if playing, for music the room can't hear itself (an embedded playlist) */
+  setSpeakerPlaying: (on: boolean) => void;
   dispose: () => void;
 }
 
@@ -236,6 +252,8 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     return group;
   };
 
+  const blindParts: THREE.Object3D[] = [];
+  let setBlind: (k: number) => void = () => {};
   // back wall with the window opening, frame, sill and the blackout blind
   const backWall = wallGroup(new THREE.Vector3(0, 0, back), new THREE.Vector3(0, 0, 1));
   {
@@ -256,11 +274,20 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     backWall.add(glass);
     slab(0.03, y1 - y0, 0.04, winMat, (x0 + x1) / 2, (y0 + y1) / 2, back - t + 0.03, backWall); // mullion
     // blind: cassette at the top, fabric rolled most of the way up
-    const blindH = (y1 - y0) * WINDOW.blindDown;
-    slab(x1 - x0 - 0.02, 0.07, 0.07, new THREE.MeshStandardMaterial({ color: "#ecebe6", roughness: 0.5 }), (x0 + x1) / 2, y1 - 0.035, back - t + 0.09, backWall);
-    const blind = slab(x1 - x0 - 0.05, blindH - 0.07, 0.004, new THREE.MeshStandardMaterial({ color: COLORS.blind, roughness: 0.9 }), (x0 + x1) / 2, y1 - 0.07 - (blindH - 0.07) / 2, back - t + 0.08, backWall);
+    const cassette = slab(x1 - x0 - 0.02, 0.07, 0.07, new THREE.MeshStandardMaterial({ color: "#ecebe6", roughness: 0.5 }), (x0 + x1) / 2, y1 - 0.035, back - t + 0.09, backWall);
+    const blind = slab(x1 - x0 - 0.05, 1, 0.004, new THREE.MeshStandardMaterial({ color: COLORS.blind, roughness: 0.9 }), (x0 + x1) / 2, 0, back - t + 0.08, backWall);
     blind.castShadow = false;
-    slab(x1 - x0 - 0.04, 0.012, 0.02, new THREE.MeshStandardMaterial({ color: "#b9b9b9", roughness: 0.4, metalness: 0.6 }), (x0 + x1) / 2, y1 - blindH, back - t + 0.08, backWall);
+    const blindBar = slab(x1 - x0 - 0.04, 0.012, 0.02, new THREE.MeshStandardMaterial({ color: "#b9b9b9", roughness: 0.4, metalness: 0.6 }), (x0 + x1) / 2, 0, back - t + 0.08, backWall);
+    blindParts.push(cassette, blind, blindBar);
+    /** how far down the blind is, 0 (rolled up) to 1 (closed) */
+    setBlind = (k) => {
+      const len = Math.max(0.002, (y1 - y0) * k - 0.07);
+      blind.scale.y = len;
+      blind.position.y = y1 - 0.07 - len / 2;
+      blind.visible = len > 0.004;
+      blindBar.position.y = y1 - 0.07 - len;
+    };
+    setBlind(WINDOW.blindDown);
     slab(W, 0.1, 0.015, trim, 0, 0.05, back + 0.0075, backWall);
   }
 
@@ -839,20 +866,108 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   // ---------- pointer: click the lamp or the binoculars; drag to aim through the binoculars ----------
   const raycaster = new THREE.Raycaster();
   const ndc = new THREE.Vector2();
-  const pickTarget = (e: PointerEvent): "lamp" | "binoculars" | "ceiling" | "sunset" | "desk" | null => {
+  type Pick =
+    | { kind: "lamp" | "binoculars" | "ceiling" | "sunset" | "desk" | "switch" | "radio" | "console" | "blind" }
+    | { kind: "plushie"; target: (typeof inter.plushies)[number] }
+    | { kind: "perfume"; target: THREE.Group };
+  const inter = furniture.interact;
+  const isIn = (o: THREE.Object3D, root: THREE.Object3D) => {
+    for (let p: THREE.Object3D | null = o; p; p = p.parent) if (p === root) return true;
+    return false;
+  };
+  const LABELS: Record<string, string> = {
+    lamp: "Floor lamp · click to switch",
+    binoculars: "Binoculars · look out at Western",
+    ceiling: "Ceiling light · click to switch",
+    sunset: "Sunset lamp · click to switch",
+    desk: "Desk lamp · click to switch",
+    switch: "Light switch · open the lights",
+    radio: options.onSpeaker ? "Speaker · play my playlist" : `Speaker · ${RADIO_STATION.name}`,
+    console: "DualSense · wake the PS5",
+    blind: "Blind · roll it up or down",
+    perfume: "Spray a fragrance",
+  };
+  const pickTarget = (e: PointerEvent): Pick | null => {
     if (mode !== "room") return null;
     const r = renderer.domElement.getBoundingClientRect();
     ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     raycaster.setFromCamera(ndc, camera);
-    const hit = raycaster.intersectObjects([...furniture.group.children, ...ceilingParts], true).find((h) => (h.object as THREE.Mesh).isMesh && h.object.visible);
+    const hit = raycaster.intersectObjects([...furniture.group.children, ...ceilingParts, ...blindParts], true).find((h) => (h.object as THREE.Mesh).isMesh && h.object.visible);
     if (!hit) return null;
-    if (ceilingParts.includes(hit.object)) return "ceiling";
-    if (sun.parts.includes(hit.object)) return "sunset";
-    if (dk.parts.includes(hit.object)) return "desk";
-    if (furniture.lamp.parts.includes(hit.object)) return "lamp";
-    if (binos.parts.includes(hit.object)) return "binoculars";
+    const o = hit.object;
+    if (ceilingParts.includes(o)) return { kind: "ceiling" };
+    if (blindParts.includes(o)) return { kind: "blind" };
+    if (sun.parts.includes(o)) return { kind: "sunset" };
+    if (dk.parts.includes(o)) return { kind: "desk" };
+    if (furniture.lamp.parts.includes(o)) return { kind: "lamp" };
+    if (binos.parts.includes(o)) return { kind: "binoculars" };
+    if (o === inter.lightSwitch) return { kind: "switch" };
+    if (o === inter.speaker) return { kind: "radio" };
+    if (isIn(o, inter.controller)) return { kind: "console" };
+    const plush = inter.plushies.find((p) => isIn(o, p.group));
+    if (plush) return { kind: "plushie", target: plush };
+    const bottle = inter.bottles.find((g) => isIn(o, g));
+    if (bottle) return { kind: "perfume", target: bottle };
     return null;
   };
+
+  // ---------- sound, the radio, and the small reactions ----------
+  const audio = createAudio();
+  audio.setMuted(options.muted ?? false);
+  audio.setWeather("clear");
+  const unlockAudio = () => audio.unlock();
+  window.addEventListener("pointerdown", unlockAudio);
+  window.addEventListener("keydown", unlockAudio);
+  let radioOn = false;
+  let speakerPlaying = false;
+  const toggleRadio = () => {
+    audio.unlock();
+    audio.click("radio");
+    radioOn = !radioOn;
+    audio.setRadio(radioOn);
+    options.onRadioChange?.(radioOn);
+    return radioOn;
+  };
+  // the PS5: the controller wakes it to the home screen and puts it back to the user picker
+  let consoleOn = false;
+  let consoleLevel = 0;
+  // the blind rolls between nearly up and fully closed
+  let blindTarget = WINDOW.blindDown;
+  let blindLevel = WINDOW.blindDown;
+  // plushies squash and spring back, each on its own clock
+  const bounces = new Map<THREE.Group, number>();
+  // perfume mist: a pool of soft particles, puffed out of whichever bottle was pressed
+  const MIST = 160;
+  const mistPos = new Float32Array(MIST * 3);
+  const mistVel = new Float32Array(MIST * 3);
+  const mistLife = new Float32Array(MIST);
+  const mistGeo = new THREE.BufferGeometry();
+  mistGeo.setAttribute("position", new THREE.BufferAttribute(mistPos, 3));
+  const mistTex = paintTexture(64, 64, (c, w, h) => {
+    const g = c.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
+    g.addColorStop(0, "rgba(255,255,255,0.9)");
+    g.addColorStop(1, "rgba(255,255,255,0)");
+    c.fillStyle = g;
+    c.fillRect(0, 0, w, h);
+  });
+  const mistMat = new THREE.PointsMaterial({ map: mistTex, size: 0.025, transparent: true, opacity: 0.5, depthWrite: false, color: "#fff4e8" });
+  const mist = new THREE.Points(mistGeo, mistMat);
+  mist.frustumCulled = false;
+  scene.add(mist);
+  let mistNext = 0;
+  const spritz = (bottle: THREE.Group) => {
+    const top = new THREE.Box3().setFromObject(bottle);
+    const from = new THREE.Vector3((top.min.x + top.max.x) / 2, top.max.y, (top.min.z + top.max.z) / 2);
+    for (let i = 0; i < 28; i++) {
+      const k = mistNext++ % MIST;
+      mistPos.set([from.x, from.y, from.z], k * 3);
+      // a fan of mist forward and up, toward the room
+      mistVel.set([(Math.random() - 0.5) * 0.25, 0.05 + Math.random() * 0.15, 0.25 + Math.random() * 0.35], k * 3);
+      mistLife[k] = 1;
+    }
+    bounces.set(bottle, 0);
+  };
+
   // a press that drags (orbiting, aiming) isn't a click
   let downAt: { x: number; y: number } | null = null;
   let dragFrom: { x: number; y: number } | null = null;
@@ -860,12 +975,41 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   const onUp = (e: PointerEvent) => {
     if (downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < 6) {
       const hit = pickTarget(e);
-      if (hit === "lamp") toggleLamp();
-      else if (hit === "binoculars") enterBinoculars();
-      else if (hit === "ceiling" || hit === "sunset" || hit === "desk") toggleLight(hit);
+      const kind = hit?.kind;
+      if (kind === "lamp") {
+        audio.click("lamp");
+        toggleLamp();
+      } else if (kind === "binoculars") enterBinoculars();
+      else if (kind === "ceiling" || kind === "sunset" || kind === "desk") {
+        audio.click(kind === "ceiling" ? "switch" : "lamp");
+        toggleLight(kind);
+      } else if (kind === "switch") {
+        audio.click("switch");
+        options.onLightSwitch?.();
+      } else if (kind === "radio") {
+        if (options.onSpeaker) {
+          audio.click("radio");
+          options.onSpeaker();
+        } else toggleRadio();
+      }
+      else if (kind === "console") {
+        consoleOn = !consoleOn;
+        if (consoleOn) audio.play("chime");
+        else audio.click("radio");
+      } else if (kind === "blind") {
+        blindTarget = blindTarget > 0.5 ? WINDOW.blindDown : 1;
+        audio.play("blind");
+      } else if (hit?.kind === "plushie") {
+        bounces.set(hit.target.group, 0);
+        audio.play("squeak");
+      } else if (hit?.kind === "perfume") {
+        spritz(hit.target);
+        audio.play("spritz");
+      }
     }
     downAt = dragFrom = null;
   };
+  let hoverLabel: string | null = null;
   const onMove = (e: PointerEvent) => {
     if (mode === "binoculars") {
       renderer.domElement.style.cursor = e.buttons ? "grabbing" : "grab";
@@ -879,7 +1023,14 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       }
       return;
     }
-    if (!e.buttons) renderer.domElement.style.cursor = pickTarget(e) ? "pointer" : "";
+    if (e.buttons) return;
+    const hit = pickTarget(e);
+    renderer.domElement.style.cursor = hit ? "pointer" : "";
+    const label = !hit ? null : hit.kind === "plushie" ? `${hit.target.name} · give it a squeeze` : LABELS[hit.kind];
+    if (label !== hoverLabel) {
+      hoverLabel = label;
+      options.onHover?.(label);
+    }
   };
   const onWheel = (e: WheelEvent) => {
     if (mode !== "binoculars") return;
@@ -952,6 +1103,49 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       applyLamp();
     }
 
+    // the PS5 screen and light bar, the blind, the plushies' bounce, the perfume mist and the speaker's pulse
+    const consoleTarget = consoleOn ? 1 : 0;
+    if (consoleLevel !== consoleTarget) {
+      consoleLevel += (consoleTarget - consoleLevel) * (reducedMotion ? 1 : 1 - Math.exp(-5 * dt));
+      if (Math.abs(consoleTarget - consoleLevel) < 0.003) consoleLevel = consoleTarget;
+      inter.setConsole(consoleLevel);
+    }
+    if (blindLevel !== blindTarget) {
+      // a roller blind moves at a steady pace, easing only at the ends
+      const dir = Math.sign(blindTarget - blindLevel);
+      blindLevel += dir * Math.min(Math.abs(blindTarget - blindLevel), dt * (reducedMotion ? 99 : 0.9) * (0.35 + Math.min(1, Math.abs(blindTarget - blindLevel) * 6)));
+      setBlind(blindLevel);
+      // light from outside follows how much window is showing
+      moon.intensity = 3 * (1 - blindLevel);
+    }
+    for (const [g, age] of bounces) {
+      const t2 = age + dt;
+      // a quick squash, then a damped spring back to rest
+      const s2 = reducedMotion ? 0 : Math.exp(-t2 * 6) * Math.sin(t2 * 22) * 0.22;
+      g.scale.set(1 + s2 * 0.6, 1 - s2, 1 + s2 * 0.6);
+      if (t2 > 1.2) {
+        g.scale.set(1, 1, 1);
+        bounces.delete(g);
+      } else bounces.set(g, t2);
+    }
+    let mistAlive = false;
+    for (let i = 0; i < MIST; i++) {
+      if (mistLife[i] <= 0) continue;
+      mistAlive = true;
+      mistLife[i] -= dt * 0.8;
+      for (let a = 0; a < 3; a++) {
+        mistPos[i * 3 + a] += mistVel[i * 3 + a] * dt;
+        mistVel[i * 3 + a] *= 1 - dt * 2.2; // drag: the cloud slows and hangs
+      }
+      mistVel[i * 3 + 1] += dt * 0.02;
+      if (mistLife[i] <= 0) mistPos[i * 3 + 1] = -10;
+    }
+    if (mistAlive) mistGeo.attributes.position.needsUpdate = true;
+    mist.visible = mistAlive;
+    // the radio reports its kick drum; an outside player gets a steady 90 bpm beat instead
+    const pulse = Math.max(audio.radioPulse(), speakerPlaying && !reducedMotion ? Math.exp(-((time * 1.5) % 1) * 7) : 0);
+    inter.speaker.scale.set(1 + pulse * 0.04, 1 + pulse * 0.07, 1 + pulse * 0.04);
+
     if (fade) {
       fade.t = Math.min(1, fade.t + dt / 0.5);
       if (!fade.fired && fade.t >= 0.5) {
@@ -1001,6 +1195,9 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     setView,
     toggleLamp,
     toggleLight,
+    toggleRadio,
+    setMuted: (m) => audio.setMuted(m),
+    setSpeakerPlaying: (on) => (speakerPlaying = on),
     setLamp,
     dispose: () => {
       renderer.domElement.removeEventListener("pointerdown", onDown);
@@ -1022,6 +1219,9 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       for (const d of disposables) d.dispose();
       for (const t of sunsetDiscs.values()) t.dispose();
       env.dispose();
+      window.removeEventListener("pointerdown", unlockAudio);
+      window.removeEventListener("keydown", unlockAudio);
+      audio.dispose();
       overlayQuad.geometry.dispose();
       maskMat.dispose();
       renderer.dispose();

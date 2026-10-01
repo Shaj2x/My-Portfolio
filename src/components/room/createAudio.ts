@@ -24,6 +24,8 @@ export interface RoomAudio {
   /** 0..1 how loud the outside is (the telescope puts you "at" the window) */
   setOutside: (amount: number) => void;
   click: (kind: "lamp" | "switch" | "radio") => void;
+  /** small sounds for things in the room: a plushie's squeak, a perfume spritz, the PS5 waking, the blind rolling */
+  play: (kind: "squeak" | "spritz" | "chime" | "blind") => void;
   thunder: (delay: number) => void;
   setRadio: (on: boolean) => void;
   /** 0..1 envelope of the radio's kick drum, for making the dial pulse */
@@ -377,6 +379,30 @@ export function createAudio(): RoomAudio {
       } else {
         burst(at, 0.015, "bandpass", 1800, 0.3, sfx, 2);
         tone(at, 90, 0.05, 0.25, sfx);
+      }
+    },
+    play: (kind) => {
+      if (!ctx) return;
+      const at = ctx.currentTime + 0.005;
+      if (kind === "squeak") {
+        // a soft squeeze: a rising then falling chirp, slightly different each time
+        const base = 700 + Math.random() * 300;
+        tone(at, base, 0.09, 0.12, sfx, "triangle", base * 1.6);
+        tone(at + 0.09, base * 1.5, 0.12, 0.1, sfx, "triangle", base * 0.9);
+        burst(at, 0.05, "bandpass", 1200, 0.05, sfx, 1.5);
+      } else if (kind === "spritz") {
+        // the pump's click, then a short hiss of mist
+        burst(at, 0.01, "highpass", 3000, 0.25, sfx);
+        burst(at + 0.02, 0.22, "highpass", 6000, 0.22, sfx, 0.6);
+      } else if (kind === "chime") {
+        // a gentle two-note console chime
+        tone(at, midiHz(76), 0.5, 0.12, sfx, "sine");
+        tone(at + 0.12, midiHz(83), 0.7, 0.1, sfx, "sine");
+        tone(at + 0.12, midiHz(88), 0.7, 0.04, sfx, "sine");
+      } else {
+        // the blind's chain rattling over its roller
+        for (let i = 0; i < 9; i++) burst(at + i * 0.07, 0.012, "bandpass", 2600 + Math.random() * 800, 0.08, sfx, 3);
+        burst(at, 0.6, "lowpass", 300, 0.06, sfx);
       }
     },
     thunder: (delay) => {

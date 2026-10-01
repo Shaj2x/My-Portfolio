@@ -29,6 +29,18 @@ export interface FurnitureHandle {
   binoculars: { position: THREE.Vector3; direction: THREE.Vector3; parts: THREE.Object3D[] };
   /** the ring desk lamp: its head, where it shines, its meshes, and its glow (0 off) in a colour */
   deskLamp: { head: THREE.Vector3; target: THREE.Vector3; parts: THREE.Object3D[]; setGlow: (k: number, color: THREE.Color) => void };
+  /** things that react when clicked */
+  interact: {
+    /** plushies: each a group whose origin is its base, for squash-and-bounce */
+    plushies: { name: string; group: THREE.Group }[];
+    /** perfume bottles, each a group with its base at the origin */
+    bottles: THREE.Group[];
+    speaker: THREE.Mesh;
+    controller: THREE.Group;
+    lightSwitch: THREE.Mesh;
+    /** 0 = the PlayStation "who's using this controller" screen, 1 = signed in to the home screen */
+    setConsole: (k: number) => void;
+  };
   /** the sunset lamp on the desk: where its lens is, the point on the wall it projects onto, its meshes, and its lens glow (0–1) */
   sunset: { lens: THREE.Vector3; target: THREE.Vector3; parts: THREE.Object3D[]; setGlow: (k: number) => void };
   /** centre and facing of each glowing screen, for area lights */
@@ -94,6 +106,12 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
   const screens: FurnitureHandle["screens"] = [];
 
   const decor = createDecor({ env, rand: rnd });
+  let bottles: THREE.Group[] = [];
+  let speaker!: THREE.Mesh;
+  let controller!: THREE.Group;
+  let lightSwitch!: THREE.Mesh;
+  let setConsole: (k: number) => void = () => {};
+  const psBars: THREE.MeshBasicMaterial[] = [];
 
   // ---------- bed ----------
   {
@@ -260,7 +278,7 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     const top = unitH * 2;
 
     const pf = LAYOUT.perfume.pos;
-    decor.perfumeShelf(group, new THREE.Vector3(pf[0], top, pf[2]));
+    bottles = decor.perfumeShelf(group, new THREE.Vector3(pf[0], top, pf[2]));
 
     // LED pillar candle: a soft-edged ivory block with a dipped top, then the everyday clutter
     const cd = LAYOUT.candle.pos;
@@ -432,7 +450,77 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
       c.lineWidth = 2;
       c.stroke();
     });
-    const screen = new THREE.Mesh(bend(new THREE.PlaneGeometry(w, h, 32, 1), 0), new THREE.MeshBasicMaterial({ map: ps5, toneMapped: false }));
+    // signed in: the PS5 home screen, a row of game tiles over a dark blue wash
+    const home = paintTexture(1024, 600, (c, cw, ch) => {
+      const g2 = c.createLinearGradient(0, 0, 0, ch);
+      g2.addColorStop(0, "#0c1a3a");
+      g2.addColorStop(1, "#040a1c");
+      c.fillStyle = g2;
+      c.fillRect(0, 0, cw, ch);
+      // the hero art of the selected game: a warm city at dusk
+      const art = c.createLinearGradient(0, 230, 0, ch);
+      art.addColorStop(0, "#c2512a");
+      art.addColorStop(0.5, "#5a1f3a");
+      art.addColorStop(1, "#0a0d1e");
+      c.fillStyle = art;
+      c.fillRect(0, 230, cw, ch - 230);
+      c.fillStyle = "#0b0d16";
+      let x = 0;
+      while (x < cw) {
+        const bw = 30 + Math.random() * 70;
+        const bh = 60 + Math.random() * 180;
+        c.fillRect(x, ch - bh, bw, bh);
+        x += bw + 4;
+      }
+      // top bar: Games / Media, and the time
+      c.fillStyle = "#fff";
+      c.font = "600 26px system-ui, sans-serif";
+      c.fillText("Games", 60, 56);
+      c.fillStyle = "rgba(255,255,255,0.6)";
+      c.fillText("Media", 170, 56);
+      c.textAlign = "right";
+      c.fillText("3:46", cw - 60, 56);
+      c.textAlign = "left";
+      // the tile row, the first one selected and larger
+      const tiles = ["#d23a3a", "#2f6fd6", "#e3b23c", "#3aa66b", "#8a4fd6", "#e0e0e0", "#d6602f"];
+      tiles.forEach((col, i) => {
+        const size = i === 0 ? 120 : 92;
+        const tx = 60 + (i === 0 ? 0 : 140 + (i - 1) * 104);
+        const ty = i === 0 ? 92 : 106;
+        c.fillStyle = col;
+        c.beginPath();
+        c.roundRect(tx, ty, size, size, 14);
+        c.fill();
+        if (i === 0) {
+          c.strokeStyle = "#fff";
+          c.lineWidth = 4;
+          c.stroke();
+        }
+      });
+      c.fillStyle = "#fff";
+      c.font = "700 44px system-ui, sans-serif";
+      c.fillText("Marvel's Spider-Man 2", 60, 300);
+      c.fillStyle = "rgba(255,255,255,0.9)";
+      c.beginPath();
+      c.roundRect(60, 330, 150, 52, 26);
+      c.fill();
+      c.fillStyle = "#111";
+      c.font = "600 24px system-ui, sans-serif";
+      c.fillText("Play", 108, 364);
+    });
+    const screenMat = new THREE.MeshBasicMaterial({ map: ps5, toneMapped: false });
+    const screen = new THREE.Mesh(bend(new THREE.PlaneGeometry(w, h, 32, 1), 0), screenMat);
+    const homeMat = new THREE.MeshBasicMaterial({ map: home, toneMapped: false, transparent: true, opacity: 0, depthWrite: false });
+    const homeScreen = new THREE.Mesh(bend(new THREE.PlaneGeometry(w, h, 32, 1), 0.0006), homeMat);
+    homeScreen.position.y = screenY;
+    g.add(homeScreen);
+    const BAR_IDLE = new THREE.Color("#3a6bff").multiplyScalar(1.8);
+    const BAR_ON = new THREE.Color("#ffffff").multiplyScalar(1.6);
+    setConsole = (k) => {
+      homeMat.opacity = k;
+      homeScreen.visible = k > 0.001;
+      for (const m of psBars) m.color.copy(BAR_IDLE).lerp(BAR_ON, k);
+    };
     screen.position.y = screenY;
     g.add(screen);
     const shell = new THREE.Mesh(bend(new THREE.PlaneGeometry(w + 0.02, h + 0.02, 32, 1), -0.004), new THREE.MeshStandardMaterial({ color: "#141416", roughness: 0.5, side: THREE.DoubleSide }));
@@ -549,6 +637,7 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     // Local axes: x across, +z toward the handles (and the chair), y up.
     const ct = LAYOUT.controller.pos;
     const cg = anchor(ct[0], deskTop, ct[2], facing + 0.25);
+    controller = cg;
     const dsWhite = std("#f3f3f1", 0.42);
     const dsBlack = std("#17171a", 0.5);
     const dsGrey = std("#3a3b40", 0.45);
@@ -635,6 +724,7 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
 
     const sp = LAYOUT.speaker.pos;
     const spk = rounded(0.2, 0.08, 0.07, 0.03, std("#1a1a1a", 0.8), sp[0], deskTop + 0.04, sp[2]);
+    speaker = spk;
     spk.rotation.y = facing;
     // the sunset lamp: a black ball head on a short stand, its lens aimed at the wall over the bed
     const ss = LAYOUT.sunsetLamp.pos;
@@ -684,6 +774,7 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     const panelGeo = new THREE.ExtrudeGeometry(panel, { depth: 0.012, bevelEnabled: true, bevelThickness: 0.004, bevelSize: 0.004, bevelSegments: 3, curveSegments: 16 });
     const whitePanel = std("#f4f4f2", 0.3);
     const glowBlue = new THREE.MeshBasicMaterial({ color: new THREE.Color("#3a6bff").multiplyScalar(1.8), toneMapped: false });
+    psBars.push(glowBlue);
     for (const sgn of [-1, 1]) {
       const m = new THREE.Mesh(panelGeo, whitePanel);
       // shape x runs along depth (z), shape y is height; the panel sits just outside the core, bowed slightly outward
@@ -767,6 +858,7 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
 
   // ---------- window sill: plants, plushies and the binoculars ----------
   const binocularParts: THREE.Object3D[] = [];
+  const plushies: FurnitureHandle["interact"]["plushies"] = [];
   let binoculars: FurnitureHandle["binoculars"] = { position: new THREE.Vector3(), direction: new THREE.Vector3(0, 0, -1), parts: binocularParts };
   {
     const y = WINDOW.y0;
@@ -775,10 +867,15 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
       const x = item.x;
       const at = new THREE.Vector3(x, y, z);
       if (item.kind === "plant") decor.plant(group, at);
-      else if (item.kind === "cow") decor.cow(group, at);
-      else if (item.kind === "spiderHam") decor.spiderHam(group, at);
-      else if (item.kind === "cat") decor.cryingCat(group, at);
-      else if (item.kind === "bird") decor.bird(group, at);
+      else if (item.kind === "cow" || item.kind === "spiderHam" || item.kind === "cat" || item.kind === "bird") {
+        // each plushie lives in its own group with its base at the origin, so it can squash and bounce
+        const pg = new THREE.Group();
+        pg.position.copy(at);
+        group.add(pg);
+        const build = { cow: decor.cow, spiderHam: decor.spiderHam, cat: decor.cryingCat, bird: decor.bird }[item.kind];
+        build(pg, new THREE.Vector3());
+        plushies.push({ name: { cow: "Chick-fil-A cow", spiderHam: "Spider-Ham", cat: "Crying cat", bird: "Blue jay" }[item.kind], group: pg });
+      }
       else if (item.kind === "binoculars") {
         // two black barrels joined by a hinge bridge, eyecups toward the room, looking out of the window
         const body = std("#1b1c1e", 0.55);
@@ -828,8 +925,10 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
       }
     }
     const sw = LAYOUT.lightSwitch.pos;
-    block(0.01, 0.12, 0.075, white, sw[0] + 0.005, sw[1], sw[2], group, false);
+    lightSwitch = block(0.01, 0.12, 0.075, white, sw[0] + 0.005, sw[1], sw[2], group, false);
+    // the rocker
+    block(0.008, 0.035, 0.016, std("#f6f5f2", 0.4), sw[0] + 0.012, sw[1], sw[2], group, false);
   }
 
-  return { group, lamp, binoculars, sunset, deskLamp, screens };
+  return { group, lamp, binoculars, sunset, deskLamp, screens, interact: { plushies, bottles, speaker, controller, lightSwitch, setConsole } };
 }
