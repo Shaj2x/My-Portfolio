@@ -980,6 +980,7 @@ html.lg .cal-list li{background:var(--glass-tint)}
 .ac-dot{width:10px;height:10px;border-radius:50%;flex:none;margin:0 4px}
 .ac-empty{font-size:13px}
 .ac-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-top:4px;border-top:1px solid var(--line);padding-top:14px}
+.ac-priv{margin:0;font-size:12.5px;line-height:1.5;color:var(--muted)}
 .ac-clear{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);cursor:pointer}
 .ac-danger{font-size:13.5px;display:grid;gap:10px}
 .linkish{background:none;border:0;padding:0;color:var(--bad);font:inherit;font-size:13px;text-decoration:underline;cursor:pointer;justify-self:start}
@@ -3840,6 +3841,20 @@ const acBlank=()=>!S.tasks.length&&!S.events.length&&!S.accounts.length&&!(S.pre
 function acCounts(d){const t=d.tasks||[];return [[t.filter(x=>!x.done).length,"open task"],[t.filter(x=>x.done).length,"done task"],[(d.presets||[]).length,"preset"],[(d.events||[]).length,"event"],[(d.accounts||[]).length,"money account"]].filter(([n])=>n).map(([n,w])=>`${n} ${w}${n===1?"":"s"}`).join(", ")||"Nothing saved yet";}
 const agoText=t=>{if(!t)return "";const s=(Date.now()-t)/1000;return s<45?"just now":s<3600?Math.round(s/60)+" min ago":s<86400?Math.round(s/3600)+" h ago":new Date(t).toLocaleDateString(undefined,{month:"short",day:"numeric"});};
 
+const ACP="digitaldash.signin"; /* set when this browser asks for a sign-in link or starts Google sign-in */
+const jwtClaims=t=>{try{return JSON.parse(atob(String(t).split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));}catch(e){return {};}};
+function acChoice(title,text,yes,no){ /* small two-button question in the account picker dialog */
+  AC.asking=true;
+  return new Promise(res=>{
+    const d=$("#acct-pick");$("#acct").open&&$("#acct").close();
+    $("#acp-body").innerHTML=`<h2 id="acp-h">${esc(title)}</h2><p class="muted">${esc(text)}</p><div class="ac-row"><button type="button" class="btn" data-pick="yes">${esc(yes)}</button><button type="button" class="btn ghost" data-pick="no">${esc(no)}</button></div>`;
+    const done=v=>{d.removeEventListener("click",onClick);d.removeEventListener("cancel",onCancel);try{d.close();}catch(e){}res(v);};
+    const onClick=e=>{const b=e.target.closest("[data-pick]");if(b){AC.asking=false;done(b.dataset.pick==="yes");}};
+    const onCancel=e=>{e.preventDefault();AC.asking=false;done(false);};
+    d.addEventListener("click",onClick);d.addEventListener("cancel",onCancel);
+    try{d.showModal();}catch(e){d.setAttribute("open","");}
+  });
+}
 function acBoot(){ /* take a sign-in result out of the address bar before the router looks at it */
   if(/access_token=|error_description=|error_code=/.test(location.hash)){acAuthHash=location.hash.slice(1);try{history.replaceState(null,"",location.pathname+location.search);}catch(e){}}
 }
@@ -3855,7 +3870,17 @@ async function acInit(){
   AC.state="out";remRender();
   if(acAuthHash){
     const q=new URLSearchParams(acAuthHash);
-    if(q.get("access_token")){const {error}=await AC.sb.auth.setSession({access_token:q.get("access_token"),refresh_token:q.get("refresh_token")||""});if(error)toast("Couldn't sign you in: "+error.message);}
+    if(q.get("access_token")){
+      /* Only trust a sign-in link this browser asked for. A link someone else sent could sign you into
+         their account and copy your data to it, so anything else needs a clear yes first. */
+      const pend=lsGet(ACP),fresh=pend&&Date.now()-pend.at<2*3600e3,email=jwtClaims(q.get("access_token")).email||"an account";
+      const cur=(await AC.sb.auth.getSession()).data.session;
+      let ok=fresh&&!cur;
+      if(!ok)ok=await acChoice(cur?"Switch accounts?":"Finish signing in?",cur?`This link signs you in as ${email} instead of ${cur.user.email||"your current account"}.`:`This link signs you in as ${email}. Only continue if you just asked for a sign-in link yourself.`,`Sign in as ${email}`,"Cancel");
+      lsSet(ACP,null);
+      if(ok){const {error}=await AC.sb.auth.setSession({access_token:q.get("access_token"),refresh_token:q.get("refresh_token")||""});if(error)toast("Couldn't sign you in: "+error.message);}
+      else toast("Sign-in cancelled");
+    }
     else{const why=(q.get("error_description")||"").replace(/\+/g," ");toast(/provider is not enabled/i.test(why)?"Google sign-in isn't turned on for this site yet. Use the email link instead.":/expired|invalid/i.test(why)?"That sign-in link has expired. Ask for a new one.":"Sign-in didn't work: "+why);setTimeout(acOpen,400);}
   }
   AC.sb.auth.onAuthStateChange((ev,session)=>{ /* never await Supabase inside this callback */
@@ -3869,7 +3894,7 @@ async function acInit(){
   acRenderBtn();
 }
 function acDirty(){
-  if(!AC||!AC.user||AC.applying)return;
+  if(!AC||!AC.user||AC.applying||AC.asking)return; /* nothing syncs while a sign-in question is open */
   acSetMeta({uid:AC.user.id,dirty:true});AC.state="saving";acRenderBtn();
   clearTimeout(AC.timer);AC.timer=setTimeout(()=>acPush(),1200);
 }
@@ -3879,7 +3904,13 @@ async function acSignedIn(){
   const {data:row,error}=await AC.sb.from("dash_state").select("data,rev,device,updated_at").eq("user_id",uid).maybeSingle();
   if(error){AC.state="error";AC.err=/relation|does not exist|schema cache|not find/i.test(error.message)?"Cloud saving isn't set up on this site yet. The Supabase database setup (dash_state) needs to be run once.":error.message;setSync("Saved on this device");acRenderBtn();acRenderDlg();return;}
   const m=acMeta(),same=m.uid===uid;
-  if(!row){AC.rev=0;await acPush(true);acUploadImages();return;}
+  if(!row){
+    if(!same&&!acBlank()){
+      const email=AC.user.email||"this account";
+      const copy=await acChoice("Copy this device's data?",`Your account ${email} is empty. Copy what's on this device into it (${acCounts(S)})?`,"Copy to my account","Not now");
+      if(!copy){try{await AC.sb.auth.signOut();}catch(e){}toast("Signed out. Nothing was copied.");return;}
+    }
+    AC.rev=0;await acPush(true);acUploadImages();return;}
   AC.lastDevice=row.device||"";AC.last=Date.parse(row.updated_at)||0;
   if(same&&row.rev===m.rev){AC.rev=row.rev;if(m.dirty)acPush();else acDone();return;}
   if(same&&!m.dirty){acApply(row);return;}
@@ -3934,7 +3965,7 @@ async function acConflict(){ /* another device saved first: load theirs, offer t
   toast(`Loaded newer changes from ${row.device||"another device"}`,{run(){AC.applying=true;merge(mine);AC.applying=false;renderAll();renderPresets();renderCals();save();}});
 }
 async function acPull(){
-  if(!AC.user||!AC.sb||AC.busy||AC.state==="error")return;
+  if(!AC.user||!AC.sb||AC.busy||AC.asking||AC.state==="error")return;
   const {data,error}=await AC.sb.from("dash_state").select("rev").eq("user_id",AC.user.id).maybeSingle();
   if(error||!data||data.rev<=AC.rev)return;
   if(acMeta().dirty){acConflict();return;}
@@ -3942,6 +3973,7 @@ async function acPull(){
   if(row&&row.rev>AC.rev){acApply(row);toast(`Updated from ${row.device||"your other device"}`);}
 }
 function acAsk(row){ /* both this device and the account have data: let the person choose */
+  AC.asking=true;
   return new Promise(res=>{
     const d=$("#acct-pick");$("#acct").open&&$("#acct").close();
     $("#acp-body").innerHTML=`<h2 id="acp-h">Which version should we keep?</h2>
@@ -3949,7 +3981,7 @@ function acAsk(row){ /* both this device and the account have data: let the pers
       <button type="button" class="acp-opt" data-pick="cloud"><b>Use my account</b><span>${esc(acCounts(row.data))}</span><small>Last saved ${esc(agoText(Date.parse(row.updated_at)))}${row.device?" on "+esc(row.device):""}</small></button>
       <button type="button" class="acp-opt" data-pick="local"><b>Use this device</b><span>${esc(acCounts(S))}</span><small>${esc(deviceName())}</small></button>
       <p class="hint">Not sure? Download a backup of this device first from Account, then choose.</p>`;
-    const done=v=>{d.removeEventListener("click",onClick);d.removeEventListener("cancel",onCancel);try{d.close();}catch(e){}res(v);};
+    const done=v=>{AC.asking=false;d.removeEventListener("click",onClick);d.removeEventListener("cancel",onCancel);try{d.close();}catch(e){}res(v);};
     const onClick=e=>{const b=e.target.closest("[data-pick]");if(b)done(b.dataset.pick);};
     const onCancel=e=>{e.preventDefault();}; /* a choice is required */
     d.addEventListener("click",onClick);d.addEventListener("cancel",onCancel);
@@ -3982,12 +4014,14 @@ function acUploadImages(){
 async function acEmail(email){
   email=String(email||"").trim();if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){toast("Enter your email address");return;}
   const btn=$("#ac-email .btn");if(btn)btn.disabled=true;
+  lsSet(ACP,{at:Date.now()});
   const {error}=await AC.sb.auth.signInWithOtp({email,options:{emailRedirectTo:location.origin+location.pathname,shouldCreateUser:true}});
   if(btn)btn.disabled=false;
   if(error){toast(/rate|seconds/i.test(error.message)?"Please wait a minute before asking for another link":"Couldn't send the link: "+error.message);return;}
   AC.sent=email;acRenderDlg();
 }
 async function acGoogle(){
+  lsSet(ACP,{at:Date.now()});
   const {error}=await AC.sb.auth.signInWithOAuth({provider:"google",options:{redirectTo:location.origin+location.pathname}});
   if(error)toast(/not enabled/i.test(error.message)?"Google sign-in isn't turned on for this site yet. Use the email link instead.":"Couldn't start Google sign-in: "+error.message);
 }
@@ -4051,13 +4085,15 @@ function acRenderDlg(){
       <form class="ac-form" id="ac-email" novalidate><label for="ac-em">Email</label><div class="ac-row"><input type="email" id="ac-em" autocomplete="email" placeholder="you@example.com" required><button class="btn" type="submit">Email me a link</button></div></form>
       <div class="ac-or"><span>or</span></div>
       <button type="button" class="btn ghost ac-google" data-ac="google">Continue with Google</button>
-      <p class="hint">No password needed. Without an account, everything keeps saving on this device.</p>`;
+      <p class="hint">No password needed. Without an account, everything keeps saving on this device.</p>
+      <p class="ac-priv">Your account data is stored in this site's database and only you can read it. You can download it or delete the account at any time.</p>`;
     return;
   }
   const name=(u.user_metadata&&(u.user_metadata.full_name||u.user_metadata.name))||"",st={synced:`All changes saved ${agoText(AC.last)}${AC.lastDevice?" · "+esc(AC.lastDevice):""}`,saving:"Saving…",offline:"Offline. Changes are saved on this device and will sync when you're back online.",error:esc(AC.err||"Not syncing right now")}[AC.state]||"";
   body.innerHTML=`<div class="ac-hero"><span class="av big">${$("#acct-av").innerHTML}</span><div><b>${esc(name||u.email||"Signed in")}</b>${name?`<span class="muted">${esc(u.email||"")}</span>`:""}<p class="ac-st" data-s="${AC.state}"><i></i>${st}</p></div></div>
     ${AC.state==="error"?"":acItems()}
     <div class="ac-actions"><button type="button" class="btn ghost small" data-ac="backup">Download backup</button><button type="button" class="btn ghost small" data-ac="signout">Sign out</button><label class="ac-clear"><input type="checkbox" id="ac-clear"> Also remove my data from this device</label></div>
+    <p class="ac-priv">Only you can read your saved data. The AI helper sends task titles, due dates and upcoming event titles to Anthropic's AI only when you use it. Reminders go through your browser's push service.</p>
     <div class="ac-danger">${AC.confirmDel?`<p><b>Delete your account?</b> This removes your saved data and photos from the cloud for good. What's on this device stays until you erase it.</p><div class="ac-row"><button type="button" class="btn danger" id="ac-del-go" data-ac="del-go">Delete my account</button><button type="button" class="btn ghost small" data-ac="del-no">Cancel</button></div>`:`<button type="button" class="linkish" data-ac="del">Delete account</button>`}</div>`;
 }
 function acOpen(){const d=$("#acct");if(d.open)return;AC.confirmDel=false;if(!AC.user&&AC.state!=="unavailable")AC.sent=AC.sent||"";try{d.showModal();}catch(e){d.setAttribute("open","");}acRenderDlg();const f=d.querySelector("#ac-em")||d.querySelector("#acd-x");if(f)f.focus();}
@@ -4105,6 +4141,17 @@ function rmState(){
   return {id:RM.me.id,name:RM.me.name,status:kind,ends:running?T.end:0,len:running?T.len:0,task:RM.share&&running&&kind==="focus"&&nt?nt.title.slice(0,60):"",group:RM.group};
 }
 function rmPush(){if(!RM.ch)return;const st=rmState();const sig=JSON.stringify(st);if(sig===RM.sig)return;RM.sig=sig;RM.ch.track(st).catch(()=>{});}
+/* Everything from other people in a room is untrusted: keep only known fields, as plain values. */
+const rmStr=(v,n)=>String(v==null?"":v).slice(0,n);
+const rmNum=v=>{const x=Number(v);return Number.isFinite(x)?x:0;};
+function rmCleanGroup(g){
+  if(!g||typeof g!=="object")return null;
+  return {kind:g.kind==="break"?"break":"focus",len:Math.min(36000,Math.max(60,rmNum(g.len))),ends:rmNum(g.ends),started:rmNum(g.started),by:rmStr(g.by,64),name:rmStr(g.name,24),stop:g.stop===true};
+}
+function rmCleanPeer(p){
+  if(!p||typeof p!=="object")return null;
+  return {id:rmStr(p.id,64),name:rmStr(p.name,24),status:p.status==="focus"||p.status==="break"?p.status:"idle",ends:rmNum(p.ends),len:rmNum(p.len),task:rmStr(p.task,60),group:rmCleanGroup(p.group)};
+}
 function rmJoin(code){
   code=rmClean(code);if(code.length!==6){toast("Room codes are 6 letters and numbers");return;}
   if(!AC.sb){toast("Study rooms need the account service, which isn't connected here");return;}
@@ -4118,16 +4165,16 @@ function rmJoin(code){
     rmFollow();
   };
   ch.on("presence",{event:"sync"},()=>{
-    const st=ch.presenceState();RM.peers=Object.values(st).map(metas=>metas[metas.length-1]).filter(Boolean);
+    const st=ch.presenceState();RM.peers=Object.values(st).map(metas=>rmCleanPeer(metas[metas.length-1])).filter(Boolean);
     gotGroup(RM.peers.map(p=>p.group).filter(Boolean).sort((a,b)=>b.started-a.started)[0],Date.now()-RM.joined>3000);
     rmRender();
   });
-  ch.on("broadcast",{event:"group"},({payload})=>{
-    if(!payload)return;
+  ch.on("broadcast",{event:"group"},({payload:raw})=>{
+    const payload=rmCleanGroup(raw);if(!payload)return;
     if(payload.stop){if(RM.group&&RM.group.started===payload.started){RM.group=null;if(T.id==="room"){T.running=false;T.left=T.len;updTimer();jbTimerSync();}toast(`${payload.name||"Someone"} ended the room timer`);}rmPush();rmRender();return;}
     gotGroup(payload,true);rmPush();rmRender();
   });
-  ch.on("broadcast",{event:"react"},({payload})=>{if(payload&&RM_EMO[payload.e]){rmFloat(payload.e);toast(`${payload.name||"Someone"} sent ${payload.e}`);}});
+  ch.on("broadcast",{event:"react"},({payload})=>{if(payload&&typeof payload.e==="string"&&Object.prototype.hasOwnProperty.call(RM_EMO,payload.e)){rmFloat(payload.e);toast(`${rmStr(payload.name,24)||"Someone"} sent ${payload.e}`);}});
   ch.subscribe(status=>{
     if(status==="SUBSCRIBED"){RM.sig="";rmPush();rmRender();}
     else if(status==="CHANNEL_ERROR"||status==="TIMED_OUT"){rmRender("Can't reach the room right now. Retrying…");}
@@ -4163,7 +4210,7 @@ const rmHue=id=>{let h=0;for(const c of String(id))h=(h*31+c.charCodeAt(0))%360;
 function rmPeerHtml(p){
   const me=p.id===RM.me.id,run=p.status!=="idle"&&p.ends>Date.now(),pct=run&&p.len?Math.min(1,1-(p.ends-Date.now())/(p.len*1000)):0;
   const label=run?(p.status==="focus"?"Focusing":"On a break")+" · "+rmLeft(p.ends):"Not in a session";
-  return `<li class="rm-p${run?" "+p.status:""}"><span class="rm-av" style="--h:${rmHue(p.id)}">${esc((p.name||"?").charAt(0).toUpperCase())}</span>
+  return `<li class="rm-p${run?(p.status==="break"?" break":" focus"):""}"><span class="rm-av" style="--h:${rmHue(p.id)}">${esc((p.name||"?").charAt(0).toUpperCase())}</span>
     <span class="rm-who"><b>${esc(p.name||"Someone")}${me?" <small>(you)</small>":""}</b><span class="rm-st">${run?`<i class="rm-dot"></i>`:""}${esc(label)}</span>${p.task?`<span class="rm-task">${esc(p.task)}</span>`:""}</span>
     ${run?`<span class="rm-ring" style="--p:${pct.toFixed(3)}" aria-hidden="true"></span>`:""}</li>`;
 }
@@ -4176,7 +4223,8 @@ function rmRender(note){
     const me=rmMe();$("#rm-sub").textContent="Focus alongside friends. See who's working and start timers together.";hact.innerHTML="";
     body._html="";body.innerHTML=`<form class="rm-join" id="rm-join" autocomplete="off">${AC.user?"":`<label class="rm-f"><span>Your name</span><input type="text" id="rm-name" maxlength="24" value="${esc(me.name)}" placeholder="What friends see"></label>`}
       <label class="rm-f"><span>Room code</span><input type="text" id="rm-code" maxlength="7" placeholder="ABC-123" autocapitalize="characters" spellcheck="false"></label>
-      <div class="rm-btns"><button class="btn ghost" type="submit">Join</button><button class="btn" type="button" data-rm="create">Create a room</button></div></form>`;
+      <div class="rm-btns"><button class="btn ghost" type="submit">Join</button><button class="btn" type="button" data-rm="create">Create a room</button></div></form>
+      <p class="ac-priv">Anyone with the room code sees your name and whether you're focusing. Share codes only with people you know.</p>`;
     return;
   }
   $("#rm-sub").textContent=note||`${RM.peers.length||1} ${RM.peers.length===1||!RM.peers.length?"person":"people"} here · ${RM.peers.filter(p=>p.status==="focus"&&p.ends>Date.now()).length} focusing`;
@@ -4286,7 +4334,7 @@ async function remSync(force){ /* write the next 7 days of reminders; only when 
   const uid=AC.user.id,list=remBuild(),rows=list.map(x=>({id:`${uid}:${x.tag}:${x.at}`,user_id:uid,at:new Date(x.at).toISOString(),kind:x.kind,title:x.title.slice(0,120),body:x.body.slice(0,240),tag:x.tag,url:x.url}));
   const sig=stableStr(rows);if(!force&&sig===REM.sig)return;REM.sig=sig;
   try{
-    if(rows.length){const {error}=await AC.sb.from("dash_reminders").upsert(rows,{onConflict:"id",ignoreDuplicates:true});if(error)throw error;}
+    if(rows.length){const {error}=await AC.sb.from("dash_reminders").upsert(rows,{onConflict:"user_id,id",ignoreDuplicates:true});if(error)throw error;}
     let q=AC.sb.from("dash_reminders").delete().eq("user_id",uid).is("sent_at",null).in("kind",["due","event","morning"]);
     if(rows.length)q=q.not("id","in",`(${rows.map(r=>`"${r.id}"`).join(",")})`);
     await q;
@@ -4296,8 +4344,8 @@ function remQueue(){clearTimeout(REM.timer);REM.timer=setTimeout(()=>remSync(),4
 function remTick(){ /* the focus timer: schedule "session done" while it runs, cancel when paused */
   if(!AC||!AC.user||!AC.sb||!remS().on||!remS().timer)return;
   const sig=T.running?T.kind+":"+T.end:"";if(sig===REM.tsig)return;REM.tsig=sig;const id=AC.user.id+":timer";
-  if(T.running&&T.end-Date.now()>20000)AC.sb.from("dash_reminders").upsert({id,user_id:AC.user.id,at:new Date(T.end).toISOString(),kind:"timer",title:T.kind==="focus"?"Focus session done":"Break's over",body:T.kind==="focus"?"Nice work. Take a short break.":"Time to get back to it.",tag:"timer",url:"/digital-dash.html",sent_at:null},{onConflict:"id"}).then(()=>{},()=>{});
-  else AC.sb.from("dash_reminders").delete().eq("id",id).is("sent_at",null).then(()=>{},()=>{});
+  if(T.running&&T.end-Date.now()>20000)AC.sb.from("dash_reminders").upsert({id,user_id:AC.user.id,at:new Date(T.end).toISOString(),kind:"timer",title:T.kind==="focus"?"Focus session done":"Break's over",body:T.kind==="focus"?"Nice work. Take a short break.":"Time to get back to it.",tag:"timer",url:"/digital-dash.html",sent_at:null},{onConflict:"user_id,id"}).then(()=>{},()=>{});
+  else AC.sb.from("dash_reminders").delete().eq("user_id",AC.user.id).eq("id",id).is("sent_at",null).then(()=>{},()=>{});
 }
 function remRender(){
   const el=$("#rem-body");if(!el)return;const r=remS(),on=!!REM.sub;
@@ -4386,6 +4434,7 @@ function aiRender(){
     el.innerHTML=`<p class="muted">Steps for <b>${esc(AI.task.title)}</b>${AI.task.due?`, due ${esc(dueLabel(AI.task.due,AI.task.dueTime).t)}`:""}. Untick anything you don't want, or edit a step.</p>
       <ul class="ai-list">${steps.map((st,i)=>`<li><input type="checkbox" checked data-i="${i}" aria-label="Include step ${i+1}"><input type="text" class="ai-t" value="${esc(st.title)}" data-i="${i}" aria-label="Step ${i+1}" maxlength="120"><span class="ai-m">${st.minutes} min${st.date?` · ${esc(new Date(st.date+"T12:00").toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"}))}`:""}</span></li>`).join("")}</ul>
       ${r.tip?`<p class="ai-tip">${SPARK_ICON}<span>${esc(r.tip)}</span></p>`:""}
+      <p class="ac-priv">Only this task's title, urgency and due date were sent to Anthropic's AI.</p>
       <details class="ai-more"><summary>Add context and try again</summary><textarea id="ai-note" rows="2" placeholder="For example: needs two graphs and a 500 word discussion">${esc(AI.note)}</textarea><button type="button" class="btn ghost small" data-ai="retry">Try again</button></details>
       <div class="ac-row"><button type="button" class="btn" data-ai="steps">Add as checklist</button><button type="button" class="btn ghost" data-ai="add">Add ${steps.length} tasks</button><button type="button" class="btn ghost" data-ai="close">Cancel</button></div>`;
     aiCount();
@@ -4396,6 +4445,7 @@ function aiRender(){
       ${blocks.length?`<ul class="ai-list ai-plan-list">${blocks.map((b,i)=>{const h=b.date!==day?(day=b.date,`<li class="ai-day">${esc(new Date(b.date+"T12:00").toLocaleDateString(undefined,{weekday:"long",month:"short",day:"numeric"}))}</li>`):"";
         return h+`<li><input type="checkbox" checked data-i="${i}" aria-label="Include ${esc(b.title)}"><span class="ai-time">${b.start}–${addMin(b.start,b.minutes)}</span><span class="ai-t2">${esc(b.title)}${b.task_id&&tTitle(b.task_id)!==b.title?`<small>${esc(tTitle(b.task_id))}</small>`:""}</span><span class="ai-m">${b.minutes} min</span></li>`;}).join("")}</ul>`:`<p class="muted">Nothing to schedule.</p>`}
       <p class="hint">Sessions go on your calendar as “AI plan” events. Adding a new plan replaces the previous one from today on.</p>
+      <p class="ac-priv">To plan, your open task titles, due dates and the next 7 days of event titles were sent to Anthropic's AI. Nothing else was.</p>
       <div class="ac-row">${blocks.length?`<button type="button" class="btn" data-ai="add">Add ${blocks.length} sessions</button>`:""}<button type="button" class="btn ghost" data-ai="retry">Try again</button><button type="button" class="btn ghost" data-ai="close">Cancel</button></div>`;
     aiCount();
   }

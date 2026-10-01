@@ -82,8 +82,12 @@ Deno.serve(async (req) => {
       list.push({ title: r.title, body: r.body, tag: r.tag, url: r.url, at: Date.parse(r.at) });
       byUser.set(r.user_id, list);
     }
-    // Mark first so an overlapping run can't send twice.
-    if (due?.length) await admin.from("dash_reminders").update({ sent_at: new Date().toISOString() }).in("id", due.map((r) => r.id));
+    // Mark first so an overlapping run can't send twice (reminders are keyed by user and id).
+    const idsByUser = new Map<string, string[]>();
+    for (const r of due ?? []) idsByUser.set(r.user_id, [...(idsByUser.get(r.user_id) ?? []), r.id]);
+    for (const [uid, ids] of idsByUser) {
+      await admin.from("dash_reminders").update({ sent_at: new Date().toISOString() }).eq("user_id", uid).in("id", ids);
+    }
     const result = byUser.size ? await sendToUsers(admin, [...byUser.keys()], byUser) : { sent: 0, removed: 0 };
     await admin.from("dash_reminders").delete().lt("at", new Date(now - 2 * 86400_000).toISOString());
     return json({ due: due?.length ?? 0, ...result });
