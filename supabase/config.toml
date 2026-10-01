@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.dash-ai]
 verify_jwt = true
+
+[functions.dash-push]
+verify_jwt = false
