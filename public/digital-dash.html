@@ -816,6 +816,13 @@ html.lg .kpi{background:color-mix(in srgb,var(--panel) 40%,transparent);-webkit-
 .sp-frame{margin-top:12px}
 .sp-frame[hidden]{display:none}
 .sp-frame iframe{display:block;width:100%;border:0;border-radius:12px}
+.sp-card{display:flex;align-items:center;gap:14px;padding:14px;border-radius:var(--r);background:var(--panel2);flex-wrap:wrap}
+html.lg .sp-card{background:var(--glass-tint);box-shadow:inset 0 0 0 1px var(--glass-edge)}
+.sp-card>svg{width:28px;height:28px;color:var(--accent);flex:none}
+.sp-card>div{flex:1 1 220px;min-width:0}
+.sp-card b{font-size:14.5px}
+.sp-card p{margin:2px 0 0;font-size:13px;color:var(--muted)}
+.sp-card .btn{text-decoration:none;flex:none}
 @media (prefers-reduced-motion:reduce){.sp summary::after{transition:none}}
 .jb-auto{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--ink);cursor:pointer;min-height:24px}
 .jb-mini{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 12px;border:1px solid color-mix(in srgb,var(--accent) 45%,var(--line));border-radius:999px;background:color-mix(in srgb,var(--accent) 12%,var(--panel));color:var(--ink);font-size:13px;max-width:220px}
@@ -968,7 +975,7 @@ html.lg .eye{background:var(--glass-tint);box-shadow:inset 0 1px 0 color-mix(in 
         <div class="jb-grid" id="jb-grid"></div>
         <label class="jb-auto"><input type="checkbox" id="jb-auto"> Play during focus timers and pause for breaks</label>
         <details class="sp" id="sp">
-          <summary><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>Play from Spotify<span class="sp-on" id="sp-on" hidden>Connected</span></summary>
+          <summary><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>Play from Spotify<span class="sp-on" id="sp-on" hidden>Link saved</span></summary>
           <form class="sp-form" id="sp-form" autocomplete="off"><input type="text" id="sp-url" inputmode="url" placeholder="Paste a Spotify playlist, album or song link" aria-label="Spotify link"><button class="btn" type="submit">Load</button><button class="btn ghost" type="button" id="sp-clear" hidden>Remove</button></form>
           <p class="hint">In Spotify, use Share, then Copy link. Log in to Spotify in this browser for full songs; otherwise Spotify plays 30 second previews. With "Play during focus timers" on, Spotify starts and pauses with your timer too.</p>
           <div class="sp-frame" id="sp-frame" hidden></div>
@@ -2564,7 +2571,19 @@ function jbTimerSync(){ // auto mode: play while a focus timer runs, pause for b
 /* ---------- Spotify ----------
    Spotify's embed player, driven through its iFrame API when it loads so the focus timer can start
    and pause it. If the API script is blocked, a plain embed still plays. Saved as settings.sp.uri. */
-const SP={api:null,ctl:null,wait:null};
+const SP={api:null,ctl:null,wait:null,blocked:false};
+const SP_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>';
+/* Some hosts (like the claude.ai preview) forbid embedding other sites. The browser reports that as a
+   CSP violation, so swap the broken frame for a card that opens Spotify in a new tab instead. */
+document.addEventListener("securitypolicyviolation",e=>{
+  if(!/spotify\.com/.test(e.blockedURI||""))return;
+  SP.blocked=true;const uri=S.settings.sp?.uri;if(uri&&/frame/.test(e.violatedDirective||e.effectiveDirective||""))spFallback(uri);
+});
+function spFallback(uri){
+  const box=$("#sp-frame"),[,type,id]=uri.split(":");SP.ctl=null;box.hidden=false;
+  const what={playlist:"playlist",album:"album",track:"song",episode:"episode",show:"podcast",artist:"artist"}[type]||"music";
+  box.innerHTML=`<div class="sp-card">${SP_ICON}<div><b>Your Spotify ${what} is ready</b><p>This page can't show Spotify's player here, so it opens in a new tab. Your timer and sounds keep running on this page.</p></div><a class="btn" href="https://open.spotify.com/${type}/${id}" target="_blank" rel="noopener">Open in Spotify</a></div>`;
+}
 function spParse(v){const m=String(v||"").trim().match(/(?:open\.spotify\.com\/(?:intl-[a-z-]+\/)?(?:embed\/)?|spotify:)(playlist|album|track|episode|show|artist)[\/:]([A-Za-z0-9]{22})/);return m?`spotify:${m[1]}:${m[2]}`:"";}
 function spApi(){
   return new Promise(res=>{
@@ -2578,8 +2597,11 @@ function spApi(){
 async function spShow(uri){
   const box=$("#sp-frame");box.innerHTML="";SP.ctl=null;$("#sp-clear").hidden=!uri;$("#sp-on").hidden=!uri;
   if(!uri){box.hidden=true;return;}box.hidden=false;
-  const [,type,id]=uri.split(":"),h=type==="track"||type==="episode"?152:352,api=await spApi();
+  const [,type,id]=uri.split(":"),h=type==="track"||type==="episode"?152:352;
+  if(SP.blocked){spFallback(uri);return;}
+  const api=await spApi();
   if(S.settings.sp?.uri!==uri)return; /* changed while the API loaded */
+  if(SP.blocked){spFallback(uri);return;}
   if(api){const el=document.createElement("div");box.appendChild(el);try{api.createController(el,{uri,width:"100%",height:h},ctl=>{SP.ctl=ctl;});return;}catch(e){box.innerHTML="";}}
   box.innerHTML=`<iframe title="Spotify player" src="https://open.spotify.com/embed/${type}/${id}?utm_source=generator" height="${h}" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>`;
 }
