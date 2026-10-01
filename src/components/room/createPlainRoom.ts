@@ -25,6 +25,8 @@ export interface LampSettings {
   color: string;
   /** the flush ceiling light */
   ceiling: boolean;
+  /** its tone as a hex string; one of CEILING_TONES */
+  ceilingTone: string;
   /** the sunset lamp on the desk, projecting a disc onto the wall over the bed */
   sunset: boolean;
   /** which disc the sunset lamp projects; a key of SUNSET_STYLES */
@@ -40,6 +42,7 @@ export interface LampSettings {
 /** discs for the sunset lamp: colour stops from the centre outward */
 export const SUNSET_STYLES: Record<string, string[]> = {
   Sunset: ["#ffc65e", "#ff8f2e", "#f2521c", "#b8182a"],
+  Ember: ["#ffb347", "#ff7a1a", "#d9400f", "#8a1c08"],
   Sunrise: ["#fff3b0", "#ffbe6b", "#ff8aa6", "#c4549a"],
   Rainbow: ["#ffffff", "#ffe14d", "#48d16a", "#3a8bff", "#9a4dff", "#ff3d5a"],
   Moon: ["#ffffff", "#e6eeff", "#a9bcff", "#5d72c4"],
@@ -48,8 +51,16 @@ export const SUNSET_STYLES: Record<string, string[]> = {
   "Western purple": ["#f0e4ff", "#bd94ff", "#8045e6", "#4b1a9e"],
 };
 
+/** tones for the ceiling light */
+export const CEILING_TONES: [string, string][] = [
+  ["Very warm", "#ffb46e"],
+  ["Warm", "#ffdcb0"],
+  ["Neutral", "#fff1dc"],
+];
+
 /** tones for the ring desk lamp */
 export const DESK_TONES: [string, string][] = [
+  ["Very warm", "#ffa95a"],
   ["Warm", "#ffd2a1"],
   ["Neutral", "#fff3e3"],
   ["Cool", "#e2edff"],
@@ -60,6 +71,7 @@ export const LAMP_DEFAULT: LampSettings = {
   brightness: 1,
   color: "#ffd6a0",
   ceiling: false,
+  ceilingTone: "#fff1dc",
   sunset: false,
   sunsetStyle: "Sunset",
   desk: false,
@@ -70,6 +82,7 @@ export const LAMP_DEFAULT: LampSettings = {
 /** bulb colours offered in the lamp panel */
 export const LAMP_COLORS: [string, string][] = [
   ["Warm white", "#ffd6a0"],
+  ["Candlelight", "#ff9a45"],
   ["Soft white", "#ffe8cc"],
   ["Daylight", "#eef2ff"],
   ["Amber", "#ffa95c"],
@@ -565,6 +578,8 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   const deskColor = new THREE.Color("#fff3e3");
   const deskColorTarget = deskColor.clone();
 
+  const ceilingColor = new THREE.Color("#fff1dc");
+  const ceilingColorTarget = ceilingColor.clone();
   let ceilingLevel = 0;
   let sunsetLevel = 0;
   let deskLevel = 0;
@@ -572,6 +587,8 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     deskLight.color.copy(deskColor);
     deskLight.intensity = 3.2 * deskLevel;
     dk.setGlow(deskLevel, deskColor);
+    ceilingLight.color.copy(ceilingColor);
+    domeMat.emissive.copy(ceilingColor);
     ceilingLight.intensity = 4.2 * ceilingLevel;
     domeMat.emissiveIntensity = 1.4 * ceilingLevel;
     sunsetLight.intensity = 11 * sunsetLevel;
@@ -606,6 +623,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     lampColorTarget.set(lampSettings.color);
     lampSettings.deskBrightness = THREE.MathUtils.clamp(lampSettings.deskBrightness, 0.2, 1.5);
     deskColorTarget.set(lampSettings.deskTone);
+    ceilingColorTarget.set(lampSettings.ceilingTone);
     if (!SUNSET_STYLES[lampSettings.sunsetStyle]) lampSettings.sunsetStyle = "Sunset";
     options.onLampChange?.({ ...lampSettings });
   };
@@ -619,6 +637,8 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   };
   if (lampSettings.ceiling) ceilingLevel = 1;
   if (lampSettings.sunset) sunsetLevel = 1;
+  ceilingColor.set(lampSettings.ceilingTone);
+  ceilingColorTarget.copy(ceilingColor);
   deskColor.set(lampSettings.deskTone);
   deskColorTarget.copy(deskColor);
   if (lampSettings.desk) deskLevel = lampSettings.deskBrightness;
@@ -915,7 +935,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     const ceilingTarget = lampSettings.ceiling ? 1 : 0;
     const sunsetTarget = lampSettings.sunset && lampSettings.sunsetStyle === shownStyle ? 1 : 0;
     const deskTarget = lampSettings.desk ? lampSettings.deskBrightness : 0;
-    const deskColorMoving = !deskColor.equals(deskColorTarget);
+    const deskColorMoving = !deskColor.equals(deskColorTarget) || !ceilingColor.equals(ceilingColorTarget);
     if (ceilingLevel !== ceilingTarget || sunsetLevel !== sunsetTarget || deskLevel !== deskTarget || deskColorMoving) {
       const step = (v: number, to: number, down = 8) => {
         const next = v + (to - v) * (reducedMotion ? 1 : 1 - Math.exp(-(to > v ? 14 : down) * dt));
@@ -925,6 +945,8 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       sunsetLevel = step(sunsetLevel, sunsetTarget, swapping ? 16 : 8);
       deskLevel = step(deskLevel, deskTarget);
       deskColor.lerp(deskColorTarget, reducedMotion ? 1 : 1 - Math.exp(-6 * dt));
+      ceilingColor.lerp(ceilingColorTarget, reducedMotion ? 1 : 1 - Math.exp(-6 * dt));
+      if (Math.abs(ceilingColor.r - ceilingColorTarget.r) + Math.abs(ceilingColor.g - ceilingColorTarget.g) + Math.abs(ceilingColor.b - ceilingColorTarget.b) < 0.004) ceilingColor.copy(ceilingColorTarget);
       if (Math.abs(deskColor.r - deskColorTarget.r) + Math.abs(deskColor.g - deskColorTarget.g) + Math.abs(deskColor.b - deskColorTarget.b) < 0.004) deskColor.copy(deskColorTarget);
       applyExtras();
       applyLamp();

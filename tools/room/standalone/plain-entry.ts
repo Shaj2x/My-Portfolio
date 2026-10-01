@@ -1,4 +1,4 @@
-import { createPlainRoom, DESK_TONES, LAMP_COLORS, LAMP_DEFAULT, SUNSET_STYLES, type LampSettings, type PlainRoomView } from "../../../src/components/room/createPlainRoom";
+import { createPlainRoom, CEILING_TONES, DESK_TONES, LAMP_COLORS, LAMP_DEFAULT, SUNSET_STYLES, type LampSettings, type PlainRoomView } from "../../../src/components/room/createPlainRoom";
 
 const $ = (id: string) => document.getElementById(id)!;
 const lampBtn = $("lamp") as HTMLButtonElement;
@@ -44,6 +44,13 @@ for (const [name, hex] of DESK_TONES) {
   $("tones").append(b);
   toneChips.push(b);
 }
+const ceilChips: HTMLButtonElement[] = [];
+for (const [name, hex] of CEILING_TONES) {
+  const b = chip(name, hex, () => room.setLamp({ ceilingTone: hex, ceiling: true }));
+  b.dataset.tone = hex;
+  $("ceiltones").append(b);
+  ceilChips.push(b);
+}
 for (const [name, stops] of Object.entries(SUNSET_STYLES)) {
   const b = chip(name, `radial-gradient(circle, ${stops.join(", ")})`, () => room.setLamp({ sunsetStyle: name, sunset: true }));
   b.dataset.style = name;
@@ -71,6 +78,7 @@ const showLamp = (s: LampSettings) => {
   deskBox.checked = s.desk;
   deskSlider.value = String(Math.round(s.deskBrightness * 100));
   dval.textContent = `${Math.round(s.deskBrightness * 100)}%`;
+  for (const b of ceilChips) b.setAttribute("aria-pressed", String(b.dataset.tone === s.ceilingTone));
   for (const b of toneChips) b.setAttribute("aria-pressed", String(b.dataset.tone === s.deskTone));
   for (const b of styleChips) b.setAttribute("aria-pressed", String(b.dataset.style === s.sunsetStyle));
   slider.value = String(Math.round(s.brightness * 100));

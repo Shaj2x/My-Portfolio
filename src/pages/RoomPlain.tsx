@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { ArrowLeft, Binoculars, Lightbulb, LightbulbOff, SlidersHorizontal, X } from "lucide-react";
 import {
   createPlainRoom,
+  CEILING_TONES,
   DESK_TONES,
   LAMP_COLORS,
   LAMP_DEFAULT,
@@ -214,6 +215,19 @@ const RoomPlain = () => {
               Ceiling light
               <input id="light-ceiling" type="checkbox" className="h-4 w-4 accent-amber-300" checked={lamp.ceiling} onChange={() => roomRef.current?.toggleLight("ceiling")} />
             </label>
+            <div className="flex flex-wrap gap-2">
+              {CEILING_TONES.map(([name, hex]) => (
+                <button
+                  key={hex}
+                  type="button"
+                  aria-pressed={lamp.ceilingTone === hex}
+                  className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1 text-xs text-white/75 hover:border-white/30 hover:text-white aria-pressed:border-amber-200/60 aria-pressed:text-amber-100"
+                  onClick={() => roomRef.current?.setLamp({ ceilingTone: hex, ceiling: true })}
+                >
+                  <span className="h-3 w-3 rounded-full" style={{ background: hex }} /> {name}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}
