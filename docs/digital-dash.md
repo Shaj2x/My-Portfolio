@@ -57,6 +57,8 @@ S = {
   timers:   [{id, name, sec, kind:"focus"|"break"}],  // Focus timer choices (settings.timerId = last used)
   schemes:  [{id, name, c:{bg,panel,ink,accent,card,cardInk}}],
   widgets:  [{id, type, size:"s"|"w", title?, cfg?}],
+  courses:  [{id, name, target, items:[{id, name, w, score}]}],  // grades; name links to t.course
+  goals:    [{id, name, target, by?, track:"nw"|accountId}],     // money goals
   settings: {
     skin, accent, uiFont, clockFont, clock, h24, secs, currency, hideNw, surface:"solid"|"glass",
     radius, clockScale, subs:{}, refract,
@@ -115,6 +117,26 @@ Optional sign-in so data saves to the cloud and follows you across devices. Sign
 - `t.course` (task form Course field with suggestions, or `#ES1050` in the command bar).
 - The focus timer's "Working on" picker (`settings.tmTag`: `t:<task id>`, `c:<course>` or nothing) tags each finished focus session in `S.focusTags = [{d, sec, task, course}]`.
 - Tasks show "3 sessions · 1h 15m". The week review adds "Time by course" (sorted bars, one hue, value on every row, with untagged focus time shown separately so totals still add up) and "Most time on".
+
+## Courses and grades
+
+- Tasks has a `#task-mode` switch: Tasks or Courses and grades (`setTaskMode`, `renderCoursesPane`).
+- Each course has a goal percent and weighted parts. Scores accept `42/50`, `84` or `84%` (`gPct`). `gradeCalc` gives the average so far, the score needed on the ungraded weight to hit the goal, the best grade still possible, and the final grade once everything is in. Weights that don't add up to 100 get a note.
+- Renaming a course renames it on tasks (`t.course`) and tagged focus sessions too. Each card shows open tasks and focus time this week for that course.
+
+## Money goals
+
+- Net worth has a Goals panel. A goal tracks net worth or one asset account, with an optional date; it shows progress and how much a month is needed to reach it in time. With amounts hidden it shows only percentages and months left.
+
+## Drag and drop
+
+- `dragable(container, selector, {target, drop, when})`: one pointer-event drag for mouse, pen and touch. Touch starts after a 280 ms hold so the page still scrolls; Escape cancels; a drop never counts as a click.
+- Calendar: undated tasks sit in a tray under the month (`renderTray`). Drag one onto a day, or tap it and then tap a day (`pickTask`). Items in the day list can be dragged to another day (`moveItemTo`, with Undo); imported calendar events stay put.
+- Widgets reorder by drag while customizing (the arrow buttons still work).
+
+## Focus heatmap
+
+- `focusHeatmap()` adds "A year of focus" to the current week review: 53 weeks of days, one accent hue in five steps (0, under 25 min, under 1 h, under 2 h, 2 h+), a legend, tooltips and a text summary (active days, longest run, total). It scrolls sideways inside its panel on phones.
 
 ## Reminders (Web Push)
 
@@ -234,7 +256,5 @@ The goal is that nothing teleports and nothing waits on you. Rules the code foll
 ## Ideas for next steps
 
 - Move to a real stack (for example Vite + React or Next.js) and split sections into modules.
-- Real accounts and sync (Supabase or Firebase) to replace the claude.ai runtime.
-- Import bank balances automatically, recurring tasks, calendar sync with Google Calendar.
-- Drag and drop for widgets instead of arrow buttons.
+- Import bank balances automatically, calendar sync with Google Calendar.
 - Two-way Google Calendar sync (needs OAuth and a backend; today's import is read-only).

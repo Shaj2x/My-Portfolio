@@ -1003,6 +1003,78 @@ html.lg .acd-in{background:color-mix(in srgb,var(--panel) 88%,transparent);-webk
 html.lg .ac-stats div,html.lg .ac-list li,html.lg .acp-opt{background:var(--glass-tint)}
 @media (max-width:560px){.acd{margin:auto auto 0;width:100vw;max-width:100vw;max-height:92vh}.acd-in{border-radius:20px 20px 0 0}.ac-stats{grid-template-columns:repeat(2,1fr)}.acd-body{padding-bottom:calc(20px + env(safe-area-inset-bottom,0px))}}
 @media (prefers-reduced-motion:reduce){.acd[open] .acd-in{animation:none}.acct-dot[data-s="saving"]{animation:none}.acct-btn:active,.acp-opt:active{transform:none}}
+.task-mode{margin:0 0 16px}
+.courses[hidden]{display:none}
+.crs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;margin-bottom:14px}
+.course{display:grid;gap:10px}
+.crs-top{display:flex;align-items:center;gap:12px}
+.crs-name{flex:1;min-width:0;font:700 17px/1.2 var(--ui);background:none!important;border-color:transparent!important;padding:4px 0!important;color:var(--ink)}
+.crs-name:focus{border-color:var(--line)!important;padding:4px 8px!important}
+.crs-avg{display:grid;justify-items:end}
+.crs-avg b{font-size:24px;font-variant-numeric:tabular-nums}
+.crs-avg small{font-size:11.5px;color:var(--muted)}
+.crs-bar{height:6px;border-radius:3px;background:color-mix(in srgb,var(--ink) 10%,transparent);overflow:hidden}
+.crs-bar i{display:block;height:100%;background:var(--accent);transform-origin:0 50%;transition:transform var(--t-ui) var(--ease-out)}
+.crs-need{margin:0;font-size:14px;line-height:1.45}
+.crs-items{display:grid;gap:4px}
+.crs-h,.crs-row{display:grid;grid-template-columns:1fr 72px 92px 32px;gap:6px;align-items:center}
+.crs-h{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;padding:0 2px}
+.crs-row input{min-width:0;width:100%;padding:6px 8px;font-size:14px}
+.crs-w{display:flex;align-items:center;gap:3px;font-size:13px;color:var(--muted)}
+.crs-items>.btn{justify-self:start;margin-top:4px}
+.crs-warn{margin:2px 0 0;font-size:12.5px;color:var(--muted)}
+.crs-foot{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;border-top:1px solid var(--line);padding-top:10px}
+.crs-foot .muted{flex:1}
+.crs-goal{display:flex;align-items:center;gap:6px;font-size:13px}
+.crs-goal input{width:64px;padding:5px 8px}
+.crs-add{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.crs-add input[type=text]{flex:1 1 200px;min-width:0}
+.goals h3{margin:0 0 10px}
+.goal{display:grid;gap:6px;padding:10px 0;border-bottom:1px solid var(--line)}
+.goal-top{display:flex;align-items:center;gap:10px}
+.goal-top b{font-size:15px}
+.goal-top .muted{flex:1;font-size:12.5px}
+.goal-bar{height:8px;border-radius:4px;background:color-mix(in srgb,var(--ink) 10%,transparent);overflow:hidden}
+.goal-bar i{display:block;height:100%;background:var(--accent);transform-origin:0 50%;transition:transform var(--t-ui) var(--ease-out)}
+.goal.done .goal-bar i{background:var(--good,#0ca30c)}
+.goal-meta{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.goal-form{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.goal-form input[type=text]{flex:2 1 180px;min-width:0}
+.goal-form input[type=number]{flex:1 1 110px;min-width:0}
+.goal-form select{flex:1 1 130px}
+.tray{margin-top:12px}
+.tray:empty{display:none}
+.tray h3{margin:0 0 8px;font-size:14px;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.tray h3 .muted{font-size:12px;font-weight:400}
+.tray-list{display:flex;gap:6px;flex-wrap:wrap}
+.tray-chip{border:1px solid var(--line);border-left:4px solid var(--c);background:var(--panel2);color:var(--ink);border-radius:8px;padding:6px 10px;font-size:13px;cursor:grab;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tray-chip.picked{outline:2px solid var(--accent);outline-offset:2px}
+.ditem{-webkit-touch-callout:none}
+@media (hover:hover){.ditem[data-kind]{cursor:grab}}
+html.lg .tray-chip{background:var(--glass-tint)}
+.picking .day{outline:1px dashed color-mix(in srgb,var(--accent) 50%,transparent);outline-offset:-2px}
+.day.drop-on,.widget.drop-on{outline:2px solid var(--accent);outline-offset:-2px;background:color-mix(in srgb,var(--accent) 14%,var(--panel2))}
+.dragging{opacity:.35}
+.drag-ghost{position:fixed;z-index:80;pointer-events:none;margin:0;opacity:.92;box-shadow:0 18px 40px -12px rgba(0,0,0,.55);transform:rotate(-2deg) scale(1.03);transition:none}
+.widgets.editing .widget{cursor:grab}
+.hm{margin-top:14px}
+.hm-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.hm-head h3{margin:0;font-size:15px}
+.hm-head p{margin:0;font-size:13px}
+.hm-scroll{overflow-x:auto;margin-top:10px;padding-bottom:4px;scrollbar-width:thin}
+.hm-scroll svg{display:block}
+.hm-m{font-size:10px;fill:var(--muted)}
+.hm-c{fill:color-mix(in srgb,var(--ink) 8%,transparent)}
+.hm-c.l1{fill:color-mix(in srgb,var(--accent) 30%,transparent)}
+.hm-c.l2{fill:color-mix(in srgb,var(--accent) 52%,transparent)}
+.hm-c.l3{fill:color-mix(in srgb,var(--accent) 76%,transparent)}
+.hm-c.l4{fill:var(--accent)}
+.hm-c.now{stroke:var(--ink);stroke-width:1.5}
+.hm-legend{display:flex;align-items:center;gap:4px;justify-content:flex-end;font-size:11.5px;color:var(--muted);margin-top:6px}
+.hm-legend i{width:11px;height:11px;border-radius:3px;background:color-mix(in srgb,var(--ink) 8%,transparent)}
+.hm-legend i.l1{background:color-mix(in srgb,var(--accent) 30%,transparent)}.hm-legend i.l2{background:color-mix(in srgb,var(--accent) 52%,transparent)}.hm-legend i.l3{background:color-mix(in srgb,var(--accent) 76%,transparent)}.hm-legend i.l4{background:var(--accent)}
+@media (max-width:560px){.crs-grid{grid-template-columns:1fr}.crs-h,.crs-row{grid-template-columns:1fr 64px 80px 30px}}
+@media (prefers-reduced-motion:reduce){.crs-bar i,.goal-bar i{transition:none}.drag-ghost{transform:none}}
 .rem-note{margin:0 0 10px;font-size:14px;line-height:1.5}
 .rem-on{display:flex;align-items:center;gap:8px;margin:0 0 6px;font-weight:600;font-size:14px}
 .rem-on i{width:8px;height:8px;border-radius:50%;background:var(--good,#0ca30c)}
@@ -1200,6 +1272,9 @@ html.lg .eye{background:var(--glass-tint);box-shadow:inset 0 1px 0 color-mix(in 
     <section class="view" id="v-tasks">
       <h1 data-sub="t-tasks">Tasks</h1>
       <p class="sub" data-sub="tasks">Sorted by urgency, then due date. The top one shows up on your clock.</p>
+      <div class="seg task-mode" id="task-mode" role="group" aria-label="Tasks or courses"><button type="button" data-m="tasks" aria-pressed="true">Tasks</button><button type="button" data-m="courses" aria-pressed="false">Courses and grades</button></div>
+      <div class="courses" id="courses-pane" hidden></div>
+      <div id="tasks-pane">
       <form class="panel addbar" id="task-form" autocomplete="off">
         <input type="text" id="t-title" placeholder="What needs doing?" required aria-label="Task">
         <select id="t-urg" aria-label="Urgency">
@@ -1225,6 +1300,7 @@ html.lg .eye{background:var(--glass-tint);box-shadow:inset 0 1px 0 color-mix(in 
         </div>
       </div>
       <div class="tasks" id="task-list"></div>
+      </div>
     </section>
 
     <!-- CALENDAR -->
@@ -1245,6 +1321,7 @@ html.lg .eye{background:var(--glass-tint);box-shadow:inset 0 1px 0 color-mix(in 
           </div>
           <div class="grid7" id="cal-dow"></div>
           <div class="grid7" id="cal-grid" style="margin-top:4px"></div>
+          <div class="tray" id="cal-tray"></div>
         </div>
         <div class="panel">
           <h2 id="day-title" style="margin:0;font-size:18px"></h2>
@@ -1289,6 +1366,17 @@ html.lg .eye{background:var(--glass-tint);box-shadow:inset 0 1px 0 color-mix(in 
       <div class="accts">
         <div class="panel"><h3><span data-sub="l-assets">Assets</span></h3><div id="asset-list"></div></div>
         <div class="panel"><h3><span data-sub="l-debts">Debts</span></h3><div id="debt-list"></div></div>
+      </div>
+      <div class="panel goals" id="goals" style="margin-top:18px">
+        <h3>Goals</h3>
+        <div id="goal-list"></div>
+        <form class="goal-form" id="goal-form" autocomplete="off">
+          <input type="text" id="g-name" placeholder="Goal, e.g. Emergency fund" required maxlength="40" aria-label="Goal name">
+          <input type="number" id="g-target" placeholder="Target" min="1" step="1" required aria-label="Target amount">
+          <select id="g-track" aria-label="Counts toward the goal"></select>
+          <input type="date" id="g-by" aria-label="Reach it by (optional)" title="Reach it by (optional)">
+          <button class="btn" type="submit">Add goal</button>
+        </form>
       </div>
       <form class="panel addacct" id="acct-form" autocomplete="off" style="margin-top:18px">
         <input type="text" id="a-name" placeholder="Account name, e.g. TFSA" required aria-label="Account name">
@@ -2605,7 +2693,7 @@ function renderCal(dir){
     if(i===35&&d.getMonth()!==calM)break;
     html+=`<button class="day${d.getMonth()!==calM?" out":""}${k===today?" today":""}" data-k="${k}" aria-pressed="${k===selDay}" aria-label="${d.toDateString()}, ${it.length} items"><span class="n">${d.getDate()}</span>${it.slice(0,3).map(x=>`<span class="chip" style="--c:${x.c}">${esc(x.title)}</span>`).join("")}${it.length>3?`<span class="more">+${it.length-3} more</span>`:""}<span class="dots">${it.slice(0,4).map(x=>`<i style="--c:${x.c}"></i>`).join("")}</span></button>`;
   }
-  const g=$("#cal-grid");g.innerHTML=html;
+  const g=$("#cal-grid");g.innerHTML=html;renderTray();
   if(dir){g.classList.remove("slide-l","slide-r");void g.offsetWidth;g.classList.add(dir<0?"slide-l":"slide-r");}
   renderDay(dir?"plain":undefined);
 }
@@ -2618,7 +2706,9 @@ function renderDay(mode){
 }
 function fmtTime(t){const [h,m]=t.split(":").map(Number);return S.settings.h24?t:`${h%12||12}:${pad(m)} ${h<12?"AM":"PM"}`;}
 const monthDir=(y,m)=>Math.sign((y*12+m)-(calY*12+calM));
-$("#cal-grid").addEventListener("click",e=>{const b=e.target.closest(".day");if(!b)return;selDay=b.dataset.k;const [y,m]=selDay.split("-").map(Number);
+$("#cal-grid").addEventListener("click",e=>{const b=e.target.closest(".day");if(!b)return;
+  if(pickTask){const id=pickTask;pickTask=null;moveItemTo("task",id,b.dataset.k);return;}
+  selDay=b.dataset.k;const [y,m]=selDay.split("-").map(Number);
   if(m-1!==calM){const d=monthDir(y,m-1);calY=y;calM=m-1;renderCal(d);return;}
   $$("#cal-grid .day").forEach(x=>x.setAttribute("aria-pressed",x===b));renderDay();});
 $("#cal-prev").addEventListener("click",()=>{calM--;if(calM<0){calM=11;calY--;}renderCal(-1);});
@@ -2714,6 +2804,7 @@ function renderWeek(){
       <div class="panel"><h3>Tasks finished</h3>${barChart(cur.perDay,d=>d.done,v=>`${v} task${v===1?"":"s"}`,"Tasks finished per day")}</div>
     </div>
     ${courseBreakdown(cur)}
+    ${isThis?focusHeatmap():""}
     <table class="sr-only"><caption>${esc(range)}</caption><thead><tr><th>Day</th><th>Focus minutes</th><th>Sessions</th><th>Tasks finished</th></tr></thead><tbody>${cur.perDay.map(d=>`<tr><th>${d.d.toLocaleDateString(undefined,{weekday:"long"})}</th><td>${Math.round(d.min)}</td><td>${d.ses}</td><td>${d.done}</td></tr>`).join("")}</tbody></table>
     <div class="wk-lists">
       <div class="panel"><h3>Finished <span class="muted">${cur.done}</span></h3>${cur.done?`<ul class="wl">${cur.doneList.sort((a,b)=>b.doneAt-a.doneAt).slice(0,8).map(t=>li(t,new Date(t.doneAt).toLocaleDateString(undefined,{weekday:"short"}))).join("")}</ul>`:`<p class="empty">Nothing finished${isThis?" yet this week. Tick something off.":" that week."}</p>`}</div>
@@ -2731,10 +2822,11 @@ $("#cal-mode").addEventListener("click",e=>{const b=e.target.closest("button[dat
 $("#week").addEventListener("click",e=>{const b=e.target.closest("[data-wk]");if(!b)return;const n=+b.dataset.wk;wkStart=n?addDays(wkStart,7*n):weekStart(new Date());renderWeek();});
 // Tooltip for bars: follows hover and keyboard focus
 const wkTip=document.createElement("div");wkTip.className="wk-tip";wkTip.setAttribute("role","status");document.body.appendChild(wkTip);
+const tipTarget=e=>e.target.closest&&e.target.closest(".bar,.hm-c");
 function tipAt(g){if(!g){wkTip.classList.remove("on");return;}const r=g.getBoundingClientRect();wkTip.textContent=g.dataset.tip;wkTip.style.left=(r.left+r.width/2)+"px";wkTip.style.top=(r.top-8)+"px";wkTip.classList.add("on");}
-$("#week").addEventListener("pointerover",e=>tipAt(e.target.closest(".bar")));
+$("#week").addEventListener("pointerover",e=>tipAt(tipTarget(e)));
 $("#week").addEventListener("pointerleave",()=>tipAt(null));
-$("#week").addEventListener("focusin",e=>tipAt(e.target.closest(".bar")));
+$("#week").addEventListener("focusin",e=>tipAt(tipTarget(e)));
 $("#week").addEventListener("focusout",()=>tipAt(null));
 
 
@@ -3144,6 +3236,8 @@ function cmdResults(q){
     else{const v=NAV[k]||NAV[k.replace(" ","")];go(v,({focus:"Focus",tasks:"Tasks",calendar:"Calendar",money:"Net worth",themes:"Themes"})[v]);}
   }
   if(/^(room|study room|study with|create room|join room)/.test(lq)){const c=rmClean(lq.replace(/^(join )?(study )?room/,""));R.push({ic:"go",label:c.length===6?`Join room ${rmFmt(c)}`:"Study room",hint:"Go",run:()=>{show("focus");if(c.length===6)rmJoin(c);setTimeout(()=>$("#room").scrollIntoView({behavior:reduced?"auto":"smooth",block:"center"}),60);}});}
+  if(/^(grades?|courses?|marks?|gpa)$/.test(lq))R.push({ic:"go",label:"Courses and grades",hint:"Go",run:()=>{show("tasks");setTaskMode("courses");}});
+  if(/^(goals?|savings?)$/.test(lq))R.push({ic:"go",label:"Money goals",hint:"Go",run:()=>{show("money");setTimeout(()=>$("#goals").scrollIntoView({behavior:reduced?"auto":"smooth",block:"center"}),60);}});
   if(/^(plan( my)?( week| day)?|ai plan|schedule( my)? week)$/.test(lq))R.push({ic:"misc",label:"Plan my week with AI",hint:"AI",run:()=>aiPlan()});
   if((m=lq.match(/^(?:break ?down|split|steps for|ai)\s+(.+)$/))){S.tasks.filter(t=>!t.done).map(t=>[t,fuzzy(m[1],t.title)]).filter(([,sc])=>sc>=40).sort((a,b)=>b[1]-a[1]).slice(0,3).forEach(([t])=>R.push({ic:"misc",label:`Break down: ${t.title}`,hint:"AI",run:()=>aiBreakdown(t)}));}
   if(/^(account|sign ?in|log ?in|sign ?out|profile|sync|cloud)/.test(lq))R.push({ic:"go",label:"Account",hint:"Go",run:()=>acOpen()});
@@ -3259,6 +3353,7 @@ function setPrivacy(on){
 $("#nw-eye").addEventListener("click",()=>setPrivacy(!S.settings.hideNw));
 let lastNw=null;
 function renderMoney(){
+  renderGoals();
   const {a,d,t}=totals(),T0=$("#nw-total"),hid=S.settings.hideNw;
   const vis=!!T0.offsetParent;
   const eye=$("#nw-eye");eye.setAttribute("aria-pressed",hid);eye.setAttribute("aria-label",hid?"Show amounts":"Hide amounts");
@@ -3546,7 +3641,7 @@ function renderAll(){
   $$("#clock-seg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.c===S.settings.clock));
   $("#def-clock").value=S.settings.clock;
   buildClock(S.settings.clock);
-  renderTasks();renderNowTask();renderMini();renderCal();renderMoney();renderSubs();
+  renderTasks();renderNowTask();renderMini();renderCal();renderMoney();renderSubs();renderCoursesPane();
 }
 
 /* ---------- editable subtitles ---------- */
@@ -4446,12 +4541,15 @@ function loadDemo(){
     for(let j=0;j<n;j++){const [c,t]=plan[(i+j)%plan.length];S.focusTags.push({d,sec:1500,task:t?ids[t]:"",course:c,demo:true});}}
   if(!S.accounts.length){S.accounts.push({id:uid(),name:"Chequing",kind:"asset",cat:"Cash",value:1850,demo:true},{id:uid(),name:"TFSA",kind:"asset",cat:"Investments",value:6200,demo:true},{id:uid(),name:"Student loan",kind:"debt",cat:"Loan",value:4300,demo:true});
     S.history=S.history||[];[[-28,3200],[-14,3480],[-1,3750]].forEach(([o,v])=>S.history.push({d:k(o),v,demo:true}));}
+  S.courses=S.courses||[];if(!S.courses.length)S.courses.push({id:uid(),name:"CHEM 1301",target:85,demo:true,items:[{id:uid(),name:"Labs",w:25,score:"88"},{id:uid(),name:"Midterm",w:30,score:"41/50"},{id:uid(),name:"Quizzes",w:10,score:"9/10"},{id:uid(),name:"Final exam",w:35,score:""}]});
+  S.goals=S.goals||[];if(!S.goals.length)S.goals.push({id:uid(),name:"Emergency fund",target:5000,by:dkey(addDays(new Date(),180)),track:"nw",demo:true});
   save();renderAll();renderCourses();renderTimerTag();$("#demo-rm").hidden=false;
   toast("Example data added. Remove it any time in Themes, Your data.");
 }
 function removeDemo(){
   const keep=x=>!x.demo;
   S.tasks=S.tasks.filter(keep);S.events=S.events.filter(keep);S.accounts=S.accounts.filter(keep);S.history=(S.history||[]).filter(keep);
+  S.courses=(S.courses||[]).filter(keep);S.goals=(S.goals||[]).filter(keep);
   const tags=(S.focusTags||[]).filter(x=>x.demo);S.focusTags=(S.focusTags||[]).filter(keep);
   tags.forEach(x=>{S.sessions[x.d]=Math.max(0,(S.sessions[x.d]||0)-1);S.focusLog[x.d]=Math.max(0,(S.focusLog[x.d]||0)-x.sec);if(!S.sessions[x.d])delete S.sessions[x.d];if(!S.focusLog[x.d])delete S.focusLog[x.d];});
   save();renderAll();renderCourses();$("#demo-rm").hidden=true;toast("Example data removed");
@@ -4466,6 +4564,169 @@ $("#tour").addEventListener("cancel",()=>{S.settings.welcomed=true;save();});
 $("#tour").addEventListener("keydown",e=>{if(e.key==="ArrowRight"&&tourStep<TOUR.length-1){tourStep++;tourRender();}else if(e.key==="ArrowLeft"&&tourStep>0){tourStep--;tourRender();}});
 $("#demo-rm").addEventListener("click",removeDemo);
 $("#tour-again").addEventListener("click",tourOpen);
+
+/* ---------- courses and grades ----------
+   S.courses = [{id, name, target, items:[{id, name, w, score}]}]. Scores accept "42/50", "84" or "84%".
+   The course name links it to tasks (t.course) and focus sessions. "What you need" spreads the gap to
+   the goal over the weight that hasn't been graded yet. */
+let taskMode="tasks";
+const gPct=v=>{v=String(v||"").trim().replace("%","");if(!v)return null;const m=v.match(/^(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)$/);if(m)return +m[2]?+m[1]/+m[2]*100:null;const n=parseFloat(v);return Number.isFinite(n)?n:null;};
+const fmtPctG=v=>v==null?"—":(Math.round(v*10)/10)+"%";
+function gradeCalc(c){
+  let tw=0,gw=0,gs=0;(c.items||[]).forEach(i=>{const w=Math.max(0,+i.w||0),p=gPct(i.score);tw+=w;if(p!=null){gw+=w;gs+=w*p;}});
+  const total=Math.max(tw,100),rem=total-gw,target=+c.target||0,avg=gw?gs/gw:null;
+  const need=rem>0?(target*total-gs)/rem:null,best=(gs+rem*100)/total;
+  return {tw,gw,gs,total,rem,avg,need,best,final:rem<=0?gs/total:null};
+}
+function setTaskMode(m){
+  taskMode=m;$$("#task-mode button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.m===m));glide($("#task-mode"));
+  $("#tasks-pane").hidden=m!=="tasks";$("#courses-pane").hidden=m!=="courses";if(m==="courses")renderCoursesPane();
+}
+function renderCoursesPane(){
+  const el=$("#courses-pane");if(!el||el.hidden)return;S.courses=S.courses||[];
+  const wk=new Set([...Array(7)].map((_,i)=>dkey(addDays(weekStart(new Date()),i))));
+  const x='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+  const card=c=>{const g=gradeCalc(c),open=S.tasks.filter(t=>!t.done&&t.course===c.name).length,mins=(S.focusTags||[]).filter(f=>f.course===c.name&&wk.has(f.d)).reduce((a,f)=>a+f.sec,0)/60;
+    let need;
+    if(!(c.items||[]).length)need="Add the parts of your grade (assignments, midterm, final) with their weights.";
+    else if(g.final!=null)need=`Final grade: <b>${fmtPctG(g.final)}</b>${g.final>=c.target?" · goal reached":""}`;
+    else if(g.gw===0)need=`Nothing graded yet. Hit ${fmtPctG(c.target)} on everything to reach your goal.`;
+    else if(g.need<=0)need=`Your ${fmtPctG(c.target)} goal is already locked in.`;
+    else if(g.need<=100)need=`You need <b>${fmtPctG(g.need)}</b> on the remaining ${Math.round(g.rem)}% to reach ${fmtPctG(c.target)}.`;
+    else need=`${fmtPctG(c.target)} is out of reach now. The best you can still finish with is ${fmtPctG(g.best)}.`;
+    return `<div class="panel course" data-cid="${c.id}">
+      <div class="crs-top"><input class="crs-name" data-cf="name" value="${esc(c.name)}" maxlength="32" aria-label="Course name">
+        <div class="crs-avg"><b>${fmtPctG(g.avg)}</b><small>so far</small></div></div>
+      <div class="crs-bar" role="img" aria-label="${Math.round(g.gw)}% of the grade is in"><i style="transform:scaleX(${Math.min(1,g.gw/g.total).toFixed(3)})"></i></div>
+      <p class="crs-need">${need}</p>
+      <div class="crs-items"><div class="crs-h"><span>Part</span><span>Weight</span><span>Score</span><span></span></div>
+        ${(c.items||[]).map(i=>`<div class="crs-row" data-iid="${i.id}"><input data-if="name" value="${esc(i.name)}" maxlength="40" aria-label="Part name"><span class="crs-w"><input data-if="w" type="number" min="0" max="100" step="0.5" value="${esc(String(i.w))}" aria-label="Weight in percent">%</span><input data-if="score" value="${esc(i.score||"")}" placeholder="e.g. 42/50" aria-label="Score" inputmode="decimal"><button type="button" class="icon-btn" data-cact="idel" aria-label="Remove ${esc(i.name)}">${x}</button></div>`).join("")}
+        <button type="button" class="btn ghost small" data-cact="iadd">Add a part</button>
+        ${g.tw&&Math.abs(g.tw-100)>.01?`<p class="crs-warn">Weights add up to ${Math.round(g.tw*10)/10}%${g.tw<100?". The rest counts as not graded yet.":"."}</p>`:""}
+      </div>
+      <div class="crs-foot"><label class="crs-goal">Goal <input type="number" data-cf="target" min="1" max="100" value="${esc(String(c.target))}" aria-label="Goal percent">%</label>
+        <span class="muted">${open} open task${open===1?"":"s"} · ${fmtMins(mins)} this week</span>
+        <button type="button" class="btn ghost small" data-cact="cdel">Remove</button></div>
+    </div>`;};
+  const fa=document.activeElement,fsel=fa&&el.contains(fa)?`[data-cid="${fa.closest("[data-cid]")?.dataset.cid}"] ${fa.dataset.iid||fa.closest("[data-iid]")?`[data-iid="${fa.closest("[data-iid]").dataset.iid}"] `:""}[data-${fa.dataset.if?"if":"cf"}="${fa.dataset.if||fa.dataset.cf}"]`:"";
+  el.innerHTML=`${S.courses.length?`<div class="crs-grid">${S.courses.map(card).join("")}</div>`:`<div class="empty">Add your courses to track grades and see what you need on the final.</div>`}
+    <form class="panel crs-add" id="crs-add" autocomplete="off"><input type="text" id="crs-new" list="courses" placeholder="Course, e.g. ES 1050" maxlength="32" required aria-label="Course name"><label class="crs-goal">Goal <input type="number" id="crs-goal" min="1" max="100" value="85" aria-label="Goal percent">%</label><button class="btn" type="submit">Add course</button></form>`;
+  if(fsel){const n=el.querySelector(fsel);if(n){n.focus();try{n.setSelectionRange(n.value.length,n.value.length);}catch(e){}}}
+}
+$("#task-mode").addEventListener("click",e=>{const b=e.target.closest("button[data-m]");if(b&&b.dataset.m!==taskMode)setTaskMode(b.dataset.m);});
+$("#courses-pane").addEventListener("submit",e=>{if(e.target.id!=="crs-add")return;e.preventDefault();const name=$("#crs-new").value.trim().slice(0,32);if(!name)return;
+  S.courses=S.courses||[];if(S.courses.some(c=>c.name.toLowerCase()===name.toLowerCase())){toast("You already have that course");return;}
+  S.courses.push({id:uid(),name,target:Math.min(100,Math.max(1,+$("#crs-goal").value||85)),items:[{id:uid(),name:"Assignments",w:30,score:""},{id:uid(),name:"Midterm",w:30,score:""},{id:uid(),name:"Final exam",w:40,score:""}]});
+  save();renderCoursesPane();renderCourses();});
+$("#courses-pane").addEventListener("change",e=>{
+  const card=e.target.closest("[data-cid]");if(!card)return;const c=S.courses.find(x=>x.id===card.dataset.cid);if(!c)return;
+  if(e.target.dataset.cf==="name"){const v=e.target.value.trim().slice(0,32);if(v&&v!==c.name){const old=c.name;S.tasks.forEach(t=>{if(t.course===old)t.course=v;});(S.focusTags||[]).forEach(f=>{if(f.course===old)f.course=v;});c.name=v;renderCourses();}}
+  else if(e.target.dataset.cf==="target")c.target=Math.min(100,Math.max(1,+e.target.value||c.target));
+  else if(e.target.dataset.if){const it=c.items.find(i=>i.id===e.target.closest("[data-iid]").dataset.iid);if(!it)return;const f=e.target.dataset.if;it[f]=f==="w"?Math.max(0,Math.min(100,+e.target.value||0)):e.target.value.trim().slice(0,f==="name"?40:20);}
+  save();renderCoursesPane();
+});
+$("#courses-pane").addEventListener("click",e=>{
+  const b=e.target.closest("[data-cact]");if(!b)return;const card=b.closest("[data-cid]"),c=S.courses.find(x=>x.id===card.dataset.cid);if(!c)return;const a=b.dataset.cact;
+  if(a==="iadd"){c.items.push({id:uid(),name:"New part",w:10,score:""});save();renderCoursesPane();const r=card.parentNode&&$(`[data-cid="${c.id}"] .crs-row:last-of-type [data-if="name"]`);if(r){r.focus();r.select();}}
+  else if(a==="idel"){const i=c.items.findIndex(x=>x.id===b.closest("[data-iid]").dataset.iid);const it=c.items.splice(i,1)[0];save();renderCoursesPane();toast(`Removed ${it.name}`,{run(){c.items.splice(i,0,it);save();renderCoursesPane();}});}
+  else if(a==="cdel"){const i=S.courses.indexOf(c);S.courses.splice(i,1);save();renderCoursesPane();toast(`Removed ${c.name}`,{run(){S.courses.splice(i,0,c);save();renderCoursesPane();}});}
+});
+
+/* ---------- money goals ----------
+   S.goals = [{id, name, target, by, track}] where track is "nw" (net worth) or an account id. */
+function goalCurrent(g){if(g.track==="nw")return totals().t;const a=S.accounts.find(x=>x.id===g.track);return a?(+a.value||0):0;}
+function renderGoals(){
+  const el=$("#goal-list");if(!el)return;S.goals=S.goals||[];const hid=S.settings.hideNw;
+  const sel=$("#g-track"),cur=sel.value;sel.innerHTML=`<option value="nw">Net worth</option>${S.accounts.filter(a=>a.kind==="asset").map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join("")}`;if([...sel.options].some(o=>o.value===cur))sel.value=cur;
+  el.innerHTML=S.goals.length?S.goals.map(g=>{
+    const now=goalCurrent(g),pct=Math.max(0,Math.min(1,now/g.target)),done=now>=g.target,acc=g.track==="nw"?"Net worth":((S.accounts.find(a=>a.id===g.track)||{}).name||"Removed account");
+    let pace="";if(!done&&g.by){const months=Math.max(.5,(new Date(g.by+"T12:00")-new Date())/(30.44*864e5));pace=new Date(g.by+"T12:00")<new Date()?`Past ${niceDate(g.by)}`:hid?`${Math.ceil(months)} month${Math.ceil(months)===1?"":"s"} left`:`${fmt((g.target-now)/months)} a month to reach it by ${niceDate(g.by)}`;}
+    return `<div class="goal${done?" done":""}" data-gid="${g.id}"><div class="goal-top"><b>${esc(g.name)}</b><span class="muted">${esc(acc)}</span><button type="button" class="icon-btn" data-gdel aria-label="Remove ${esc(g.name)}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+      <div class="goal-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct*100)}" aria-label="${esc(g.name)}"><i style="transform:scaleX(${pct.toFixed(4)})"></i></div>
+      <div class="goal-meta"><span>${hid?`${Math.round(pct*100)}%`:`${fmt(now)} of ${fmt(g.target)} · ${Math.round(pct*100)}%`}</span><span>${done?"Goal reached":esc(pace)}</span></div></div>`;}).join("")
+    :`<p class="empty" style="margin:0 0 10px">Set a target, like an emergency fund or a trip, and watch it fill as your balances grow.</p>`;
+}
+$("#goal-form").addEventListener("submit",e=>{e.preventDefault();const name=$("#g-name").value.trim(),target=+$("#g-target").value;if(!name||!(target>0))return;
+  S.goals=S.goals||[];S.goals.push({id:uid(),name:name.slice(0,40),target,by:$("#g-by").value||"",track:$("#g-track").value||"nw"});
+  $("#g-name").value="";$("#g-target").value="";$("#g-by").value="";save();renderGoals();});
+$("#goal-list").addEventListener("click",e=>{const b=e.target.closest("[data-gdel]");if(!b)return;const i=S.goals.findIndex(g=>g.id===b.closest("[data-gid]").dataset.gid);if(i<0)return;const g=S.goals.splice(i,1)[0];save();renderGoals();toast(`Removed ${g.name}`,{run(){S.goals.splice(i,0,g);save();renderGoals();}});});
+
+/* ---------- drag and drop ----------
+   One pointer-based drag for mouse, pen and touch (touch starts after a short hold, so scrolling still
+   works). Used to drop undated tasks onto calendar days, move a day's items to another day, and
+   reorder widgets while customizing. Every drag has a non-drag way too (pick a task, then a day;
+   the widget arrow buttons). */
+const DR={src:null,ghost:null,start:null,timer:0,active:false,over:null,opts:null,justDropped:0};
+function dragable(container,sel,opts){
+  container.addEventListener("pointerdown",e=>{
+    if(e.button!==0)return;const src=e.target.closest(sel);if(!src||!container.contains(src)||(opts.when&&!opts.when(src))||e.target.closest("input,select,textarea,.x,[data-w],[data-act]"))return;
+    DR.src=src;DR.opts=opts;DR.start={x:e.clientX,y:e.clientY,id:e.pointerId,touch:e.pointerType==="touch"};
+    clearTimeout(DR.timer);if(DR.start.touch)DR.timer=setTimeout(()=>dragBegin(e.clientX,e.clientY),280);
+  });
+}
+function dragBegin(x,y){
+  const src=DR.src;if(!src||DR.active)return;DR.active=true;
+  const r=src.getBoundingClientRect(),g=src.cloneNode(true);g.classList.add("drag-ghost");g.style.width=r.width+"px";g.style.height=r.height+"px";
+  g.style.left=r.left+"px";g.style.top=r.top+"px";DR.off={x:x-r.left,y:y-r.top};document.body.appendChild(g);DR.ghost=g;src.classList.add("dragging");
+  if(navigator.vibrate&&DR.start.touch)try{navigator.vibrate(8);}catch(e){}
+}
+function dragMove(x,y){
+  if(!DR.src)return;
+  if(!DR.active){if(DR.start.touch){if(Math.hypot(x-DR.start.x,y-DR.start.y)>8){clearTimeout(DR.timer);DR.src=null;}return;}if(Math.hypot(x-DR.start.x,y-DR.start.y)<6)return;dragBegin(x,y);}
+  DR.ghost.style.left=(x-DR.off.x)+"px";DR.ghost.style.top=(y-DR.off.y)+"px";
+  const el=document.elementFromPoint(x,y),t=el&&el.closest(DR.opts.target);const over=t&&t!==DR.src?t:null;
+  if(over!==DR.over){DR.over&&DR.over.classList.remove("drop-on");over&&over.classList.add("drop-on");DR.over=over;}
+}
+function dragEnd(cancel){
+  clearTimeout(DR.timer);if(!DR.src)return;const {src,over,opts,active}=DR;
+  if(DR.ghost)DR.ghost.remove();src.classList.remove("dragging");over&&over.classList.remove("drop-on");
+  Object.assign(DR,{src:null,ghost:null,active:false,over:null});
+  if(active){DR.justDropped=Date.now();if(over&&!cancel)opts.drop(src,over);}
+}
+addEventListener("pointermove",e=>{if(DR.src&&e.pointerId===DR.start.id)dragMove(e.clientX,e.clientY);},{passive:true});
+addEventListener("pointerup",e=>{if(DR.src&&e.pointerId===DR.start.id)dragEnd(false);});
+addEventListener("pointercancel",e=>{if(DR.src&&e.pointerId===DR.start.id)dragEnd(true);});
+addEventListener("keydown",e=>{if(e.key==="Escape"&&DR.active)dragEnd(true);});
+document.addEventListener("touchmove",e=>{if(DR.active)e.preventDefault();},{passive:false}); /* hold-to-drag: stop the page scrolling under the finger */
+document.addEventListener("click",e=>{if(Date.now()-DR.justDropped<300){e.stopPropagation();e.preventDefault();}},true); /* a drop isn't a click */
+document.addEventListener("contextmenu",e=>{if(DR.active||DR.timer&&DR.src)e.preventDefault();});
+let pickTask=null; /* keyboard and tap alternative: pick a task in the tray, then a day */
+function moveItemTo(kind,id,k){
+  if(kind==="task"){const t=S.tasks.find(x=>x.id===id);if(!t||t.due===k)return;const old=t.due;t.due=k;save();renderCal();renderTasks();renderNowTask();renderMini();
+    toast(`Moved "${t.title}" to ${niceDate(k)}`,{run(){t.due=old;save();renderCal();renderTasks();renderNowTask();renderMini();}});}
+  else{const ev=S.events.find(x=>x.id===id);if(!ev||ev.date===k)return;if(ev.src&&ev.src!=="ai"){toast("Imported events move when you change them in their own calendar");return;}
+    const old=ev.date;ev.date=k;save();renderCal();toast(`Moved "${ev.title}" to ${niceDate(k)}`,{run(){ev.date=old;save();renderCal();}});}
+}
+function renderTray(){
+  const el=$("#cal-tray");if(!el)return;const und=sortedTasks().filter(t=>!t.done&&!t.due).slice(0,20);
+  el.innerHTML=und.length?`<h3>No date yet <span class="muted">Drag onto a day${matchMedia("(hover:none)").matches?" (press and hold)":""}, or tap one then a day</span></h3><div class="tray-list">${und.map(t=>`<button type="button" class="tray-chip${pickTask===t.id?" picked":""}" data-tid="${t.id}" style="--c:var(--u${t.urg})" aria-pressed="${pickTask===t.id}">${esc(t.title)}</button>`).join("")}</div>`:"";
+  $("#cal-grid").classList.toggle("picking",!!pickTask);
+}
+$("#cal-tray").addEventListener("click",e=>{const b=e.target.closest(".tray-chip");if(!b)return;pickTask=pickTask===b.dataset.tid?null:b.dataset.tid;renderTray();if(pickTask)toast("Now pick a day");});
+dragable($("#cal-tray"),".tray-chip",{target:".day",drop:(src,day)=>{pickTask=null;moveItemTo("task",src.dataset.tid,day.dataset.k);}});
+dragable($("#day-list"),".ditem",{target:".day",when:src=>!(src.dataset.kind==="ev"&&(S.events.find(x=>x.id===src.dataset.id)||{}).src&&(S.events.find(x=>x.id===src.dataset.id)||{}).src!=="ai"),drop:(src,day)=>moveItemTo(src.dataset.kind,src.dataset.id,day.dataset.k)});
+dragable($("#widgets"),".widget",{target:".widget",when:()=>wEdit,drop:(src,over)=>{
+  const a=S.widgets.findIndex(w=>w.id===src.dataset.id),b=S.widgets.findIndex(w=>w.id===over.dataset.id);if(a<0||b<0)return;
+  const [w]=S.widgets.splice(a,1);S.widgets.splice(b,0,w);save();renderWidgets(true);}});
+
+/* ---------- focus heatmap ----------
+   A year of focus minutes, one cell per day, weeks as columns (Monday first). One hue, five steps,
+   empty days stay neutral; a legend and a text summary carry the same story. */
+function focusHeatmap(){
+  const end=addDays(weekStart(new Date()),6),start=addDays(weekStart(new Date()),-52*7),days=[];
+  for(let d=new Date(start);d<=end;d=addDays(d,1))days.push(d);
+  const today=dkey(new Date()),mins=days.map(d=>dayFocusMin(dkey(d)));
+  const lvl=m=>m<=0?0:m<25?1:m<60?2:m<120?3:4,C=13,G=3,W=53*(C+G)+28,H=7*(C+G)+20;
+  let cells="",months="",lastM=-1,active=0,best=0,run=0,total=0;
+  days.forEach((d,i)=>{const k=dkey(d),m=mins[i],col=Math.floor(i/7),row=i%7,fut=k>today;
+    if(!fut){total+=m;if(m>0){active++;run++;best=Math.max(best,run);}else run=0;}
+    if(row===0&&d.getMonth()!==lastM&&d.getDate()<=7){lastM=d.getMonth();months+=`<text class="hm-m" x="${28+col*(C+G)}" y="10">${d.toLocaleDateString(undefined,{month:"short"})}</text>`;}
+    if(!fut)cells+=`<rect class="hm-c l${lvl(m)}${k===today?" now":""}" x="${28+col*(C+G)}" y="${16+row*(C+G)}" width="${C}" height="${C}" rx="3" data-tip="${esc(d.toLocaleDateString(undefined,{weekday:"short",month:"short",day:"numeric"})+": "+(m?fmtMins(m):"no focus"))}"/>`;});
+  const dl=["Mon","","Wed","","Fri","",""].map((t,i)=>t?`<text class="hm-m" x="0" y="${16+i*(C+G)+10}">${t}</text>`:"").join("");
+  return `<div class="panel hm"><div class="hm-head"><h3>A year of focus</h3><p class="muted">${active} day${active===1?"":"s"} with focus · longest run ${best} day${best===1?"":"s"} · ${fmtMins(total)} in total</p></div>
+    <div class="hm-scroll"><svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Focus per day over the last year. ${active} days with focus, longest run ${best} days.">${months}${dl}${cells}</svg></div>
+    <div class="hm-legend" aria-hidden="true"><span>Less</span>${[0,1,2,3,4].map(l=>`<i class="l${l}"></i>`).join("")}<span>More</span></div></div>`;
+}
 
 /* ---------- AI helper ----------
    Calls the dash-ai Supabase Edge Function (supabase/functions/dash-ai), which talks to Claude with the
@@ -4581,7 +4842,7 @@ railInd=document.createElement("div");railInd.className="ind";railInd.setAttribu
 $(".rail").prepend(railInd);$(".rail").classList.add("has-ind");
 {const bd=document.createElement("div");bd.className="hbead";bd.setAttribute("aria-hidden","true");$(".rail").prepend(bd);$(".rail")._bead=bd;}
 if(typeof ResizeObserver!=="undefined")new ResizeObserver(()=>moveInd(true)).observe($(".rail"));
-["#clock-seg","#task-filter","#bg-type","#st-type","#surface"].forEach(q=>initSeg($(q)));
+["#clock-seg","#task-filter","#bg-type","#st-type","#surface","#task-mode"].forEach(q=>initSeg($(q)));
 if(S.accounts.length)snapshot();
 renderAll();jbRender();renderCals();renderCourses();
 npInit();
