@@ -25,11 +25,47 @@ export interface LampSettings {
   color: string;
   /** the flush ceiling light */
   ceiling: boolean;
-  /** the sunset lamp on the desk, projecting an orange disc onto the wall over the bed */
+  /** the sunset lamp on the desk, projecting a disc onto the wall over the bed */
   sunset: boolean;
+  /** which disc the sunset lamp projects; a key of SUNSET_STYLES */
+  sunsetStyle: string;
+  /** the ring lamp on the desk */
+  desk: boolean;
+  /** 0.2 to 1.5 */
+  deskBrightness: number;
+  /** its tone as a hex string; one of DESK_TONES */
+  deskTone: string;
 }
 
-export const LAMP_DEFAULT: LampSettings = { on: true, brightness: 1, color: "#ffd6a0", ceiling: false, sunset: false };
+/** discs for the sunset lamp: colour stops from the centre outward */
+export const SUNSET_STYLES: Record<string, string[]> = {
+  Sunset: ["#ffc65e", "#ff8f2e", "#f2521c", "#b8182a"],
+  Sunrise: ["#fff3b0", "#ffbe6b", "#ff8aa6", "#c4549a"],
+  Rainbow: ["#ffffff", "#ffe14d", "#48d16a", "#3a8bff", "#9a4dff", "#ff3d5a"],
+  Moon: ["#ffffff", "#e6eeff", "#a9bcff", "#5d72c4"],
+  Aurora: ["#c8ffe4", "#4fe3b0", "#36a2e8", "#7a4fdc"],
+  Ocean: ["#e2fffa", "#63dbe4", "#1d8fcf", "#0c3d91"],
+  "Western purple": ["#f0e4ff", "#bd94ff", "#8045e6", "#4b1a9e"],
+};
+
+/** tones for the ring desk lamp */
+export const DESK_TONES: [string, string][] = [
+  ["Warm", "#ffd2a1"],
+  ["Neutral", "#fff3e3"],
+  ["Cool", "#e2edff"],
+];
+
+export const LAMP_DEFAULT: LampSettings = {
+  on: true,
+  brightness: 1,
+  color: "#ffd6a0",
+  ceiling: false,
+  sunset: false,
+  sunsetStyle: "Sunset",
+  desk: false,
+  deskBrightness: 1,
+  deskTone: "#fff3e3",
+};
 
 /** bulb colours offered in the lamp panel */
 export const LAMP_COLORS: [string, string][] = [
@@ -56,8 +92,8 @@ export interface PlainRoomHandle {
   setView: (view: PlainRoomView) => void;
   /** switch the floor lamp; it fades like a real bulb. Returns the new state. */
   toggleLamp: () => boolean;
-  /** switch the ceiling light or the sunset lamp */
-  toggleLight: (which: "ceiling" | "sunset") => boolean;
+  /** switch the ceiling light, the sunset lamp or the desk lamp */
+  toggleLight: (which: "ceiling" | "sunset" | "desk") => boolean;
   /** change any lamp settings; the light fades to them */
   setLamp: (settings: Partial<LampSettings>) => void;
   dispose: () => void;
@@ -480,33 +516,62 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
 
   // the sunset lamp: a narrow projector with a painted disc (a bright amber core fading to red)
   const sun = furniture.sunset;
-  const sunsetDisc = paintTexture(256, 256, (c, w, h) => {
-    c.fillStyle = "#000";
-    c.fillRect(0, 0, w, h);
-    const g = c.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w * 0.46);
-    g.addColorStop(0, "#ffc25a");
-    g.addColorStop(0.4, "#ff8a2a");
-    g.addColorStop(0.78, "#f04a1a");
-    g.addColorStop(0.97, "#c81e1e");
-    g.addColorStop(1, "#000");
-    c.fillStyle = g;
-    c.beginPath();
-    c.arc(w / 2, h / 2, w * 0.46, 0, Math.PI * 2);
-    c.fill();
-  });
-  const sunsetLight = new THREE.SpotLight("#ffffff", 0, 6, 0.26, 0.25, 1.2);
-  sunsetLight.map = sunsetDisc;
+  // each disc is painted once, its stops spread over most of the radius and then feathered out to
+  // black, so the projected circle has a soft rim rather than a hard edge
+  const sunsetDiscs = new Map<string, THREE.Texture>();
+  const sunsetDisc = (style: string) => {
+    const stops = SUNSET_STYLES[style] ?? SUNSET_STYLES.Sunset;
+    let tex = sunsetDiscs.get(style);
+    if (!tex) {
+      tex = paintTexture(512, 512, (c, w, h) => {
+        c.fillStyle = "#000";
+        c.fillRect(0, 0, w, h);
+        const R = w * 0.48;
+        const g = c.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, R);
+        stops.forEach((col, i) => g.addColorStop((i / (stops.length - 1)) * 0.72, col));
+        g.addColorStop(0.86, stops[stops.length - 1]);
+        g.addColorStop(1, "#000");
+        c.fillStyle = g;
+        c.fillRect(0, 0, w, h);
+      });
+      sunsetDiscs.set(style, tex);
+    }
+    return tex;
+  };
+  const sunsetLight = new THREE.SpotLight("#ffffff", 0, 6, 0.28, 0.1, 1.2);
+  let shownStyle = SUNSET_STYLES[options.initialLamp?.sunsetStyle ?? ""] ? options.initialLamp!.sunsetStyle! : "Sunset";
+  sunsetLight.map = sunsetDisc(shownStyle);
   sunsetLight.position.copy(sun.lens);
   sunsetLight.target.position.copy(sun.target);
   // a projected texture needs a shadow map; the lamp only ever lights a wall, so a small one does
   sunsetLight.castShadow = true;
   sunsetLight.shadow.mapSize.set(512, 512);
-  sunsetLight.shadow.camera.near = 0.05;
+  // things right beside the lamp (the monitor's edge, the speaker) must not cut into the disc
+  sunsetLight.shadow.camera.near = 0.5;
   sunsetLight.shadow.bias = -0.0005;
   scene.add(sunsetLight, sunsetLight.target);
+  // the ring desk lamp: a soft spot onto the keyboard and the chair, with gentle shadows
+  const dk = furniture.deskLamp;
+  const deskLight = new THREE.SpotLight("#fff3e3", 0, 3, 0.7, 0.7, 1.5);
+  deskLight.position.copy(dk.head);
+  deskLight.target.position.copy(dk.target);
+  deskLight.castShadow = true;
+  deskLight.shadow.mapSize.set(512, 512);
+  deskLight.shadow.camera.near = 0.05;
+  deskLight.shadow.radius = 5;
+  deskLight.shadow.blurSamples = 12;
+  deskLight.shadow.normalBias = 0.02;
+  scene.add(deskLight, deskLight.target);
+  const deskColor = new THREE.Color("#fff3e3");
+  const deskColorTarget = deskColor.clone();
+
   let ceilingLevel = 0;
   let sunsetLevel = 0;
+  let deskLevel = 0;
   const applyExtras = () => {
+    deskLight.color.copy(deskColor);
+    deskLight.intensity = 3.2 * deskLevel;
+    dk.setGlow(deskLevel, deskColor);
     ceilingLight.intensity = 4.2 * ceilingLevel;
     domeMat.emissiveIntensity = 1.4 * ceilingLevel;
     sunsetLight.intensity = 11 * sunsetLevel;
@@ -539,18 +604,24 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     Object.assign(lampSettings, next);
     lampSettings.brightness = THREE.MathUtils.clamp(lampSettings.brightness, 0.15, 1.5);
     lampColorTarget.set(lampSettings.color);
+    lampSettings.deskBrightness = THREE.MathUtils.clamp(lampSettings.deskBrightness, 0.2, 1.5);
+    deskColorTarget.set(lampSettings.deskTone);
+    if (!SUNSET_STYLES[lampSettings.sunsetStyle]) lampSettings.sunsetStyle = "Sunset";
     options.onLampChange?.({ ...lampSettings });
   };
   const toggleLamp = () => {
     setLamp({ on: !lampSettings.on });
     return lampSettings.on;
   };
-  const toggleLight = (which: "ceiling" | "sunset") => {
+  const toggleLight = (which: "ceiling" | "sunset" | "desk") => {
     setLamp({ [which]: !lampSettings[which] });
     return lampSettings[which];
   };
   if (lampSettings.ceiling) ceilingLevel = 1;
   if (lampSettings.sunset) sunsetLevel = 1;
+  deskColor.set(lampSettings.deskTone);
+  deskColorTarget.copy(deskColor);
+  if (lampSettings.desk) deskLevel = lampSettings.deskBrightness;
   applyExtras();
   applyLamp();
 
@@ -748,7 +819,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   // ---------- pointer: click the lamp or the binoculars; drag to aim through the binoculars ----------
   const raycaster = new THREE.Raycaster();
   const ndc = new THREE.Vector2();
-  const pickTarget = (e: PointerEvent): "lamp" | "binoculars" | "ceiling" | "sunset" | null => {
+  const pickTarget = (e: PointerEvent): "lamp" | "binoculars" | "ceiling" | "sunset" | "desk" | null => {
     if (mode !== "room") return null;
     const r = renderer.domElement.getBoundingClientRect();
     ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
@@ -757,6 +828,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     if (!hit) return null;
     if (ceilingParts.includes(hit.object)) return "ceiling";
     if (sun.parts.includes(hit.object)) return "sunset";
+    if (dk.parts.includes(hit.object)) return "desk";
     if (furniture.lamp.parts.includes(hit.object)) return "lamp";
     if (binos.parts.includes(hit.object)) return "binoculars";
     return null;
@@ -770,7 +842,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       const hit = pickTarget(e);
       if (hit === "lamp") toggleLamp();
       else if (hit === "binoculars") enterBinoculars();
-      else if (hit === "ceiling" || hit === "sunset") toggleLight(hit);
+      else if (hit === "ceiling" || hit === "sunset" || hit === "desk") toggleLight(hit);
     }
     downAt = dragFrom = null;
   };
@@ -834,15 +906,26 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     }
 
     // the ceiling light and the sunset lamp fade like the floor lamp
+    // a new sunset style dips the lamp out, swaps the disc, and brings it back
+    const swapping = lampSettings.sunsetStyle !== shownStyle;
+    if (swapping && (sunsetLevel < 0.02 || !lampSettings.sunset)) {
+      shownStyle = lampSettings.sunsetStyle;
+      sunsetLight.map = sunsetDisc(shownStyle);
+    }
     const ceilingTarget = lampSettings.ceiling ? 1 : 0;
-    const sunsetTarget = lampSettings.sunset ? 1 : 0;
-    if (ceilingLevel !== ceilingTarget || sunsetLevel !== sunsetTarget) {
-      const step = (v: number, to: number) => {
-        const next = v + (to - v) * (reducedMotion ? 1 : 1 - Math.exp(-(to > v ? 14 : 8) * dt));
+    const sunsetTarget = lampSettings.sunset && lampSettings.sunsetStyle === shownStyle ? 1 : 0;
+    const deskTarget = lampSettings.desk ? lampSettings.deskBrightness : 0;
+    const deskColorMoving = !deskColor.equals(deskColorTarget);
+    if (ceilingLevel !== ceilingTarget || sunsetLevel !== sunsetTarget || deskLevel !== deskTarget || deskColorMoving) {
+      const step = (v: number, to: number, down = 8) => {
+        const next = v + (to - v) * (reducedMotion ? 1 : 1 - Math.exp(-(to > v ? 14 : down) * dt));
         return Math.abs(to - next) < 0.002 ? to : next;
       };
       ceilingLevel = step(ceilingLevel, ceilingTarget);
-      sunsetLevel = step(sunsetLevel, sunsetTarget);
+      sunsetLevel = step(sunsetLevel, sunsetTarget, swapping ? 16 : 8);
+      deskLevel = step(deskLevel, deskTarget);
+      deskColor.lerp(deskColorTarget, reducedMotion ? 1 : 1 - Math.exp(-6 * dt));
+      if (Math.abs(deskColor.r - deskColorTarget.r) + Math.abs(deskColor.g - deskColorTarget.g) + Math.abs(deskColor.b - deskColorTarget.b) < 0.004) deskColor.copy(deskColorTarget);
       applyExtras();
       applyLamp();
     }
@@ -915,6 +998,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
         }
       });
       for (const d of disposables) d.dispose();
+      for (const t of sunsetDiscs.values()) t.dispose();
       env.dispose();
       overlayQuad.geometry.dispose();
       maskMat.dispose();

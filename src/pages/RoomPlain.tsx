@@ -3,8 +3,10 @@ import { Link } from "react-router-dom";
 import { ArrowLeft, Binoculars, Lightbulb, LightbulbOff, SlidersHorizontal, X } from "lucide-react";
 import {
   createPlainRoom,
+  DESK_TONES,
   LAMP_COLORS,
   LAMP_DEFAULT,
+  SUNSET_STYLES,
   type LampSettings,
   type PlainRoomHandle,
   type PlainRoomView,
@@ -154,13 +156,63 @@ const RoomPlain = () => {
             ))}
           </div>
           <div className="mt-5 grid gap-3 border-t border-white/10 pt-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-amber-200/70">Desk lamp</p>
+            <label className="flex items-center justify-between text-sm text-white/80">
+              Switched on
+              <input id="light-desk" type="checkbox" className="h-4 w-4 accent-amber-300" checked={lamp.desk} onChange={() => roomRef.current?.toggleLight("desk")} />
+            </label>
+            <label className="grid gap-2 text-sm text-white/80" htmlFor="desk-brightness">
+              <span className="flex justify-between">
+                Brightness <span className="font-mono text-xs text-white/50 tabular-nums">{Math.round(lamp.deskBrightness * 100)}%</span>
+              </span>
+              <input
+                id="desk-brightness"
+                type="range"
+                min={20}
+                max={150}
+                value={Math.round(lamp.deskBrightness * 100)}
+                className="accent-amber-300"
+                onChange={(e) => roomRef.current?.setLamp({ deskBrightness: Number(e.target.value) / 100, desk: true })}
+              />
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {DESK_TONES.map(([name, hex]) => (
+                <button
+                  key={hex}
+                  type="button"
+                  aria-pressed={lamp.deskTone === hex}
+                  className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1 text-xs text-white/75 hover:border-white/30 hover:text-white aria-pressed:border-amber-200/60 aria-pressed:text-amber-100"
+                  onClick={() => roomRef.current?.setLamp({ deskTone: hex, desk: true })}
+                >
+                  <span className="h-3 w-3 rounded-full" style={{ background: hex }} /> {name}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="mt-5 grid gap-3 border-t border-white/10 pt-4">
+            <p className="text-xs uppercase tracking-[0.18em] text-amber-200/70">Sunset lamp</p>
+            <label className="flex items-center justify-between text-sm text-white/80">
+              Switched on
+              <input id="light-sunset" type="checkbox" className="h-4 w-4 accent-amber-300" checked={lamp.sunset} onChange={() => roomRef.current?.toggleLight("sunset")} />
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(SUNSET_STYLES).map(([name, stops]) => (
+                <button
+                  key={name}
+                  type="button"
+                  aria-pressed={lamp.sunsetStyle === name}
+                  className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1 text-xs text-white/75 hover:border-white/30 hover:text-white aria-pressed:border-amber-200/60 aria-pressed:text-amber-100"
+                  onClick={() => roomRef.current?.setLamp({ sunsetStyle: name, sunset: true })}
+                >
+                  <span className="h-3 w-3 rounded-full" style={{ background: `radial-gradient(circle, ${stops.join(", ")})` }} /> {name}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="mt-5 grid gap-3 border-t border-white/10 pt-4">
             <label className="flex items-center justify-between text-sm text-white/80">
               Ceiling light
               <input id="light-ceiling" type="checkbox" className="h-4 w-4 accent-amber-300" checked={lamp.ceiling} onChange={() => roomRef.current?.toggleLight("ceiling")} />
-            </label>
-            <label className="flex items-center justify-between text-sm text-white/80">
-              Sunset lamp
-              <input id="light-sunset" type="checkbox" className="h-4 w-4 accent-amber-300" checked={lamp.sunset} onChange={() => roomRef.current?.toggleLight("sunset")} />
             </label>
           </div>
         </div>
@@ -192,7 +244,7 @@ const RoomPlain = () => {
           )}
         </div>
         <p className="text-xs text-white/50">
-          {inBinoculars ? "Drag to look around · scroll to zoom · Esc to step back" : "Drag to orbit · scroll to zoom · click the lamp (L), the ceiling light, the sunset lamp or the binoculars (B)"}
+          {inBinoculars ? "Drag to look around · scroll to zoom · Esc to step back" : "Drag to orbit · scroll to zoom · click any light to switch it (L for the floor lamp) or the binoculars (B)"}
         </p>
       </div>
     </main>

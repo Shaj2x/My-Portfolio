@@ -27,7 +27,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--amber); out
 .val { font: 12px var(--mono); color: var(--ink-dim); font-variant-numeric: tabular-nums; }
 #panel input[type=range] { width: 100%; accent-color: var(--amber); margin: 8px 0 0; }
 #panel input[type=checkbox] { accent-color: var(--amber); width: 16px; height: 16px; }
-#colors { display: flex; flex-wrap: wrap; gap: 6px; }
+#colors, .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .swatch { display: inline-flex; align-items: center; gap: 6px; font: 12px var(--sans); color: rgba(255,255,255,.75); background: none; border: 1px solid rgba(255,255,255,.12); border-radius: 999px; padding: 5px 10px; cursor: pointer; }
 .swatch:hover { color: #fff; border-color: rgba(255,255,255,.3); }
 .eyebrow-s { margin: 0 0 -6px; font: 500 11px var(--mono); letter-spacing: .18em; text-transform: uppercase; color: var(--amber); opacity: .75; }
@@ -48,8 +48,19 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--amber); out
     <input type="range" id="lamp-brightness" min="15" max="150" value="100"></label>
   <div><div class="line" style="margin-bottom:8px">Bulb colour</div><div id="colors"></div></div>
   <div class="extras">
+    <p class="eyebrow-s">Desk lamp</p>
+    <label class="line" for="light-desk">Switched on <input type="checkbox" id="light-desk"></label>
+    <label for="desk-brightness"><span class="line">Brightness <span class="val" id="dval">100%</span></span>
+      <input type="range" id="desk-brightness" min="20" max="150" value="100"></label>
+    <div id="tones" class="chips"></div>
+  </div>
+  <div class="extras">
+    <p class="eyebrow-s">Sunset lamp</p>
+    <label class="line" for="light-sunset">Switched on <input type="checkbox" id="light-sunset"></label>
+    <div id="styles" class="chips"></div>
+  </div>
+  <div class="extras">
     <label class="line" for="light-ceiling">Ceiling light <input type="checkbox" id="light-ceiling"></label>
-    <label class="line" for="light-sunset">Sunset lamp <input type="checkbox" id="light-sunset"></label>
   </div>
 </div>
 <div class="bar">
@@ -66,6 +77,6 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--amber); out
   <div class="row" id="scoperow" hidden>
     <button type="button" id="leave">Back to the room (Esc)</button>
   </div>
-  <p class="hint" id="hint">Drag to orbit · scroll to zoom · click the lamp (L), the ceiling light, the sunset lamp or the binoculars (B)</p>
+  <p class="hint" id="hint">Drag to orbit · scroll to zoom · click any light to switch it (L for the floor lamp) or the binoculars (B)</p>
 </div>
 <script>

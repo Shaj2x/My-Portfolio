@@ -27,6 +27,8 @@ export interface FurnitureHandle {
   lamp: { bulb: THREE.Vector3; parts: THREE.Object3D[]; setGlow: (k: number, color: THREE.Color) => void };
   /** the binoculars on the window sill: where they sit, which way they look, and the meshes that pick them up */
   binoculars: { position: THREE.Vector3; direction: THREE.Vector3; parts: THREE.Object3D[] };
+  /** the ring desk lamp: its head, where it shines, its meshes, and its glow (0 off) in a colour */
+  deskLamp: { head: THREE.Vector3; target: THREE.Vector3; parts: THREE.Object3D[]; setGlow: (k: number, color: THREE.Color) => void };
   /** the sunset lamp on the desk: where its lens is, the point on the wall it projects onto, its meshes, and its lens glow (0–1) */
   sunset: { lens: THREE.Vector3; target: THREE.Vector3; parts: THREE.Object3D[]; setGlow: (k: number) => void };
   /** centre and facing of each glowing screen, for area lights */
@@ -510,6 +512,7 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
 
   // ---------- desk props ----------
   let sunset!: FurnitureHandle["sunset"];
+  let deskLamp!: FurnitureHandle["deskLamp"];
   {
     const facing = -Math.PI / 2;
     // keyboard: an off-white 75% board, white alphas, dusty-blue modifiers and a volume knob
@@ -541,16 +544,47 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     const ms = LAYOUT.mouse.pos;
     ball(0.035, std("#101012", 0.4), ms[0], deskTop + 0.012, ms[2], group, [0.9, 0.45, 1.5]);
 
-    // DualSense: a white body with two grips and a black touch-pad band
+    // DualSense: white wings and grips, a black centre with the sticks and PS button, a white
+    // touchpad edged by its light bar, a D-pad and face buttons, bumpers and triggers at the front.
+    // Local axes: x across, +z toward the handles (and the chair), y up.
     const ct = LAYOUT.controller.pos;
-    const cg = anchor(ct[0], deskTop, ct[2], facing + 0.3);
-    const dsWhite = std("#f2f2f2", 0.45);
-    rounded(0.12, 0.035, 0.07, 0.015, dsWhite, 0, 0.022, 0, cg);
-    for (const s of [-1, 1]) {
-      const grip = ball(0.028, dsWhite, s * 0.06, 0.02, 0.03, cg, [1, 0.7, 1.6]);
-      grip.rotation.y = s * 0.3;
+    const cg = anchor(ct[0], deskTop, ct[2], facing + 0.25);
+    const dsWhite = std("#f3f3f1", 0.42);
+    const dsBlack = std("#17171a", 0.5);
+    const dsGrey = std("#3a3b40", 0.45);
+    // black core and its belly
+    rounded(0.112, 0.026, 0.062, 0.012, dsBlack, 0, 0.019, 0.004, cg);
+    // white wings sweeping back into the grips
+    for (const sgn of [-1, 1]) {
+      const wing = rounded(0.05, 0.03, 0.066, 0.014, dsWhite, sgn * 0.046, 0.02, 0.0, cg);
+      wing.rotation.y = sgn * 0.12;
+      const grip = place(new THREE.Mesh(new THREE.CapsuleGeometry(0.019, 0.042, 8, 16), dsWhite), sgn * 0.058, 0.016, 0.043, cg);
+      grip.rotation.set(Math.PI / 2 - 0.25, 0, -sgn * 0.42);
+      // bumpers and triggers along the front edge
+      const bumper = rounded(0.034, 0.008, 0.012, 0.004, dsWhite, sgn * 0.044, 0.03, -0.036, cg);
+      bumper.rotation.y = sgn * 0.12;
+      const trigger = rounded(0.026, 0.012, 0.016, 0.005, dsBlack, sgn * 0.044, 0.02, -0.042, cg);
+      trigger.rotation.x = 0.35;
+      // thumbsticks: a post and a dished cap
+      const sx = sgn * 0.024;
+      cyl(0.0045, 0.0045, 0.008, dsBlack, sx, 0.035, 0.02, cg, 12);
+      cyl(0.0095, 0.0095, 0.004, dsGrey, sx, 0.041, 0.02, cg, 20);
+      const rim = place(new THREE.Mesh(new THREE.TorusGeometry(0.0085, 0.0016, 6, 20), dsBlack), sx, 0.043, 0.02, cg, false);
+      rim.rotation.x = Math.PI / 2;
     }
-    block(0.06, 0.004, 0.045, std("#1a1a1a", 0.5), 0, 0.04, -0.005, cg, false);
+    // D-pad on the left wing, face buttons on the right
+    for (const [dx, dz, rot] of [[0, -0.007, 0], [0, 0.007, 0], [-0.007, 0, Math.PI / 2], [0.007, 0, Math.PI / 2]] as const) {
+      const arm = block(0.005, 0.003, 0.007, dsGrey, -0.046 + dx, 0.0365, -0.006 + dz, cg, false);
+      arm.rotation.y = rot;
+    }
+    const faceMat = std("#c9cdd4", 0.3);
+    for (const [dx, dz] of [[0, -0.008], [0, 0.008], [-0.008, 0], [0.008, 0]]) cyl(0.0035, 0.0035, 0.003, faceMat, 0.046 + dx, 0.0365, -0.006 + dz, cg, 14);
+    // touchpad, its blue light bar, the PS and mute buttons
+    rounded(0.05, 0.006, 0.032, 0.004, dsWhite, 0, 0.034, -0.016, cg);
+    const bar = new THREE.MeshBasicMaterial({ color: new THREE.Color("#3a6bff").multiplyScalar(1.6), toneMapped: false });
+    for (const sgn of [-1, 1]) block(0.0016, 0.0025, 0.03, bar, sgn * 0.026, 0.0345, -0.016, cg, false);
+    cyl(0.0042, 0.0042, 0.003, dsGrey, 0, 0.0335, 0.012, cg, 16);
+    block(0.008, 0.002, 0.003, std("#f2a65a", 0.4), 0, 0.0333, 0.019, cg, false);
 
     const mg = LAYOUT.mug.pos;
     const mugMat = std("#161616", 0.35);
@@ -575,11 +609,29 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     const faceMesh = new THREE.Mesh(new THREE.PlaneGeometry(0.05, 0.019), new THREE.MeshBasicMaterial({ map: face, toneMapped: false }));
     faceMesh.position.set(0, 0.026, 0.0645);
     lampG.add(faceMesh);
-    tube([new THREE.Vector3(0, 0.05, -0.02), new THREE.Vector3(0, 0.25, -0.03), new THREE.Vector3(0, 0.38, 0.0), new THREE.Vector3(0, 0.42, 0.04)], 0.008, white, lampG);
-    const headRing = place(new THREE.Mesh(new THREE.TorusGeometry(0.058, 0.012, 12, 40), white), 0, 0.46, 0.06, lampG);
+    const deskLampParts: THREE.Object3D[] = [lampG.children[0]];
+    deskLampParts.push(tube([new THREE.Vector3(0, 0.05, -0.02), new THREE.Vector3(0, 0.25, -0.03), new THREE.Vector3(0, 0.38, 0.0), new THREE.Vector3(0, 0.42, 0.04)], 0.008, white, lampG));
+    // the head is a white ring of LEDs around a frosted disc; both glow when it's on
+    const ringMat = new THREE.MeshStandardMaterial({ color: "#f2f2f0", roughness: 0.4, emissive: "#ffffff", emissiveIntensity: 0 });
+    const discMat = new THREE.MeshStandardMaterial({ color: "#e3e6ea", roughness: 0.25, emissive: "#ffffff", emissiveIntensity: 0 });
+    const headRing = place(new THREE.Mesh(new THREE.TorusGeometry(0.058, 0.012, 12, 40), ringMat), 0, 0.46, 0.06, lampG);
     headRing.rotation.x = -0.25;
-    const lens = place(new THREE.Mesh(new THREE.CircleGeometry(0.058, 36), std("#e3e6ea", 0.25)), 0, 0.46, 0.061, lampG, false);
+    const lens = place(new THREE.Mesh(new THREE.CircleGeometry(0.058, 36), discMat), 0, 0.46, 0.061, lampG, false);
     lens.rotation.x = -0.25;
+    deskLampParts.push(headRing, lens);
+    lampG.updateMatrixWorld(true);
+    deskLamp = {
+      head: new THREE.Vector3(0, 0.46, 0.08).applyMatrix4(lampG.matrixWorld),
+      // it lights the keyboard and the chair in front of it
+      target: new THREE.Vector3(LAYOUT.keyboard.pos[0] - 0.15, deskTop, LAYOUT.keyboard.pos[2] - 0.2),
+      parts: deskLampParts,
+      setGlow: (k, color) => {
+        ringMat.emissive.copy(color);
+        discMat.emissive.copy(color);
+        ringMat.emissiveIntensity = 1.6 * k;
+        discMat.emissiveIntensity = 1.1 * k;
+      },
+    };
 
     const sp = LAYOUT.speaker.pos;
     const spk = rounded(0.2, 0.08, 0.07, 0.03, std("#1a1a1a", 0.8), sp[0], deskTop + 0.04, sp[2]);
@@ -749,5 +801,5 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     block(0.01, 0.12, 0.075, white, sw[0] + 0.005, sw[1], sw[2], group, false);
   }
 
-  return { group, lamp, binoculars, sunset, screens };
+  return { group, lamp, binoculars, sunset, deskLamp, screens };
 }
