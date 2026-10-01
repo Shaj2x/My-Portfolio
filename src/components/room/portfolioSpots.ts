@@ -8,7 +8,7 @@ export const PORTFOLIO_SPOTS: Record<PortfolioId, { object: string; title: strin
   about: { object: "The tapestry", title: "About Me" },
   projects: { object: "The laptop", title: "Projects" },
   experience: { object: "The closet", title: "Experience" },
-  resume: { object: "The dresser drawers", title: "Resume" },
+  resume: { object: "The resume in the drawer", title: "Resume" },
   leadership: { object: "The Western lanyard", title: "Leadership" },
   skills: { object: "The keyboard", title: "Skills" },
   services: { object: "The wallet", title: "Services" },

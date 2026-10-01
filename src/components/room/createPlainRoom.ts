@@ -895,7 +895,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   const raycaster = new THREE.Raycaster();
   const ndc = new THREE.Vector2();
   type Pick =
-    | { kind: "lamp" | "binoculars" | "ceiling" | "sunset" | "desk" | "switch" | "radio" | "console" | "blind" }
+    | { kind: "lamp" | "binoculars" | "ceiling" | "sunset" | "desk" | "switch" | "radio" | "console" | "blind" | "drawer" }
     | { kind: "plushie"; target: (typeof inter.plushies)[number] }
     | { kind: "perfume"; target: THREE.Group }
     | { kind: "portfolio"; id: PortfolioId };
@@ -914,6 +914,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     radio: options.onSpeaker ? "Speaker · play my playlist" : `Speaker · ${RADIO_STATION.name}`,
     console: "PS5 · pick up the controller and play",
     blind: "Blind · roll it up or down",
+    drawer: "Dresser drawer · open it",
     perfume: "Spray a fragrance",
   };
   const pickTarget = (e: PointerEvent): Pick | null => {
@@ -938,6 +939,9 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     if (o === inter.lightSwitch) return { kind: "switch" };
     if (o === inter.speaker) return { kind: "radio" };
     if (isIn(o, inter.controller) || isIn(o, inter.monitor) || isIn(o, inter.ps5)) return { kind: "console" };
+    // the resume is only reachable once the drawer is open
+    if (o === inter.drawer.paper) return drawerTarget > 0.5 ? { kind: "portfolio", id: "resume" } : { kind: "drawer" };
+    if (inter.drawer.parts.includes(o)) return { kind: "drawer" };
     const spot = [...inter.spots, ...roomSpots].find((r) => isIn(o, r.root));
     if (spot) return { kind: "portfolio", id: spot.id };
     const plush = inter.plushies.find((p) => isIn(o, p.group));
@@ -970,6 +974,9 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   // the blind rolls between nearly up and fully closed
   let blindTarget = WINDOW.blindDown;
   let blindLevel = WINDOW.blindDown;
+  // the dresser's top drawer slides out with an ease, and the resume is waiting inside
+  let drawerTarget = 0;
+  let drawerLevel = 0;
   // plushies squash and spring back, each on its own clock
   const bounces = new Map<THREE.Group, number>();
   // perfume mist: a pool of soft particles, puffed out of whichever bottle was pressed
@@ -1028,7 +1035,11 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
           options.onSpeaker();
         } else toggleRadio();
       }
-      else if (kind === "console") enterConsole(); else if (kind === "blind") {
+      else if (kind === "console") enterConsole();
+      else if (kind === "drawer") {
+        drawerTarget = drawerTarget > 0.5 ? 0 : 1;
+        audio.play("blind");
+      } else if (kind === "blind") {
         blindTarget = blindTarget > 0.5 ? WINDOW.blindDown : 1;
         audio.play("blind");
       } else if (hit?.kind === "plushie") {
@@ -1152,6 +1163,11 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       setBlind(blindLevel);
       // light from outside follows how much window is showing
       moon.intensity = 3 * (1 - blindLevel);
+    }
+    if (drawerLevel !== drawerTarget) {
+      drawerLevel += (drawerTarget - drawerLevel) * (reducedMotion ? 1 : 1 - Math.exp(-7 * dt));
+      if (Math.abs(drawerTarget - drawerLevel) < 0.002) drawerLevel = drawerTarget;
+      inter.drawer.setOpen(drawerLevel);
     }
     for (const [g, age] of bounces) {
       const t2 = age + dt;

@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { createDecor } from "./createDecor";
 import type { PortfolioId } from "./portfolioSpots";
+import { profile } from "@/data/portfolio";
 import { paintTexture } from "./paintTexture";
 import { COLORS, LAYOUT, ROOM, WINDOW } from "./roomLayout";
 
@@ -44,6 +45,8 @@ export interface FurnitureHandle {
     lightSwitch: THREE.Mesh;
     /** objects that open a section of the portfolio */
     spots: { id: PortfolioId; root: THREE.Object3D }[];
+    /** the dresser's top drawer: its meshes, the resume lying in it, and how far out it is (0–1) */
+    drawer: { parts: THREE.Object3D[]; paper: THREE.Mesh; setOpen: (k: number) => void };
     /** 0 = the PlayStation "who's using this controller" screen, 1 = signed in to the home screen */
     setConsole: (k: number) => void;
   };
@@ -114,6 +117,7 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
   const decor = createDecor({ env, rand: rnd });
   let bottles: THREE.Group[] = [];
   const spots: FurnitureHandle["interact"]["spots"] = [];
+  let drawer!: FurnitureHandle["interact"]["drawer"];
   let speaker!: THREE.Mesh;
   let controller!: THREE.Group;
   let monitor!: THREE.Group;
@@ -278,11 +282,70 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     const body = std(COLORS.dresser, 0.62);
     const front = std("#d8b283", 0.6);
     const pull = std(COLORS.pull, 0.8);
-    for (let u = 0; u < 2; u++) {
-      const y0 = u * unitH;
-      block(w, unitH - 0.004, d, body, x, y0 + unitH / 2, z);
-      spots.push({ id: "resume", root: block(w - 0.03, unitH - 0.04, 0.012, front, x, y0 + unitH / 2, z + d / 2 + 0.002) });
-      block(0.11, 0.022, 0.006, pull, x, y0 + unitH - 0.075, z + d / 2 + 0.009, group, false);
+    // the lower unit is closed
+    block(w, unitH - 0.004, d, body, x, unitH / 2, z);
+    block(w - 0.03, unitH - 0.04, 0.012, front, x, unitH / 2, z + d / 2 + 0.002);
+    block(0.11, 0.022, 0.006, pull, x, unitH - 0.075, z + d / 2 + 0.009, group, false);
+    // the upper unit is a hollow carcass with a drawer that slides out, the resume lying in it
+    {
+      const y0 = unitH;
+      const t = 0.015;
+      block(w, t, d, body, x, y0 + unitH - 0.004 - t / 2, z); // top
+      block(w, t, d, body, x, y0 + t / 2, z); // bottom
+      block(t, unitH - 0.004, d, body, x - w / 2 + t / 2, y0 + unitH / 2, z); // sides
+      block(t, unitH - 0.004, d, body, x + w / 2 - t / 2, y0 + unitH / 2, z);
+      block(w, unitH - 0.004, t, body, x, y0 + unitH / 2, z - d / 2 + t / 2); // back
+      const dg = new THREE.Group();
+      dg.position.set(x, y0, z);
+      group.add(dg);
+      const dw = w - 0.05;
+      const dd = d - 0.05;
+      const floorY = unitH * 0.68; // a shallow tray, so the page shows from above
+      const dh = unitH - 0.05 - floorY;
+      const inner = std("#c99d6c", 0.7);
+      const parts: THREE.Object3D[] = [
+        block(w - 0.03, unitH - 0.04, 0.012, front, 0, unitH / 2, d / 2 + 0.002, dg),
+        block(0.11, 0.022, 0.006, pull, 0, unitH - 0.075, d / 2 + 0.009, dg, false),
+        block(dw, 0.01, dd, inner, 0, floorY, 0.0, dg),
+        block(0.01, dh, dd, inner, -dw / 2, floorY + dh / 2, 0, dg),
+        block(0.01, dh, dd, inner, dw / 2, floorY + dh / 2, 0, dg),
+        block(dw, dh, 0.01, inner, 0, floorY + dh / 2, -dd / 2, dg),
+      ];
+      // the resume: a printed page, slightly askew
+      const sheet = paintTexture(340, 440, (c, cw, ch) => {
+        c.fillStyle = "#f7f5f0";
+        c.fillRect(0, 0, cw, ch);
+        c.fillStyle = "#1c1c1f";
+        c.font = "700 26px Georgia, serif";
+        c.fillText(profile.name, 28, 50);
+        c.fillStyle = "#b3262d";
+        c.fillRect(28, 62, 120, 3);
+        c.fillStyle = "#555";
+        c.font = "12px system-ui, sans-serif";
+        c.fillText(profile.email, 28, 84);
+        c.fillStyle = "#1c1c1f";
+        c.font = "700 14px system-ui, sans-serif";
+        for (const [i, head] of ["EDUCATION", "EXPERIENCE", "LEADERSHIP", "SKILLS"].entries()) {
+          const y = 118 + i * 82;
+          c.fillStyle = "#1c1c1f";
+          c.fillText(head, 28, y);
+          c.fillStyle = "#9a9aa0";
+          for (let l = 0; l < 3; l++) c.fillRect(28, y + 14 + l * 15, 200 + ((i * 37 + l * 53) % 80), 5);
+        }
+      });
+      const paper = new THREE.Mesh(new THREE.PlaneGeometry(0.216, 0.279), new THREE.MeshStandardMaterial({ map: sheet, roughness: 0.9 }));
+      paper.rotation.set(-Math.PI / 2, 0, 0.08);
+      paper.position.set(0, floorY + 0.006, dd / 2 - 0.15);
+      paper.receiveShadow = true;
+      dg.add(paper);
+      const closedZ = z;
+      drawer = {
+        parts,
+        paper,
+        setOpen: (k) => {
+          dg.position.z = closedZ + k * (dd - 0.08);
+        },
+      };
     }
     const top = unitH * 2;
 
@@ -945,5 +1008,5 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     block(0.008, 0.035, 0.016, std("#f6f5f2", 0.4), sw[0] + 0.012, sw[1], sw[2], group, false);
   }
 
-  return { group, lamp, binoculars, sunset, deskLamp, screens, interact: { plushies, bottles, speaker, controller, monitor, ps5, lightSwitch, setConsole, spots } };
+  return { group, lamp, binoculars, sunset, deskLamp, screens, interact: { plushies, bottles, speaker, controller, monitor, ps5, lightSwitch, setConsole, spots, drawer } };
 }
