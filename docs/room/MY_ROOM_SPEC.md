@@ -10,6 +10,7 @@ Built from four night photos (no measurements given yet). Every number is **esti
 | C | From the bed, looking into the back-right corner: floor lamp, desk, tapestry, monitor, laptop |
 | D | Close-up of the dresser, perfume shelf, window sill plushies, lamp and rugs |
 | E | From beside the desk, looking at the front wall: the entry door in its alcove and the closet |
+| F | From the foot of the bed, looking into the corner: the floor lamp in the corner, about 0.75 m of open floor (with both rugs) between the desk's end and the window wall |
 
 ## Coordinate convention
 

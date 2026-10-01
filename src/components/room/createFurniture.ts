@@ -292,12 +292,13 @@ export function createFurniture(): FurnitureHandle {
   // ---------- floor lamp ----------
   let lampBulb: THREE.Vector3;
   {
-    const { pos, height, shadeY, shadeR, shadeH } = LAYOUT.floorLamp;
+    const { pos, height, shadeY, shadeR, shadeH, shadeOffset } = LAYOUT.floorLamp;
     const [x, , z] = pos;
     cyl(0.14, 0.15, 0.025, black, x, 0.0125, z, group, 40);
     cyl(0.011, 0.011, height, black, x, height / 2, z, group, 12);
-    const sx = x - 0.09;
-    tube([new THREE.Vector3(x, height - 0.02, z), new THREE.Vector3(x - 0.02, height + 0.05, z), new THREE.Vector3(sx, height + 0.04, z), new THREE.Vector3(sx, shadeY + shadeH / 2, z)], 0.008, black);
+    const sx = x + shadeOffset[0];
+    const sz = z + shadeOffset[1];
+    tube([new THREE.Vector3(x, height - 0.02, z), new THREE.Vector3(x - 0.02, height + 0.05, z + 0.02), new THREE.Vector3(sx, height + 0.04, sz), new THREE.Vector3(sx, shadeY + shadeH / 2, sz)], 0.008, black);
     const linen = paintTexture(512, 256, (c, w, h) => {
       c.fillStyle = COLORS.shade;
       c.fillRect(0, 0, w, h);
@@ -316,19 +317,19 @@ export function createFurniture(): FurnitureHandle {
       new THREE.CylinderGeometry(shadeR, shadeR, shadeH, 48, 1, true),
       new THREE.MeshStandardMaterial({ map: linen, emissive: "#ffcf96", emissiveMap: linen, emissiveIntensity: 0.9, side: THREE.DoubleSide, roughness: 0.9 }),
     );
-    place(shade, sx, shadeY, z, group, false);
+    place(shade, sx, shadeY, sz, group, false);
     const rimMat = std("#9a958c", 0.6);
     for (const dy of [-shadeH / 2, shadeH / 2]) {
       const rim = new THREE.Mesh(new THREE.TorusGeometry(shadeR, 0.004, 6, 48), rimMat);
       rim.rotation.x = Math.PI / 2;
-      place(rim, sx, shadeY + dy, z, group, false);
+      place(rim, sx, shadeY + dy, sz, group, false);
     }
     // the bright diffuser seen from below
     const disc = new THREE.Mesh(new THREE.CircleGeometry(shadeR * 0.96, 40), glow("#ffe3bd", 1.6));
     disc.rotation.x = Math.PI / 2;
-    place(disc, sx, shadeY - shadeH / 2 + 0.01, z, group, false);
-    lampBulb = new THREE.Vector3(sx, shadeY, z);
-    ball(0.03, glow("#fff1d8", 3), sx, shadeY, z, group).castShadow = false;
+    place(disc, sx, shadeY - shadeH / 2 + 0.01, sz, group, false);
+    lampBulb = new THREE.Vector3(sx, shadeY, sz);
+    ball(0.03, glow("#fff1d8", 3), sx, shadeY, sz, group).castShadow = false;
   }
 
   // ---------- desk ----------
@@ -365,14 +366,15 @@ export function createFurniture(): FurnitureHandle {
     block(d - 0.05, 0.03, 0.03, steel, x, 0.16, z + l / 2 - 0.025);
 
     // desk mat
-    block(0.36, 0.003, 0.82, std("#1a1a1c", 0.9), 1.1, h + 0.0015, -0.72, group, false);
+    block(0.36, 0.003, 0.82, std("#1a1a1c", 0.9), x - 0.1, h + 0.0015, z, group, false);
   }
 
   // ---------- curved monitor, facing the chair ----------
   {
     const { pos, w, h } = LAYOUT.monitor;
     const g = anchor(pos[0], deskTop, pos[2]);
-    g.lookAt(0.35, deskTop, -0.9);
+    const chair = LAYOUT.chair.pos;
+    g.lookAt(chair[0] - 0.2, deskTop, chair[2] - 0.15);
     const R = 1.0;
     const bend = (geo: THREE.PlaneGeometry, dz: number) => {
       const p = geo.attributes.position;

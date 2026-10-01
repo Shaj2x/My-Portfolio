@@ -25,7 +25,8 @@ const heroDir = vec(HERO.target).sub(heroPos).normalize();
 const VIEWS: Record<PlainRoomView, { pos: THREE.Vector3; target: THREE.Vector3 }> = {
   photo: { pos: heroPos, target: heroPos.clone().addScaledVector(heroDir, 2.2) },
   dollhouse: { pos: new THREE.Vector3(-3.4, 4.8, ROOM.midZ + 4.7), target: new THREE.Vector3(0.1, 0.5, ROOM.midZ) },
-  desk: { pos: new THREE.Vector3(-0.6, 1.45, 0.6), target: new THREE.Vector3(1.2, 0.95, -0.75) },
+  // matches photo F: from the foot of the bed, looking into the corner with the lamp and the end of the desk
+  desk: { pos: new THREE.Vector3(-0.15, 1.7, 0.6), target: new THREE.Vector3(1.0, 0.3, -1.2) },
   // matches photo E: from beside the desk, looking at the entry door and the closet
   door: { pos: new THREE.Vector3(0.35, 1.5, -0.45), target: new THREE.Vector3(0.0, 1.0, ROOM.front) },
 };
