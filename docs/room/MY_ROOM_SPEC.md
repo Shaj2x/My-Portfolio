@@ -114,7 +114,6 @@ Positions are the object's centre on the floor (y = 0) unless a height is given.
 | LED candle | small point light, flicker | 2200 K `#ffb46a` | small | +0.05, 0.90, −1.30 | Candle toggle |
 | Ceiling dome | point light + emissive diffuser | 4000 K `#fff1dc` | off | −0.20, 2.40, +0.45 | Ceiling dimmer |
 | Gooseneck lamp | spot, down onto the desk | 4000 K | off | +1.40, 1.15, −1.28 | Proposed new dimmer (or left decorative) |
-| Ring light | ring emissive + soft point light | 5000 K | off | +1.42, 1.48, −1.30 | Proposed: toggled by clicking it |
 | Window | backdrop + cool fill | by time of day | only when the blind is up | window | Time of day and weather |
 | Hallway | spot through the door | warm | as the reference | front wall | Unchanged |
 
@@ -161,6 +160,7 @@ Photo B is the best whole-room view, so the hero view reproduces **photo B** rat
 ## Differences from the reference room
 
 **Removed**
+- The rugs and the ring light behind the desk lamp (in the photos, left out on request).
 - Wood floor → dark charcoal carpet.
 - Bookshelf, corkboard, poster, the wall clock on the wall, curtains and rod, the trailing and potted floor plants,
   the book stack, the pencil cup, and the nightstand with its bedside lamp.
@@ -172,10 +172,9 @@ Photo B is the best whole-room view, so the hero view reproduces **photo B** rat
 - Maple two-unit dresser with a perfume riser, an LED candle and clutter.
 - Arched floor lamp with a drum shade, as the main light.
 - Black-steel desk with a curved monitor (PS5 screen), a laptop on a stand, a keyboard, a controller, a gooseneck
-  lamp, a ring light, a digital clock and speakers. Office chair and a PC tower.
+  lamp, a digital clock and speakers. Office chair and a PC tower.
 - The "If you're reading this it's too late" tapestry.
 - Blackout roller blind with a sill row of plushies and two small plants.
-- Spider-web rug and cartoon rug.
 - Flush ceiling dome and a sprinkler head; a popcorn ceiling texture; outlets.
 
 **Moved or re-anchored**
