@@ -879,6 +879,73 @@ html.lg .cal-list li{background:var(--glass-tint)}
 .cmd-list .ch{flex:none;font-size:12.5px;color:var(--muted)}
 .cmd-foot{display:flex;gap:16px;padding:8px 16px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
 .cmd-foot kbd{font:600 11px/1 var(--ui);padding:3px 6px;border-radius:5px;background:var(--panel2);margin-right:4px}
+.acct-btn{position:relative;display:inline-grid;place-items:center;width:40px;height:40px;padding:0;border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--muted);transition:border-color var(--t-fast) ease,color var(--t-fast) ease,transform var(--t-press) var(--ease-out)}
+.acct-btn:hover{color:var(--ink);border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}
+.acct-btn:active{transform:scale(.95)}
+.acct-btn.in{color:var(--accent-ink);background:var(--accent);border-color:transparent}
+.av{display:grid;place-items:center;width:100%;height:100%;border-radius:50%;overflow:hidden;font:700 15px/1 var(--ui)}
+.av svg{width:20px;height:20px}
+.av img{width:100%;height:100%;object-fit:cover}
+.acct-dot{position:absolute;right:-1px;bottom:-1px;width:11px;height:11px;border-radius:50%;border:2px solid var(--bg);background:var(--good,#0ca30c)}
+.acct-dot[hidden]{display:none}
+.acct-dot[data-s="saving"]{background:var(--accent);animation:ac-pulse 1.2s ease-in-out infinite}
+.acct-dot[data-s="offline"]{background:#fab219}
+.acct-dot[data-s="error"]{background:var(--bad)}
+@keyframes ac-pulse{50%{opacity:.35}}
+.acd{padding:0;border:0;background:none;width:min(560px,calc(100vw - 24px));max-height:min(86vh,760px);margin:8vh auto auto;overflow:visible;color:var(--ink)}
+.acd-sm{width:min(460px,calc(100vw - 24px))}
+.acd::backdrop{background:color-mix(in srgb,#000 50%,transparent);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.acd-in{display:flex;flex-direction:column;max-height:inherit;border-radius:calc(var(--r) + 6px);background:var(--panel);border:1px solid var(--line);box-shadow:0 30px 70px -20px rgba(0,0,0,.6);overflow:hidden}
+.acd[open] .acd-in{animation:ac-in var(--t-move,280ms) var(--ease-out)}
+@keyframes ac-in{from{opacity:0;transform:translateY(10px) scale(.98)}}
+.acd-top{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 6px 20px}
+.acd-top h2{margin:0;font-size:18px}
+.acd-body{padding:6px 20px 20px;overflow:auto;display:grid;gap:16px}
+.acd-body h2{margin:6px 0 0;font-size:18px}
+.acd-body p{margin:0}
+.ac-lead{font-size:14.5px;line-height:1.5}
+.ac-form{display:grid;gap:6px}
+.ac-form label{font-size:13px;color:var(--muted)}
+.ac-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.ac-row input{flex:1 1 220px;min-width:0}
+.ac-or{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12.5px}
+.ac-or::before,.ac-or::after{content:"";flex:1;height:1px;background:var(--line)}
+.ac-google{width:100%}
+.ac-hero{display:flex;gap:14px;align-items:center}
+.ac-hero>svg{width:34px;height:34px;color:var(--accent);flex:none}
+.ac-hero b{font-size:16px;display:block}
+.ac-hero .muted{font-size:13.5px}
+.av.big{width:52px;height:52px;flex:none;background:var(--accent);color:var(--accent-ink);font-size:22px}
+.ac-st{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--muted);margin-top:4px!important}
+.ac-st i{width:8px;height:8px;border-radius:50%;background:var(--good,#0ca30c);flex:none}
+.ac-st[data-s="saving"] i{background:var(--accent)}.ac-st[data-s="offline"] i{background:#fab219}.ac-st[data-s="error"] i{background:var(--bad)}
+.ac-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.ac-stats div{display:grid;gap:2px;padding:10px;border-radius:12px;background:var(--panel2);text-align:center}
+.ac-stats b{font-size:18px;font-variant-numeric:tabular-nums}
+.ac-stats span{font-size:11.5px;color:var(--muted)}
+.ac-sec h3{display:flex;align-items:center;gap:8px;margin:0 0 6px;font-size:14px}
+.ac-sec h3 span{font-size:12px;font-weight:600;color:var(--muted);padding:1px 7px;border-radius:999px;background:var(--panel2)}
+.ac-list{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.ac-list li{display:flex;align-items:center;gap:10px;padding:6px 6px 6px 8px;border-radius:10px;background:var(--panel2);min-height:44px}
+.ac-list .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}
+.ac-list .muted{font-size:12.5px}
+.ac-sw{position:relative;width:26px;height:26px;border-radius:8px;flex:none;box-shadow:inset 0 0 0 1px rgba(255,255,255,.15)}
+.ac-sw i{position:absolute;right:-3px;bottom:-3px;width:11px;height:11px;border-radius:50%;box-shadow:0 0 0 2px var(--panel2)}
+.ac-dot{width:10px;height:10px;border-radius:50%;flex:none;margin:0 4px}
+.ac-empty{font-size:13px}
+.ac-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding-top:4px;border-top:1px solid var(--line);padding-top:14px}
+.ac-clear{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);cursor:pointer}
+.ac-danger{font-size:13.5px;display:grid;gap:10px}
+.linkish{background:none;border:0;padding:0;color:var(--bad);font:inherit;font-size:13px;text-decoration:underline;cursor:pointer;justify-self:start}
+.btn.danger{background:var(--bad);color:#fff}
+.acp-opt{display:grid;gap:3px;text-align:left;padding:14px 16px;border-radius:14px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);transition:border-color var(--t-fast) ease,transform var(--t-press) var(--ease-out)}
+.acp-opt:hover{border-color:var(--accent)}
+.acp-opt:active{transform:scale(.98)}
+.acp-opt b{font-size:15px}.acp-opt span{font-size:13.5px}.acp-opt small{font-size:12px;color:var(--muted)}
+html.lg .acd-in{background:color-mix(in srgb,var(--panel) 88%,transparent);-webkit-backdrop-filter:blur(30px) saturate(180%);backdrop-filter:blur(30px) saturate(180%);border-color:transparent;box-shadow:var(--rim),0 30px 70px -20px rgba(0,0,0,.6)}
+html.lg .ac-stats div,html.lg .ac-list li,html.lg .acp-opt{background:var(--glass-tint)}
+@media (max-width:560px){.acd{margin:auto auto 0;width:100vw;max-width:100vw;max-height:92vh}.acd-in{border-radius:20px 20px 0 0}.ac-stats{grid-template-columns:repeat(2,1fr)}.acd-body{padding-bottom:calc(20px + env(safe-area-inset-bottom,0px))}}
+@media (prefers-reduced-motion:reduce){.acd[open] .acd-in{animation:none}.acct-dot[data-s="saving"]{animation:none}.acct-btn:active,.acp-opt:active{transform:none}}
 html.lg .cmd-in{background:color-mix(in srgb,var(--panel) 62%,transparent);-webkit-backdrop-filter:blur(30px) saturate(180%);backdrop-filter:blur(30px) saturate(180%);border-color:transparent;box-shadow:var(--rim),0 30px 70px -20px rgba(0,0,0,.6)}
 @media (max-width:720px){.cmd{margin-top:10px;max-height:calc(100dvh - 120px)}.cmd-foot{display:none}.cmd-q input{font-size:16px}}
 
@@ -949,6 +1016,7 @@ html.lg .eye{background:var(--glass-tint);box-shadow:inset 0 1px 0 color-mix(in 
         <span class="sync" id="sync">Loading…</span>
         <button class="jb-mini" id="jb-mini" type="button" hidden aria-label="Pause sounds" title="Pause sounds"><span class="eq" aria-hidden="true"><i></i><i></i><i></i></span><span class="jb-mini-lbl"></span></button>
         <button class="btn ghost small inst" id="install-app" type="button" hidden>Install app</button>
+        <button class="acct-btn" id="acct-open" type="button" aria-haspopup="dialog" aria-label="Account: not signed in" title="Account"><span class="av" id="acct-av"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20c1.4-3.6 4.2-5.4 7.5-5.4s6.1 1.8 7.5 5.4"/></svg></span><i class="acct-dot" id="acct-dot" hidden></i></button>
         <button class="cmdk" id="cmdk-open" type="button" aria-label="Search or run a command" aria-keyshortcuts="Control+K Meta+K"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span class="cmdk-lbl">Search or do anything</span><kbd class="kbd-mac">⌘K</kbd><kbd class="kbd-pc">Ctrl K</kbd></button>
       </div>
     </header>
@@ -1157,6 +1225,7 @@ html.lg .eye{background:var(--glass-tint);box-shadow:inset 0 1px 0 color-mix(in 
         </div>
         <div class="panel">
           <h3>Your data</h3>
+          <p class="hint" style="margin:0 0 10px">Sign in to keep everything in your account and use it on any device. <button class="btn ghost small" type="button" id="acct-open2">Account</button></p>
           <div class="row" style="margin-bottom:10px"><button class="btn ghost small" id="export">Show backup</button><button class="btn ghost small" id="import">Restore from backup</button><button class="btn ghost small" id="wipe" style="color:var(--bad)">Erase everything</button></div>
           <p class="hint" id="install-hint" style="margin:0 0 10px"></p>
           <textarea id="backup" placeholder="Your backup JSON appears here. Paste one in and press Restore to load it." aria-label="Backup data"></textarea>
@@ -1166,6 +1235,15 @@ html.lg .eye{background:var(--glass-tint);box-shadow:inset 0 1px 0 color-mix(in 
   </main>
 </div>
 <div class="toast" id="toast" role="status"></div>
+<dialog class="acd" id="acct" aria-labelledby="acd-h">
+  <div class="acd-in">
+    <div class="acd-top"><h2 id="acd-h">Account</h2><button class="icon-btn" type="button" id="acd-x" aria-label="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+    <div class="acd-body" id="acd-body"></div>
+  </div>
+</dialog>
+<dialog class="acd acd-sm" id="acct-pick" aria-labelledby="acp-h">
+  <div class="acd-in"><div class="acd-body" id="acp-body"></div></div>
+</dialog>
 <dialog class="cmd" id="cmd" aria-label="Command bar">
   <div class="cmd-in">
     <div class="cmd-q"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -1291,6 +1369,7 @@ try{const raw=localStorage.getItem(LSK);if(raw)merge(JSON.parse(raw));}catch(e){
 function setSync(t){$("#sync").textContent=t;}
 function save(){
   try{localStorage.setItem(LSK,JSON.stringify(S));}catch(e){}
+  acDirty();
   clearTimeout(saveTimer);
   saveTimer=setTimeout(async()=>{
     if(!dbRef)return;
@@ -1761,12 +1840,13 @@ function sizeHint(w,h,img,fit){
 }
 function resolveImg(src){
   if(!src)return "";
-  if(src==="local")return bgData;
+  if(src==="local"){if(!bgData)cloudImgGet("bg");return bgData;}
   if(!src.startsWith("local:"))return src;
   const k=src.slice(6);
   if(imgCache[k])return imgCache[k];
   try{const v=localStorage.getItem("digitaldash.img."+k);if(v){imgCache[k]=v;return v;}}catch(e){}
   if(dbH&&userId&&!imgFetching.has(k)){imgFetching.add(k);dbH.doc("data/users/"+userId+"/img-"+k).get().then(sn=>{if(sn.exists&&sn.data().img){imgCache[k]=sn.data().img;try{localStorage.setItem("digitaldash.img."+k,imgCache[k]);}catch(e){}applyStage();renderWidgets(true);}}).catch(()=>{});}
+  cloudImgGet(k);
   return "";
 }
 async function storeImage(file,key,maxSide,mime){
@@ -1778,8 +1858,8 @@ async function storeImage(file,key,maxSide,mime){
   }catch(e){}
   let out=first;
   for(const [m,q] of [[1600,.78],[1200,.66],[900,.55],[640,.5]]){if(out.url.length<=240000)break;out=await shrink(file,m,q,mime);}
-  if(key==="bg"){bgData=out.url;try{localStorage.setItem(BGK,bgData);}catch(e){}if(bgImgRef)bgImgRef.set({img:bgData}).catch(()=>{});return Object.assign({src:"local"},meta);}
-  imgCache[key]=out.url;try{localStorage.setItem("digitaldash.img."+key,out.url);}catch(e){}
+  if(key==="bg"){bgData=out.url;try{localStorage.setItem(BGK,bgData);}catch(e){}if(bgImgRef)bgImgRef.set({img:bgData}).catch(()=>{});cloudImgPut("bg",bgData);return Object.assign({src:"local"},meta);}
+  imgCache[key]=out.url;try{localStorage.setItem("digitaldash.img."+key,out.url);}catch(e){}cloudImgPut(key,out.url);
   if(dbH&&userId)dbH.doc("data/users/"+userId+"/img-"+key).set({img:out.url}).catch(()=>{});
   return Object.assign({src:"local:"+key},meta);
 }
@@ -1788,8 +1868,8 @@ async function removeImage(src){
   if((S.presets||[]).some(p=>p.s.bg.image===src||p.s.stage.image===src))return; // a saved preset still uses it
   try{
     if(src.startsWith("/_blob/")){const a=window.claude&&window.claude.use?await window.claude.use("assets"):null;if(a)await a.delete(src.slice(7));}
-    else if(src==="local"){bgData="";try{localStorage.removeItem(BGK);}catch(e){}if(bgImgRef)await bgImgRef.delete();}
-    else if(src.startsWith("local:")){const k=src.slice(6);delete imgCache[k];try{localStorage.removeItem("digitaldash.img."+k);}catch(e){}if(dbH&&userId)await dbH.doc("data/users/"+userId+"/img-"+k).delete();}
+    else if(src==="local"){bgData="";try{localStorage.removeItem(BGK);}catch(e){}cloudImgDel("bg");if(bgImgRef)await bgImgRef.delete();}
+    else if(src.startsWith("local:")){const k=src.slice(6);delete imgCache[k];try{localStorage.removeItem("digitaldash.img."+k);}catch(e){}cloudImgDel(k);if(dbH&&userId)await dbH.doc("data/users/"+userId+"/img-"+k).delete();}
   }catch(e){}
 }
 const pickMime=f=>/png|webp|gif|svg/.test(f.type)?"image/webp":"image/jpeg";
@@ -2760,6 +2840,7 @@ function cmdResults(q){
     const k=m[1].replace(/\s+/g," ");if(k.startsWith("week"))R.push({ic:"go",label:"Week review",hint:"Go",run:()=>{show("calendar");setCalMode("week");}});
     else{const v=NAV[k]||NAV[k.replace(" ","")];go(v,({focus:"Focus",tasks:"Tasks",calendar:"Calendar",money:"Net worth",themes:"Themes"})[v]);}
   }
+  if(/^(account|sign ?in|log ?in|sign ?out|profile|sync|cloud)/.test(lq))R.push({ic:"go",label:"Account",hint:"Go",run:()=>acOpen()});
   // timers
   if((m=lq.match(/^(timer|focus|break|pomodoro|study)\s+(\d{1,3})(?::(\d\d))?\s*(m|min|mins|minutes|h|hr|hours)?$/))){
     const hrs=/^h/.test(m[4]||""),sec=hrs?+m[2]*3600:(+m[2])*60+(+(m[3]||0)),kind=m[1]==="break"?"break":"focus";
@@ -3394,7 +3475,7 @@ HTML.addEventListener("pointerleave",()=>{releasePiece(pLean);releasePiece(pNudg
 const PRESET_KEYS=["skin","accent","uiFont","clockFont","radius","clockScale","surface","refract","clock","h24","secs","bg","stage"];
 function copyImg(src,key){
   const data=src==="local"?bgData:resolveImg(src);if(!data||!/^(local)/.test(src))return src; // remote/blob images are already stable
-  try{localStorage.setItem("digitaldash.img."+key,data);imgCache[key]=data;if(dbH&&userId)dbH.doc("data/users/"+userId+"/img-"+key).set({img:data}).catch(()=>{});return "local:"+key;}
+  try{localStorage.setItem("digitaldash.img."+key,data);imgCache[key]=data;cloudImgPut(key,data);if(dbH&&userId)dbH.doc("data/users/"+userId+"/img-"+key).set({img:data}).catch(()=>{});return "local:"+key;}
   catch(e){toast("That photo is too big to keep in a preset, so the preset will use whatever photo is set");return src;}
 }
 function presetSnapshot(id){
@@ -3446,6 +3527,272 @@ function lgModeChanged(){
   lgRefractAll();
 }
 
+/* ---------- accounts ----------
+   Optional sign-in with Supabase (email magic link or Google). The whole state S is one row in
+   dash_state (row level security: only its owner can read or write it); photos go to the private
+   dash-images bucket under <user id>/<image key>. localStorage stays the working copy, so the app
+   works offline and signed out exactly as before.
+   Sync: every save marks the device dirty and pushes ~1.2s later. A push only lands if the row's
+   rev still matches the one this device last saw; otherwise another device saved first, so that
+   newer version is loaded and the toast offers Undo to put this device's version back.
+   Settings come from /digital-dash-config.js, which the Vite build writes from the same env vars
+   the portfolio uses (see vite.config.ts). Without it, the account button explains what's missing. */
+/* AC is a var so save() and resolveImg(), which can run before this section during start-up, see undefined instead of throwing */
+const ACK="digitaldash.acct",SB_JS="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.97.0/dist/umd/supabase.js";
+var AC={sb:null,user:null,state:"loading",why:"",rev:0,busy:false,pending:false,timer:0,retry:0,last:0,lastDevice:"",err:"",applying:false,imgGet:new Set(),sent:"",confirmDel:false};
+const acMeta=()=>lsGet(ACK)||{};
+const acSetMeta=m=>lsSet(ACK,Object.assign(acMeta(),m));
+let acAuthHash="";
+function loadScript(src){return new Promise((res,rej)=>{const el=document.createElement("script");el.src=src;el.async=true;el.onload=res;el.onerror=rej;document.head.appendChild(el);});}
+function deviceName(){
+  const u=navigator.userAgent,b=/Edg\//.test(u)?"Edge":/OPR\//.test(u)?"Opera":/Firefox\//.test(u)?"Firefox":/Chrome\//.test(u)?"Chrome":/Safari\//.test(u)?"Safari":"Browser";
+  const o=/iPhone/.test(u)?"iPhone":/iPad/.test(u)?"iPad":/Android/.test(u)?"Android":/CrOS/.test(u)?"Chromebook":/Mac OS X/.test(u)?"Mac":/Windows/.test(u)?"Windows":/Linux/.test(u)?"Linux":"";
+  return o?`${b} on ${o}`:b;
+}
+const stableStr=v=>JSON.stringify(v,(k,x)=>x&&typeof x==="object"&&!Array.isArray(x)?Object.keys(x).sort().reduce((o,kk)=>(o[kk]=x[kk],o),{}):x);
+const acBlank=()=>!S.tasks.length&&!S.events.length&&!S.accounts.length&&!(S.presets||[]).length&&!(S.schemes||[]).length&&!Object.keys(S.sessions||{}).length;
+function acCounts(d){const t=d.tasks||[];return [[t.filter(x=>!x.done).length,"open task"],[t.filter(x=>x.done).length,"done task"],[(d.presets||[]).length,"preset"],[(d.events||[]).length,"event"],[(d.accounts||[]).length,"money account"]].filter(([n])=>n).map(([n,w])=>`${n} ${w}${n===1?"":"s"}`).join(", ")||"Nothing saved yet";}
+const agoText=t=>{if(!t)return "";const s=(Date.now()-t)/1000;return s<45?"just now":s<3600?Math.round(s/60)+" min ago":s<86400?Math.round(s/3600)+" h ago":new Date(t).toLocaleDateString(undefined,{month:"short",day:"numeric"});};
+
+function acBoot(){ /* take a sign-in result out of the address bar before the router looks at it */
+  if(/access_token=|error_description=|error_code=/.test(location.hash)){acAuthHash=location.hash.slice(1);try{history.replaceState(null,"",location.pathname+location.search);}catch(e){}}
+}
+async function acInit(){
+  acBoot();acRenderBtn();
+  if(npEmbedded()){AC.state="unavailable";AC.why="preview";acRenderBtn();return;}
+  if(!window.DASH_CONFIG){try{await loadScript("/digital-dash-config.js");}catch(e){}}
+  const cf=window.DASH_CONFIG;
+  if(!cf||!cf.supabaseUrl||!cf.supabaseKey){AC.state="unavailable";AC.why="config";acRenderBtn();return;}
+  try{if(!window.supabase)await loadScript(SB_JS);}catch(e){AC.state="unavailable";AC.why="offline";acRenderBtn();return;}
+  AC.sb=window.supabase.createClient(cf.supabaseUrl,cf.supabaseKey,{auth:{flowType:"implicit",detectSessionInUrl:false,persistSession:true,autoRefreshToken:true,storageKey:"digitaldash.auth"}});
+  AC.state="out";
+  if(acAuthHash){
+    const q=new URLSearchParams(acAuthHash);
+    if(q.get("access_token")){const {error}=await AC.sb.auth.setSession({access_token:q.get("access_token"),refresh_token:q.get("refresh_token")||""});if(error)toast("Couldn't sign you in: "+error.message);}
+    else{const why=(q.get("error_description")||"").replace(/\+/g," ");toast(/provider is not enabled/i.test(why)?"Google sign-in isn't turned on for this site yet. Use the email link instead.":/expired|invalid/i.test(why)?"That sign-in link has expired. Ask for a new one.":"Sign-in didn't work: "+why);setTimeout(acOpen,400);}
+  }
+  AC.sb.auth.onAuthStateChange((ev,session)=>{ /* never await Supabase inside this callback */
+    const u=session&&session.user||null,was=AC.user&&AC.user.id;AC.user=u;
+    if((u&&u.id)!==was)setTimeout(()=>u?acSignedIn():acSignedOut(),0);else acRenderBtn();
+  });
+  addEventListener("online",()=>{if(AC.user&&acMeta().dirty)acPush();});
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden)acPull();});
+  setInterval(()=>{if(!document.hidden)acPull();},60000);
+  acRenderBtn();
+}
+function acDirty(){
+  if(!AC||!AC.user||AC.applying)return;
+  acSetMeta({uid:AC.user.id,dirty:true});AC.state="saving";acRenderBtn();
+  clearTimeout(AC.timer);AC.timer=setTimeout(()=>acPush(),1200);
+}
+async function acSignedIn(){
+  const uid=AC.user.id;AC.state="saving";AC.err="";acRenderBtn();setSync("Syncing…");acRenderDlg();
+  const {data:row,error}=await AC.sb.from("dash_state").select("data,rev,device,updated_at").eq("user_id",uid).maybeSingle();
+  if(error){AC.state="error";AC.err=/relation|does not exist|schema cache|not find/i.test(error.message)?"Cloud saving isn't set up on this site yet. The Supabase database setup (dash_state) needs to be run once.":error.message;setSync("Saved on this device");acRenderBtn();acRenderDlg();return;}
+  const m=acMeta(),same=m.uid===uid;
+  if(!row){AC.rev=0;await acPush(true);acUploadImages();return;}
+  AC.lastDevice=row.device||"";AC.last=Date.parse(row.updated_at)||0;
+  if(same&&row.rev===m.rev){AC.rev=row.rev;if(m.dirty)acPush();else acDone();return;}
+  if(same&&!m.dirty){acApply(row);return;}
+  if(acBlank()){acApply(row);return;}
+  if(stableStr(row.data)===stableStr(JSON.parse(JSON.stringify(S)))){AC.rev=row.rev;acSetMeta({uid,rev:row.rev,dirty:false});acDone();return;}
+  const pick=await acAsk(row);
+  if(pick==="cloud")acApply(row);else{AC.rev=row.rev;await acPush();acUploadImages();}
+}
+function acSignedOut(){
+  clearTimeout(AC.timer);clearTimeout(AC.retry);AC.rev=0;AC.state=AC.sb?"out":AC.state;AC.err="";AC.confirmDel=false;AC.imgGet.clear();
+  setSync("Saved on this device");acRenderBtn();acRenderDlg();
+}
+function acApply(row){
+  AC.applying=true;
+  try{
+    AC.rev=row.rev;AC.last=Date.parse(row.updated_at)||Date.now();AC.lastDevice=row.device||"";
+    merge(row.data);try{localStorage.setItem(LSK,JSON.stringify(S));}catch(e){}
+    acSetMeta({uid:AC.user.id,rev:row.rev,dirty:false});
+    previewScheme=null;editingScheme=null;
+    try{buildSkins();buildSchemeEditor(currentColors());}catch(e){}
+    renderAll();renderPresets();renderCals();jbRender();applyStage();renderWidgets(true);
+    if(S.settings.bg.type!=="none"&&!S.settings.bg.pal)computePal();
+  }finally{AC.applying=false;}
+  acDone();
+}
+function acDone(){AC.state="synced";AC.err="";setSync("Saved to your account");acRenderBtn();acRenderDlg();}
+async function acPush(insert){
+  if(!AC.user||!AC.sb)return;
+  if(AC.busy){AC.pending=true;return;}
+  AC.busy=true;clearTimeout(AC.timer);AC.state="saving";acRenderBtn();
+  const uid=AC.user.id,data=JSON.parse(JSON.stringify(S)),device=deviceName();
+  try{
+    const q=AC.sb.from("dash_state");
+    const res=insert?await q.insert({user_id:uid,data,rev:1,device}).select("rev,updated_at")
+      :await q.update({data,rev:AC.rev+1,device,updated_at:new Date().toISOString()}).eq("user_id",uid).eq("rev",AC.rev).select("rev,updated_at");
+    if(res.error){if(res.error.code==="23505"){AC.busy=false;return acSignedIn();}throw res.error;}
+    const r=(res.data||[])[0];
+    if(!r){AC.busy=false;return acConflict();}
+    AC.rev=r.rev;AC.last=Date.parse(r.updated_at)||Date.now();AC.lastDevice=device;
+    acSetMeta({uid,rev:AC.rev,dirty:false});acDone();
+  }catch(e){
+    AC.state=navigator.onLine?"error":"offline";AC.err=navigator.onLine?(e.message||"Couldn't save to your account"):"";
+    setSync(navigator.onLine?"Saved on this device":"Offline · saved on this device");acRenderBtn();acRenderDlg();
+    clearTimeout(AC.retry);AC.retry=setTimeout(()=>{if(AC.user&&acMeta().dirty)acPush();},30000);
+  }finally{AC.busy=false;if(AC.pending){AC.pending=false;acPush();}}
+}
+async function acConflict(){ /* another device saved first: load theirs, offer this device's back */
+  const mine=JSON.parse(JSON.stringify(S));
+  const {data:row,error}=await AC.sb.from("dash_state").select("data,rev,device,updated_at").eq("user_id",AC.user.id).maybeSingle();
+  if(error||!row){acPush(!row&&!error);return;}
+  acApply(row);
+  toast(`Loaded newer changes from ${row.device||"another device"}`,{run(){AC.applying=true;merge(mine);AC.applying=false;renderAll();renderPresets();renderCals();save();}});
+}
+async function acPull(){
+  if(!AC.user||!AC.sb||AC.busy||AC.state==="error")return;
+  const {data,error}=await AC.sb.from("dash_state").select("rev").eq("user_id",AC.user.id).maybeSingle();
+  if(error||!data||data.rev<=AC.rev)return;
+  if(acMeta().dirty){acConflict();return;}
+  const {data:row}=await AC.sb.from("dash_state").select("data,rev,device,updated_at").eq("user_id",AC.user.id).maybeSingle();
+  if(row&&row.rev>AC.rev){acApply(row);toast(`Updated from ${row.device||"your other device"}`);}
+}
+function acAsk(row){ /* both this device and the account have data: let the person choose */
+  return new Promise(res=>{
+    const d=$("#acct-pick");$("#acct").open&&$("#acct").close();
+    $("#acp-body").innerHTML=`<h2 id="acp-h">Which version should we keep?</h2>
+      <p class="muted">Your account and this device both have saved data. Pick one to use everywhere. The other is replaced.</p>
+      <button type="button" class="acp-opt" data-pick="cloud"><b>Use my account</b><span>${esc(acCounts(row.data))}</span><small>Last saved ${esc(agoText(Date.parse(row.updated_at)))}${row.device?" on "+esc(row.device):""}</small></button>
+      <button type="button" class="acp-opt" data-pick="local"><b>Use this device</b><span>${esc(acCounts(S))}</span><small>${esc(deviceName())}</small></button>
+      <p class="hint">Not sure? Download a backup of this device first from Account, then choose.</p>`;
+    const done=v=>{d.removeEventListener("click",onClick);d.removeEventListener("cancel",onCancel);try{d.close();}catch(e){}res(v);};
+    const onClick=e=>{const b=e.target.closest("[data-pick]");if(b)done(b.dataset.pick);};
+    const onCancel=e=>{e.preventDefault();}; /* a choice is required */
+    d.addEventListener("click",onClick);d.addEventListener("cancel",onCancel);
+    try{d.showModal();}catch(e){d.setAttribute("open","");}
+  });
+}
+/* images */
+const imgPath=k=>AC.user.id+"/"+k;
+function cloudImgPut(k,dataUrl){
+  if(!AC||!AC.user||!AC.sb||!dataUrl||!/^data:/.test(dataUrl))return;
+  fetch(dataUrl).then(r=>r.blob()).then(b=>AC.sb.storage.from("dash-images").upload(imgPath(k),b,{upsert:true,contentType:b.type||"image/jpeg"})).catch(()=>{});
+}
+function cloudImgDel(k){if(AC&&AC.user&&AC.sb)AC.sb.storage.from("dash-images").remove([imgPath(k)]).catch(()=>{});}
+function cloudImgGet(k){
+  if(!AC||!AC.user||!AC.sb||AC.imgGet.has(k))return;AC.imgGet.add(k);
+  AC.sb.storage.from("dash-images").download(imgPath(k)).then(({data,error})=>{
+    if(error||!data)return;const fr=new FileReader();
+    fr.onload=()=>{const u=fr.result;
+      if(k==="bg"){bgData=u;try{localStorage.setItem(BGK,u);}catch(e){}applyBg();}
+      else{imgCache[k]=u;try{localStorage.setItem("digitaldash.img."+k,u);}catch(e){}}
+      applyStage();renderWidgets(true);renderPresets();};
+    fr.readAsDataURL(data);
+  }).catch(()=>{});
+}
+function acUploadImages(){
+  if(!AC.user)return;if(bgData)cloudImgPut("bg",bgData);
+  try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith("digitaldash.img."))cloudImgPut(k.slice(16),localStorage.getItem(k));}}catch(e){}
+}
+/* sign in / out */
+async function acEmail(email){
+  email=String(email||"").trim();if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){toast("Enter your email address");return;}
+  const btn=$("#ac-email .btn");if(btn)btn.disabled=true;
+  const {error}=await AC.sb.auth.signInWithOtp({email,options:{emailRedirectTo:location.origin+location.pathname,shouldCreateUser:true}});
+  if(btn)btn.disabled=false;
+  if(error){toast(/rate|seconds/i.test(error.message)?"Please wait a minute before asking for another link":"Couldn't send the link: "+error.message);return;}
+  AC.sent=email;acRenderDlg();
+}
+async function acGoogle(){
+  const {error}=await AC.sb.auth.signInWithOAuth({provider:"google",options:{redirectTo:location.origin+location.pathname}});
+  if(error)toast(/not enabled/i.test(error.message)?"Google sign-in isn't turned on for this site yet. Use the email link instead.":"Couldn't start Google sign-in: "+error.message);
+}
+async function acSignOut(clear){
+  if(acMeta().dirty&&navigator.onLine){await acPush();}
+  try{await AC.sb.auth.signOut();}catch(e){}
+  if(clear){
+    try{Object.keys(localStorage).filter(k=>k===LSK||k===BGK||k===ACK||k.startsWith("digitaldash.img.")).forEach(k=>localStorage.removeItem(k));}catch(e){}
+    location.reload();return;
+  }
+  toast("Signed out. Your data stays on this device.");
+}
+async function acDelete(){
+  const uid=AC.user.id,b=$("#ac-del-go");if(b){b.disabled=true;b.textContent="Deleting…";}
+  try{
+    const {data:files}=await AC.sb.storage.from("dash-images").list(uid,{limit:1000});
+    if(files&&files.length)await AC.sb.storage.from("dash-images").remove(files.map(f=>uid+"/"+f.name));
+    const {error}=await AC.sb.rpc("delete_my_dash_account");if(error)throw error;
+    try{await AC.sb.auth.signOut({scope:"local"});}catch(e){}
+    lsSet(ACK,null);AC.user=null;acSignedOut();$("#acct").close();
+    toast("Account deleted. Your data on this device is still here.");
+  }catch(e){toast("Couldn't delete the account: "+(e.message||e));if(b){b.disabled=false;b.textContent="Delete my account";}}
+}
+function acBackup(){
+  const a=document.createElement("a"),url=URL.createObjectURL(new Blob([JSON.stringify(S,null,1)],{type:"application/json"}));
+  a.href=url;a.download=`digital-dash-backup-${dkey(new Date())}.json`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);
+}
+/* UI */
+const AC_PERSON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20c1.4-3.6 4.2-5.4 7.5-5.4s6.1 1.8 7.5 5.4"/></svg>';
+function acRenderBtn(){
+  const b=$("#acct-open");if(!b)return;const u=AC.user,av=$("#acct-av"),dot=$("#acct-dot");
+  const name=u?(u.user_metadata&&(u.user_metadata.full_name||u.user_metadata.name))||u.email||"":"";
+  const pic=u&&u.user_metadata&&u.user_metadata.avatar_url;
+  av.innerHTML=u?(pic?`<img src="${esc(pic)}" alt="" referrerpolicy="no-referrer">`:esc((name||"?").trim().charAt(0).toUpperCase())):AC_PERSON;
+  b.classList.toggle("in",!!u);
+  dot.hidden=!u;dot.dataset.s=AC.state;
+  const st={synced:"saved",saving:"saving",offline:"offline, saved on this device",error:"not syncing"}[AC.state]||"";
+  b.setAttribute("aria-label",u?`Account: ${name}${st?", "+st:""}`:"Account: not signed in");b.title=u?`${name}${st?" · "+st:""}`:"Sign in";
+}
+function acItems(){
+  const pr=(S.presets||[]),sc=(S.schemes||[]),tm=(S.timers||[]),cl=(S.calendars||[]);
+  const del='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+  const sec=(title,n,body,empty)=>`<section class="ac-sec"><h3>${title}<span>${n}</span></h3>${n?`<ul class="ac-list">${body}</ul>`:`<p class="muted ac-empty">${empty}</p>`}</section>`;
+  const focusMin=Math.round(Object.values(S.focusLog||{}).reduce((a,b)=>a+b,0)/60);
+  return `<div class="ac-stats">${[[S.tasks.filter(t=>!t.done).length,"Open tasks"],[S.tasks.filter(t=>t.done).length,"Done"],[S.events.length,"Events"],[fmtMins(focusMin),"Focus time"]].map(([v,l])=>`<div><b>${v}</b><span>${l}</span></div>`).join("")}</div>`
+    +sec("Presets",pr.length,pr.map(p=>`<li data-acp="${p.id}"><span class="ac-sw" style="background:${esc((p.sw||{}).bg||"#222")}"><i style="background:${esc((p.sw||{}).accent||"#fa0")}"></i></span><span class="nm">${esc(p.name)}</span><button type="button" class="btn small" data-ac="pr-apply">Apply</button><button type="button" class="icon-btn" data-ac="pr-del" aria-label="Delete ${esc(p.name)}">${del}</button></li>`).join(""),"Save a look in Themes, Presets and it shows up here.")
+    +sec("Colour schemes",sc.length,sc.map(x=>`<li data-acs="${x.id}"><span class="ac-sw" style="background:${esc(x.c.bg)}"><i style="background:${esc(x.c.accent)}"></i></span><span class="nm">${esc(x.name)}</span><button type="button" class="btn small" data-ac="sc-use">Use</button><button type="button" class="icon-btn" data-ac="sc-del" aria-label="Delete ${esc(x.name)}">${del}</button></li>`).join(""),"Make your own in Themes, Colour scheme.")
+    +sec("Timers",tm.length,tm.map(t=>`<li data-act="${t.id}"><span class="tk ${t.kind}">${t.kind==="focus"?"Focus":"Break"}</span><span class="nm">${esc(t.name)}</span><span class="muted">${esc(t.sec%60?fmtDur(t.sec):t.sec>=3600?fmtDur(t.sec):t.sec/60+" min")}</span><button type="button" class="icon-btn" data-ac="tm-del" aria-label="Remove ${esc(t.name)}">${del}</button></li>`).join(""),"")
+    +sec("Imported calendars",cl.length,cl.map(c=>`<li><span class="ac-dot" style="background:${calColor(c)}"></span><span class="nm">${esc(c.name)}</span><span class="muted">${c.count||0} events</span></li>`).join(""),"Import a calendar from the Calendar page.");
+}
+function acRenderDlg(){
+  const body=$("#acd-body");if(!body||!$("#acct").open)return;
+  const u=AC.user;
+  if(AC.state==="loading"){body.innerHTML=`<p class="muted">Loading…</p>`;return;}
+  if(AC.state==="unavailable"){
+    body.innerHTML=`<div class="ac-hero">${AC_PERSON}<div><b>Accounts aren't available here</b><p class="muted">${AC.why==="preview"?"This preview can't sign in. Open Digital Dash on your own site to use your account.":AC.why==="offline"?"Can't reach the sign-in service. Check your connection and try again.":"This site isn't connected to the account service yet (no Supabase settings found)."}</p></div></div><p class="hint">Everything is still saved on this device.</p>`;return;}
+  if(!u){
+    body.innerHTML=AC.sent?`<div class="ac-hero"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg><div><b>Check your email</b><p class="muted">We sent a sign-in link to ${esc(AC.sent)}. Open it on this device to finish signing in.</p></div></div><button type="button" class="btn ghost small" data-ac="resend">Use a different email</button>`
+    :`<p class="ac-lead">Sign in to save everything to your account: tasks, presets, timers, sounds, photos and more. Open it on any device and pick up where you left off.</p>
+      <form class="ac-form" id="ac-email" novalidate><label for="ac-em">Email</label><div class="ac-row"><input type="email" id="ac-em" autocomplete="email" placeholder="you@example.com" required><button class="btn" type="submit">Email me a link</button></div></form>
+      <div class="ac-or"><span>or</span></div>
+      <button type="button" class="btn ghost ac-google" data-ac="google">Continue with Google</button>
+      <p class="hint">No password needed. Without an account, everything keeps saving on this device.</p>`;
+    return;
+  }
+  const name=(u.user_metadata&&(u.user_metadata.full_name||u.user_metadata.name))||"",st={synced:`All changes saved ${agoText(AC.last)}${AC.lastDevice?" · "+esc(AC.lastDevice):""}`,saving:"Saving…",offline:"Offline. Changes are saved on this device and will sync when you're back online.",error:esc(AC.err||"Not syncing right now")}[AC.state]||"";
+  body.innerHTML=`<div class="ac-hero"><span class="av big">${$("#acct-av").innerHTML}</span><div><b>${esc(name||u.email||"Signed in")}</b>${name?`<span class="muted">${esc(u.email||"")}</span>`:""}<p class="ac-st" data-s="${AC.state}"><i></i>${st}</p></div></div>
+    ${AC.state==="error"?"":acItems()}
+    <div class="ac-actions"><button type="button" class="btn ghost small" data-ac="backup">Download backup</button><button type="button" class="btn ghost small" data-ac="signout">Sign out</button><label class="ac-clear"><input type="checkbox" id="ac-clear"> Also remove my data from this device</label></div>
+    <div class="ac-danger">${AC.confirmDel?`<p><b>Delete your account?</b> This removes your saved data and photos from the cloud for good. What's on this device stays until you erase it.</p><div class="ac-row"><button type="button" class="btn danger" id="ac-del-go" data-ac="del-go">Delete my account</button><button type="button" class="btn ghost small" data-ac="del-no">Cancel</button></div>`:`<button type="button" class="linkish" data-ac="del">Delete account</button>`}</div>`;
+}
+function acOpen(){const d=$("#acct");if(d.open)return;AC.confirmDel=false;if(!AC.user&&AC.state!=="unavailable")AC.sent=AC.sent||"";try{d.showModal();}catch(e){d.setAttribute("open","");}acRenderDlg();const f=d.querySelector("#ac-em")||d.querySelector("#acd-x");if(f)f.focus();}
+$("#acct-open").addEventListener("click",acOpen);$("#acct-open2").addEventListener("click",acOpen);
+$("#acd-x").addEventListener("click",()=>$("#acct").close());
+$("#acct").addEventListener("click",e=>{if(e.target===e.currentTarget)e.currentTarget.close();});
+$("#acct").addEventListener("submit",e=>{if(e.target.id==="ac-email"){e.preventDefault();acEmail($("#ac-em").value);}});
+$("#acct").addEventListener("click",e=>{
+  const b=e.target.closest("[data-ac]");if(!b)return;const a=b.dataset.ac;
+  if(a==="google")acGoogle();
+  else if(a==="resend"){AC.sent="";acRenderDlg();$("#ac-em")&&$("#ac-em").focus();}
+  else if(a==="backup")acBackup();
+  else if(a==="signout")acSignOut($("#ac-clear")&&$("#ac-clear").checked).then(()=>acRenderDlg());
+  else if(a==="del"){AC.confirmDel=true;acRenderDlg();}
+  else if(a==="del-no"){AC.confirmDel=false;acRenderDlg();}
+  else if(a==="del-go")acDelete();
+  else if(a==="pr-apply"||a==="pr-del"){const p=S.presets.find(x=>x.id===b.closest("[data-acp]").dataset.acp);if(!p)return;
+    if(a==="pr-apply")applyPreset(p);
+    else{const i=S.presets.indexOf(p);S.presets.splice(i,1);save();renderPresets();acRenderDlg();toast(`Deleted "${p.name}"`,{run(){S.presets.splice(Math.min(i,S.presets.length),0,p);save();renderPresets();acRenderDlg();},done(){[p.s.bg.image,p.s.stage.image].forEach(src=>{if(/^local:p/.test(src||"")&&S.settings.bg.image!==src&&S.settings.stage.image!==src&&!S.presets.includes(p))removeImage(src);});}});}}
+  else if(a==="sc-use"||a==="sc-del"){const sc=S.schemes.find(x=>x.id===b.closest("[data-acs]").dataset.acs);if(!sc)return;
+    if(a==="sc-use"){S.settings.skin="custom:"+sc.id;S.settings.accent="";vt(()=>{applyTheme();buildSchemeEditor(currentColors());});save();toast(`Using "${sc.name}"`);}
+    else{const i=S.schemes.indexOf(sc),wasSkin=S.settings.skin;S.schemes.splice(i,1);if(wasSkin==="custom:"+sc.id){S.settings.skin="dash";applyTheme();}save();buildSkins();acRenderDlg();toast(`Deleted "${sc.name}"`,{run(){S.schemes.splice(Math.min(i,S.schemes.length),0,sc);S.settings.skin=wasSkin;applyTheme();save();buildSkins();acRenderDlg();}});}}
+  else if(a==="tm-del"){removeTimer(b.closest("[data-act]").dataset.act);acRenderDlg();}
+});
+
 buildThemes();fillCats();
 railInd=document.createElement("div");railInd.className="ind";railInd.setAttribute("aria-hidden","true");
 $(".rail").prepend(railInd);$(".rail").classList.add("has-ind");
@@ -3455,12 +3802,14 @@ if(typeof ResizeObserver!=="undefined")new ResizeObserver(()=>moveInd(true)).obs
 if(S.accounts.length)snapshot();
 renderAll();jbRender();renderCals();
 npInit();
+acBoot();
 {const v=location.hash.slice(1);if(v==="week"){show("calendar");setCalMode("week",true);}else if(VIEWS.includes(v)&&v!=="focus")show(v);} // deep link, e.g. digital-dash.html#tasks
 moveInd(true);
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{moveInd(true);$$(".seg").forEach(x=>glide(x,true));});
 if(S.settings.bg.type!=="none"&&!S.settings.bg.pal)computePal();
 loop();
 connect();
+acInit();
 })();
 </script>
 </body>
