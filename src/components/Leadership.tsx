@@ -1,27 +1,6 @@
-import { Crown, Users, Vote } from "lucide-react";
 import { motion } from "framer-motion";
 import MotionSection from "./MotionSection";
-
-const roles = [
-  {
-    icon: Crown,
-    title: "Student Activity Council President",
-    org: "Chinguacousy Secondary School",
-    description: "Led school-wide initiatives and coordinated the executive team to deliver events and represent the student body.",
-  },
-  {
-    icon: Users,
-    title: "Tamil Student Association President",
-    org: "Chinguacousy Secondary School",
-    description: "Organized cultural events and represented the student body, building a community celebrating Tamil heritage.",
-  },
-  {
-    icon: Vote,
-    title: "Lead Election Canvasser",
-    org: "Cynthia Sri Pragash Campaign",
-    description: "Led canvassing teams and community outreach, coordinating voter engagement strategies during the election campaign.",
-  },
-];
+import { roles } from "@/data/portfolio";
 
 const Leadership = () => {
   return (

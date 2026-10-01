@@ -1,24 +1,6 @@
 import { motion } from "framer-motion";
 import MotionSection from "./MotionSection";
-
-const skillCategories = [
-  {
-    title: "Languages",
-    skills: ["Java", "C++", "Python", "JavaScript", "C#", "HTML/CSS"],
-  },
-  {
-    title: "Tools & Frameworks",
-    skills: ["GitHub", "MATLAB", "OnShape", "CAD", "Photoshop", "After Effects"],
-  },
-  {
-    title: "Creative & Other",
-    skills: ["FL Studio", "Canva", "Leadership", "Entrepreneurship"],
-  },
-  {
-    title: "Spoken Languages",
-    skills: ["English (Fluent)", "Tamil (Fluent)", "French (Limited)"],
-  },
-];
+import { skillCategories } from "@/data/portfolio";
 
 const Skills = () => {
   return (

@@ -37,6 +37,9 @@ export interface FurnitureHandle {
     bottles: THREE.Group[];
     speaker: THREE.Mesh;
     controller: THREE.Group;
+    /** the curved monitor and the PS5 itself, which also open the console */
+    monitor: THREE.Group;
+    ps5: THREE.Group;
     lightSwitch: THREE.Mesh;
     /** 0 = the PlayStation "who's using this controller" screen, 1 = signed in to the home screen */
     setConsole: (k: number) => void;
@@ -109,6 +112,8 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
   let bottles: THREE.Group[] = [];
   let speaker!: THREE.Mesh;
   let controller!: THREE.Group;
+  let monitor!: THREE.Group;
+  let ps5!: THREE.Group;
   let lightSwitch!: THREE.Mesh;
   let setConsole: (k: number) => void = () => {};
   const psBars: THREE.MeshBasicMaterial[] = [];
@@ -394,6 +399,7 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
   {
     const { pos, w, h } = LAYOUT.monitor;
     const g = anchor(pos[0], deskTop, pos[2]);
+    monitor = g;
     const chair = LAYOUT.chair.pos;
     g.lookAt(chair[0], deskTop, chair[2] + 0.15);
     const R = 1.0;
@@ -450,14 +456,14 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
       c.lineWidth = 2;
       c.stroke();
     });
-    // signed in: the PS5 home screen, a row of game tiles over a dark blue wash
+    // signed in: the PS5 home screen with his own games in the row (the console overlay shows the same)
     const home = paintTexture(1024, 600, (c, cw, ch) => {
       const g2 = c.createLinearGradient(0, 0, 0, ch);
       g2.addColorStop(0, "#0c1a3a");
       g2.addColorStop(1, "#040a1c");
       c.fillStyle = g2;
       c.fillRect(0, 0, cw, ch);
-      // the hero art of the selected game: a warm city at dusk
+      // the hero art behind the selected tile
       const art = c.createLinearGradient(0, 230, 0, ch);
       art.addColorStop(0, "#c2512a");
       art.addColorStop(0.5, "#5a1f3a");
@@ -482,7 +488,7 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
       c.fillText("3:46", cw - 60, 56);
       c.textAlign = "left";
       // the tile row, the first one selected and larger
-      const tiles = ["#d23a3a", "#2f6fd6", "#e3b23c", "#3aa66b", "#8a4fd6", "#e0e0e0", "#d6602f"];
+      const tiles = ["#d4202c", "#1f9d55", "#ce1141", "#a1a1a4", "#e2a33a", "#7a4fdc", "#2f6fd6"];
       tiles.forEach((col, i) => {
         const size = i === 0 ? 120 : 92;
         const tx = 60 + (i === 0 ? 0 : 140 + (i - 1) * 104);
@@ -499,7 +505,7 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
       });
       c.fillStyle = "#fff";
       c.font = "700 44px system-ui, sans-serif";
-      c.fillText("Marvel's Spider-Man 2", 60, 300);
+      c.fillText("Pong", 60, 300);
       c.fillStyle = "rgba(255,255,255,0.9)";
       c.beginPath();
       c.roundRect(60, 330, 150, 52, 26);
@@ -754,6 +760,7 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     // glowing in the gaps, on a round black stand
     const pc = LAYOUT.pcTower.pos;
     const ps = new THREE.Group();
+    ps5 = ps;
     ps.position.set(pc[0], 0, pc[2]);
     group.add(ps);
     const H = 0.39;
@@ -930,5 +937,5 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     block(0.008, 0.035, 0.016, std("#f6f5f2", 0.4), sw[0] + 0.012, sw[1], sw[2], group, false);
   }
 
-  return { group, lamp, binoculars, sunset, deskLamp, screens, interact: { plushies, bottles, speaker, controller, lightSwitch, setConsole } };
+  return { group, lamp, binoculars, sunset, deskLamp, screens, interact: { plushies, bottles, speaker, controller, monitor, ps5, lightSwitch, setConsole } };
 }

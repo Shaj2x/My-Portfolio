@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ExternalLink, Github, Star, GitFork, Loader2, Gamepad2, Construction } from "lucide-react";
 import { motion } from "framer-motion";
 import MotionSection from "./MotionSection";
+import { GITHUB_USERNAME, demoLinks, inProgressRepos, customDescriptions } from "@/data/portfolio";
 
 interface GitHubRepo {
   id: number;
@@ -15,22 +16,6 @@ interface GitHubRepo {
   topics: string[];
   updated_at: string;
 }
-
-const GITHUB_USERNAME = "Shaj2x";
-
-const demoLinks: Record<string, string> = {
-  "Raptors-Slot-Machine": "https://shaj2x.github.io/Raptors-Slot-Machine/",
-  "Raptors-BlackJack": "https://shaj2x.github.io/Raptors-BlackJack/",
-  "StatStack": "https://shaj2x.github.io/StatStack/",
-  "Mercatus": "https://shaj2x.github.io/Mercatus/",
-  "Anthropogenic-Sound-Device-Simulator---ES1050-Project": "https://shaj2x.github.io/Anthropogenic-Sound-Device-Simulator---ES1050-Project/",
-};
-
-const inProgressRepos = ["MarkWise", "HarmonAI"];
-
-const customDescriptions: Record<string, string> = {
-  "Mercatus": "A strategy game that teaches stocks, crypto, and market timing through simulated trading decisions.",
-};
 
 const languageColors: Record<string, string> = {
   HTML: "hsl(12, 80%, 55%)",

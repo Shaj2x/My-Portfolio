@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Binoculars, Lightbulb, LightbulbOff, Radio, SlidersHorizontal, Volume2, VolumeX, X } from "lucide-react";
+import { ArrowLeft, Binoculars, Gamepad2, Lightbulb, LightbulbOff, Radio, SlidersHorizontal, Volume2, VolumeX, X } from "lucide-react";
 import { RADIO_STATION } from "@/components/room/createAudio";
 import { playlistEmbed } from "@/components/room/playlist";
+import { RoomConsole } from "@/components/room/console/RoomConsole";
 
 // the desk speaker plays this playlist when one is set in playlist.ts; otherwise the built-in lo-fi radio
 const playlist = playlistEmbed();
@@ -21,7 +22,9 @@ import {
 const chip =
   "pointer-events-auto inline-flex items-center gap-2 rounded-full bg-black/40 px-4 py-2 text-sm text-white/85 backdrop-blur-md transition-colors hover:bg-black/60 hover:text-white aria-pressed:text-amber-200";
 
-const VIEWS: [Exclude<PlainRoomView, "binoculars">, string][] = [
+type RoomView = Exclude<PlainRoomView, "binoculars" | "console">;
+
+const VIEWS: [RoomView, string][] = [
   ["photo", "Photo view"],
   ["window", "Window"],
   ["desk", "Desk"],
@@ -47,12 +50,17 @@ const saveLamp = (s: LampSettings) => {
 };
 
 /** The plain 3D recreation of the real room, before the lighting and life of /room are layered on. */
-const RoomPlain = () => {
+/**
+ * `hosted` is for the standalone preview, which runs on a host that forbids frames from other
+ * sites: hosted games and the playlist link out instead of embedding.
+ */
+const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const roomRef = useRef<PlainRoomHandle | null>(null);
   const [view, setView] = useState<PlainRoomView>("photo");
   const viewRef = useRef<PlainRoomView>("photo");
-  const lastRoomView = useRef<Exclude<PlainRoomView, "binoculars">>("photo");
+  const lastRoomView = useRef<RoomView>("photo");
+  const [consoleReady, setConsoleReady] = useState(false);
   const [error, setError] = useState(false);
   const [lamp, setLamp] = useState<LampSettings>(loadLamp);
   const [panelOpen, setPanelOpen] = useState(false);
@@ -80,10 +88,12 @@ const RoomPlain = () => {
         },
         onViewChange: (v) => {
           viewRef.current = v;
-          if (v !== "binoculars") lastRoomView.current = v;
+          if (v !== "binoculars" && v !== "console") lastRoomView.current = v;
+          if (v !== "console") setConsoleReady(false);
           setView(v);
         },
         onScopeTarget: setTarget,
+        onConsoleReady: () => setConsoleReady(true),
         onLightSwitch: () => setPanelOpen(true),
         onRadioChange: setRadioOn,
         onSpeaker: playlist ? () => setPlayerOpen((o) => !o) : undefined,
@@ -97,6 +107,8 @@ const RoomPlain = () => {
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       const key = e.key.toLowerCase();
+      // the console takes the keyboard while it's on screen
+      if (viewRef.current === "console") return;
       if (key === "l") roomRef.current?.toggleLamp();
       else if (key === "m") setMuted((m) => !m);
       else if (key === "b") roomRef.current?.setView(viewRef.current === "binoculars" ? lastRoomView.current : "binoculars");
@@ -126,6 +138,8 @@ const RoomPlain = () => {
   useEffect(() => roomRef.current?.setSpeakerPlaying(playerOpen), [playerOpen]);
 
   const inBinoculars = view === "binoculars";
+  const inConsole = view === "console";
+  const away = inBinoculars || inConsole;
 
   return (
     <main className="fixed inset-0 bg-[#0d0e11] text-white">
@@ -140,7 +154,7 @@ const RoomPlain = () => {
           <button type="button" className={chip} aria-pressed={!muted} aria-label={muted ? "Unmute (M)" : "Mute (M)"} onClick={() => setMuted((m) => !m)}>
             {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
           </button>
-          {radioOn && !inBinoculars && (
+          {radioOn && !away && (
             <button type="button" className={chip} onClick={() => roomRef.current?.toggleRadio()}>
               <Radio className="h-4 w-4 text-amber-200" />
               <span className="text-left">
@@ -172,13 +186,20 @@ const RoomPlain = () => {
               <X className="h-4 w-4" />
             </button>
           </div>
-          <iframe title={`My playlist on ${playlist.service}`} src={playlist.embed} className="block h-[352px] w-full border-0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" />
+          {hosted ? (
+            <a href={playlist.open} target="_blank" rel="noopener noreferrer" className="m-4 mt-0 inline-flex rounded-full bg-white px-4 py-2 text-sm font-semibold text-black">
+              Open my playlist on {playlist.service}
+            </a>
+          ) : (
+            <iframe title={`My playlist on ${playlist.service}`} src={playlist.embed} className="block h-[352px] w-full border-0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" />
+          )}
         </div>
       )}
-      {hover && !inBinoculars && (
+      <RoomConsole open={inConsole && consoleReady} embedSites={!hosted} onExit={() => roomRef.current?.setView(lastRoomView.current)} />
+      {hover && !away && (
         <p className="pointer-events-none absolute left-1/2 top-4 -translate-x-1/2 rounded-full bg-black/55 px-4 py-1.5 text-xs text-white/85 backdrop-blur-md">{hover}</p>
       )}
-      {panelOpen && !inBinoculars && (
+      {panelOpen && !away && (
         <div className="pointer-events-auto absolute bottom-36 right-4 max-h-[calc(100%-13rem)] w-[min(320px,calc(100%-32px))] overflow-y-auto overscroll-contain rounded-2xl border border-white/10 bg-black/70 p-5 backdrop-blur-xl">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-base font-semibold">Lights</h2>
@@ -295,7 +316,7 @@ const RoomPlain = () => {
         </div>
       )}
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col items-center gap-2 p-4 pb-6">
+      <div className={`pointer-events-none absolute inset-x-0 bottom-0 flex flex-col items-center gap-2 p-4 pb-6 ${inConsole ? "hidden" : ""}`}>
         <div className="flex flex-wrap justify-center gap-2">
           {inBinoculars ? (
             <button type="button" className={chip} onClick={() => roomRef.current?.setView(lastRoomView.current)}>
@@ -308,6 +329,9 @@ const RoomPlain = () => {
                   {label}
                 </button>
               ))}
+              <button type="button" className={chip} onClick={() => roomRef.current?.setView("console")}>
+                <Gamepad2 className="h-4 w-4" /> PlayStation
+              </button>
               <button type="button" className={chip} onClick={() => roomRef.current?.setView("binoculars")}>
                 <Binoculars className="h-4 w-4" /> Binoculars (B)
               </button>
@@ -321,7 +345,7 @@ const RoomPlain = () => {
           )}
         </div>
         <p className="text-xs text-white/50">
-          {inBinoculars ? "Drag to look around · scroll to zoom · Esc to step back" : "Drag to orbit · scroll to zoom · click around the room: lights, the speaker, the plushies, the perfume, the controller, the blind, the binoculars (B)"}
+          {inBinoculars ? "Drag to look around · scroll to zoom · Esc to step back" : "Drag to orbit · scroll to zoom · click around the room: the PS5 and its controller, lights, the speaker, the plushies, the perfume, the blind, the binoculars (B)"}
         </p>
       </div>
     </main>

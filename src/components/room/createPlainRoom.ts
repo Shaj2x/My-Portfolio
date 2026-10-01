@@ -14,8 +14,8 @@ import { CLOSET, COLORS, DOOR, HERO, LAYOUT, ROOM, WINDOW } from "./roomLayout";
  * the window sill look out at Western's campus.
  */
 
-export type PlainRoomView = "photo" | "window" | "dollhouse" | "desk" | "door" | "binoculars";
-type CameraView = Exclude<PlainRoomView, "binoculars">;
+export type PlainRoomView = "photo" | "window" | "dollhouse" | "desk" | "door" | "binoculars" | "console";
+type CameraView = Exclude<PlainRoomView, "binoculars" | "console">;
 
 /** the room's switchable lights: the floor lamp (dimmable, any colour), the ceiling light and the sunset lamp */
 export interface LampSettings {
@@ -100,6 +100,8 @@ export interface PlainRoomOptions {
   onViewChange?: (view: PlainRoomView) => void;
   /** the campus landmark nearest the middle of the binoculars, or null */
   onScopeTarget?: (landmark: { name: string; detail: string } | null) => void;
+  /** the camera has reached the monitor: show the console on it */
+  onConsoleReady?: () => void;
   /** the light switch by the door was clicked */
   onLightSwitch?: () => void;
   /** the speaker was clicked; when given, this replaces the built-in radio (e.g. to open a playlist player) */
@@ -783,7 +785,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   };
 
   // ---------- views ----------
-  type Mode = "room" | "toBinoculars" | "binoculars";
+  type Mode = "room" | "toBinoculars" | "binoculars" | "console";
   let mode: Mode = "room";
   let roomView: CameraView = "photo";
   let returnPose = { pos: VIEWS.photo.pos.clone(), target: VIEWS.photo.target.clone() };
@@ -825,6 +827,25 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     options.onViewChange?.("binoculars");
     moveTo(eyePose.pos, eyePose.target, () => cutWithFade(startBinoculars));
   };
+  // the console: glide in until the monitor fills the view, then the page draws the console over it
+  const enterConsole = () => {
+    if (mode !== "room") return;
+    returnPose = { pos: camera.position.clone(), target: controls.target.clone() };
+    mode = "console";
+    controls.enabled = false;
+    if (!consoleOn) audio.play("chime");
+    consoleOn = true;
+    options.onViewChange?.("console");
+    const screen = furniture.screens[0];
+    moveTo(screen.center.clone().addScaledVector(screen.normal, 0.62), screen.center, () => options.onConsoleReady?.());
+  };
+  const leaveConsole = (then: CameraView) => {
+    mode = "room";
+    const to = then === roomView ? returnPose : VIEWS[then];
+    roomView = then;
+    moveTo(to.pos, to.target, () => (controls.enabled = true));
+    options.onViewChange?.(then);
+  };
   const leaveBinoculars = (then: CameraView) => {
     const returnToRoom = () => {
       mode = "room";
@@ -854,6 +875,8 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   };
   const setView = (view: PlainRoomView) => {
     if (view === "binoculars") return enterBinoculars();
+    if (view === "console") return enterConsole();
+    if (mode === "console") return leaveConsole(view);
     if (mode !== "room") return leaveBinoculars(view);
     roomView = view;
     moveTo(VIEWS[view].pos, VIEWS[view].target);
@@ -883,7 +906,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     desk: "Desk lamp · click to switch",
     switch: "Light switch · open the lights",
     radio: options.onSpeaker ? "Speaker · play my playlist" : `Speaker · ${RADIO_STATION.name}`,
-    console: "DualSense · wake the PS5",
+    console: "PS5 · pick up the controller and play",
     blind: "Blind · roll it up or down",
     perfume: "Spray a fragrance",
   };
@@ -903,7 +926,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     if (binos.parts.includes(o)) return { kind: "binoculars" };
     if (o === inter.lightSwitch) return { kind: "switch" };
     if (o === inter.speaker) return { kind: "radio" };
-    if (isIn(o, inter.controller)) return { kind: "console" };
+    if (isIn(o, inter.controller) || isIn(o, inter.monitor) || isIn(o, inter.ps5)) return { kind: "console" };
     const plush = inter.plushies.find((p) => isIn(o, p.group));
     if (plush) return { kind: "plushie", target: plush };
     const bottle = inter.bottles.find((g) => isIn(o, g));
@@ -992,11 +1015,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
           options.onSpeaker();
         } else toggleRadio();
       }
-      else if (kind === "console") {
-        consoleOn = !consoleOn;
-        if (consoleOn) audio.play("chime");
-        else audio.click("radio");
-      } else if (kind === "blind") {
+      else if (kind === "console") enterConsole(); else if (kind === "blind") {
         blindTarget = blindTarget > 0.5 ? WINDOW.blindDown : 1;
         audio.play("blind");
       } else if (hit?.kind === "plushie") {
