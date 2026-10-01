@@ -874,7 +874,7 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
         group.add(pg);
         const build = { cow: decor.cow, spiderHam: decor.spiderHam, cat: decor.cryingCat, bird: decor.bird }[item.kind];
         build(pg, new THREE.Vector3());
-        plushies.push({ name: { cow: "Chick-fil-A cow", spiderHam: "Spider-Ham", cat: "Crying cat", bird: "Blue jay" }[item.kind], group: pg });
+        plushies.push({ name: { cow: "Chick-fil-A cow", spiderHam: "Spider-Ham", cat: "Crying cat", bird: "Babs" }[item.kind], group: pg });
       }
       else if (item.kind === "binoculars") {
         // two black barrels joined by a hinge bridge, eyecups toward the room, looking out of the window

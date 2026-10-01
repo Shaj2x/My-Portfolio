@@ -602,31 +602,139 @@ export function createDecor({ env, rand }: DecorContext) {
     board.rotation.x = -0.15;
   };
 
-  /** the blue-jay squish: a round blue bird with a white face, eyes closed, holding a paper tag */
+  /**
+   * Babs, the blue-jay squish: an egg-shaped plush, bright blue on top, a white face mask with
+   * thin round glasses over happy closed eyes, pink cheeks, a grey felt beak above an open smile,
+   * a scalloped navy collar, a white belly, felt wings and a three-point crest, and her tag.
+   * The print is painted onto a sphere's wrap-around texture, whose front (+z) is at u = 0.25.
+   */
   const bird = (parent: THREE.Object3D, at: THREE.Vector3) => {
-    const skin = paintTexture(256, 128, (c, w, h) => {
-      c.fillStyle = "#3e64ad";
+    const skin = paintTexture(1024, 512, (c, w, h) => {
+      const cx = w * 0.25;
+      const base = c.createLinearGradient(0, 0, 0, h);
+      base.addColorStop(0, "#2a6de8");
+      base.addColorStop(0.6, "#3b82f0");
+      base.addColorStop(1, "#4a8ff2");
+      c.fillStyle = base;
       c.fillRect(0, 0, w, h);
-      // white face and belly on the front half (u around 0.75 faces +z on a sphere)
-      c.fillStyle = "#f2f4f7";
-      c.beginPath();
-      c.ellipse(w * 0.75, h * 0.62, w * 0.17, h * 0.4, 0, 0, Math.PI * 2);
-      c.fill();
-      c.strokeStyle = "#20263a";
-      c.lineWidth = 3;
-      for (const ex of [w * 0.71, w * 0.79]) {
+      // darker navy shading down the sides of the face, as on the print
+      c.fillStyle = "#23408f";
+      for (const sx of [-1, 1]) {
         c.beginPath();
-        c.arc(ex, h * 0.46, 6, Math.PI * 1.1, Math.PI * 1.9);
+        c.ellipse(cx + sx * w * 0.115, h * 0.5, w * 0.045, h * 0.1, 0, 0, Math.PI * 2);
+        c.fill();
+      }
+      // white face mask: two soft lobes meeting at the beak
+      c.fillStyle = "#f6f7f9";
+      for (const sx of [-1, 1]) {
+        c.beginPath();
+        c.ellipse(cx + sx * w * 0.055, h * 0.43, w * 0.072, h * 0.115, 0, 0, Math.PI * 2);
+        c.fill();
+      }
+      c.fillRect(cx - w * 0.05, h * 0.38, w * 0.1, h * 0.16);
+      // white belly
+      c.beginPath();
+      c.ellipse(cx, h * 0.75, w * 0.085, h * 0.16, 0, 0, Math.PI * 2);
+      c.fill();
+      // the scalloped navy collar, dipping in the middle
+      c.strokeStyle = "#1c2f6e";
+      c.lineWidth = h * 0.028;
+      c.lineCap = "round";
+      c.beginPath();
+      for (let i = 0; i <= 40; i++) {
+        const t = i / 40;
+        const x = cx + (t - 0.5) * w * 0.3;
+        const dip = Math.cos((t - 0.5) * Math.PI) * h * 0.07;
+        const y = h * 0.53 + dip + Math.sin(t * Math.PI * 14) * h * 0.006;
+        if (i === 0) c.moveTo(x, y);
+        else c.lineTo(x, y);
+      }
+      c.stroke();
+      // round glasses with a bridge, over happy closed eyes
+      const ey = h * 0.41;
+      const ex = w * 0.047;
+      c.strokeStyle = "#22356e";
+      c.lineWidth = 3;
+      for (const sx of [-1, 1]) {
+        c.beginPath();
+        c.ellipse(cx + sx * ex, ey, w * 0.03, h * 0.058, 0, 0, Math.PI * 2);
         c.stroke();
       }
+      c.beginPath();
+      c.moveTo(cx - ex + w * 0.03, ey);
+      c.lineTo(cx + ex - w * 0.03, ey);
+      c.moveTo(cx - ex - w * 0.03, ey);
+      c.lineTo(cx - w * 0.115, ey - h * 0.01);
+      c.moveTo(cx + ex + w * 0.03, ey);
+      c.lineTo(cx + w * 0.115, ey - h * 0.01);
+      c.stroke();
+      c.strokeStyle = "#16181f";
+      c.lineWidth = 5;
+      for (const sx of [-1, 1]) {
+        c.beginPath();
+        c.ellipse(cx + sx * ex, ey + h * 0.012, w * 0.012, h * 0.018, 0, Math.PI * 1.1, Math.PI * 1.9);
+        c.stroke();
+      }
+      // pink cheeks
+      c.fillStyle = "rgba(244,150,160,0.85)";
+      for (const sx of [-1, 1]) {
+        c.beginPath();
+        c.ellipse(cx + sx * w * 0.078, h * 0.47, w * 0.016, h * 0.02, 0, 0, Math.PI * 2);
+        c.fill();
+      }
+      // the open smile with its pink tongue, under the beak
+      c.fillStyle = "#1b1416";
+      c.beginPath();
+      c.moveTo(cx - w * 0.018, h * 0.49);
+      c.quadraticCurveTo(cx, h * 0.47, cx + w * 0.018, h * 0.49);
+      c.quadraticCurveTo(cx, h * 0.55, cx - w * 0.018, h * 0.49);
+      c.fill();
+      c.fillStyle = "#f07a8c";
+      c.beginPath();
+      c.ellipse(cx + w * 0.003, h * 0.515, w * 0.01, h * 0.012, 0, 0, Math.PI * 2);
+      c.fill();
+      // a soft sheen on the shiny base fabric
+      c.fillStyle = "rgba(255,255,255,0.12)";
+      c.fillRect(0, h * 0.9, w, h * 0.1);
     });
-    const body = add(parent, new THREE.SphereGeometry(0.034, 28, 18), new THREE.MeshStandardMaterial({ map: skin, roughness: 0.95 }), at.x, at.y + 0.032, at.z);
-    body.scale.set(1, 0.95, 0.92);
-    add(parent, new THREE.ConeGeometry(0.007, 0.012, 10), matte("#5a5d66"), at.x, at.y + 0.034, at.z + 0.034, false).rotation.x = Math.PI / 2;
-    add(parent, new THREE.ConeGeometry(0.01, 0.02, 10), matte("#3e64ad"), at.x, at.y + 0.068, at.z - 0.004, false).rotation.x = -0.4;
-    for (const s of [-1, 1]) add(parent, new THREE.SphereGeometry(0.012, 12, 8), matte("#2f4f92"), at.x + s * 0.032, at.y + 0.03, at.z + 0.004).scale.set(0.5, 1, 1);
-    const tag = add(parent, new THREE.PlaneGeometry(0.026, 0.014), matte("#f2efe6", 0.8), at.x - 0.035, at.y + 0.04, at.z + 0.022, false);
-    tag.rotation.set(-0.2, 0.5, 0.25);
+    const R = 0.036;
+    const g = new THREE.Group();
+    g.position.copy(at);
+    g.rotation.y = -0.15;
+    parent.add(g);
+    const body = add(g, new THREE.SphereGeometry(R, 40, 28), new THREE.MeshStandardMaterial({ map: skin, roughness: 0.95 }), 0, R * 1.2, 0);
+    body.scale.set(1, 1.2, 0.88);
+    // the grey felt beak, a flattened button on the face
+    const beak = add(g, new THREE.SphereGeometry(0.0075, 16, 10), matte("#a9adb3", 1), 0, R * 1.2 + 0.006, R * 0.86, false);
+    beak.scale.set(1, 0.9, 0.55);
+    const felt = matte("#3d88f2", 1);
+    // felt wings, flat and splayed a little
+    for (const sx of [-1, 1]) {
+      const wing = add(g, new THREE.CylinderGeometry(0.014, 0.014, 0.002, 18), felt, sx * (R + 0.002), R * 1.05, 0.006);
+      wing.scale.set(0.75, 1, 1.2);
+      wing.rotation.set(0.2, 0, sx * (Math.PI / 2 - 0.35));
+    }
+    // the three-point crest
+    for (const [dx, h, tilt] of [[-0.004, 0.012, 0.35], [0.0, 0.016, 0], [0.004, 0.011, -0.35]] as const) {
+      const prong = add(g, new THREE.ConeGeometry(0.003, h, 6), felt, dx, R * 2.38 + h / 2 - 0.002, -0.004, false);
+      prong.scale.z = 0.4;
+      prong.rotation.z = tilt;
+    }
+    // her tag, hanging from the right side
+    const tagTex = paintTexture(96, 128, (c, w, h) => {
+      c.fillStyle = "#f2f3f5";
+      c.fillRect(0, 0, w, h);
+      c.fillStyle = "#2b3a66";
+      c.font = "700 22px system-ui, sans-serif";
+      c.textAlign = "center";
+      c.fillText("Babs", w / 2, 40);
+      c.fillStyle = "#3b82f0";
+      c.beginPath();
+      c.arc(w / 2, 86, 22, 0, Math.PI * 2);
+      c.fill();
+    });
+    const tag = add(g, new THREE.PlaneGeometry(0.02, 0.026), new THREE.MeshStandardMaterial({ map: tagTex, roughness: 0.8, side: THREE.DoubleSide }), R + 0.008, R * 0.9, 0.012, false);
+    tag.rotation.set(0, 0.9, 0.2);
   };
 
   // ---------- dresser clutter ----------
