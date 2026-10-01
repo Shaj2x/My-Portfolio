@@ -13,7 +13,7 @@ Built from four night photos (no measurements given yet). Every number is **esti
 
 ## Coordinate convention
 
-Same as the reference scene: metres, **y up**, **+z toward the doorway camera**, origin at the centre of the floor.
+Metres, **y up**, **+z toward the doorway**. x = 0 is the middle of the window wall, which stays fixed at z = −1.65, so changing the depth moves only the front wall.
 
 - **Back wall (z = −1.65)**: the window wall. The bed headboard, dresser and floor lamp stand against it.
 - **Left wall (x = −1.50)**: the long blank wall. The bed runs along it.
