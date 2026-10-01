@@ -159,6 +159,11 @@ Photo B is the best whole-room view, so the hero view reproduces **photo B** rat
 
 ## Differences from the reference room
 
+**Changed on request**
+- The blind is rolled up: the window shows a night sky with stars, the moon and a distant skyline, and moonlight falls across the bed.
+- The floor lamp switches like the reference room's bedside lamp: click it, press L or use the button, and it fades like a real bulb.
+- The headboard top sits just under the window sill, and the desk props are spaced so nothing overlaps.
+
 **Removed**
 - The rugs and the ring light behind the desk lamp (in the photos, left out on request).
 - Wood floor → dark charcoal carpet.

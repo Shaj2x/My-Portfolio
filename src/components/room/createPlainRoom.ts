@@ -14,6 +14,8 @@ export type PlainRoomView = "photo" | "dollhouse" | "desk" | "door";
 
 export interface PlainRoomHandle {
   setView: (view: PlainRoomView) => void;
+  /** switch the floor lamp; it fades like a real bulb. Returns the new state. */
+  toggleLamp: () => boolean;
   dispose: () => void;
 }
 
@@ -31,7 +33,7 @@ const VIEWS: Record<PlainRoomView, { pos: THREE.Vector3; target: THREE.Vector3 }
   door: { pos: new THREE.Vector3(0.35, 1.5, -0.45), target: new THREE.Vector3(0.0, 1.0, ROOM.front) },
 };
 
-export function createPlainRoom(container: HTMLElement): PlainRoomHandle {
+export function createPlainRoom(container: HTMLElement, options: { onLampChange?: (on: boolean) => void } = {}): PlainRoomHandle {
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.setSize(container.clientWidth, container.clientHeight);
@@ -145,11 +147,12 @@ export function createPlainRoom(container: HTMLElement): PlainRoomHandle {
     slab(x1 - x0, f, 0.05, winMat, (x0 + x1) / 2, y1 - f / 2, back - t + 0.03, backWall);
     slab(f, y1 - y0, 0.05, winMat, x0 + f / 2, (y0 + y1) / 2, back - t + 0.03, backWall);
     slab(f, y1 - y0, 0.05, winMat, x1 - f / 2, (y0 + y1) / 2, back - t + 0.03, backWall);
-    // night outside the glass
-    const night = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0, y1 - y0), new THREE.MeshBasicMaterial({ color: "#0b1018" }));
-    night.position.set((x0 + x1) / 2, (y0 + y1) / 2, back - t + 0.005);
-    backWall.add(night);
-    // blind: cassette at the top, fabric down to the sill
+    // the glass: a faint cool sheen, so the opening reads as a window rather than a hole
+    const glass = new THREE.Mesh(new THREE.PlaneGeometry(x1 - x0, y1 - y0), new THREE.MeshBasicMaterial({ color: "#a8c0ff", transparent: true, opacity: 0.06, depthWrite: false }));
+    glass.position.set((x0 + x1) / 2, (y0 + y1) / 2, back - t + 0.03);
+    backWall.add(glass);
+    slab(0.03, y1 - y0, 0.04, winMat, (x0 + x1) / 2, (y0 + y1) / 2, back - t + 0.03, backWall); // mullion
+    // blind: cassette at the top, fabric rolled most of the way up
     const blindH = (y1 - y0) * WINDOW.blindDown;
     slab(x1 - x0 - 0.02, 0.07, 0.07, new THREE.MeshStandardMaterial({ color: "#ecebe6", roughness: 0.5 }), (x0 + x1) / 2, y1 - 0.035, back - t + 0.09, backWall);
     const blind = slab(x1 - x0 - 0.05, blindH - 0.07, 0.004, new THREE.MeshStandardMaterial({ color: COLORS.blind, roughness: 0.9 }), (x0 + x1) / 2, y1 - 0.07 - (blindH - 0.07) / 2, back - t + 0.08, backWall);
@@ -157,6 +160,76 @@ export function createPlainRoom(container: HTMLElement): PlainRoomHandle {
     slab(x1 - x0 - 0.04, 0.012, 0.02, new THREE.MeshStandardMaterial({ color: "#b9b9b9", roughness: 0.4, metalness: 0.6 }), (x0 + x1) / 2, y1 - blindH, back - t + 0.08, backWall);
     slab(W, 0.1, 0.015, trim, 0, 0.05, back + 0.0075, backWall);
   }
+
+  // the night sky outside, painted once: deep blue overhead, a city glow low down, stars, the moon,
+  // and a dark line of trees and rooftops. Seen only through the window, so hidden from outside the room.
+  const sky = new THREE.Mesh(
+    new THREE.PlaneGeometry(9, 5),
+    new THREE.MeshBasicMaterial({
+      map: paintTexture(1536, 860, (c, w, h) => {
+        const g = c.createLinearGradient(0, 0, 0, h);
+        g.addColorStop(0, "#050a1c");
+        g.addColorStop(0.45, "#102047");
+        g.addColorStop(0.75, "#2d3b6b");
+        g.addColorStop(0.9, "#6a5a78");
+        g.addColorStop(1, "#b07a62");
+        c.fillStyle = g;
+        c.fillRect(0, 0, w, h);
+        for (let i = 0; i < 700; i++) {
+          const y = Math.random() ** 1.6 * h * 0.7;
+          c.fillStyle = `rgba(255,255,255,${0.25 + Math.random() * 0.75 * (1 - y / h)})`;
+          const r = Math.random() < 0.06 ? 1.6 : 0.8;
+          c.beginPath();
+          c.arc(Math.random() * w, y, r, 0, Math.PI * 2);
+          c.fill();
+        }
+        // the moon with a soft halo, up and to the left of centre
+        const mx = w * 0.42;
+        const my = h * 0.24;
+        const halo = c.createRadialGradient(mx, my, 10, mx, my, 120);
+        halo.addColorStop(0, "rgba(220,230,255,0.45)");
+        halo.addColorStop(1, "rgba(220,230,255,0)");
+        c.fillStyle = halo;
+        c.fillRect(mx - 130, my - 130, 260, 260);
+        c.fillStyle = "#f3f1e6";
+        c.beginPath();
+        c.arc(mx, my, 26, 0, Math.PI * 2);
+        c.fill();
+        c.fillStyle = "rgba(170,165,150,0.35)";
+        for (const [dx, dy, r] of [[-8, -6, 6], [7, 5, 5], [2, -12, 3], [-4, 10, 4]]) {
+          c.beginPath();
+          c.arc(mx + dx, my + dy, r, 0, Math.PI * 2);
+          c.fill();
+        }
+        // rooftops with a few lit windows, then trees in front
+        let x = 0;
+        while (x < w) {
+          const bw = 60 + Math.random() * 140;
+          const bh = h * (0.06 + Math.random() * 0.12);
+          c.fillStyle = "#0b0d16";
+          c.fillRect(x, h - bh - h * 0.08, bw, bh + h * 0.08);
+          for (let k = 0; k < bw * bh * 0.0012; k++) {
+            c.fillStyle = Math.random() > 0.3 ? "rgba(255,200,120,0.85)" : "rgba(180,210,255,0.7)";
+            c.fillRect(x + 6 + Math.random() * (bw - 16), h - bh - h * 0.06 + Math.random() * bh * 0.8, 6, 8);
+          }
+          x += bw + Math.random() * 30;
+        }
+        c.fillStyle = "#05070c";
+        for (let i = 0; i < 70; i++) {
+          const tx = Math.random() * w;
+          const tr = 30 + Math.random() * 60;
+          c.beginPath();
+          c.arc(tx, h - h * 0.04 - Math.random() * 30, tr, 0, Math.PI * 2);
+          c.fill();
+        }
+        c.fillRect(0, h - h * 0.05, w, h * 0.05);
+      }),
+      toneMapped: false,
+      fog: false,
+    }),
+  );
+  sky.position.set((WINDOW.x0 + WINDOW.x1) / 2, 1.9, back - t - 3);
+  scene.add(sky);
 
   // side walls, each with its skirting board
   const leftWall = wallGroup(new THREE.Vector3(left, 0, 0), new THREE.Vector3(1, 0, 0));
@@ -305,7 +378,13 @@ export function createPlainRoom(container: HTMLElement): PlainRoomHandle {
   scene.add(furniture.group);
 
   // ---------- night lighting ----------
-  scene.add(new THREE.HemisphereLight("#fff1dc", "#3b352e", 0.9));
+  const hemi = new THREE.HemisphereLight("#fff1dc", "#3b352e", 0.9);
+  scene.add(hemi);
+  // cool moonlight through the open window, falling across the bed
+  const moon = new THREE.SpotLight("#9fb4ff", 3, 6, 0.45, 0.9, 1.2);
+  moon.position.set((WINDOW.x0 + WINDOW.x1) / 2 + 0.3, 2.6, back - 1.2);
+  moon.target.position.set(-0.6, 0.4, -0.4);
+  scene.add(moon, moon.target);
   // light bouncing off the pale walls and ceiling: a soft, shadowless fill from above the room
   const bounce = new THREE.PointLight("#ffe2c0", 1.4, 0, 1.2);
   bounce.position.set(0.1, height - 0.3, ROOM.midZ);
@@ -313,7 +392,7 @@ export function createPlainRoom(container: HTMLElement): PlainRoomHandle {
 
   // the floor lamp is the room's main light
   const lamp = new THREE.PointLight("#ffd6a0", 5.5, 0, 1.6);
-  lamp.position.copy(furniture.lampBulb);
+  lamp.position.copy(furniture.lamp.bulb);
   lamp.castShadow = true;
   lamp.shadow.mapSize.set(1024, 1024);
   lamp.shadow.bias = -0.002;
@@ -322,9 +401,49 @@ export function createPlainRoom(container: HTMLElement): PlainRoomHandle {
   scene.add(lamp);
   // the bright scallop the open shade throws up the corner
   const upLight = new THREE.SpotLight("#ffd9a8", 6, 2.2, 0.75, 0.8, 1.5);
-  upLight.position.copy(furniture.lampBulb).add(new THREE.Vector3(0, 0.1, 0));
-  upLight.target.position.copy(furniture.lampBulb).add(new THREE.Vector3(0, 2, 0));
+  upLight.position.copy(furniture.lamp.bulb).add(new THREE.Vector3(0, 0.1, 0));
+  upLight.target.position.copy(furniture.lamp.bulb).add(new THREE.Vector3(0, 2, 0));
   scene.add(upLight, upLight.target);
+
+  // ---------- the lamp switch ----------
+  // Clicking the lamp (or pressing L) fades it like a real bulb: quickly on, a short filament glow off.
+  let lampOn = true;
+  let lampLevel = 1;
+  const applyLamp = (k: number) => {
+    lamp.intensity = 5.5 * k;
+    upLight.intensity = 6 * k;
+    // the walls bounce less light, and the room falls back on the screens and the moon
+    bounce.intensity = 0.25 + 1.15 * k;
+    hemi.intensity = 0.25 + 0.65 * k;
+    furniture.lamp.setGlow(k);
+  };
+  const toggleLamp = () => {
+    lampOn = !lampOn;
+    options.onLampChange?.(lampOn);
+    return lampOn;
+  };
+  const raycaster = new THREE.Raycaster();
+  const ndc = new THREE.Vector2();
+  const overLamp = (e: PointerEvent) => {
+    const r = renderer.domElement.getBoundingClientRect();
+    ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    raycaster.setFromCamera(ndc, camera);
+    const hit = raycaster.intersectObjects(scene.children, true).find((h) => h.object.visible && (h.object as THREE.Mesh).isMesh);
+    return !!hit && furniture.lamp.parts.includes(hit.object);
+  };
+  // a press that drags (orbiting) isn't a click
+  let downAt: { x: number; y: number } | null = null;
+  const onDown = (e: PointerEvent) => (downAt = { x: e.clientX, y: e.clientY });
+  const onUp = (e: PointerEvent) => {
+    if (downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < 6 && overLamp(e)) toggleLamp();
+    downAt = null;
+  };
+  const onMove = (e: PointerEvent) => {
+    if (!e.buttons) renderer.domElement.style.cursor = overLamp(e) ? "pointer" : "";
+  };
+  renderer.domElement.addEventListener("pointerdown", onDown);
+  renderer.domElement.addEventListener("pointerup", onUp);
+  renderer.domElement.addEventListener("pointermove", onMove);
 
   for (const s of furniture.screens) {
     const area = new THREE.RectAreaLight(s.color, s.strength, s.w, s.h);
@@ -363,6 +482,12 @@ export function createPlainRoom(container: HTMLElement): PlainRoomHandle {
   const toCamera = new THREE.Vector3();
   renderer.setAnimationLoop(() => {
     const dt = Math.min(clock.getDelta(), 0.1);
+    const lampTarget = lampOn ? 1 : 0;
+    if (lampLevel !== lampTarget) {
+      lampLevel += (lampTarget - lampLevel) * (reducedMotion ? 1 : 1 - Math.exp(-(lampTarget > lampLevel ? 18 : 9) * dt));
+      if (Math.abs(lampTarget - lampLevel) < 0.002) lampLevel = lampTarget;
+      applyLamp(lampLevel);
+    }
     if (tween) {
       tween.t = Math.min(1, tween.t + dt / 1.4);
       const e = tween.t < 0.5 ? 4 * tween.t ** 3 : 1 - (-2 * tween.t + 2) ** 3 / 2;
@@ -374,12 +499,18 @@ export function createPlainRoom(container: HTMLElement): PlainRoomHandle {
     // dollhouse cutaway: hide any wall the camera is behind, and the ceiling from above
     for (const w of walls) w.group.visible = toCamera.subVectors(camera.position, w.point).dot(w.inward) > -0.05;
     ceiling.visible = camera.position.y < height;
+    const p = camera.position;
+    sky.visible = p.x > left && p.x < right && p.z > back && p.z < front && p.y < height;
     renderer.render(scene, camera);
   });
 
   return {
     setView,
+    toggleLamp,
     dispose: () => {
+      renderer.domElement.removeEventListener("pointerdown", onDown);
+      renderer.domElement.removeEventListener("pointerup", onUp);
+      renderer.domElement.removeEventListener("pointermove", onMove);
       renderer.setAnimationLoop(null);
       ro.disconnect();
       controls.dispose();

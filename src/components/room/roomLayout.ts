@@ -29,7 +29,7 @@ export const ROOM = {
 };
 
 /** window opening in the back wall */
-export const WINDOW = { x0: -0.9, x1: 0.4, y0: 1.02, y1: 2.05, blindDown: 1.0 };
+export const WINDOW = { x0: -0.9, x1: 0.4, y0: 1.02, y1: 2.05, blindDown: 0.12 };
 
 /**
  * Front wall, from photo E. The entry door sits in an alcove beside the desk wall, hinged on
@@ -67,26 +67,27 @@ export const LAYOUT = {
     pos: [-0.79, 0, -0.66] as Vec3,
     mattress: { w: 1.37, l: 1.91, h: 0.2, top: 0.53 },
     frame: { w: 1.4, l: 1.95, h: 0.33 },
-    headboard: { w: 1.45, h: 1.04, t: 0.03 },
+    /** its top stays just under the window sill */
+    headboard: { w: 1.45, h: 0.97, t: 0.03 },
   },
   dresser: { pos: [0.28, 0, -1.42] as Vec3, w: 0.55, d: 0.45, unitH: 0.39 },
-  perfume: { pos: [0.26, 0, -1.55] as Vec3, w: 0.42, d: 0.2, h: 0.26 },
+  perfume: { pos: [0.26, 0, -1.51] as Vec3, w: 0.42, d: 0.2, h: 0.26 },
   candle: { pos: [0.05, 0, -1.3] as Vec3 },
   /** right in the corner of the window wall and the desk wall; the shade hangs out toward the room */
   floorLamp: { pos: [1.36, 0, -1.51] as Vec3, height: 1.62, shadeY: 1.48, shadeR: 0.15, shadeH: 0.22, shadeOffset: [-0.07, 0.07] as [number, number] },
   /** against the right wall, with about 0.75 m of open floor between its end and the window wall (photo F) */
   desk: { pos: [1.2, 0, ROOM.back + 0.75 + 0.6] as Vec3, l: 1.2, d: 0.6, h: 0.75 },
-  /** turned to face the chair */
-  monitor: { pos: [1.3, 0, 0.04] as Vec3, w: 0.71, h: 0.42 },
-  laptop: { pos: [1.25, 0, -0.63] as Vec3 },
-  keyboard: { pos: [1.08, 0, -0.33] as Vec3 },
-  mouse: { pos: [1.12, 0, 0.07] as Vec3 },
-  controller: { pos: [1.1, 0, -0.68] as Vec3 },
-  mug: { pos: [1.35, 0, -0.8] as Vec3 },
-  clock: { pos: [1.36, 0, -0.7] as Vec3 },
-  deskLamp: { pos: [1.4, 0, -0.86] as Vec3 },
-  speaker: { pos: [1.36, 0, -0.16] as Vec3 },
-  smallSpeaker: { pos: [1.36, 0, 0.24] as Vec3 },
+  /** turned to face the chair; desk props are spaced so their footprints never overlap */
+  monitor: { pos: [1.3, 0, -0.05] as Vec3, w: 0.71, h: 0.42 },
+  laptop: { pos: [1.28, 0, -0.55] as Vec3 },
+  keyboard: { pos: [1.05, 0, -0.2] as Vec3 },
+  mouse: { pos: [1.08, 0, 0.12] as Vec3 },
+  controller: { pos: [1.0, 0, -0.62] as Vec3 },
+  mug: { pos: [1.06, 0, -0.8] as Vec3 },
+  clock: { pos: [1.3, 0, -0.84] as Vec3 },
+  deskLamp: { pos: [1.42, 0, -0.84] as Vec3 },
+  speaker: { pos: [1.44, 0, -0.28] as Vec3 },
+  smallSpeaker: { pos: [1.42, 0, 0.24] as Vec3 },
   pcTower: { pos: [1.25, 0, 0.06] as Vec3 },
   chair: { pos: [0.55, 0, -0.33] as Vec3, yaw: Math.PI / 2 },
   tapestry: { pos: [1.49, 1.72, -0.2] as Vec3, w: 1.3, h: 1.2 },

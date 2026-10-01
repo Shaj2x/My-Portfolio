@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Lightbulb, LightbulbOff } from "lucide-react";
 import { createPlainRoom, type PlainRoomHandle, type PlainRoomView } from "@/components/room/createPlainRoom";
 
 const chip =
@@ -19,16 +19,23 @@ const RoomPlain = () => {
   const roomRef = useRef<PlainRoomHandle | null>(null);
   const [view, setView] = useState<PlainRoomView>("photo");
   const [error, setError] = useState(false);
+  const [lampOn, setLampOn] = useState(true);
 
   useEffect(() => {
     if (!containerRef.current) return;
     try {
-      roomRef.current = createPlainRoom(containerRef.current);
+      roomRef.current = createPlainRoom(containerRef.current, { onLampChange: setLampOn });
     } catch (e) {
       console.error("Failed to start the room:", e);
       setError(true);
     }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key.toLowerCase() === "l") roomRef.current?.toggleLamp();
+    };
+    window.addEventListener("keydown", onKey);
     return () => {
+      window.removeEventListener("keydown", onKey);
       roomRef.current?.dispose();
       roomRef.current = null;
     };
@@ -55,8 +62,11 @@ const RoomPlain = () => {
               {label}
             </button>
           ))}
+          <button type="button" className={`${chip} inline-flex items-center gap-2`} aria-pressed={lampOn} onClick={() => roomRef.current?.toggleLamp()}>
+            {lampOn ? <Lightbulb className="h-4 w-4" /> : <LightbulbOff className="h-4 w-4" />} Lamp (L)
+          </button>
         </div>
-        <p className="text-xs text-white/50">Drag to orbit · scroll to zoom · right-drag to pan</p>
+        <p className="text-xs text-white/50">Drag to orbit · scroll to zoom · right-drag to pan · click the lamp or press L</p>
       </div>
     </main>
   );
