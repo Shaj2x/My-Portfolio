@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RectAreaLightUniformsLib } from "three/examples/jsm/lights/RectAreaLightUniformsLib.js";
 import { createFurniture, paintTexture } from "./createFurniture";
-import { COLORS, DOOR, HERO, LAYOUT, ROOM, WINDOW } from "./roomLayout";
+import { CLOSET, COLORS, DOOR, HERO, LAYOUT, ROOM, WINDOW } from "./roomLayout";
 
 /**
  * A plain recreation of the real room: the shell, furniture and night lighting, with orbit
@@ -10,7 +10,7 @@ import { COLORS, DOOR, HERO, LAYOUT, ROOM, WINDOW } from "./roomLayout";
  * dollhouse view. No effects, sound or animation beyond the camera.
  */
 
-export type PlainRoomView = "photo" | "dollhouse" | "desk";
+export type PlainRoomView = "photo" | "dollhouse" | "desk" | "door";
 
 export interface PlainRoomHandle {
   setView: (view: PlainRoomView) => void;
@@ -26,6 +26,8 @@ const VIEWS: Record<PlainRoomView, { pos: THREE.Vector3; target: THREE.Vector3 }
   photo: { pos: heroPos, target: heroPos.clone().addScaledVector(heroDir, 2.2) },
   dollhouse: { pos: new THREE.Vector3(-3.4, 4.6, 4.4), target: new THREE.Vector3(0.1, 0.5, -0.3) },
   desk: { pos: new THREE.Vector3(-0.6, 1.45, 0.6), target: new THREE.Vector3(1.2, 0.95, -0.75) },
+  // matches photo E: from beside the desk, looking at the entry door and the closet
+  door: { pos: new THREE.Vector3(0.35, 1.5, -0.55), target: new THREE.Vector3(0.0, 1.0, 1.65) },
 };
 
 export function createPlainRoom(container: HTMLElement): PlainRoomHandle {
@@ -162,22 +164,121 @@ export function createPlainRoom(container: HTMLElement): PlainRoomHandle {
   slab(t, height, D + t * 2, wallMat, right + t / 2, height / 2, 0, rightWall);
   slab(0.015, 0.1, D, trim, right - 0.0075, 0.05, 0, rightWall);
 
-  // front wall with a closed white door (its position is a guess)
+  // front wall: the entry door in an alcove by the desk wall, and the closet jutting out beside it
   const frontWall = wallGroup(new THREE.Vector3(0, 0, front), new THREE.Vector3(0, 0, -1));
   {
-    const fz = front + t / 2;
-    const wallMesh = pierced(left - t, right + t, [{ x0: DOOR.x0, x1: DOOR.x1, y0: 0, y1: DOOR.h }]);
-    wallMesh.position.z = front;
-    frontWall.add(wallMesh);
+    const closetZ = front - CLOSET.depth;
     const doorMat = new THREE.MeshStandardMaterial({ color: "#f1efea", roughness: 0.45 });
-    slab(DOOR.x1 - DOOR.x0, DOOR.h, 0.04, doorMat, (DOOR.x0 + DOOR.x1) / 2, DOOR.h / 2, fz, frontWall);
-    for (const x of [DOOR.x0 - 0.035, DOOR.x1 + 0.035]) slab(0.07, DOOR.h + 0.035, 0.015, trim, x, (DOOR.h + 0.035) / 2, front - 0.0075, frontWall);
-    slab(DOOR.x1 - DOOR.x0 + 0.14, 0.07, 0.015, trim, (DOOR.x0 + DOOR.x1) / 2, DOOR.h + 0.035, front - 0.0075, frontWall);
-    const knob = new THREE.Mesh(new THREE.SphereGeometry(0.027, 16, 12), new THREE.MeshStandardMaterial({ color: "#b8bcc2", metalness: 0.9, roughness: 0.3 }));
-    knob.position.set(DOOR.x0 + 0.07, 0.95, front - 0.04);
-    frontWall.add(knob);
-    slab(DOOR.x0 - left, 0.1, 0.015, trim, (left + DOOR.x0) / 2, 0.05, front - 0.0075, frontWall);
-    slab(right - DOOR.x1, 0.1, 0.015, trim, (DOOR.x1 + right) / 2, 0.05, front - 0.0075, frontWall);
+    // satin nickel; kept low on metalness since the scene has no reflections to show
+    const steelMat = new THREE.MeshStandardMaterial({ color: "#b4b7bb", metalness: 0.3, roughness: 0.35 });
+    /** casing around an opening, on the room side of a wall whose room face is at z */
+    const casing = (x0: number, x1: number, h: number, z: number) => {
+      for (const x of [x0 - 0.035, x1 + 0.035]) slab(0.07, h + 0.035, 0.015, trim, x, (h + 0.035) / 2, z - 0.0075, frontWall);
+      slab(x1 - x0 + 0.14, 0.07, 0.015, trim, (x0 + x1) / 2, h + 0.035, z - 0.0075, frontWall);
+    };
+    /** a lever handle on a door face at z, its bar pointing along x by `dir` */
+    const lever = (x: number, y: number, z: number, dir: number) => {
+      const rose = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.012, 20), steelMat);
+      rose.rotation.x = Math.PI / 2;
+      rose.position.set(x, y, z - 0.006);
+      frontWall.add(rose);
+      slab(0.012, 0.012, 0.05, steelMat, x, y, z - 0.03, frontWall);
+      slab(0.11, 0.016, 0.014, steelMat, x + dir * 0.05, y, z - 0.055, frontWall);
+    };
+    const hinges = (x: number, z: number, h: number) => {
+      for (const y of [0.22, h / 2, h - 0.22]) slab(0.014, 0.09, 0.012, steelMat, x, y, z - 0.004, frontWall);
+    };
+
+    // entry door, hinged on the desk-wall side, with a deadbolt above the lever
+    const doorWall = pierced(CLOSET.x1 - t, right + t, [{ x0: DOOR.x0, x1: DOOR.x1, y0: 0, y1: DOOR.h }]);
+    doorWall.position.z = front;
+    frontWall.add(doorWall);
+    const entry = paintTexture(256, 640, (c, w, h) => {
+      c.fillStyle = "#f1efea";
+      c.fillRect(0, 0, w, h);
+      c.strokeStyle = "rgba(0,0,0,0.05)";
+      c.lineWidth = 2;
+      c.strokeRect(w * 0.14, h * 0.07, w * 0.72, h * 0.38);
+      c.strokeRect(w * 0.14, h * 0.55, w * 0.72, h * 0.38);
+    });
+    slab(DOOR.x1 - DOOR.x0, DOOR.h, 0.04, new THREE.MeshStandardMaterial({ map: entry, roughness: 0.4 }), (DOOR.x0 + DOOR.x1) / 2, DOOR.h / 2, front + 0.03, frontWall);
+    casing(DOOR.x0, DOOR.x1, DOOR.h, front);
+    hinges(DOOR.x1 - 0.005, front + 0.01, DOOR.h);
+    lever(DOOR.x0 + 0.08, 0.98, front + 0.01, 1);
+    const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.012, 24), steelMat);
+    bolt.rotation.x = Math.PI / 2;
+    bolt.scale.set(0.8, 1, 1.15);
+    bolt.position.set(DOOR.x0 + 0.08, 1.24, front + 0.004);
+    frontWall.add(bolt);
+
+    // the closet: a side face toward the alcove and a front face with two six-panel doors
+    // starts behind the front face so the two never share a face
+    slab(t, height, CLOSET.depth - t, wallMat, CLOSET.x1 - t / 2, height / 2, closetZ + t + (CLOSET.depth - t) / 2, frontWall);
+    const closetFront = pierced(left - t, CLOSET.x1, [{ x0: CLOSET.doorX0, x1: CLOSET.doorX1, y0: 0, y1: CLOSET.doorH }]);
+    closetFront.position.z = closetZ;
+    frontWall.add(closetFront);
+    const leafW = (CLOSET.doorX1 - CLOSET.doorX0) / 2;
+    const sixPanel = paintTexture(256, 860, (c, w, h) => {
+      c.fillStyle = "#f2f0ea";
+      c.fillRect(0, 0, w, h);
+      // faint embossed wood grain
+      for (let i = 0; i < 260; i++) {
+        c.strokeStyle = `rgba(0,0,0,${0.012 + Math.random() * 0.02})`;
+        c.lineWidth = 1;
+        const x = Math.random() * w;
+        c.beginPath();
+        c.moveTo(x, 0);
+        c.lineTo(x + Math.random() * 6 - 3, h);
+        c.stroke();
+      }
+      // raised panels: shadow on the top and left edges, light on the bottom and right
+      const panel = (x: number, y: number, pw: number, ph: number) => {
+        c.lineWidth = 5;
+        c.strokeStyle = "rgba(0,0,0,0.13)";
+        c.beginPath();
+        c.moveTo(x, y + ph);
+        c.lineTo(x, y);
+        c.lineTo(x + pw, y);
+        c.stroke();
+        c.strokeStyle = "rgba(255,255,255,0.7)";
+        c.beginPath();
+        c.moveTo(x + pw, y);
+        c.lineTo(x + pw, y + ph);
+        c.lineTo(x, y + ph);
+        c.stroke();
+        c.lineWidth = 2;
+        c.strokeStyle = "rgba(0,0,0,0.07)";
+        c.strokeRect(x + 12, y + 12, pw - 24, ph - 24);
+      };
+      for (const col of [0, 1]) {
+        const x = w * (0.1 + col * 0.46);
+        const pw = w * 0.34;
+        panel(x, h * 0.05, pw, h * 0.14);
+        panel(x, h * 0.25, pw, h * 0.3);
+        panel(x, h * 0.6, pw, h * 0.34);
+      }
+    });
+    const leafMat = new THREE.MeshStandardMaterial({ map: sixPanel, bumpMap: sixPanel, bumpScale: 2, roughness: 0.5 });
+    for (const s of [-1, 1]) {
+      const cx = (CLOSET.doorX0 + CLOSET.doorX1) / 2 + s * (leafW / 2 + 0.002);
+      slab(leafW - 0.006, CLOSET.doorH, 0.035, leafMat, cx, CLOSET.doorH / 2, closetZ + 0.03, frontWall);
+      // lever beside the centre seam, its bar pointing toward the leaf's hinge
+      lever(cx - s * (leafW / 2 - 0.07), 1.0, closetZ + 0.0125, s);
+      hinges(cx + s * (leafW / 2 - 0.004), closetZ + 0.012, CLOSET.doorH);
+    }
+    casing(CLOSET.doorX0, CLOSET.doorX1, CLOSET.doorH, closetZ);
+    // dark closet interior, seen only through the seam
+    const inside = new THREE.Mesh(new THREE.PlaneGeometry(CLOSET.doorX1 - CLOSET.doorX0, CLOSET.doorH), new THREE.MeshBasicMaterial({ color: "#121212" }));
+    inside.position.set((CLOSET.doorX0 + CLOSET.doorX1) / 2, CLOSET.doorH / 2, front - 0.01);
+    inside.rotation.y = Math.PI;
+    frontWall.add(inside);
+
+    // skirting boards along the closet front, its side, and the alcove wall either side of the door
+    slab(CLOSET.doorX0 - 0.07 - left, 0.1, 0.015, trim, (left + CLOSET.doorX0 - 0.07) / 2, 0.05, closetZ - 0.0075, frontWall);
+    slab(CLOSET.x1 - CLOSET.doorX1 - 0.07, 0.1, 0.015, trim, (CLOSET.doorX1 + 0.07 + CLOSET.x1) / 2, 0.05, closetZ - 0.0075, frontWall);
+    slab(0.015, 0.1, CLOSET.depth, trim, CLOSET.x1 + 0.0075, 0.05, closetZ + CLOSET.depth / 2, frontWall);
+    slab(DOOR.x0 - 0.07 - CLOSET.x1, 0.1, 0.015, trim, (CLOSET.x1 + DOOR.x0 - 0.07) / 2, 0.05, front - 0.0075, frontWall);
+    slab(right - DOOR.x1 - 0.07, 0.1, 0.015, trim, (DOOR.x1 + 0.07 + right) / 2, 0.05, front - 0.0075, frontWall);
   }
 
   // ceiling light (off) and the sprinkler head

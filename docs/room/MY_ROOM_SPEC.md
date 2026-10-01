@@ -9,6 +9,7 @@ Built from four night photos (no measurements given yet). Every number is **esti
 | B | From the front, looking at the window wall: bed, dresser, window, floor lamp, desk on the right wall |
 | C | From the bed, looking into the back-right corner: floor lamp, desk, tapestry, monitor, laptop |
 | D | Close-up of the dresser, perfume shelf, window sill plushies, lamp and rugs |
+| E | From beside the desk, looking at the front wall: the entry door in its alcove and the closet |
 
 ## Coordinate convention
 
@@ -17,7 +18,8 @@ Same as the reference scene: metres, **y up**, **+z toward the doorway camera**,
 - **Back wall (z = −1.65)**: the window wall. The bed headboard, dresser and floor lamp stand against it.
 - **Left wall (x = −1.50)**: the long blank wall. The bed runs along it.
 - **Right wall (x = +1.50)**: the desk and the tapestry.
-- **Front wall (z = +1.65)**: not in any photo. The door and the hero camera are assumed to be here.
+- **Front wall (z = +1.65)**: the entry door, in an alcove beside the desk wall, and the closet, which juts
+  0.62 m into the room from the bed side of the wall up to that alcove (photo E).
 
 ## Dimensions
 
@@ -27,7 +29,8 @@ Same as the reference scene: metres, **y up**, **+z toward the doorway camera**,
 | Depth (back → front) | 3.30 m | estimated: the bed (2.0 m) covers about 60 % of the left wall in photo A |
 | Ceiling height | 2.44 m (8 ft) | estimated, standard. Textured "popcorn" ceiling |
 | Window | 1.30 m wide × 1.03 m tall, sill at 1.02 m, from x −0.90 to +0.40 | estimated |
-| Door | 0.81 m × 2.03 m, front wall, x +0.45 to +1.26 | **guessed**, not in any photo |
+| Entry door | 0.81 m × 2.03 m, front wall, x +0.61 to +1.42, hinged on the desk-wall side | estimated from photo E |
+| Closet | bump-out from x −1.50 to +0.52, 0.62 m deep; a pair of six-panel doors from x −1.00 to +0.22, 2.03 m tall | estimated from photo E |
 
 ## Surfaces
 
@@ -98,7 +101,9 @@ Positions are the object's centre on the floor (y = 0) unless a height is given.
 | Object | Position | Notes |
 |---|---|---|
 | Duplex outlet | −1.49, 0.35, +1.10 | Otherwise the left wall is bare |
-| Door and light switch | front wall | Not in any photo; see open questions |
+| Entry door | x +0.61 to +1.42 in the alcove | White slab with faint panels, satin-nickel lever, round deadbolt above it, hinges on the desk-wall side |
+| Closet doors | x −1.00 to +0.22, front face at z +1.03 | Two white six-panel leaves with textured grain, levers at the centre seam, hinges at the outer edges, white casing |
+| Light switch | closet side face, facing the alcove, 1.2 m up | |
 
 ## Light sources
 
@@ -188,8 +193,8 @@ Photo B is the best whole-room view, so the hero view reproduces **photo B** rat
 
 1. **Measurements.** Please measure, even roughly: room width × depth × ceiling height; window width × height and
    sill height; bed size (single, double or queen); desk length × depth. The estimates above could be off by 20 %.
-2. **Door and closet.** Where is the door (which wall, left or right end), which way does it swing, and where is the
-   light switch? Is there a closet? A photo from the back-left corner looking at the front wall would answer all of this.
+2. ~~**Door and closet.**~~ Answered by photo E. Still to check: the closet's depth (0.62 m estimated) and how far
+   its doors are from the bed-side wall.
 3. **Hero view.** Match photo B (whole room from the door), as proposed, or photo A?
 4. **Blind.** Open about two-thirds by default and clickable, as proposed, or kept down with the room lit only from
    inside?

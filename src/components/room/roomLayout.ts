@@ -28,8 +28,13 @@ export const ROOM = {
 /** window opening in the back wall */
 export const WINDOW = { x0: -0.9, x1: 0.4, y0: 1.02, y1: 2.05, blindDown: 1.0 };
 
-/** door opening in the front wall (a guess; not in any photo) */
-export const DOOR = { x0: 0.45, x1: 1.26, h: 2.03 };
+/**
+ * Front wall, from photo E. The entry door sits in an alcove beside the desk wall, hinged on
+ * the desk side and swinging into the room. The closet juts into the room from the bed side
+ * of the wall up to that alcove, with a pair of six-panel doors.
+ */
+export const DOOR = { x0: 0.61, x1: 1.42, h: 2.03 };
+export const CLOSET = { x0: -1.5, x1: 0.52, depth: 0.62, doorX0: -1.0, doorX1: 0.22, doorH: 2.03 };
 
 export const COLORS = {
   wall: "#dcdad4",
@@ -97,11 +102,12 @@ export const LAYOUT = {
   ] as { kind: "plant" | "cow" | "spiderHam" | "cat" | "bird" | "remote"; x: number }[],
   outlets: [
     { pos: [0.6, 0.42, -1.65] as Vec3, facing: "back" },
-    { pos: [-1.5, 0.35, 1.1] as Vec3, facing: "left" },
+    { pos: [-1.5, 0.35, 0.8] as Vec3, facing: "left" },
     { pos: [1.5, 0.35, -1.25] as Vec3, facing: "right" },
   ] as { pos: Vec3; facing: "back" | "left" | "right" }[],
-  lightSwitch: { pos: [0.3, 1.2, 1.65] as Vec3 },
+  /** on the closet's side face, facing the entry door alcove */
+  lightSwitch: { pos: [0.52, 1.2, 1.53] as Vec3 },
 };
 
-/** the opening camera, matching photo B: standing in the doorway, looking at the window wall */
-export const HERO = { pos: [0.35, 1.58, 1.55] as Vec3, target: [-0.12, 1.0, -1.65] as Vec3, fov: 62 };
+/** the opening camera, matching photo B: standing in front of the closet, looking at the window wall */
+export const HERO = { pos: [0.62, 1.62, 1.0] as Vec3, target: [-0.2, 0.95, -1.65] as Vec3, fov: 68 };

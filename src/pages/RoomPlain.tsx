@@ -9,6 +9,7 @@ const chip =
 const VIEWS: [PlainRoomView, string][] = [
   ["photo", "Photo view"],
   ["desk", "Desk"],
+  ["door", "Door & closet"],
   ["dollhouse", "Dollhouse"],
 ];
 

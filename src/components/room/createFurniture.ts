@@ -818,7 +818,7 @@ export function createFurniture(): FurnitureHandle {
       }
     }
     const sw = LAYOUT.lightSwitch.pos;
-    block(0.075, 0.12, 0.01, white, sw[0], sw[1], sw[2] - 0.005, group, false);
+    block(0.01, 0.12, 0.075, white, sw[0] + 0.005, sw[1], sw[2], group, false);
   }
 
   return { group, lampBulb, screens };
