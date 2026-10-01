@@ -178,34 +178,48 @@ export function createFurniture(): FurnitureHandle {
     pillow.rotation.y = -0.12;
     pillow.scale.y = 0.9;
 
-    // the throw: a lumpy draped plane on the front half, spilling over the right edge and the foot
+    // the throw, laid out neatly: flat over the mattress from just below the pillow, hanging evenly
+    // over the open side and the foot, tucked down against the wall, with a folded-back cuff at
+    // the window end
     const top = frame.h + mattress.h;
-    const edgeX = cx + mattress.w / 2;
-    const edgeZ = cz + mattress.l / 2;
-    const lumps = Array.from({ length: 9 }, () => ({ x: between(-1.15, -0.2), z: between(-0.5, 0.2), r: between(0.12, 0.28), h: between(0.04, 0.13) }));
-    const geo = new THREE.PlaneGeometry(1.3, 1.0, 70, 56);
-    geo.rotateX(-Math.PI / 2);
-    const p = geo.attributes.position;
-    for (let i = 0; i < p.count; i++) {
-      let x = p.getX(i) - 0.5;
-      let z = p.getZ(i) - 0.2;
-      let y = top + 0.012;
-      for (const l of lumps) y += l.h * Math.exp(-((x - l.x) ** 2 + (z - l.z) ** 2) / (l.r * l.r));
-      y += 0.012 * Math.sin(x * 23 + z * 9) + 0.008 * Math.sin(z * 31 - x * 7);
-      // hang over the side and the foot
-      if (x > edgeX) {
-        const over = x - edgeX;
-        y = Math.max(0.02, Math.min(y, top + 0.01) - over * 1.4);
-        x = edgeX + 0.018 + over * 0.12;
+    const mL = cx - mattress.w / 2;
+    const mR = cx + mattress.w / 2;
+    const foot = cz + mattress.l / 2;
+    const start = z0 + 0.62;
+    const hang = 0.26;
+    const tuck = 0.06;
+    /** a cloth sheet laid from z0 to z1 (plus the foot overhang if it reaches the foot), lifted by `lift` */
+    const drape = (zFrom: number, zTo: number, lift: number) => {
+      const across = tuck + mattress.w + hang;
+      const along = zTo - zFrom;
+      const geo = new THREE.PlaneGeometry(across, along, 90, Math.max(8, Math.round(along * 60)));
+      geo.rotateX(-Math.PI / 2);
+      const p = geo.attributes.position;
+      for (let i = 0; i < p.count; i++) {
+        const u = p.getX(i) + across / 2 - tuck; // 0 at the mattress's wall-side edge
+        let z = p.getZ(i) + zFrom + along / 2;
+        let x = mL + u;
+        let y = top + 0.012 + lift + 0.004 * Math.sin(u * 19 + z * 3) + 0.003 * Math.sin(z * 27 - u * 5);
+        // round over the edges, then fall straight down
+        const r = 0.03;
+        if (u < 0) {
+          x = mL - 0.008;
+          y = top + lift - Math.max(0, -u - r) - r * 0.5;
+        } else if (u > mattress.w) {
+          const over = u - mattress.w;
+          x = mR + 0.012 + Math.min(over, r) * 0.3 + Math.sin(z * 9) * 0.004;
+          y = top + lift - Math.max(0, over - r) - Math.min(over, r) * 0.5;
+        }
+        if (z > foot) {
+          const over = z - foot;
+          z = foot + 0.012 + Math.min(over, r) * 0.3;
+          y = Math.min(y, top + lift) - Math.max(0, over - r) - Math.min(over, r) * 0.5;
+        }
+        p.setXYZ(i, x, Math.max(frame.h - 0.05, y), z);
       }
-      if (z > edgeZ) {
-        const over = z - edgeZ;
-        y = Math.max(0.02, Math.min(y, top + 0.01) - over * 1.5);
-        z = edgeZ + 0.018 + over * 0.1;
-      }
-      p.setXYZ(i, x, y, z);
-    }
-    geo.computeVertexNormals();
+      geo.computeVertexNormals();
+      return geo;
+    };
     const blanketTex = paintTexture(1024, 1024, (c, w, h) => {
       c.fillStyle = COLORS.blanket;
       c.fillRect(0, 0, w, h);
@@ -225,9 +239,15 @@ export function createFurniture(): FurnitureHandle {
         c.fill();
       }
     });
-    const blanket = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: blanketTex, roughness: 0.9, side: THREE.DoubleSide }));
-    blanket.castShadow = blanket.receiveShadow = true;
-    group.add(blanket);
+    const throwMat = new THREE.MeshStandardMaterial({ map: blanketTex, roughness: 0.9, side: THREE.DoubleSide });
+    for (const [zFrom, zTo, lift] of [
+      [start, foot + hang, 0],
+      [start, start + 0.26, 0.018],
+    ]) {
+      const sheet = new THREE.Mesh(drape(zFrom, zTo, lift), throwMat);
+      sheet.castShadow = sheet.receiveShadow = true;
+      group.add(sheet);
+    }
   }
 
   // ---------- dresser, perfume shelf and clutter ----------
@@ -577,13 +597,6 @@ export function createFurniture(): FurnitureHandle {
     const lens = place(new THREE.Mesh(new THREE.CircleGeometry(0.06, 32), std("#dfe3e8", 0.2)), dl[0] - 0.052, deskTop + 0.42, dl[2] + 0.06, group, false);
     lens.rotation.y = -Math.PI / 2 + 0.4;
 
-    // ring light on a clamp arm (off)
-    const rl = LAYOUT.ringLight.pos;
-    block(0.04, 0.06, 0.05, black, rl[0], deskTop - 0.01, rl[2]);
-    tube([new THREE.Vector3(rl[0], deskTop + 0.02, rl[2]), new THREE.Vector3(rl[0] - 0.02, deskTop + 0.35, rl[2] + 0.02), new THREE.Vector3(rl[0] - 0.06, deskTop + 0.62, rl[2] + 0.05), new THREE.Vector3(rl[0] - 0.1, deskTop + 0.72, rl[2] + 0.08)], 0.01, black);
-    const ring = place(new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.014, 10, 48), black), rl[0] - 0.12, deskTop + 0.73, rl[2] + 0.1);
-    ring.rotation.x = Math.PI / 2 - 0.1;
-
     const sp = LAYOUT.speaker.pos;
     const spk = rounded(0.2, 0.08, 0.07, 0.03, std("#1a1a1a", 0.8), sp[0], deskTop + 0.04, sp[2]);
     spk.rotation.y = facing;
@@ -665,84 +678,6 @@ export function createFurniture(): FurnitureHandle {
     const cloth = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95 }));
     cloth.rotation.y = -Math.PI / 2;
     place(cloth, pos[0] - 0.01, pos[1], pos[2], group, false);
-  }
-
-  // ---------- rugs ----------
-  {
-    const flat = (tex: THREE.Texture, w: number, l: number, x: number, z: number, yaw: number) => {
-      const m = new THREE.Mesh(new THREE.PlaneGeometry(w, l), new THREE.MeshStandardMaterial({ map: tex, alphaTest: 0.5, roughness: 1 }));
-      m.rotation.set(-Math.PI / 2, 0, yaw);
-      m.position.set(x, 0.004, z);
-      m.receiveShadow = true;
-      group.add(m);
-    };
-    const web = paintTexture(512, 512, (c, w, h) => {
-      const cx = w / 2;
-      const cy = h / 2;
-      const spokes = 10;
-      const edge = (k: number) => (k % 2 ? 0.95 : 0.8) * (w / 2);
-      c.fillStyle = "#1e1e22";
-      c.beginPath();
-      for (let k = 0; k <= spokes; k++) {
-        const a = (k / spokes) * Math.PI * 2;
-        const r = edge(k);
-        if (k === 0) c.moveTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
-        else {
-          const am = ((k - 0.5) / spokes) * Math.PI * 2;
-          c.quadraticCurveTo(cx + Math.cos(am) * r * 0.78, cy + Math.sin(am) * r * 0.78, cx + Math.cos(a) * r, cy + Math.sin(a) * r);
-        }
-      }
-      c.fill();
-      c.strokeStyle = "#e6e6e6";
-      c.lineWidth = 7;
-      for (let k = 0; k < spokes; k++) {
-        const a = (k / spokes) * Math.PI * 2;
-        c.beginPath();
-        c.moveTo(cx, cy);
-        c.lineTo(cx + Math.cos(a) * edge(k) * 0.96, cy + Math.sin(a) * edge(k) * 0.96);
-        c.stroke();
-      }
-      for (let ringR = 45; ringR < w * 0.4; ringR += 42) {
-        c.beginPath();
-        for (let k = 0; k <= spokes; k++) {
-          const a = (k / spokes) * Math.PI * 2;
-          const am = ((k - 0.5) / spokes) * Math.PI * 2;
-          const px = cx + Math.cos(a) * ringR;
-          const py = cy + Math.sin(a) * ringR;
-          if (k === 0) c.moveTo(px, py);
-          else c.quadraticCurveTo(cx + Math.cos(am) * ringR * 0.8, cy + Math.sin(am) * ringR * 0.8, px, py);
-        }
-        c.stroke();
-      }
-    });
-    const wr = LAYOUT.webRug;
-    flat(web, wr.r * 2, wr.r * 2, wr.pos[0], wr.pos[2], 0.3);
-
-    // a cartoon character lying on its back: cream body, orange hands, olive hat, maroon shoes
-    const toon = paintTexture(512, 320, (c, w, h) => {
-      const blob = (x: number, y: number, rx: number, ry: number, color: string, rot = 0) => {
-        c.fillStyle = color;
-        c.beginPath();
-        c.ellipse(x, y, rx, ry, rot, 0, Math.PI * 2);
-        c.fill();
-      };
-      c.lineWidth = 8;
-      c.strokeStyle = "#2a1c1c";
-      blob(90, 170, 70, 55, "#6e7a3c");
-      blob(250, 160, 120, 80, "#f3e2cf");
-      blob(160, 210, 28, 18, "#f28a45", 0.4);
-      blob(330, 90, 32, 20, "#f28a45", -0.5);
-      blob(420, 230, 55, 32, "#6a2a30", 0.3);
-      blob(440, 120, 50, 30, "#6a2a30", -0.3);
-      c.fillStyle = "#2a1c1c";
-      blob(215, 140, 7, 9, "#2a1c1c");
-      blob(255, 135, 7, 9, "#2a1c1c");
-      c.beginPath();
-      c.arc(235, 175, 18, 0.1, Math.PI - 0.1);
-      c.stroke();
-    });
-    const cr = LAYOUT.cartoonRug;
-    flat(toon, cr.w, cr.l, cr.pos[0], cr.pos[2], -0.4);
   }
 
   // ---------- window sill: plants and plushies ----------

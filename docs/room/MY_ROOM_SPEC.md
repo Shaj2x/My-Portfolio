@@ -55,7 +55,7 @@ Positions are the object's centre on the floor (y = 0) unless a height is given.
 | Bed frame | −0.79, 0, −0.66 | 1.40 × 0.33 × 1.95 | black steel `#1c1c1e` | Low platform frame: four square legs, slats visible at the side |
 | Mattress + fitted sheet | −0.79, 0.33→0.53, −0.66 | 1.37 × 0.20 × 1.91 (double) | red `#9e2427` | Wrinkled satin sheet with folds near the pillow |
 | Pillow | −0.55, 0.58, −1.40 | 0.66 × 0.12 × 0.45 | satin peach `#d99a6c`, brown print `#5a3226` | Slightly off-centre toward the window side |
-| Throw blanket | −0.60, 0.55, −0.35 | about 1.2 × 1.4 heap | red `#c8161c`, black-red stripes `#3a080c`, pink florals `#e46a8a` | Bunched on the front half and spilling over the right edge toward the floor |
+| Throw blanket | over the mattress from just below the pillow to the foot | 1.43 × 1.55 | red `#c8161c`, black-red stripes `#3a080c`, pink florals `#e46a8a` | Laid out neatly, with a folded-back cuff at the window end, hanging evenly over the open side and the foot |
 | Dresser (two stacked two-drawer units) | +0.28, 0, −1.42 | 0.55 × 0.78 × 0.45 | maple `#d2a877`, black recessed pulls `#141414` | Top holds the perfume shelf and clutter |
 | Perfume riser | +0.26, 0.78, −1.55 | 0.40 × 0.26 × 0.20 (3 steps) | black `#161616` | About 25 bottles, instanced from 6 shapes: square, round, tall, cap-heavy, gold `#c9a24a`, navy `#2a3560`, amber glass `#c98a3c` |
 | LED pillar candle | +0.05, 0.78, −1.30 | 0.08 Ø × 0.10 | ivory `#f1e7d2` | Warm flicker |
@@ -82,7 +82,6 @@ Positions are the object's centre on the floor (y = 0) unless a height is given.
 | Black mug | +1.35, 0.75, −1.22 | 0.08 Ø × 0.10 | `#161616` | Steam rises from it |
 | Digital alarm clock | +1.36, 0.75, −1.12 | 0.10 × 0.06 | white, grey face | Shows real time; stands in for the wall clock |
 | Gooseneck desk lamp | +1.40, 0.75, −1.28 | round head 0.14 Ø at 1.15 | white `#ecedef` | Off in the photos |
-| Ring light on a clamp arm | +1.42, 0.75, −1.30 | 0.30 Ø ring at 1.48 | black | Off in the photos |
 | Bluetooth speaker | +1.36, 0.75, −0.58 | 0.20 × 0.07 × 0.09 | black `#1a1a1a` | Becomes the **lo-fi radio** |
 | Small round speaker | +1.36, 0.75, −0.18 | 0.07 Ø | black with blue ring | |
 | PC tower | +1.25, 0, −0.10 | 0.20 × 0.45 × 0.42 | black, blue LED `#3050ff` | Under the front end of the desk |
@@ -93,8 +92,6 @@ Positions are the object's centre on the floor (y = 0) unless a height is given.
 | Object | Position (x, y, z) | Size | Colours | Notes |
 |---|---|---|---|---|
 | Office chair | +0.55, 0, −0.75 | seat at 0.48, back to 1.00 | black mesh `#1a1a1c`, grey X-base on castors `#8a8a8e` | Faces the desk (+x) |
-| Spider-web rug | +0.72, 0.004, −0.95 | about 0.75 Ø, irregular web edge | black `#1e1e22`, white web `#e6e6e6` | Partly under the chair |
-| Cartoon rug | +0.45, 0.004, −1.25 | about 0.70 × 0.40 | cream body `#f3e2cf`, orange hands `#f28a45`, olive hat `#6e7a3c`, maroon shoes `#6a2a30` | A character lying on its back |
 | Ceiling light | −0.20, 2.44, +0.45 | 0.33 Ø flush dome | brushed nickel ring `#9c9fa3`, frosted diffuser `#f4f1ea` | Off in the photos |
 
 ### Left and front walls
