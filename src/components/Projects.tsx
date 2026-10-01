@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ExternalLink, Github, Star, GitFork, Loader2, Gamepad2, Construction } from "lucide-react";
+import { ExternalLink, Github, Star, GitFork, Loader2, Gamepad2, Construction, Gauge, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import MotionSection from "./MotionSection";
 
@@ -30,6 +30,15 @@ const inProgressRepos = ["MarkWise", "HarmonAI"];
 
 const customDescriptions: Record<string, string> = {
   "Mercatus": "A strategy game that teaches stocks, crypto, and market timing through simulated trading decisions.",
+};
+
+// Lives in public/, so it ships with the portfolio rather than as a GitHub repo
+const featured = {
+  name: "Digital Dash",
+  href: "/digital-dash.html",
+  description:
+    "A study dashboard for students: focus timers with study music, tasks that repeat and break themselves into steps with AI, a week review, study rooms with friends, and phone reminders.",
+  tags: ["Focus timers", "AI planning", "Study rooms", "Push reminders", "Installable app"],
 };
 
 const languageColors: Record<string, string> = {
@@ -84,6 +93,35 @@ const Projects = () => {
             GitHub
           </a>
         </p>
+
+        <motion.a
+          href={featured.href}
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+          whileHover={{ y: -4 }}
+          className="group mb-8 flex flex-col gap-5 rounded-lg border border-primary/40 bg-card p-6 transition-colors duration-300 hover:border-primary md:flex-row md:items-center md:p-8"
+        >
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <Gauge size={28} />
+          </span>
+          <div className="flex-1">
+            <p className="mb-1 font-mono text-xs uppercase tracking-wider text-primary">Featured project</p>
+            <h3 className="mb-2 text-xl font-semibold transition-colors group-hover:text-primary">{featured.name}</h3>
+            <p className="mb-4 text-sm text-muted-foreground">{featured.description}</p>
+            <div className="flex flex-wrap gap-2">
+              {featured.tags.map((t) => (
+                <span key={t} className="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
+                  {t}
+                </span>
+              ))}
+            </div>
+          </div>
+          <span className="inline-flex w-fit shrink-0 items-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground">
+            Open Digital Dash <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
+          </span>
+        </motion.a>
 
         {loading && (
           <div className="flex justify-center py-20">
