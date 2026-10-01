@@ -226,15 +226,20 @@ input::placeholder{color:var(--muted)}
 .tm-sr .chips{grid-column:2/-1}
 .tm-sl{font-size:12.5px;opacity:.9}
 .chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips-h{flex-basis:100%;font-size:11.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;opacity:.7;margin-top:4px}
+.chips button.mel::before{content:"\266A";margin-right:5px;opacity:.75}
 .chips button{border:0;font:500 13px/1 var(--ui);color:var(--card-ink);padding:8px 11px;min-height:32px;border-radius:999px;background:rgba(255,255,255,.07);box-shadow:inset 0 0 0 1px rgba(255,255,255,.1);transition:background var(--t-fast) ease,box-shadow var(--t-fast) ease,transform var(--t-press) var(--ease-out)}
 @media (hover:hover){.chips button:hover{background:rgba(255,255,255,.13)}}
 .chips button:active{transform:scale(.95)}
 .chips button[aria-checked="true"]{background:color-mix(in srgb,var(--accent) 34%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 70%,transparent)}
 .tm-sr input[type=range]{width:100%;accent-color:var(--accent)}
+.tm-sr select{width:100%;min-width:0;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:var(--card-ink)}
+.tm-sr select option,.tm-sr select optgroup{background:var(--panel);color:var(--ink)}
+.ts-prev{color:var(--card-ink);background:rgba(255,255,255,.1)}
 .tm-snd .btn.ghost{background:rgba(255,255,255,.1);color:var(--card-ink)}
 .tm-ck{display:flex;align-items:center;gap:8px;font-size:13.5px;cursor:pointer}
 .tm-ck input{accent-color:var(--accent);width:16px;height:16px}
-@media (max-width:560px){.tm-sr{grid-template-columns:1fr auto}.tm-sr .chips{grid-column:1/-1}.tm-sr .tm-sl{grid-column:1/-1}}
+@media (max-width:560px){.tm-sr{grid-template-columns:1fr auto}.tm-sr .tm-sl{grid-column:1/-1}}
 @media (max-width:560px){.tm-add{grid-template-columns:1fr 1fr}.tm-add label:first-child,.tm-add .tm-kind,.tm-add .btn{grid-column:1/-1}}
 @media (prefers-reduced-motion:reduce){.chips button:active{transform:none}.tm-edit{transition:opacity var(--t-ui) ease}@starting-style{.tm-edit{transform:none}}.timer .tm-editbtn svg{transition:none}}
 
@@ -786,6 +791,7 @@ html.lg .kpi{background:color-mix(in srgb,var(--panel) 40%,transparent);-webkit-
 .jb-mix:hover{border-color:color-mix(in srgb,var(--accent) 50%,var(--line))}
 .jb-mix:active{transform:scale(.97)}
 .jb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.jb-sub{grid-column:1/-1;margin:4px 0 -2px;font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
 .jb-tile{display:grid;gap:6px;padding:10px;border-radius:var(--r);background:var(--panel2);border:1px solid transparent;transition:border-color var(--t-fast) ease,background-color var(--t-fast) ease}
 .jb-tile.on{border-color:color-mix(in srgb,var(--accent) 55%,transparent);background:color-mix(in srgb,var(--accent) 10%,var(--panel2))}
 .jb-on{display:flex;align-items:center;gap:10px;border:0;background:none;padding:2px;text-align:left;color:var(--muted);font-weight:500;transition:color var(--t-fast) ease,transform var(--t-press) var(--ease-out)}
@@ -796,6 +802,21 @@ html.lg .kpi{background:color-mix(in srgb,var(--panel) 40%,transparent);-webkit-
 .jb-tile.on .jb-on svg{color:var(--accent)}
 .jb-tile input[type=range]{width:100%}
 .jb-tile input:disabled{opacity:.35}
+.sp{border-top:1px solid var(--line);padding-top:12px}
+.sp summary{display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:600;font-size:14.5px;list-style:none;min-height:32px}
+.sp summary::-webkit-details-marker{display:none}
+.sp summary svg{width:20px;height:20px;color:var(--accent)}
+.sp summary::after{content:"";margin-left:auto;width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);transition:transform var(--t-ui) var(--ease-out)}
+.sp[open] summary::after{transform:rotate(-135deg)}
+.sp-on{font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;background:color-mix(in srgb,var(--good,#0ca30c) 22%,transparent)}
+.sp-on[hidden]{display:none}
+.sp-form{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.sp-form input{flex:1 1 220px;min-width:0}
+.sp .hint{margin:8px 0 0;font-size:12.5px}
+.sp-frame{margin-top:12px}
+.sp-frame[hidden]{display:none}
+.sp-frame iframe{display:block;width:100%;border:0;border-radius:12px}
+@media (prefers-reduced-motion:reduce){.sp summary::after{transition:none}}
 .jb-auto{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--ink);cursor:pointer;min-height:24px}
 .jb-mini{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 12px;border:1px solid color-mix(in srgb,var(--accent) 45%,var(--line));border-radius:999px;background:color-mix(in srgb,var(--accent) 12%,var(--panel));color:var(--ink);font-size:13px;max-width:220px}
 .jb-mini[hidden]{display:none}
@@ -940,12 +961,18 @@ html.lg .eye{background:var(--glass-tint);box-shadow:inset 0 1px 0 color-mix(in 
       </div>
       <section class="panel jukebox" id="jukebox" aria-labelledby="jb-h">
         <div class="jb-head">
-          <div><h3 id="jb-h">Sounds</h3><p class="muted">Mix background sounds to help you study. Generated live, nothing to download.</p></div>
+          <div><h3 id="jb-h">Sounds</h3><p class="muted">Mix study music and background sounds. Made live in your browser, so it never repeats and nothing downloads.</p></div>
           <div class="jb-ctl"><button class="btn" id="jb-play" type="button" aria-pressed="false">Play</button><label class="jb-vol"><span>Volume</span><input type="range" id="jb-master" min="0" max="100" aria-label="Master volume"></label></div>
         </div>
         <div class="jb-mixes" id="jb-mixes" role="group" aria-label="Quick mixes"></div>
         <div class="jb-grid" id="jb-grid"></div>
         <label class="jb-auto"><input type="checkbox" id="jb-auto"> Play during focus timers and pause for breaks</label>
+        <details class="sp" id="sp">
+          <summary><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>Play from Spotify<span class="sp-on" id="sp-on" hidden>Connected</span></summary>
+          <form class="sp-form" id="sp-form" autocomplete="off"><input type="text" id="sp-url" inputmode="url" placeholder="Paste a Spotify playlist, album or song link" aria-label="Spotify link"><button class="btn" type="submit">Load</button><button class="btn ghost" type="button" id="sp-clear" hidden>Remove</button></form>
+          <p class="hint">In Spotify, use Share, then Copy link. Log in to Spotify in this browser for full songs; otherwise Spotify plays 30 second previews. With "Play during focus timers" on, Spotify starts and pauses with your timer too.</p>
+          <div class="sp-frame" id="sp-frame" hidden></div>
+        </details>
       </section>
       <div class="wbar"><button class="btn ghost small" id="w-add" hidden>Add widget</button><button class="btn ghost small" id="w-edit">Customize widgets</button></div>
       <div class="wmenu panel" id="w-menu" hidden></div>
@@ -1891,15 +1918,11 @@ function buildClock(k){
     ed.addEventListener("click",e=>{
       const k=e.target.closest("#tm-kind button");if(k){$$("#tm-kind button").forEach(x=>x.setAttribute("aria-pressed",x===k));return;}
       const d=e.target.closest("[data-tdel]");if(d){removeTimer(d.dataset.tdel);return;}
-      const sn=e.target.closest("[data-snd]");if(sn){const g=sn.parentElement,k=g.dataset.ts;tsS()[k]=sn.dataset.snd;save();g.querySelectorAll("[data-snd]").forEach(x=>{const on=x===sn;x.setAttribute("aria-checked",on);x.tabIndex=on?0:-1;});tsPlay(sn.dataset.snd);return;}
+      const pv=e.target.closest("[data-prev]");if(pv){tsPlay(tsS()[pv.dataset.prev]);return;}
       if(e.target.closest("#ts-test"))timerEndSound(T.kind);
     });
-    ed.addEventListener("keydown",e=>{ /* arrow keys move through a sound group, like native radios */
-      const sn=e.target.closest("[data-snd]");if(!sn||!/^Arrow/.test(e.key))return;e.preventDefault();
-      const all=[...sn.parentElement.children],i=all.indexOf(sn),n=all[(i+(/Right|Down/.test(e.key)?1:-1)+all.length)%all.length];n.focus();n.click();
-    });
     ed.addEventListener("input",e=>{if(e.target.id==="ts-vol"){tsS().vol=+e.target.value;clearTimeout(T.sv);T.sv=setTimeout(save,400);}});
-    ed.addEventListener("change",e=>{const m={"ts-rep":"rep","ts-warn":"warn","ts-tick":"tick"}[e.target.id];if(m){tsS()[m]=e.target.checked;save();}if(e.target.id==="ts-vol")tsPlay(tsS()[T.kind==="focus"?"focus":"brk"]);});
+    ed.addEventListener("change",e=>{if(e.target.dataset.ts){tsS()[e.target.dataset.ts]=e.target.value;save();tsPlay(e.target.value);return;}const m={"ts-rep":"rep","ts-warn":"warn","ts-tick":"tick"}[e.target.id];if(m){tsS()[m]=e.target.checked;save();}if(e.target.id==="ts-vol")tsPlay(tsS()[T.kind==="focus"?"focus":"brk"]);});
   }
   if(k==="analog")syncAnalog();
   fitClock();
@@ -1981,7 +2004,7 @@ function renderTimerEdit(){
     </form>
     <p class="tm-hint">Focus timers count toward today's sessions when they finish. Breaks don't.</p>
     <section class="tm-snd" aria-labelledby="tm-snd-h"><h4 id="tm-snd-h">Sounds</h4>
-      ${[["focus","Focus ends"],["brk","Break ends"]].map(([k,l])=>`<div class="tm-sr"><span class="tm-sl" id="ts-l-${k}">${l}</span><div class="chips" role="radiogroup" aria-labelledby="ts-l-${k}" data-ts="${k}">${TSND.map(([id,n])=>`<button type="button" role="radio" data-snd="${id}" aria-checked="${tsS()[k]===id}" tabindex="${tsS()[k]===id?0:-1}">${n}</button>`).join("")}</div></div>`).join("")}
+      ${[["focus","Focus ends"],["brk","Break ends"]].map(([k,l])=>`<div class="tm-sr"><label class="tm-sl" for="ts-${k}">${l}</label><select id="ts-${k}" data-ts="${k}"><optgroup label="Melodies">${MELO_IDS.map(id=>`<option value="${id}"${tsS()[k]===id?" selected":""}>${MELO[id].name}</option>`).join("")}</optgroup><optgroup label="Tones">${TSND.map(([id,n])=>`<option value="${id}"${tsS()[k]===id?" selected":""}>${n}</option>`).join("")}</optgroup></select><button type="button" class="icon-btn ts-prev" data-prev="${k}" aria-label="Preview the ${l.toLowerCase()} sound" title="Preview"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13l11-6.5z"/></svg></button></div>`).join("")}
       <div class="tm-sr"><label class="tm-sl" for="ts-vol">Volume</label><input type="range" id="ts-vol" min="0" max="100" value="${tsS().vol}"><button type="button" class="btn ghost small" id="ts-test">Test</button></div>
       <label class="tm-ck"><input type="checkbox" id="ts-rep" ${tsS().rep?"checked":""}> Ring 3 times</label>
       <label class="tm-ck"><input type="checkbox" id="ts-warn" ${tsS().warn?"checked":""}> Soft cue 1 minute before the end</label>
@@ -2009,10 +2032,49 @@ function removeTimer(id){
 }
 let actx=null;
 function ensureAudio(){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();if(actx.state==="suspended")actx.resume();}catch(e){}}
+/* ---------- instruments ----------
+   Small synth voices shared by the study music player and the timer melodies. Each takes its
+   AudioContext so it can play on either. m is a MIDI note number, dur in seconds, v is velocity 0..1. */
+const mtof=m=>440*Math.pow(2,(m-69)/12);
+function ienv(c,t,a,peak,dur,out){const g=c.createGain();g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(Math.max(.0002,peak),t+a);g.gain.exponentialRampToValueAtTime(.0001,t+Math.max(a+.01,dur));g.connect(out);return g;}
+function iosc(c,type,f,t,dur,dest,det){const o=c.createOscillator();o.type=type;o.frequency.setValueAtTime(f,t);if(det)o.detune.value=det;o.connect(dest);o.start(t);o.stop(t+dur+.05);return o;}
+function ilp(c,f,out){const x=c.createBiquadFilter();x.type="lowpass";x.frequency.value=f;x.connect(out);return x;}
+const INST={
+  epiano(c,out,t,m,dur,v){const f=mtof(m);iosc(c,"sine",f,t,dur,ienv(c,t,.012,.11*v,dur,out));iosc(c,"sine",f*2,t,.6,ienv(c,t,.005,.035*v,.6,out));iosc(c,"sine",f*7,t,.12,ienv(c,t,.002,.012*v,.12,out));},
+  piano(c,out,t,m,dur,v){const f=mtof(m),lp=c.createBiquadFilter();lp.type="lowpass";lp.frequency.setValueAtTime(Math.min(9000,f*8),t);lp.frequency.exponentialRampToValueAtTime(Math.max(300,f*2),t+dur);lp.connect(out);
+    [[1,.13],[2,.045],[3,.022],[4,.01]].forEach(([h,a])=>iosc(c,h===1?"triangle":"sine",f*h,t,dur,ienv(c,t,.004,a*v,dur/Math.pow(h,.4),lp),h===2?3:0));},
+  bass(c,out,t,m,dur,v){const lp=ilp(c,360,out),g=ienv(c,t,.02,.22*v,dur,lp),f=mtof(m);iosc(c,"triangle",f,t,dur,g);iosc(c,"sine",f,t,dur,g);},
+  pad(c,out,t,m,dur,v){const f=mtof(m),lp=c.createBiquadFilter();lp.type="lowpass";lp.frequency.setValueAtTime(450,t);lp.frequency.linearRampToValueAtTime(1100,t+dur*.5);lp.frequency.linearRampToValueAtTime(450,t+dur);lp.connect(out);
+    const g=c.createGain();g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.03*v,t+dur*.35);g.gain.linearRampToValueAtTime(0,t+dur);g.connect(lp);[-8,8].forEach(d=>iosc(c,"sawtooth",f,t,dur,g,d));},
+  bell(c,out,t,m,dur,v){const f=mtof(m);[[1,.09],[2.01,.035],[3.9,.016]].forEach(([r,a])=>iosc(c,"sine",f*r,t,dur,ienv(c,t,.003,a*v,dur/r,out)));},
+  kalimba(c,out,t,m,dur,v){const f=mtof(m),d=Math.min(dur,1.3);iosc(c,"sine",f,t,d,ienv(c,t,.003,.16*v,d,out));iosc(c,"sine",f*5.4,t,.08,ienv(c,t,.001,.035*v,.08,out));},
+  marimba(c,out,t,m,dur,v){const f=mtof(m),d=Math.min(dur,.7);iosc(c,"sine",f,t,d,ienv(c,t,.003,.2*v,d,out));iosc(c,"sine",f*4,t,.07,ienv(c,t,.002,.045*v,.07,out));},
+  musicbox(c,out,t,m,dur,v){const f=mtof(m);[[1,.1],[3,.022],[5.2,.009]].forEach(([r,a])=>iosc(c,"sine",f*r,t,1.6,ienv(c,t,.002,a*v,1.6/Math.pow(r,.3),out)));},
+  lead(c,out,t,m,dur,v){const f=mtof(m),lp=c.createBiquadFilter();lp.type="lowpass";lp.frequency.setValueAtTime(3200,t);lp.frequency.exponentialRampToValueAtTime(900,t+dur);lp.connect(out);const g=ienv(c,t,.01,.045*v,dur,lp);iosc(c,"sawtooth",f,t,dur,g,-6);iosc(c,"square",f,t,dur,g,6);},
+  brass(c,out,t,m,dur,v){const f=mtof(m),lp=c.createBiquadFilter();lp.type="lowpass";lp.frequency.setValueAtTime(600,t);lp.frequency.linearRampToValueAtTime(2600,t+.08);lp.frequency.exponentialRampToValueAtTime(1100,t+dur);lp.connect(out);
+    const g=c.createGain();g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.05*v,t+.05);g.gain.setValueAtTime(.05*v,t+dur*.7);g.gain.exponentialRampToValueAtTime(.0001,t+dur);g.connect(lp);iosc(c,"sawtooth",f,t,dur,g,-5);iosc(c,"sawtooth",f,t,dur,g,5);},
+  kick(c,out,t,v){const o=c.createOscillator();o.frequency.setValueAtTime(130,t);o.frequency.exponentialRampToValueAtTime(42,t+.12);o.connect(ienv(c,t,.002,.5*v,.35,out));o.start(t);o.stop(t+.4);},
+  snare(c,out,t,v,nb){const s=c.createBufferSource();s.buffer=nb;const bp=c.createBiquadFilter();bp.type="bandpass";bp.frequency.value=1700;bp.Q.value=.7;s.connect(bp).connect(ienv(c,t,.002,.22*v,.2,out));s.start(t,Math.random()*2);s.stop(t+.25);iosc(c,"triangle",190,t,.1,ienv(c,t,.002,.08*v,.1,out));},
+  hat(c,out,t,v,nb){const s=c.createBufferSource();s.buffer=nb;const hp=c.createBiquadFilter();hp.type="highpass";hp.frequency.value=7000;s.connect(hp).connect(ienv(c,t,.001,.06*v,.045,out));s.start(t,Math.random()*2);s.stop(t+.06);}
+};
 /* ---------- timer sounds ----------
    Every sound is synthesized with Web Audio, so nothing downloads. settings.ts = {focus, brk, vol, rep, warn, tick}. */
 const TSND=[["chime","Chime"],["bell","Bell"],["marimba","Marimba"],["harp","Harp"],["gong","Gong"],["birds","Birds"],["digital","Digital"],["soft","Soft swell"],["none","None"]];
+/* Melodies, like a phone alarm. All original tunes. n = [beat, midi, beats], parts play together. */
+const MELO={
+  sunrise:{name:"Sunrise",bpm:150,parts:[{i:"marimba",n:[[0,72,.5],[.5,76,.5],[1,79,.5],[1.5,84,1],[2.5,83,.5],[3,79,.5],[3.5,81,1],[4.5,79,1.5]]},{i:"marimba",n:[[0,60,1],[1.5,64,1],[2.5,65,1],[4.5,67,1.5]],v:.6}]},
+  wakeup:{name:"Wake up",bpm:132,parts:[{i:"kalimba",n:[[0,79,.5],[.5,76,.5],[1,79,.5],[1.75,84,.75],[2.5,79,.5],[3,76,.5],[3.5,74,.5],[4,72,1],[5,79,.5],[5.5,76,.5],[6,79,.5],[6.75,86,.75],[7.5,84,1.5]]},{i:"bass",n:[[0,48,2],[2.5,53,1.5],[4,55,1],[5,48,2],[7.5,48,1.5]]}]},
+  musicbox:{name:"Music box",bpm:96,parts:[{i:"musicbox",n:[[0,76,1],[1,79,.5],[1.5,81,.5],[2,79,1],[3,76,1],[4,74,.5],[4.5,72,.5],[5,74,1],[6,72,2]]},{i:"musicbox",n:[[0,60,3],[3,55,3],[6,60,2]],v:.5}]},
+  piano:{name:"Piano",bpm:100,parts:[{i:"piano",n:[[0,48,4],[0,55,4],[.08,64,3.9],[.16,71,3.8]],v:.7},{i:"piano",n:[[1,76,.5],[1.5,79,.5],[2,83,1],[3,81,.5],[3.5,79,.5],[4,76,2]]}]},
+  lofikeys:{name:"Lo-fi keys",bpm:84,parts:[{i:"epiano",n:[[0,53,2],[0,57,2],[0,60,2],[0,64,2],[2,52,2],[2,55,2],[2,59,2],[2,62,2],[4,48,3],[4,52,3],[4,55,3],[4,59,3]]},{i:"epiano",n:[[.5,76,.5],[1,79,.5],[2.5,74,.5],[3,76,1],[4.5,72,2]],v:.9},{i:"bass",n:[[0,41,2],[2,40,2],[4,36,3]]}]},
+  synthpop:{name:"Synth pop",bpm:150,parts:[{i:"lead",n:[[0,72,.5],[.5,76,.5],[1,79,.5],[1.5,84,.5],[2,83,.5],[2.5,79,.5],[3,76,.5],[3.5,79,.5],[4,81,1],[5,84,1.5]]},{i:"bass",n:[[0,48,1],[1,48,1],[2,52,1],[3,52,1],[4,53,1],[5,48,1.5]]}]},
+  fanfare:{name:"Fanfare",bpm:120,parts:[{i:"brass",n:[[0,67,.33],[.33,67,.33],[.66,67,.34],[1,72,1.5],[2.5,76,.5],[3,79,2]]},{i:"brass",n:[[1,64,1.5],[3,72,2]],v:.6},{i:"bass",n:[[1,48,1.5],[3,48,2]]}]},
+  dream:{name:"Dream",bpm:90,parts:[{i:"bell",n:[[0,84,2],[.5,81,2],[1,79,2],[1.5,76,2],[2,74,2],[2.5,72,2.5],[3.5,79,3]]},{i:"pad",n:[[0,60,5],[0,64,5],[0,67,5]],v:.8}]}
+};
+const MELO_IDS=Object.keys(MELO);
+function playMelody(m,t,out,c=actx){const b=60/m.bpm;m.parts.forEach(pt=>pt.n.forEach(([at,n,d])=>INST[pt.i](c,out,t+at*b,n,d*b,pt.v||1)));}
 const TS_LEN={chime:1,bell:2.4,marimba:.9,harp:1.7,gong:4.5,birds:1.3,digital:1.2,soft:1.9,warn:.8,tick:.05};
+MELO_IDS.forEach(id=>{const m=MELO[id];TS_LEN[id]=Math.max(...m.parts.flatMap(p=>p.n.map(([a,,d])=>a+d)))*60/m.bpm+.4;});
 function tsS(){const t=S.settings.ts;if(t&&t.vol!=null)return t;return S.settings.ts=Object.assign({focus:"chime",brk:"bell",vol:70,rep:false,warn:true,tick:false},t||{});}
 function tone(o){const c=actx,osc=c.createOscillator(),g=c.createGain();osc.type=o.type||"sine";osc.frequency.setValueAtTime(o.f,o.t);if(o.fEnd)osc.frequency.exponentialRampToValueAtTime(o.fEnd,o.t+(o.glide||o.dur/2));g.gain.setValueAtTime(.0001,o.t);g.gain.exponentialRampToValueAtTime(o.peak,o.t+(o.a||.008));g.gain.exponentialRampToValueAtTime(.0001,o.t+o.dur);osc.connect(g).connect(o.out);osc.start(o.t);osc.stop(o.t+o.dur+.05);}
 const TS_FX={
@@ -2027,6 +2089,7 @@ const TS_FX={
   warn:(t,out)=>{tone({f:784,t,dur:.5,peak:.1,out,a:.02});tone({f:1047,t:t+.16,dur:.6,peak:.08,out,a:.02});},
   tick:(t,out)=>tone({f:T.left%2?1500:1900,t,dur:.035,peak:.035,out,a:.002})
 };
+MELO_IDS.forEach(id=>{TS_FX[id]=(t,out)=>playMelody(MELO[id],t,out);});
 function tsPlay(id,o={}){
   if(!TS_FX[id])return;ensureAudio();if(!actx)return;
   try{const st=tsS(),out=actx.createGain();out.gain.value=Math.pow((o.vol??st.vol)/100,1.6)*1.2;out.connect(actx.destination);
@@ -2314,6 +2377,10 @@ $("#week").addEventListener("focusout",()=>tipAt(null));
    feeding one master gain; channels are built when first switched on and torn down when off.
    Changes fade (setTargetAtTime) so nothing clicks. The context is suspended when paused. */
 const JBS=[
+ {id:"lofi",name:"Lo-fi beats",music:true,ic:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/><path d="M12 3a9 9 0 0 1 9 9"/>'},
+ {id:"piano",name:"Soft piano",music:true,ic:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M8 5v8M12 5v8M16 5v8M8 13v6M12 13v6M16 13v6"/>'},
+ {id:"ambient",name:"Ambient drift",music:true,ic:'<path d="M3 15c3-6 6-6 9 0s6 6 9 0"/><path d="M3 9c3-4 6-4 9 0s6 4 9 0" opacity=".6"/>'},
+ {id:"kalimba",name:"Kalimba",music:true,ic:'<path d="M5 4h14l-2 16H7z"/><path d="M9 4v7M12 4v9M15 4v7"/>'},
  {id:"rain",name:"Rain",ic:'<path d="M7 15a4 4 0 0 1 .5-8 5 5 0 0 1 9.5 1.5A3.5 3.5 0 0 1 17 15"/><path d="M8 18l-1 2M12 18l-1 2M16 18l-1 2"/>'},
  {id:"waves",name:"Ocean",ic:'<path d="M2 12c2.5-2 4.5-2 7 0s4.5 2 7 0 4.5-2 6 0"/><path d="M2 17c2.5-2 4.5-2 7 0s4.5 2 7 0 4.5-2 6 0"/>'},
  {id:"wind",name:"Wind",ic:'<path d="M3 8h11a3 3 0 1 0-3-3"/><path d="M3 12h16a3 3 0 1 1-3 3"/><path d="M3 16h7"/>'},
@@ -2324,11 +2391,13 @@ const JBS=[
  {id:"white",name:"White noise",ic:'<path d="M3 12h1l1-6 1 12 1-9 1 6 1-10 1 14 1-8 1 5 1-11 1 13 1-7 1 4h3"/>'},
  {id:"binaural",name:"Focus tone",note:"Use headphones",ic:'<path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="3" y="14" width="4" height="6" rx="1.5"/><rect x="17" y="14" width="4" height="6" rx="1.5"/>'}
 ];
-const JB_MIXES=[["Rainy café",{rain:.6,cafe:.5}],["Deep focus",{brown:.7,binaural:.4}],["Seaside",{waves:.8,wind:.25}],["Cabin",{fire:.7,rain:.35}]];
+const JB_MIXES=[["Lo-fi rain",{lofi:.7,rain:.35}],["Night piano",{piano:.7,fire:.3}],["Rainy café",{rain:.6,cafe:.5}],["Deep focus",{brown:.7,binaural:.4}],["Seaside",{waves:.8,wind:.25}],["Cabin",{fire:.7,rain:.35}]];
 const JB={ctx:null,master:null,ch:{},buf:{},playing:false,auto:false};
 const jbS=()=>{S.settings.jb=Object.assign({vol:70,on:[],lv:{},auto:false},S.settings.jb||{});return S.settings.jb;};
 function jbCtx(){
-  if(!JB.ctx){const C=window.AudioContext||window.webkitAudioContext;if(!C)return null;JB.ctx=new C();JB.master=JB.ctx.createGain();JB.master.gain.value=0;JB.master.connect(JB.ctx.destination);}
+  if(!JB.ctx){const C=window.AudioContext||window.webkitAudioContext;if(!C)return null;JB.ctx=new C();JB.master=JB.ctx.createGain();JB.master.gain.value=0;
+    const comp=JB.ctx.createDynamicsCompressor();comp.threshold.value=-14;comp.ratio.value=3;comp.attack.value=.01;comp.release.value=.25; /* glue the mix, never clip */
+    JB.master.connect(comp).connect(JB.ctx.destination);}
   return JB.ctx;
 }
 // Looping noise buffers, stereo with independent channels for width
@@ -2361,7 +2430,87 @@ function eventBuf(kind,sec){
 function jbLoop(buf,rate=1){const s=JB.ctx.createBufferSource();s.buffer=buf;s.loop=true;s.playbackRate.value=rate;s.start();return s;}
 function jbLfo(freq,depth,param){const o=JB.ctx.createOscillator(),g=JB.ctx.createGain();o.frequency.value=freq;g.gain.value=depth;o.connect(g).connect(param);o.start();return o;}
 function jbFilter(type,f,q){const x=JB.ctx.createBiquadFilter();x.type=type;x.frequency.value=f;if(q)x.Q.value=q;return x;}
+/* ---------- study music ----------
+   One conductor keeps every music channel on the same beat and chord, so lo-fi, piano, ambient and
+   kalimba can be layered and stay in key. Notes are scheduled a little ahead on the audio clock
+   (further ahead while the tab is hidden, where timers slow down). */
+const PROGS=[
+  [[41,[53,57,60,64]],[40,[52,55,59,62]],[38,[53,57,60,64]],[36,[52,55,59,62]]], /* Fmaj7 Em7 Dm9 Cmaj9 */
+  [[36,[52,55,59,62]],[45,[55,60,64,67]],[38,[53,57,60,64]],[43,[53,57,59,62]]], /* Cmaj9 Am7 Dm9 G9 */
+  [[38,[53,57,60,64]],[43,[53,59,62,64]],[36,[52,55,59,62]],[45,[52,55,60,67]]], /* Dm9 G13 Cmaj9 Am7 */
+  [[45,[55,60,64,67]],[41,[52,57,60,64]],[36,[52,55,60,62]],[43,[50,55,59,62]]]  /* Am7 Fmaj7 Cadd9 G */
+];
+const PENTA=[60,62,64,67,69,72,74,76,79,81,84];
+const MUS={on:new Map(),timer:0,next:0,step:0,bar:0,prog:0,bpm:74};
+const rnd=n=>Math.floor(Math.random()*n);
+function musTick(){
+  const c=JB.ctx;if(!c||!MUS.on.size)return;
+  const sd=60/MUS.bpm/4,ahead=document.hidden?1.6:.3;
+  if(MUS.next<c.currentTime-.05)MUS.next=c.currentTime+.06; /* coming back from a pause: pick up cleanly */
+  while(MUS.next<c.currentTime+ahead){
+    const st=MUS.step%16,t=MUS.next+(st%2?sd*.3:0),ch=PROGS[MUS.prog][MUS.bar%4]; /* swung 16ths */
+    MUS.on.forEach(fn=>{try{fn(t,st,ch,sd);}catch(e){}});
+    MUS.next+=sd;MUS.step++;
+    if(MUS.step%16===0){MUS.bar++;if(MUS.bar%8===0&&Math.random()<.65)MUS.prog=(MUS.prog+1+rnd(PROGS.length-1))%PROGS.length;}
+  }
+}
+function musAdd(id,fn){MUS.on.set(id,fn);if(!MUS.timer){MUS.next=JB.ctx.currentTime+.08;MUS.step=0;MUS.timer=setInterval(musTick,50);musTick();}}
+function musDel(id){MUS.on.delete(id);if(!MUS.on.size){clearInterval(MUS.timer);MUS.timer=0;}}
+function jbVerb(){
+  if(JB.verb)return JB.verb;const c=JB.ctx,sr=c.sampleRate,n=Math.floor(sr*2.8),b=c.createBuffer(2,n,sr);
+  for(let ch=0;ch<2;ch++){const d=b.getChannelData(ch);for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/n,3);}
+  const v=c.createConvolver();v.buffer=b;v.connect(JB.master);return JB.verb=v;
+}
+function musBuild(id,out){
+  const c=JB.ctx,src=[{stop:()=>musDel(id)}],send=c.createGain();send.gain.value={lofi:.16,piano:.45,ambient:.7,kalimba:.35}[id];out.connect(send).connect(jbVerb());
+  const bus=c.createGain();bus.gain.value={lofi:1,piano:2.8,ambient:2.6,kalimba:3.2}[id];bus.connect(out); /* even out loudness between styles */
+  if(id==="lofi"){
+    const warm=ilp(c,3600,out);bus.disconnect();bus.connect(warm); /* lo-fi: everything a little dull and dusty */
+    const nb=noiseBuf("white",3),k=jbLoop(eventBuf("crackle",11)),hp=jbFilter("highpass",1800),kg=c.createGain();kg.gain.value=.22;src.push(k);k.connect(hp).connect(kg).connect(out);
+    const hs=jbLoop(noiseBuf("pink",5)),hh=jbFilter("highpass",4000),hg=c.createGain();hg.gain.value=.025;src.push(hs);hs.connect(hh).connect(hg).connect(out);
+    musAdd(id,(t,st,[root,notes],sd)=>{
+      if(st===0||st===10||(st===7&&Math.random()<.25))INST.kick(c,bus,t,1);
+      if(st===4||st===12)INST.snare(c,bus,t,.9,nb);
+      if(st%2===0)INST.hat(c,bus,t,st%4?.55:.85,nb);else if(Math.random()<.12)INST.hat(c,bus,t,.35,nb);
+      if(st===0)notes.forEach((m,i)=>INST.epiano(c,bus,t+i*.014,m,sd*14,.85));
+      if(st===10&&Math.random()<.45)notes.slice(1).forEach((m,i)=>INST.epiano(c,bus,t+i*.01,m,sd*5,.5));
+      if(st===0)INST.bass(c,bus,t,root,sd*7,1);
+      if(st===8&&Math.random()<.6)INST.bass(c,bus,t,root+7,sd*3,.8);
+      if(st===14&&Math.random()<.35)INST.bass(c,bus,t,root+2,sd*2,.7);
+      if(st%2===0&&st!==0&&Math.random()<.1)INST.epiano(c,bus,t,PENTA[2+rnd(6)],sd*3,.5);
+    });
+  }
+  else if(id==="piano"){
+    const P={pos:4,dir:1};
+    musAdd(id,(t,st,[root,notes],sd)=>{
+      if(st===0){INST.piano(c,bus,t,root+12,sd*16,.65);INST.piano(c,bus,t+.03,root+19,sd*16,.4);}
+      if(st%2)return;
+      if(Math.random()<(st%4===0?.75:.45)){
+        const tones=[...notes.map(m=>m+12),...notes.map(m=>m+24)].sort((a,b)=>a-b);
+        if(Math.random()<.25)P.dir*=-1;P.pos=Math.max(0,Math.min(tones.length-1,P.pos+P.dir*(1+rnd(2))));
+        INST.piano(c,bus,t,tones[P.pos],sd*8,.35+Math.random()*.3);
+      }
+    });
+  }
+  else if(id==="ambient"){
+    musAdd(id,(t,st,[root,notes],sd)=>{
+      if(st===0&&MUS.bar%2===0){notes.forEach(m=>INST.pad(c,bus,t,m,sd*34,1));INST.pad(c,bus,t,root+12,sd*34,.8);}
+      if(st%4===0&&Math.random()<.16)INST.bell(c,bus,t,PENTA[5+rnd(6)],3.5,.8);
+    });
+  }
+  else if(id==="kalimba"){
+    const pat=[1,0,1,1,0,1,0,1];
+    musAdd(id,(t,st,[root,notes],sd)=>{
+      if(st%2)return;const i=st/2;
+      if(pat[i]&&Math.random()<.85){const tones=notes.map(m=>m+12);INST.kalimba(c,bus,t,tones[(i+MUS.bar)%tones.length]+(Math.random()<.2?12:0),sd*4,.7+Math.random()*.3);}
+      if(st===0)INST.kalimba(c,bus,t,root+12,sd*8,.6);
+      if(MUS.bar%4===3&&st===12&&Math.random()<.5)pat[rnd(8)]^=1; /* let the pattern drift now and then */
+    });
+  }
+  return src;
+}
 function jbBuild(id,out){
+  if((JBS.find(x=>x.id===id)||{}).music)return musBuild(id,out);
   const c=JB.ctx,src=[],link=(...n)=>{for(let i=0;i<n.length-1;i++)n[i].connect(n[i+1]);return n[n.length-1];};
   if(id==="white"||id==="pink"||id==="brown"){const s=jbLoop(noiseBuf(id,id==="brown"?8:5));src.push(s);link(s,out);}
   else if(id==="rain"){const s=jbLoop(noiseBuf("pink",7)),hp=jbFilter("highpass",500),lp=jbFilter("lowpass",6500),g=c.createGain();g.gain.value=.55;src.push(s);link(s,hp,lp,g,out);
@@ -2408,14 +2557,47 @@ function jbToggle(id){
   save();jbRender();
 }
 function jbTimerSync(){ // auto mode: play while a focus timer runs, pause for breaks and when it stops
-  const st=jbS();if(!st.auto)return;
-  if(T.running&&T.kind==="focus"){if(!JB.playing){jbPlay();JB.auto=true;}}
+  const st=jbS();if(!st.auto)return;spTimerSync();
+  if(T.running&&T.kind==="focus"){if(!JB.playing&&(st.on.length||!SP.ctl)){jbPlay();JB.auto=true;}}
   else if(JB.playing&&JB.auto)jbPause();
+}
+/* ---------- Spotify ----------
+   Spotify's embed player, driven through its iFrame API when it loads so the focus timer can start
+   and pause it. If the API script is blocked, a plain embed still plays. Saved as settings.sp.uri. */
+const SP={api:null,ctl:null,wait:null};
+function spParse(v){const m=String(v||"").trim().match(/(?:open\.spotify\.com\/(?:intl-[a-z-]+\/)?(?:embed\/)?|spotify:)(playlist|album|track|episode|show|artist)[\/:]([A-Za-z0-9]{22})/);return m?`spotify:${m[1]}:${m[2]}`:"";}
+function spApi(){
+  return new Promise(res=>{
+    if(SP.api)return res(SP.api);if(SP.wait){SP.wait.push(res);return;}SP.wait=[res];
+    const done=api=>{if(!SP.wait)return;SP.api=api;SP.wait.forEach(f=>f(api));SP.wait=null;};
+    window.onSpotifyIframeApiReady=done;
+    const sc=document.createElement("script");sc.src="https://open.spotify.com/embed/iframe-api/v1";sc.async=true;sc.onerror=()=>done(null);document.head.appendChild(sc);
+    setTimeout(()=>done(null),6000);
+  });
+}
+async function spShow(uri){
+  const box=$("#sp-frame");box.innerHTML="";SP.ctl=null;$("#sp-clear").hidden=!uri;$("#sp-on").hidden=!uri;
+  if(!uri){box.hidden=true;return;}box.hidden=false;
+  const [,type,id]=uri.split(":"),h=type==="track"||type==="episode"?152:352,api=await spApi();
+  if(S.settings.sp?.uri!==uri)return; /* changed while the API loaded */
+  if(api){const el=document.createElement("div");box.appendChild(el);try{api.createController(el,{uri,width:"100%",height:h},ctl=>{SP.ctl=ctl;});return;}catch(e){box.innerHTML="";}}
+  box.innerHTML=`<iframe title="Spotify player" src="https://open.spotify.com/embed/${type}/${id}?utm_source=generator" height="${h}" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>`;
+}
+$("#sp-form").addEventListener("submit",e=>{
+  e.preventDefault();const uri=spParse($("#sp-url").value);
+  if(!uri){toast("That doesn't look like a Spotify link. In Spotify, use Share, then Copy link.");$("#sp-url").focus();return;}
+  S.settings.sp={uri};save();spShow(uri);$("#sp-url").value="";
+});
+$("#sp-clear").addEventListener("click",()=>{const old=S.settings.sp;S.settings.sp=null;save();spShow("");toast("Spotify removed",{run(){S.settings.sp=old;save();spShow(old.uri);}});});
+function spTimerSync(){
+  if(!SP.ctl||!jbS().auto)return;
+  try{if(T.running&&T.kind==="focus")SP.ctl.resume();else SP.ctl.pause();}catch(e){}
 }
 function jbRender(){
   const st=jbS(),grid=$("#jb-grid");if(!grid)return;
   if(!grid._built){grid._built=true;
-    grid.innerHTML=JBS.map(x=>`<div class="jb-tile" data-s="${x.id}"><button type="button" class="jb-on" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${x.ic}</svg><span>${x.name}${x.note?`<small>${x.note}</small>`:""}</span></button><input type="range" min="0" max="100" aria-label="${x.name} volume"></div>`).join("");
+    const tile=x=>`<div class="jb-tile" data-s="${x.id}"><button type="button" class="jb-on" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${x.ic}</svg><span>${x.name}${x.note?`<small>${x.note}</small>`:""}</span></button><input type="range" min="0" max="100" aria-label="${x.name} volume"></div>`;
+    grid.innerHTML=`<h4 class="jb-sub">Study music</h4>${JBS.filter(x=>x.music).map(tile).join("")}<h4 class="jb-sub">Ambience</h4>${JBS.filter(x=>!x.music).map(tile).join("")}`;
     $("#jb-mixes").innerHTML=JB_MIXES.map(([n],i)=>`<button type="button" class="jb-mix" data-mix="${i}">${n}</button>`).join("");}
   $$("#jb-grid .jb-tile").forEach(t=>{const id=t.dataset.s,on=st.on.includes(id);t.classList.toggle("on",on);t.querySelector(".jb-on").setAttribute("aria-pressed",on);const r=t.querySelector("input");if(document.activeElement!==r)r.value=Math.round((st.lv[id]??.6)*100);r.disabled=!on;});
   const pb=$("#jb-play");pb.textContent=JB.playing?"Pause":"Play";pb.setAttribute("aria-pressed",JB.playing);
@@ -3187,6 +3369,7 @@ if(typeof ResizeObserver!=="undefined")new ResizeObserver(()=>moveInd(true)).obs
 ["#clock-seg","#task-filter","#bg-type","#st-type","#surface"].forEach(q=>initSeg($(q)));
 if(S.accounts.length)snapshot();
 renderAll();jbRender();renderCals();
+if(S.settings.sp?.uri){$("#sp").open=true;spShow(S.settings.sp.uri);}
 {const v=location.hash.slice(1);if(v==="week"){show("calendar");setCalMode("week",true);}else if(VIEWS.includes(v)&&v!=="focus")show(v);} // deep link, e.g. digital-dash.html#tasks
 moveInd(true);
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{moveInd(true);$$(".seg").forEach(x=>glide(x,true));});
