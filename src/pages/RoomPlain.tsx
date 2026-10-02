@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion, type Transition } from "framer-motion";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Binoculars, Camera, Check, Gamepad2, LayoutGrid, Lightbulb, LightbulbOff, Radio, Search, SlidersHorizontal, Volume2, VolumeX, X } from "lucide-react";
 import type { ReactNode } from "react";
@@ -35,9 +36,33 @@ import {
 } from "@/components/room/createPlainRoom";
 
 const chip =
-  "pointer-events-auto inline-flex items-center gap-2 rounded-full bg-black/40 px-4 py-2 text-sm text-white/85 backdrop-blur-md transition-colors hover:bg-black/60 hover:text-white aria-pressed:text-amber-200";
+  "liquid-glass on-glass pointer-events-auto inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm text-white/90 transition-[color,transform] duration-150 hover:text-white active:scale-[0.96] aria-pressed:text-amber-200";
 
 type RoomView = Exclude<PlainRoomView, "binoculars" | "console">;
+
+// motion: critically damped springs (no overshoot) for UI that appears; it starts from wherever it
+// is, so a panel closed mid-opening reverses smoothly instead of jumping
+const SPRING: Transition = { type: "spring", bounce: 0, duration: 0.42 };
+const usePresets = () => {
+  const reduce = useReducedMotion() ?? false;
+  // pop-ups materialise out of the dock: glass arriving (scale, blur and opacity together), not a plain fade
+  const pop = reduce
+    ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: 0.15 } }
+    : {
+        initial: { opacity: 0, y: 14, scale: 0.94, filter: "blur(8px)" },
+        animate: { opacity: 1, y: 0, scale: 1, filter: "blur(0px)" },
+        exit: { opacity: 0, y: 10, scale: 0.96, filter: "blur(6px)" },
+        transition: SPRING,
+      };
+  // the section sheet comes in from the right and leaves the same way
+  const sheet = reduce
+    ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: 0.15 } }
+    : { initial: { opacity: 0, x: 56 }, animate: { opacity: 1, x: 0 }, exit: { opacity: 0, x: 56 }, transition: SPRING };
+  const fade = reduce
+    ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 } }
+    : { initial: { opacity: 0, y: -4, scale: 0.97 }, animate: { opacity: 1, y: 0, scale: 1 }, exit: { opacity: 0, scale: 0.97 }, transition: { ...SPRING, duration: 0.25 } };
+  return { reduce, pop, sheet, fade };
+};
 
 const VIEWS: [RoomView, string][] = [
   ["photo", "Photo view"],
@@ -65,20 +90,47 @@ const saveLamp = (s: LampSettings) => {
 };
 
 /** The plain 3D recreation of the real room, before the lighting and life of /room are layered on. */
-/** a dock button: an icon over a short label, lit when its thing is on or open */
-const DockButton = ({ label, onClick, active = false, accent = false, badge, className = "", children }: { label: string; onClick: () => void; active?: boolean; accent?: boolean; badge?: string; className?: string; children: ReactNode }) => (
-  <button
+/**
+ * A dock button: an icon over a short label. `open` means its menu is showing; a lens of glass
+ * slides between open buttons. `on` means the thing it controls is on (a lit dot). Presses
+ * respond on pointer-down with a quick spring.
+ */
+const DockButton = ({
+  label,
+  onClick,
+  open = false,
+  on = false,
+  accent = false,
+  badge,
+  className = "",
+  children,
+}: {
+  label: string;
+  onClick: () => void;
+  open?: boolean;
+  on?: boolean;
+  accent?: boolean;
+  badge?: string;
+  className?: string;
+  children: ReactNode;
+}) => (
+  <motion.button
     type="button"
     onClick={onClick}
-    aria-pressed={active}
-    className={`${className} relative flex min-w-[52px] shrink-0 flex-col items-center gap-1 rounded-xl px-2 py-2 text-[10px] font-medium sm:min-w-[64px] sm:px-3 sm:text-[11px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-200 ${
-      accent ? "bg-amber-200/10 text-amber-100 hover:bg-amber-200/20" : "text-white/75 hover:bg-white/10 hover:text-white"
-    } ${active ? "bg-white/15 text-amber-100" : ""}`}
+    aria-pressed={open || on}
+    whileTap={{ scale: 0.9 }}
+    transition={{ type: "spring", bounce: 0, duration: 0.25 }}
+    className={`${className} on-glass relative flex min-w-[52px] shrink-0 flex-col items-center gap-1 rounded-[16px] px-2 py-2 text-[10px] font-medium sm:min-w-[64px] sm:px-3 sm:text-[11px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-200 ${
+      accent ? "text-amber-100" : open || on ? "text-amber-100" : "text-white/80 hover:text-white"
+    }`}
   >
+    {open && <motion.span layoutId="dock-lens" transition={SPRING} className="liquid-lens absolute inset-0 -z-10 rounded-[16px]" aria-hidden="true" />}
+    {accent && !open && <span className="absolute inset-0 -z-10 rounded-[16px] bg-amber-200/10" aria-hidden="true" />}
     {children}
     <span>{label}</span>
+    {on && <span className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-amber-200 shadow-[0_0_6px_rgba(253,230,138,0.9)]" aria-hidden="true" />}
     {badge && <span className="absolute right-1 top-1 rounded-full bg-amber-200 px-1.5 text-[10px] font-semibold leading-4 text-black tabular-nums">{badge}</span>}
-  </button>
+  </motion.button>
 );
 
 /**
@@ -203,6 +255,7 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
     roomRef.current?.setSpeakerPlaying(playerOpen);
   }, [playerOpen]);
 
+  const { reduce, pop, sheet, fade } = usePresets();
   const toggleMenu = (m: "portfolio" | "views" | "lights") => {
     if (m === "lights") {
       setMenu(null);
@@ -260,9 +313,9 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
         )}
       </div>
 
-      {playlist && playerOpen && (
+      <AnimatePresence>{playlist && playerOpen && (
         // kept mounted while open so the music carries on when the lights panel or binoculars are used
-        <div className="pointer-events-auto absolute left-4 top-20 w-[min(360px,calc(100%-32px))] overflow-hidden rounded-2xl border border-white/10 bg-black/70 backdrop-blur-xl">
+        <motion.div key="player" {...pop} style={{ transformOrigin: "top left" }} className="pointer-events-auto absolute left-4 top-20 w-[min(360px,calc(100%-32px))] liquid-glass-panel overflow-hidden rounded-[24px]">
           <div className="flex items-center justify-between px-4 py-2.5">
             <p className="text-xs uppercase tracking-[0.18em] text-amber-200/70">Desk speaker · {playlist.service}</p>
             <button type="button" aria-label="Close the player" className="rounded-full p-1.5 text-white/60 hover:bg-white/10 hover:text-white" onClick={() => setPlayerOpen(false)}>
@@ -276,13 +329,13 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
           ) : (
             <iframe title={`My playlist on ${playlist.service}`} src={playlist.embed} className="block h-[352px] w-full border-0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" />
           )}
-        </div>
-      )}
+        </motion.div>
+      )}</AnimatePresence>
       <RoomConsole open={inConsole && consoleReady} onExit={() => roomRef.current?.setView(lastRoomView.current)} />
       {keyboardOpen && !away && <FidgetKeyboard muted={muted} onClose={() => setKeyboardOpen(false)} />}
-      {section && !away && (
+      <AnimatePresence>{section && !away && (
         // a section of the portfolio, found in the room
-        <div className="pointer-events-auto absolute inset-y-0 right-0 z-10 flex w-full max-w-xl flex-col border-l border-white/10 bg-[#0b0c10]/85 backdrop-blur-xl animate-in slide-in-from-right-8 fade-in duration-300" role="dialog" aria-label={PORTFOLIO_SPOTS[section].title}>
+        <motion.div key="section" {...sheet} className="pointer-events-auto absolute inset-y-0 right-0 z-10 flex w-full max-w-xl flex-col liquid-glass-panel rounded-l-[28px]" role="dialog" aria-label={PORTFOLIO_SPOTS[section].title}>
           <div className="flex items-start justify-between gap-4 border-b border-white/10 px-6 pb-4 pt-6">
             <div className="min-w-0">
               <p className="text-xs uppercase tracking-[0.2em] text-amber-200/70">
@@ -297,13 +350,17 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-5">
             <PortfolioPage id={section} />
           </div>
+        </motion.div>
+      )}</AnimatePresence>
+      <AnimatePresence>{hover && !away && (
+        <div className="pointer-events-none absolute inset-x-0 top-4 flex justify-center">
+          <motion.p key={hover} {...fade} className="liquid-glass on-glass rounded-full px-4 py-1.5 text-xs text-white/90">
+            {hover}
+          </motion.p>
         </div>
-      )}
-      {hover && !away && (
-        <p className="pointer-events-none absolute left-1/2 top-4 -translate-x-1/2 rounded-full bg-black/55 px-4 py-1.5 text-xs text-white/85 backdrop-blur-md">{hover}</p>
-      )}
-      {panelOpen && !away && (
-        <div className="pointer-events-auto absolute bottom-32 right-4 z-10 max-h-[calc(100%-12rem)] w-[min(320px,calc(100%-32px))] overflow-y-auto overscroll-contain rounded-2xl border border-white/10 bg-black/70 p-5 backdrop-blur-xl">
+      )}</AnimatePresence>
+      <AnimatePresence>{panelOpen && !away && (
+        <motion.div key="lights" {...pop} style={{ transformOrigin: "bottom right" }} className="pointer-events-auto absolute bottom-32 right-4 z-10 max-h-[calc(100%-12rem)] w-[min(320px,calc(100%-32px))] overflow-y-auto overscroll-contain liquid-glass-panel rounded-[24px] p-5">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-base font-semibold">Lights</h2>
             <button type="button" aria-label="Close light settings" className="rounded-full p-1.5 text-white/60 hover:bg-white/10 hover:text-white" onClick={() => setPanelOpen(false)}>
@@ -416,12 +473,12 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
               ))}
             </div>
           </div>
-        </div>
-      )}
+        </motion.div>
+      )}</AnimatePresence>
 
       {/* the portfolio menu: every section, found or not */}
-      {menu === "portfolio" && !away && (
-        <div className="pointer-events-auto absolute inset-x-4 bottom-32 z-10 mx-auto max-h-[calc(100%-12rem)] max-w-2xl overflow-y-auto overscroll-contain rounded-2xl border border-white/10 bg-[#0b0c10]/90 p-5 backdrop-blur-xl animate-in fade-in slide-in-from-bottom-2 duration-200 sm:p-6" role="dialog" aria-label="My portfolio">
+      <AnimatePresence>{menu === "portfolio" && !away && (
+        <motion.div key="portfolio" {...pop} style={{ transformOrigin: "bottom center" }} className="pointer-events-auto absolute inset-x-4 bottom-32 z-10 mx-auto max-h-[calc(100%-12rem)] max-w-2xl overflow-y-auto overscroll-contain liquid-glass-panel rounded-[26px] p-5 sm:p-6" role="dialog" aria-label="My portfolio">
           <div className="mb-4 flex items-start justify-between gap-4">
             <div>
               <h2 className="text-lg font-semibold">My portfolio</h2>
@@ -431,34 +488,36 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
               <X className="h-4 w-4" />
             </button>
           </div>
-          <div className="grid gap-2 sm:grid-cols-2">
+          <motion.div className="grid gap-2 sm:grid-cols-2" initial="hidden" animate="show" variants={{ show: { transition: { staggerChildren: reduce ? 0 : 0.035, delayChildren: 0.05 } } }}>
             {PORTFOLIO_IDS.map((id) => {
               const isFound = found.includes(id);
               return (
-                <button
+                <motion.button
                   key={id}
                   type="button"
+                  variants={{ hidden: { opacity: 0, y: reduce ? 0 : 8 }, show: { opacity: 1, y: 0, transition: SPRING } }}
+                  whileTap={{ scale: 0.97 }}
                   onClick={() => {
                     setMenu(null);
                     setSection(id);
                   }}
-                  className="group flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-left transition hover:border-amber-200/40 hover:bg-white/[0.07]"
+                  className="group flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-colors hover:border-amber-200/40 hover:bg-white/[0.09]"
                 >
                   <span className="min-w-0">
                     <span className="block font-medium text-white">{PORTFOLIO_SPOTS[id].title}</span>
                     <span className="block truncate text-xs text-white/50">{isFound ? `Found · ${PORTFOLIO_SPOTS[id].object}` : "Still hidden in the room"}</span>
                   </span>
                   {isFound ? <Check className="h-4 w-4 shrink-0 text-amber-200" /> : <Search className="h-4 w-4 shrink-0 text-white/35 group-hover:text-white/70" />}
-                </button>
+                </motion.button>
               );
             })}
-          </div>
-        </div>
-      )}
+          </motion.div>
+        </motion.div>
+      )}</AnimatePresence>
 
       {/* camera views */}
-      {menu === "views" && !away && (
-        <div className="pointer-events-auto absolute bottom-32 left-1/2 z-10 w-56 -translate-x-1/2 overflow-hidden rounded-2xl border border-white/10 bg-[#0b0c10]/90 py-2 backdrop-blur-xl animate-in fade-in slide-in-from-bottom-2 duration-200" role="menu" aria-label="Views">
+      <AnimatePresence>{menu === "views" && !away && (
+        <div className="pointer-events-none absolute inset-x-0 bottom-32 z-10 flex justify-center"><motion.div key="views" {...pop} style={{ transformOrigin: "bottom center" }} className="pointer-events-auto w-56 overflow-hidden liquid-glass-panel rounded-[22px] py-2 animate-in fade-in slide-in-from-bottom-2 duration-200" role="menu" aria-label="Views">
           {VIEWS.map(([v, label]) => (
             <button
               key={v}
@@ -475,8 +534,8 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
               {view === v && <Check className="h-4 w-4 text-amber-200" />}
             </button>
           ))}
-        </div>
-      )}
+        </motion.div></div>
+      )}</AnimatePresence>
 
       {/* the dock */}
       <div className={`pointer-events-none absolute inset-x-0 bottom-0 flex flex-col items-center gap-2 px-4 pb-[calc(16px+env(safe-area-inset-bottom,0px))] ${inConsole ? "hidden" : ""}`}>
@@ -489,8 +548,14 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
           </>
         ) : (
           <>
-            <nav className="pointer-events-auto flex max-w-full items-stretch gap-1 overflow-x-auto rounded-2xl border border-white/10 bg-black/55 p-1.5 backdrop-blur-xl [scrollbar-width:none]" aria-label="Room controls">
-              <DockButton label="Portfolio" active={menu === "portfolio"} onClick={() => toggleMenu("portfolio")} accent badge={`${found.length}/${PORTFOLIO_IDS.length}`}>
+            <motion.nav
+              initial={reduce ? { opacity: 0 } : { opacity: 0, y: 24, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ ...SPRING, delay: 0.35 }}
+              className="liquid-glass pointer-events-auto flex max-w-full items-stretch gap-1 overflow-x-auto rounded-[24px] p-1.5 [scrollbar-width:none]"
+              aria-label="Room controls"
+            >
+              <DockButton label="Portfolio" open={menu === "portfolio"} onClick={() => toggleMenu("portfolio")} accent badge={`${found.length}/${PORTFOLIO_IDS.length}`}>
                 <LayoutGrid className="h-5 w-5" />
               </DockButton>
               <span className="mx-1 hidden w-px self-stretch bg-white/10 sm:block" aria-hidden="true" />
@@ -500,20 +565,20 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
               <DockButton label="Binoculars" onClick={() => roomRef.current?.setView("binoculars")}>
                 <Binoculars className="h-5 w-5" />
               </DockButton>
-              <DockButton label="Music" active={playlist ? playerOpen : radioOn} onClick={() => (playlist ? setPlayerOpen((o) => !o) : roomRef.current?.toggleRadio())}>
+              <DockButton label="Music" on={playlist ? playerOpen : radioOn} onClick={() => (playlist ? setPlayerOpen((o) => !o) : roomRef.current?.toggleRadio())}>
                 <Radio className="h-5 w-5" />
               </DockButton>
-              <DockButton label="Lamp" className="hidden sm:flex" active={lamp.on} onClick={() => roomRef.current?.toggleLamp()}>
+              <DockButton label="Lamp" className="hidden sm:flex" on={lamp.on} onClick={() => roomRef.current?.toggleLamp()}>
                 {lamp.on ? <Lightbulb className="h-5 w-5" /> : <LightbulbOff className="h-5 w-5" />}
               </DockButton>
-              <DockButton label="Lights" active={panelOpen} onClick={() => toggleMenu("lights")}>
+              <DockButton label="Lights" open={panelOpen} onClick={() => toggleMenu("lights")}>
                 <SlidersHorizontal className="h-5 w-5" />
               </DockButton>
-              <DockButton label="Views" active={menu === "views"} onClick={() => toggleMenu("views")}>
+              <DockButton label="Views" open={menu === "views"} onClick={() => toggleMenu("views")}>
                 <Camera className="h-5 w-5" />
               </DockButton>
-            </nav>
-            <p className="hidden text-center text-xs text-white/45 sm:block">Drag to look around · click things in the room · L lamp · B binoculars · M sound</p>
+            </motion.nav>
+            <p className="on-glass hidden text-center text-xs text-white/55 sm:block">Drag to look around · click things in the room · L lamp · B binoculars · M sound</p>
           </>
         )}
       </div>
