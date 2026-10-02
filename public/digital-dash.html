@@ -4205,14 +4205,14 @@ function acRenderDlg(){
       <div class="ac-or"><span>or</span></div>
       <button type="button" class="btn ghost ac-google" data-ac="google">Continue with Google</button>
       <p class="hint">No password needed. Without an account, everything keeps saving on this device.</p>
-      <p class="ac-priv">Your account data is stored in this site's database and only you can read it. You can download it or delete the account at any time.</p>`;
+      <p class="ac-priv">Your account data is stored in this site's database and only you can read it. You can download it or delete the account at any time. <a href="/digital-dash-privacy.html" target="_blank" rel="noopener">Privacy policy</a></p>`;
     return;
   }
   const name=(u.user_metadata&&(u.user_metadata.full_name||u.user_metadata.name))||"",st={synced:`All changes saved ${agoText(AC.last)}${AC.lastDevice?" · "+esc(AC.lastDevice):""}`,saving:"Saving…",offline:"Offline. Changes are saved on this device and will sync when you're back online.",error:esc(AC.err||"Not syncing right now")}[AC.state]||"";
   body.innerHTML=`<div class="ac-hero"><span class="av big">${$("#acct-av").innerHTML}</span><div><b>${esc(name||u.email||"Signed in")}</b>${name?`<span class="muted">${esc(u.email||"")}</span>`:""}<p class="ac-st" data-s="${AC.state}"><i></i>${st}</p></div></div>
     ${AC.state==="error"?"":acItems()}
     <div class="ac-actions"><button type="button" class="btn ghost small" data-ac="backup">Download backup</button><button type="button" class="btn ghost small" data-ac="signout">Sign out</button><label class="ac-clear"><input type="checkbox" id="ac-clear"> Also remove my data from this device</label></div>
-    <p class="ac-priv">Only you can read your saved data. The AI helper sends task titles, due dates and upcoming event titles to Anthropic's AI only when you use it. Reminders go through your browser's push service.</p>
+    <p class="ac-priv">Only you can read your saved data. The AI helper sends task titles, due dates and upcoming event titles to Anthropic's AI only when you use it. Reminders go through your browser's push service. <a href="/digital-dash-privacy.html" target="_blank" rel="noopener">Privacy policy</a></p>
     <div class="ac-danger">${AC.confirmDel?`<p><b>Delete your account?</b> This removes your saved data and photos from the cloud for good. What's on this device stays until you erase it.</p><div class="ac-row"><button type="button" class="btn danger" id="ac-del-go" data-ac="del-go">Delete my account</button><button type="button" class="btn ghost small" data-ac="del-no">Cancel</button></div>`:`<button type="button" class="linkish" data-ac="del">Delete account</button>`}</div>`;
 }
 function acOpen(){const d=$("#acct");if(d.open)return;AC.confirmDel=false;if(!AC.user&&AC.state!=="unavailable")AC.sent=AC.sent||"";try{d.showModal();}catch(e){d.setAttribute("open","");}acRenderDlg();const f=d.querySelector("#ac-em")||d.querySelector("#acd-x");if(f)f.focus();}
