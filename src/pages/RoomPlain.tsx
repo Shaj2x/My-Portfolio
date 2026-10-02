@@ -155,6 +155,10 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
   const [consoleReady, setConsoleReady] = useState(false);
   const [section, setSection] = useState<PortfolioId | null>(null);
   const [keyboardOpen, setKeyboardOpen] = useState(false);
+  const [toast, setToast] = useState<{ id: PortfolioId; n: number; key: number } | null>(null);
+  const [intro, setIntro] = useState(true);
+  // the opening's clock starts when the room is actually on screen, not when the page loads
+  const [roomShown, setRoomShown] = useState(false);
   // one pop-up at a time above the dock
   const [menu, setMenu] = useState<"portfolio" | "views" | null>(null);
   const [hoverView, setHoverView] = useState<RoomView | null>(null);
@@ -196,6 +200,7 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
         },
         onScopeTarget: setTarget,
         onConsoleReady: () => setConsoleReady(true),
+        onFirstFrame: () => setRoomShown(true),
         onKeyboard: () => {
           setSection(null);
           setKeyboardOpen(true);
@@ -205,6 +210,8 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
           setFound((f) => {
             if (f.includes(id)) return f;
             const next = [...f, id];
+            // a newly found section gets its moment
+            setToast({ id, n: next.length, key: Date.now() });
             try {
               localStorage.setItem(FOUND_KEY, JSON.stringify(next));
             } catch {
@@ -276,6 +283,23 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
     }
   };
 
+  // the found card stays a few seconds; the opening title until it's read or the room is touched
+  useEffect(() => {
+    if (!toast) return;
+    const id = window.setTimeout(() => setToast(null), toast.n === PORTFOLIO_IDS.length ? 6500 : 3600);
+    return () => window.clearTimeout(id);
+  }, [toast]);
+  useEffect(() => {
+    if (!roomShown) return;
+    const done = () => setIntro(false);
+    const id = window.setTimeout(done, 4600);
+    window.addEventListener("pointerdown", done, { once: true });
+    return () => {
+      window.clearTimeout(id);
+      window.removeEventListener("pointerdown", done);
+    };
+  }, [roomShown]);
+
   const inBinoculars = view === "binoculars";
   const inConsole = view === "console";
   const away = inBinoculars || inConsole;
@@ -341,6 +365,99 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
           )}
         </motion.div>
       )}</AnimatePresence>
+      {!roomShown && <div className="absolute inset-0 z-30 bg-black" aria-hidden="true" />}
+      {/* the opening: the room fades up from black while the title writes itself in */}
+      <AnimatePresence>
+        {intro && roomShown && (
+          <motion.div key="intro" className="pointer-events-none absolute inset-0 z-30 flex flex-col items-center justify-center text-center" exit={{ opacity: 0, transition: { duration: 0.8 } }}>
+            <motion.div className="absolute inset-0 bg-black" initial={{ opacity: 1 }} animate={{ opacity: 0 }} transition={{ duration: reduce ? 0.3 : 2.2, ease: [0.22, 1, 0.36, 1] }} />
+            <h1 className="relative text-4xl font-semibold tracking-[-0.02em] text-white sm:text-6xl" aria-label="Shajith's room" style={{ textShadow: "0 4px 30px rgba(0,0,0,0.6)" }}>
+              {"Shajith's room".split("").map((ch, i) => (
+                <motion.span
+                  key={i}
+                  className="inline-block"
+                  initial={reduce ? { opacity: 0 } : { opacity: 0, y: 18, filter: "blur(8px)" }}
+                  animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                  transition={{ ...SPRING, delay: 0.5 + i * 0.045 }}
+                  aria-hidden="true"
+                >
+                  {ch === " " ? "\u00a0" : ch}
+                </motion.span>
+              ))}
+            </h1>
+            <motion.p
+              className="relative mt-3 text-sm font-medium text-white/90 sm:text-base"
+              style={{ textShadow: "0 2px 12px rgba(0,0,0,0.85), 0 1px 2px rgba(0,0,0,0.9)" }}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ ...SPRING, delay: 1.4 }}
+            >
+              Everything here means something. Click around.
+            </motion.p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* a section just found: a glass card with a ring filling to the new count */}
+      <AnimatePresence>
+        {toast && (
+          <div className="pointer-events-none absolute left-4 right-4 top-[4.5rem] z-20 flex justify-start">
+            <motion.div
+              key={toast.key}
+              initial={reduce ? { opacity: 0 } : { opacity: 0, y: -16, scale: 0.9, filter: "blur(6px)" }}
+              animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
+              exit={{ opacity: 0, y: -10, scale: 0.96 }}
+              transition={{ type: "spring", bounce: 0.35, duration: 0.5 }}
+              className="liquid-glass on-glass flex items-center gap-3 rounded-full py-2 pl-2 pr-5"
+              role="status"
+            >
+              <svg viewBox="0 0 36 36" className="h-9 w-9 -rotate-90" aria-hidden="true">
+                <circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="3" />
+                <motion.circle
+                  cx="18"
+                  cy="18"
+                  r="15"
+                  fill="none"
+                  stroke="#fcd99a"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  initial={{ pathLength: (toast.n - 1) / PORTFOLIO_IDS.length }}
+                  animate={{ pathLength: toast.n / PORTFOLIO_IDS.length }}
+                  transition={{ duration: reduce ? 0 : 0.9, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
+                />
+              </svg>
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.18em] text-amber-200/80">
+                  {toast.n === PORTFOLIO_IDS.length ? "The whole portfolio" : `Found ${toast.n} of ${PORTFOLIO_IDS.length}`}
+                </p>
+                <p className="text-sm font-medium text-white">
+                  {toast.n === PORTFOLIO_IDS.length ? "You found everything. Thanks for looking around." : `${PORTFOLIO_SPOTS[toast.id].title}, behind ${PORTFOLIO_SPOTS[toast.id].object.replace(/^The /, "the ")}`}
+                </p>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+      {/* finding all eight: a shower of gold confetti */}
+      {toast?.n === PORTFOLIO_IDS.length && !reduce && (
+        <div key={toast.key} className="pointer-events-none absolute inset-0 z-20 overflow-hidden" aria-hidden="true">
+          {Array.from({ length: 70 }, (_, i) => {
+            const x = (i * 37) % 100;
+            const hue = ["#fcd99a", "#ffb46e", "#ffffff", "#f7a6c4", "#a47bff"][i % 5];
+            return (
+              <motion.span
+                key={i}
+                className="absolute top-0 block h-2.5 w-1.5 rounded-[2px]"
+                style={{ left: `${x}%`, background: hue }}
+                initial={{ y: -20, rotate: 0, opacity: 1 }}
+                animate={{ y: "105vh", rotate: 360 + ((i * 53) % 360), x: ((i * 29) % 80) - 40, opacity: [1, 1, 0] }}
+                transition={{ duration: 2.6 + ((i * 7) % 10) / 10, delay: ((i * 13) % 20) / 20, ease: [0.3, 0.6, 0.5, 1] }}
+              />
+            );
+          })}
+        </div>
+      )}
+
       <RoomConsole open={inConsole && consoleReady} onExit={() => roomRef.current?.setView(lastRoomView.current)} />
       {keyboardOpen && !away && <FidgetKeyboard muted={muted} onClose={() => setKeyboardOpen(false)} />}
       <AnimatePresence>{section && !away && (
@@ -358,7 +475,9 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
             </button>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-5">
-            <PortfolioPage id={section} />
+            <div key={section} className="stagger-in">
+              <PortfolioPage id={section} />
+            </div>
           </div>
         </motion.div>
       )}</AnimatePresence>

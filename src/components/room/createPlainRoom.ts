@@ -107,6 +107,8 @@ export interface PlainRoomOptions {
   onKeyboard?: () => void;
   /** an object hiding a section of the portfolio was clicked */
   onPortfolio?: (id: PortfolioId) => void;
+  /** the room has drawn its first frame (shaders compiled, everything on screen) */
+  onFirstFrame?: () => void;
   /** the light switch by the door was clicked */
   onLightSwitch?: () => void;
   /** the speaker was clicked; when given, this replaces the built-in radio (e.g. to open a playlist player) */
@@ -922,6 +924,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   };
   // the mesh under the pointer at the last pick, for the hover glow and lift
   let lastHitObject: THREE.Object3D | null = null;
+  const lastHitPoint = new THREE.Vector3();
   const pickTarget = (e: PointerEvent): Pick | null => {
     if (mode !== "room") return null;
     const r = renderer.domElement.getBoundingClientRect();
@@ -936,6 +939,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     if (!hit) return null;
     const o = hit.object;
     lastHitObject = o;
+    lastHitPoint.copy(hit.point);
     if (ceilingParts.includes(o)) return { kind: "ceiling" };
     if (blindParts.includes(o)) return { kind: "blind" };
     if (sun.parts.includes(o)) return { kind: "sunset" };
@@ -986,6 +990,82 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   let drawerLevel = 0;
   // plushies squash and spring back, each on its own clock
   const bounces = new Map<THREE.Group, number>();
+
+  // ---------- small wonders ----------
+  // a soft round sprite shared by the sparkles and the dust
+  const dotTex = paintTexture(64, 64, (c, w, h) => {
+    const g = c.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
+    g.addColorStop(0, "rgba(255,255,255,1)");
+    g.addColorStop(0.35, "rgba(255,255,255,0.5)");
+    g.addColorStop(1, "rgba(255,255,255,0)");
+    c.fillStyle = g;
+    c.fillRect(0, 0, w, h);
+  });
+
+  // gold sparkles that burst from whatever just gave up a piece of the portfolio, then drift down
+  const SPARKS = 90;
+  const sparkPos = new Float32Array(SPARKS * 3);
+  const sparkVel = new Float32Array(SPARKS * 3);
+  const sparkLife = new Float32Array(SPARKS);
+  const sparkGeo = new THREE.BufferGeometry();
+  sparkGeo.setAttribute("position", new THREE.BufferAttribute(sparkPos, 3));
+  const sparkMat = new THREE.PointsMaterial({ map: dotTex, size: 0.03, color: new THREE.Color("#ffd27a").multiplyScalar(2.2), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+  const sparks = new THREE.Points(sparkGeo, sparkMat);
+  sparks.frustumCulled = false;
+  sparks.visible = false;
+  scene.add(sparks);
+  const burst = (at: THREE.Vector3, count = 60) => {
+    if (reducedMotion) return;
+    for (let i = 0; i < count; i++) {
+      const k = i % SPARKS;
+      sparkPos.set([at.x, at.y, at.z], k * 3);
+      // an even spray over a sphere, biased upward
+      const u = Math.random() * 2 - 1;
+      const a = Math.random() * Math.PI * 2;
+      const r = Math.sqrt(1 - u * u);
+      const sp = 0.5 + Math.random() * 0.9;
+      sparkVel.set([r * Math.cos(a) * sp, Math.abs(u) * sp * 1.1 + 0.3, r * Math.sin(a) * sp], k * 3);
+      sparkLife[k] = 0.8 + Math.random() * 0.6;
+    }
+    sparks.visible = true;
+  };
+
+  // dust motes turning slowly in the lamp's light
+  const DUST = 140;
+  const dustPos = new Float32Array(DUST * 3);
+  const dustSeed = new Float32Array(DUST * 3);
+  const lampAt = furniture.lamp.bulb;
+  for (let i = 0; i < DUST; i++) {
+    dustSeed.set([Math.random() * Math.PI * 2, Math.random(), 0.15 + Math.random() * 0.45], i * 3);
+  }
+  const dustGeo = new THREE.BufferGeometry();
+  dustGeo.setAttribute("position", new THREE.BufferAttribute(dustPos, 3));
+  const dustMat = new THREE.PointsMaterial({ map: dotTex, size: 0.008, color: "#ffe2b8", transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending });
+  const dust = new THREE.Points(dustGeo, dustMat);
+  dust.frustumCulled = false;
+  scene.add(dust);
+
+  // now and then a shooting star crosses the sky outside the window
+  const starGeo = new THREE.PlaneGeometry(0.9, 0.012);
+  starGeo.translate(-0.45, 0, 0); // the head leads, the tail trails behind
+  const starMat = new THREE.MeshBasicMaterial({
+    map: paintTexture(256, 8, (c, w, h) => {
+      const g = c.createLinearGradient(0, 0, w, 0);
+      g.addColorStop(0, "rgba(255,255,255,0)");
+      g.addColorStop(1, "rgba(255,255,255,1)");
+      c.fillStyle = g;
+      c.fillRect(0, 0, w, h);
+    }),
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    fog: false,
+  });
+  const star = new THREE.Mesh(starGeo, starMat);
+  star.visible = false;
+  scene.add(star);
+  const starRun = { t: 1, next: 6, from: new THREE.Vector3(), dir: new THREE.Vector3() };
+
   // perfume mist: a pool of soft particles, puffed out of whichever bottle was pressed
   const MIST = 160;
   const mistPos = new Float32Array(MIST * 3);
@@ -1055,9 +1135,11 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
         audio.play("squeak");
       } else if (hit?.kind === "portfolio") {
         audio.play("chime");
+        burst(lastHitPoint);
         options.onPortfolio?.(hit.id);
       } else if (hit?.kind === "perfume") {
         spritz(hit.target);
+        burst(new THREE.Box3().setFromObject(hit.target).getCenter(new THREE.Vector3()).add(new THREE.Vector3(0, 0.06, 0)), 40);
         // the scent lingers a moment, then About Me opens
         window.setTimeout(() => options.onPortfolio?.("about"), reducedMotion ? 0 : 650);
         audio.play("spritz");
@@ -1168,16 +1250,35 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   ro.observe(container);
   onResize();
 
+  // ---------- the opening ----------
+  // the camera drifts down from near the ceiling into the photo view while the lamp flickers on,
+  // the way an old bulb catches. Skipped for reduced motion.
+  let intro = reducedMotion ? 1 : 0;
+  if (!reducedMotion) {
+    camera.position.copy(VIEWS.photo.pos).add(new THREE.Vector3(0.1, 0.55, 0.02));
+    controls.target.copy(VIEWS.photo.target).add(new THREE.Vector3(0, -0.35, 0));
+    camera.lookAt(controls.target);
+    tween = { fromPos: camera.position.clone(), fromTarget: controls.target.clone(), toPos: VIEWS.photo.pos.clone(), toTarget: VIEWS.photo.target.clone(), t: 0, dur: 3.2 };
+  }
+  // brightness over the first 1.8 s: two stutters, then it holds
+  const flicker = (t: number) => (t < 0.25 ? 0 : t < 0.35 ? 0.7 : t < 0.5 ? 0.1 : t < 0.62 ? 0.9 : t < 0.72 ? 0.35 : Math.min(1, 0.6 + (t - 0.72) * 0.6));
+
+  let firstFrameSent = false;
   const clock = new THREE.Clock();
   const toCamera = new THREE.Vector3();
   renderer.setAnimationLoop(() => {
     const dt = Math.min(clock.getDelta(), 0.1);
     const time = clock.elapsedTime;
+    if (intro < 1) {
+      intro = Math.min(1, time / 1.8);
+      lampLevel = (lampSettings.on ? lampSettings.brightness : 0) * flicker(time);
+      applyLamp();
+    }
 
     // lamp: level and colour chase their settings
     const lampTarget = lampSettings.on ? lampSettings.brightness : 0;
     const colorMoving = !lampColor.equals(lampColorTarget);
-    if (lampLevel !== lampTarget || colorMoving) {
+    if (intro >= 1 && (lampLevel !== lampTarget || colorMoving)) {
       const rate = lampTarget > lampLevel ? 18 : 9;
       lampLevel += (lampTarget - lampLevel) * (reducedMotion ? 1 : 1 - Math.exp(-rate * dt));
       if (Math.abs(lampTarget - lampLevel) < 0.002) lampLevel = lampTarget;
@@ -1234,6 +1335,65 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       if (Math.abs(drawerTarget - drawerLevel) < 0.002) drawerLevel = drawerTarget;
       inter.drawer.setOpen(drawerLevel);
     }
+    // sparkles: fly, slow, fall, fade
+    if (sparks.visible) {
+      let alive = false;
+      for (let i = 0; i < SPARKS; i++) {
+        if (sparkLife[i] <= 0) continue;
+        alive = true;
+        sparkLife[i] -= dt;
+        sparkVel[i * 3 + 1] -= 1.6 * dt;
+        for (let a = 0; a < 3; a++) {
+          sparkVel[i * 3 + a] *= 1 - 2.4 * dt;
+          sparkPos[i * 3 + a] += sparkVel[i * 3 + a] * dt;
+        }
+        if (sparkLife[i] <= 0) sparkPos[i * 3 + 1] = -10;
+      }
+      sparkGeo.attributes.position.needsUpdate = true;
+      sparkMat.opacity = 1;
+      sparks.visible = alive;
+    }
+    // dust: each mote circles slowly in the lamp's cone, brighter the brighter the lamp
+    dust.visible = lampLevel > 0.05 && mode === "room";
+    if (dust.visible) {
+      for (let i = 0; i < DUST; i++) {
+        const [ph, h, r] = [dustSeed[i * 3], dustSeed[i * 3 + 1], dustSeed[i * 3 + 2]];
+        const a = ph + time * (0.05 + h * 0.06);
+        const y = ((h + time * 0.012) % 1) * (lampAt.y - 0.05);
+        const spread = r * (0.35 + (1 - y / lampAt.y) * 0.6);
+        dustPos[i * 3] = lampAt.x - 0.2 + Math.cos(a) * spread;
+        dustPos[i * 3 + 1] = y + Math.sin(time * 0.7 + ph) * 0.02;
+        dustPos[i * 3 + 2] = lampAt.z + 0.25 + Math.sin(a) * spread;
+      }
+      dustGeo.attributes.position.needsUpdate = true;
+      dustMat.opacity = 0.45 * Math.min(1, lampLevel);
+    }
+    // the shooting star, only while the sky is in view
+    if (!reducedMotion && sky.visible) {
+      if (starRun.t >= 1) {
+        starRun.next -= dt;
+        star.visible = false;
+        if (starRun.next <= 0) {
+          starRun.t = 0;
+          starRun.next = 9 + Math.random() * 14;
+          starRun.from.set(sky.position.x + (Math.random() - 0.2) * 3, sky.position.y + 1.2 + Math.random() * 0.8, sky.position.z + 0.05);
+          starRun.dir.set(-(0.7 + Math.random() * 0.4), -(0.35 + Math.random() * 0.3), 0).normalize();
+          star.rotation.z = Math.atan2(starRun.dir.y, starRun.dir.x);
+        }
+      } else {
+        starRun.t = Math.min(1, starRun.t + dt / 0.9);
+        star.visible = true;
+        star.position.copy(starRun.from).addScaledVector(starRun.dir, starRun.t * 3.2);
+        starMat.opacity = Math.sin(starRun.t * Math.PI);
+      }
+    } else star.visible = false;
+    // the plushies breathe, each at its own pace, unless one is mid-squeeze
+    if (!reducedMotion)
+      inter.plushies.forEach((p, i) => {
+        if (bounces.has(p.group)) return;
+        const b = Math.sin(time * (1.1 + i * 0.17) + i * 1.7) * 0.012;
+        p.group.scale.set(1 - b * 0.4, 1 + b, 1 - b * 0.4);
+      });
     for (const [g, age] of bounces) {
       const t2 = age + dt;
       // a quick squash, then a damped spring back to rest
@@ -1322,6 +1482,10 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     }
 
     renderer.render(scene, camera);
+    if (!firstFrameSent) {
+      firstFrameSent = true;
+      options.onFirstFrame?.();
+    }
     if (maskMat.uniforms.uMask.value > 0 || maskMat.uniforms.uFade.value > 0) {
       renderer.autoClear = false;
       renderer.render(overlay, overlayCam);
