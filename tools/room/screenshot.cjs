@@ -8,6 +8,7 @@
  * colour and layout, not smoothness. `steps.json` is an optional list of actions, e.g.
  *   [{"wait":30000},{"shot":"doorway"},{"click":"text=Step inside"},{"wait":40000},{"shot":"inside"},
  *    {"key":"t"},{"wait":60000},{"shot":"telescope"},{"drag":[480,300,420,300]},{"wheel":-200},
+ *    {"hover":[452,250]},{"hoverEl":"text=Desk"},
  *    {"localStorage":{"portfolio-room:v1":{"weather":"snow","timeMode":"day"}}},{"viewport":[390,780]}]
  * Run the dev server bound to IPv4 first:
  *   VITE_SUPABASE_URL=http://x.invalid VITE_SUPABASE_PUBLISHABLE_KEY=x npx vite --host 127.0.0.1 --port 8080
@@ -40,6 +41,8 @@ const pw = require(path.join(execSync("npm root -g").toString().trim(), "playwri
     if (s.wait) await p.waitForTimeout(s.wait);
     if (s.click) await p.click(s.click);
     if (s.key) await p.keyboard.press(s.key);
+    if (s.hover) await p.mouse.move(s.hover[0], s.hover[1], { steps: 5 });
+    if (s.hoverEl) await p.hover(s.hoverEl);
     if (s.wheel) {
       await p.mouse.move(vp[0] / 2, vp[1] / 2);
       await p.mouse.wheel(0, s.wheel);

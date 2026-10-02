@@ -920,6 +920,8 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     keyboard: "Keyboard · leave me a note",
     perfume: "The fragrances · spray one",
   };
+  // the mesh under the pointer at the last pick, for the hover glow and lift
+  let lastHitObject: THREE.Object3D | null = null;
   const pickTarget = (e: PointerEvent): Pick | null => {
     if (mode !== "room") return null;
     const r = renderer.domElement.getBoundingClientRect();
@@ -933,6 +935,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     });
     if (!hit) return null;
     const o = hit.object;
+    lastHitObject = o;
     if (ceilingParts.includes(o)) return { kind: "ceiling" };
     if (blindParts.includes(o)) return { kind: "blind" };
     if (sun.parts.includes(o)) return { kind: "sunset" };
@@ -1063,6 +1066,51 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     downAt = dragFrom = null;
   };
   let hoverLabel: string | null = null;
+
+  // ---------- hover: a warm glow on whatever can be clicked, and small things lift a little ----------
+  // One light, moved to the hovered thing and faded in, so it costs the same however many things
+  // there are. Things you'd pick up (plushies, bottles, binoculars, the controller) rise on a
+  // slightly bouncy spring and settle back when the pointer leaves.
+  const hoverGlow = new THREE.PointLight("#ffd9a8", 0, 0.5, 2);
+  scene.add(hoverGlow);
+  let glowTarget = 0;
+  const glowAt = new THREE.Vector3();
+  const box = new THREE.Box3();
+  const lifts = new Map<THREE.Object3D, { base: number; off: number; vel: number; target: number }>();
+  let lifted: THREE.Object3D | null = null;
+  const liftRootFor = (hit: Pick | null): THREE.Object3D | null => {
+    if (!hit) return null;
+    if (hit.kind === "plushie") return hit.target.group;
+    if (hit.kind === "perfume") return hit.target;
+    if (hit.kind === "binoculars") return binos.parts[0]?.parent ?? null;
+    if (hit.kind === "console" && lastHitObject && isIn(lastHitObject, inter.controller)) return inter.controller;
+    return null;
+  };
+  const setHover = (hit: Pick | null) => {
+    const root = liftRootFor(hit);
+    if (root !== lifted) {
+      if (lifted) lifts.get(lifted)!.target = 0;
+      if (root) {
+        const l = lifts.get(root) ?? { base: root.position.y, off: 0, vel: 0, target: 0 };
+        l.target = hit?.kind === "plushie" ? 0.018 : 0.012;
+        lifts.set(root, l);
+      }
+      lifted = root;
+    }
+    if (hit && lastHitObject) {
+      // centre the glow on the plushie's own meshes when one is hovered, else on the hovered mesh
+      box.makeEmpty();
+      (root ?? lastHitObject).traverse((o) => {
+        if ((o as THREE.Mesh).isMesh) box.expandByObject(o);
+      });
+      if (box.isEmpty()) box.setFromObject(lastHitObject);
+      box.getCenter(glowAt);
+      // sit the glow just in front of the thing, toward the camera, so it lights the visible face
+      glowAt.lerp(camera.position, 0.12);
+      hoverGlow.position.copy(glowAt);
+      glowTarget = 1;
+    } else glowTarget = 0;
+  };
   const onMove = (e: PointerEvent) => {
     if (mode === "binoculars") {
       renderer.domElement.style.cursor = e.buttons ? "grabbing" : "grab";
@@ -1079,6 +1127,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     if (e.buttons) return;
     const hit = pickTarget(e);
     renderer.domElement.style.cursor = hit ? "pointer" : "";
+    setHover(hit);
     const label = !hit ? null : hit.kind === "plushie" ? `${hit.target.name} · give it a squeeze` : hit.kind === "portfolio" ? `${PORTFOLIO_SPOTS[hit.id].object} · something's here` : LABELS[hit.kind];
     if (label !== hoverLabel) {
       hoverLabel = label;
@@ -1093,6 +1142,15 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   renderer.domElement.addEventListener("pointerdown", onDown);
   renderer.domElement.addEventListener("pointerup", onUp);
   renderer.domElement.addEventListener("pointermove", onMove);
+  // leaving the canvas (onto a panel, or off the page) lets go of whatever was hovered
+  const onLeave = () => {
+    setHover(null);
+    if (hoverLabel) {
+      hoverLabel = null;
+      options.onHover?.(null);
+    }
+  };
+  renderer.domElement.addEventListener("pointerleave", onLeave);
   renderer.domElement.addEventListener("wheel", onWheel, { passive: false });
 
   const onResize = () => {
@@ -1201,6 +1259,28 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     if (mistAlive) mistGeo.attributes.position.needsUpdate = true;
     mist.visible = mistAlive;
     // the radio reports its kick drum; an outside player gets a steady 90 bpm beat instead
+    // hover glow and lifts
+    if (mode !== "room" && glowTarget) setHover(null);
+    hoverGlow.intensity += (glowTarget * 0.35 - hoverGlow.intensity) * (1 - Math.exp(-12 * dt));
+    for (const [obj, l] of lifts) {
+      if (reducedMotion) l.off = l.target;
+      else {
+        // a spring with a little give: stiffness 320, damping ratio about 0.55. Stepped in small
+        // fixed slices (semi-implicit Euler), so a slow frame can't make it overshoot and blow up.
+        const k = 320;
+        const c = 2 * 0.55 * Math.sqrt(k);
+        for (let left = dt; left > 0; left -= 1 / 240) {
+          const h = Math.min(left, 1 / 240);
+          l.vel += (k * (l.target - l.off) - c * l.vel) * h;
+          l.off += l.vel * h;
+        }
+      }
+      obj.position.y = l.base + l.off;
+      if (l.target === 0 && Math.abs(l.off) < 0.0003 && Math.abs(l.vel) < 0.003) {
+        obj.position.y = l.base;
+        lifts.delete(obj);
+      }
+    }
     const pulse = Math.max(audio.radioPulse(), speakerPlaying && !reducedMotion ? Math.exp(-((time * 1.5) % 1) * 7) : 0);
     inter.speaker.scale.set(1 + pulse * 0.04, 1 + pulse * 0.07, 1 + pulse * 0.04);
 
@@ -1261,6 +1341,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       renderer.domElement.removeEventListener("pointerdown", onDown);
       renderer.domElement.removeEventListener("pointerup", onUp);
       renderer.domElement.removeEventListener("pointermove", onMove);
+      renderer.domElement.removeEventListener("pointerleave", onLeave);
       renderer.domElement.removeEventListener("wheel", onWheel);
       renderer.setAnimationLoop(null);
       ro.disconnect();

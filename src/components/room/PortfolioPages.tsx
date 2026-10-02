@@ -24,7 +24,9 @@ const Section = ({ title, children }: { title: string; children: ReactNode }) =>
   </section>
 );
 
-const Card = ({ children }: { children: ReactNode }) => <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4">{children}</div>;
+const Card = ({ children }: { children: ReactNode }) => (
+  <div className="sheen rounded-xl border border-white/10 bg-white/[0.04] p-4 transition-[transform,border-color,background-color,box-shadow] duration-200 ease-out hover:border-white/20 hover:bg-white/[0.07] hover:shadow-[0_10px_30px_rgba(0,0,0,0.25)] motion-safe:hover:-translate-y-0.5">{children}</div>
+);
 
 export const LinkButton = ({ href, children }: { href: string; children: ReactNode }) => (
   <a

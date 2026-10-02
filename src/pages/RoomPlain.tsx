@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion, type Transition } from "framer-motion";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Binoculars, Camera, Check, Gamepad2, LayoutGrid, Lightbulb, LightbulbOff, Radio, Search, SlidersHorizontal, Volume2, VolumeX, X } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Binoculars, Camera, Check, Gamepad2, LayoutGrid, Lightbulb, LightbulbOff, Radio, SlidersHorizontal, Volume2, VolumeX, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { RADIO_STATION } from "@/components/room/createAudio";
 import { playlistEmbed } from "@/components/room/playlist";
@@ -90,6 +90,13 @@ const saveLamp = (s: LampSettings) => {
 };
 
 /** The plain 3D recreation of the real room, before the lighting and life of /room are layered on. */
+/** keeps a glass surface's cursor highlight under the pointer */
+const trackSpot = (e: React.PointerEvent<HTMLElement>) => {
+  const r = e.currentTarget.getBoundingClientRect();
+  e.currentTarget.style.setProperty("--mx", `${e.clientX - r.left}px`);
+  e.currentTarget.style.setProperty("--my", `${e.clientY - r.top}px`);
+};
+
 /**
  * A dock button: an icon over a short label. `open` means its menu is showing; a lens of glass
  * slides between open buttons. `on` means the thing it controls is on (a lit dot). Presses
@@ -119,15 +126,17 @@ const DockButton = ({
     onClick={onClick}
     aria-pressed={open || on}
     whileTap={{ scale: 0.9 }}
-    transition={{ type: "spring", bounce: 0, duration: 0.25 }}
-    className={`${className} on-glass relative flex min-w-[52px] shrink-0 flex-col items-center gap-1 rounded-[16px] px-2 py-2 text-[10px] font-medium sm:min-w-[64px] sm:px-3 sm:text-[11px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-200 ${
+    whileHover={{ y: -2 }}
+    transition={{ type: "spring", bounce: 0.3, duration: 0.3 }}
+    className={`${className} group on-glass relative flex min-w-[52px] shrink-0 flex-col items-center gap-1 rounded-[16px] px-2 py-2 text-[10px] font-medium sm:min-w-[64px] sm:px-3 sm:text-[11px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-200 ${
       accent ? "text-amber-100" : open || on ? "text-amber-100" : "text-white/80 hover:text-white"
     }`}
   >
     {open && <motion.span layoutId="dock-lens" transition={SPRING} className="liquid-lens absolute inset-0 -z-10 rounded-[16px]" aria-hidden="true" />}
     {accent && !open && <span className="absolute inset-0 -z-10 rounded-[16px] bg-amber-200/10" aria-hidden="true" />}
-    {children}
+    <span className="transition-transform duration-200 ease-out motion-safe:group-hover:scale-[1.15] motion-safe:group-hover:-rotate-3">{children}</span>
     <span>{label}</span>
+    {!open && <span className="absolute inset-0 -z-10 rounded-[16px] bg-white/0 transition-colors duration-200 group-hover:bg-white/[0.07]" aria-hidden="true" />}
     {on && <span className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-amber-200 shadow-[0_0_6px_rgba(253,230,138,0.9)]" aria-hidden="true" />}
     {badge && <span className="absolute right-1 top-1 rounded-full bg-amber-200 px-1.5 text-[10px] font-semibold leading-4 text-black tabular-nums">{badge}</span>}
   </motion.button>
@@ -148,6 +157,7 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
   const [keyboardOpen, setKeyboardOpen] = useState(false);
   // one pop-up at a time above the dock
   const [menu, setMenu] = useState<"portfolio" | "views" | null>(null);
+  const [hoverView, setHoverView] = useState<RoomView | null>(null);
   const keyboardOpenRef = useRef(false);
   keyboardOpenRef.current = keyboardOpen;
   const sectionRef = useRef<PortfolioId | null>(null);
@@ -360,7 +370,7 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
         </div>
       )}</AnimatePresence>
       <AnimatePresence>{panelOpen && !away && (
-        <motion.div key="lights" {...pop} style={{ transformOrigin: "bottom right" }} className="pointer-events-auto absolute bottom-32 right-4 z-10 max-h-[calc(100%-12rem)] w-[min(320px,calc(100%-32px))] overflow-y-auto overscroll-contain liquid-glass-panel rounded-[24px] p-5">
+        <motion.div key="lights" {...pop} onPointerMove={trackSpot} style={{ transformOrigin: "bottom right" }} className="pointer-events-auto absolute bottom-32 right-4 z-10 max-h-[calc(100%-12rem)] w-[min(320px,calc(100%-32px))] overflow-y-auto overscroll-contain liquid-glass-panel glass-spot rounded-[24px] p-5">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-base font-semibold">Lights</h2>
             <button type="button" aria-label="Close light settings" className="rounded-full p-1.5 text-white/60 hover:bg-white/10 hover:text-white" onClick={() => setPanelOpen(false)}>
@@ -478,7 +488,7 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
 
       {/* the portfolio menu: every section, found or not */}
       <AnimatePresence>{menu === "portfolio" && !away && (
-        <motion.div key="portfolio" {...pop} style={{ transformOrigin: "bottom center" }} className="pointer-events-auto absolute inset-x-4 bottom-32 z-10 mx-auto max-h-[calc(100%-12rem)] max-w-2xl overflow-y-auto overscroll-contain liquid-glass-panel rounded-[26px] p-5 sm:p-6" role="dialog" aria-label="My portfolio">
+        <motion.div key="portfolio" {...pop} onPointerMove={trackSpot} style={{ transformOrigin: "bottom center" }} className="pointer-events-auto absolute inset-x-4 bottom-32 z-10 mx-auto max-h-[calc(100%-12rem)] max-w-2xl overflow-y-auto overscroll-contain liquid-glass-panel glass-spot rounded-[26px] p-5 sm:p-6" role="dialog" aria-label="My portfolio">
           <div className="mb-4 flex items-start justify-between gap-4">
             <div>
               <h2 className="text-lg font-semibold">My portfolio</h2>
@@ -497,17 +507,18 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
                   type="button"
                   variants={{ hidden: { opacity: 0, y: reduce ? 0 : 8 }, show: { opacity: 1, y: 0, transition: SPRING } }}
                   whileTap={{ scale: 0.97 }}
+                  whileHover={reduce ? undefined : { y: -2, transition: { type: "spring", bounce: 0.35, duration: 0.3 } }}
                   onClick={() => {
                     setMenu(null);
                     setSection(id);
                   }}
-                  className="group flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-colors hover:border-amber-200/40 hover:bg-white/[0.09]"
+                  className="sheen group flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-colors hover:border-amber-200/40 hover:bg-white/[0.09]"
                 >
                   <span className="min-w-0">
                     <span className="block font-medium text-white">{PORTFOLIO_SPOTS[id].title}</span>
                     <span className="block truncate text-xs text-white/50">{isFound ? `Found · ${PORTFOLIO_SPOTS[id].object}` : "Still hidden in the room"}</span>
                   </span>
-                  {isFound ? <Check className="h-4 w-4 shrink-0 text-amber-200" /> : <Search className="h-4 w-4 shrink-0 text-white/35 group-hover:text-white/70" />}
+                  {isFound ? <Check className="h-4 w-4 shrink-0 text-amber-200 transition-transform duration-200 group-hover:scale-125" /> : <ArrowUpRight className="h-4 w-4 shrink-0 text-white/35 transition-[color,transform] duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-white/80" />}
                 </motion.button>
               );
             })}
@@ -517,7 +528,7 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
 
       {/* camera views */}
       <AnimatePresence>{menu === "views" && !away && (
-        <div className="pointer-events-none absolute inset-x-0 bottom-32 z-10 flex justify-center"><motion.div key="views" {...pop} style={{ transformOrigin: "bottom center" }} className="pointer-events-auto w-56 overflow-hidden liquid-glass-panel rounded-[22px] py-2 animate-in fade-in slide-in-from-bottom-2 duration-200" role="menu" aria-label="Views">
+        <div className="pointer-events-none absolute inset-x-0 bottom-32 z-10 flex justify-center"><motion.div key="views" {...pop} onPointerLeave={() => setHoverView(null)} style={{ transformOrigin: "bottom center" }} className="pointer-events-auto isolate w-56 overflow-hidden liquid-glass-panel rounded-[22px] py-2 animate-in fade-in slide-in-from-bottom-2 duration-200" role="menu" aria-label="Views">
           {VIEWS.map(([v, label]) => (
             <button
               key={v}
@@ -528,8 +539,10 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
                 setMenu(null);
                 roomRef.current?.setView(v);
               }}
-              className="flex w-full items-center justify-between px-4 py-2 text-left text-sm text-white/80 hover:bg-white/10 hover:text-white"
+              onPointerEnter={() => setHoverView(v)}
+              className="relative flex w-full items-center justify-between px-4 py-2 text-left text-sm text-white/80 transition-colors hover:text-white"
             >
+              {hoverView === v && <motion.span layoutId="views-hover" transition={SPRING} className="liquid-lens absolute inset-x-1.5 inset-y-0.5 -z-10 rounded-xl" aria-hidden="true" />}
               {label}
               {view === v && <Check className="h-4 w-4 text-amber-200" />}
             </button>
@@ -552,7 +565,8 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
               initial={reduce ? { opacity: 0 } : { opacity: 0, y: 24, scale: 0.96 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ ...SPRING, delay: 0.35 }}
-              className="liquid-glass pointer-events-auto flex max-w-full items-stretch gap-1 overflow-x-auto rounded-[24px] p-1.5 [scrollbar-width:none]"
+              onPointerMove={trackSpot}
+              className="liquid-glass glass-spot pointer-events-auto flex max-w-full items-stretch gap-1 overflow-x-auto rounded-[24px] p-1.5 [scrollbar-width:none]"
               aria-label="Room controls"
             >
               <DockButton label="Portfolio" open={menu === "portfolio"} onClick={() => toggleMenu("portfolio")} accent badge={`${found.length}/${PORTFOLIO_IDS.length}`}>
