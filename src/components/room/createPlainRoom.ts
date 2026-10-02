@@ -918,7 +918,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     blind: "Blind · roll it up or down",
     drawer: "Dresser drawer · open it",
     keyboard: "Keyboard · leave me a note",
-    perfume: "Spray a fragrance",
+    perfume: "The fragrances · spray one",
   };
   const pickTarget = (e: PointerEvent): Pick | null => {
     if (mode !== "room") return null;
@@ -1055,6 +1055,8 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
         options.onPortfolio?.(hit.id);
       } else if (hit?.kind === "perfume") {
         spritz(hit.target);
+        // the scent lingers a moment, then About Me opens
+        window.setTimeout(() => options.onPortfolio?.("about"), reducedMotion ? 0 : 650);
         audio.play("spritz");
       }
     }

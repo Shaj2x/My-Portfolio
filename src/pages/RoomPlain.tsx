@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Binoculars, Gamepad2, Lightbulb, LightbulbOff, Radio, SlidersHorizontal, Volume2, VolumeX, X } from "lucide-react";
+import { ArrowLeft, Binoculars, Camera, Check, Gamepad2, LayoutGrid, Lightbulb, LightbulbOff, Radio, Search, SlidersHorizontal, Volume2, VolumeX, X } from "lucide-react";
+import type { ReactNode } from "react";
 import { RADIO_STATION } from "@/components/room/createAudio";
 import { playlistEmbed } from "@/components/room/playlist";
 import { RoomConsole } from "@/components/room/console/RoomConsole";
@@ -64,6 +65,22 @@ const saveLamp = (s: LampSettings) => {
 };
 
 /** The plain 3D recreation of the real room, before the lighting and life of /room are layered on. */
+/** a dock button: an icon over a short label, lit when its thing is on or open */
+const DockButton = ({ label, onClick, active = false, accent = false, badge, className = "", children }: { label: string; onClick: () => void; active?: boolean; accent?: boolean; badge?: string; className?: string; children: ReactNode }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    aria-pressed={active}
+    className={`${className} relative flex min-w-[52px] shrink-0 flex-col items-center gap-1 rounded-xl px-2 py-2 text-[10px] font-medium sm:min-w-[64px] sm:px-3 sm:text-[11px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-200 ${
+      accent ? "bg-amber-200/10 text-amber-100 hover:bg-amber-200/20" : "text-white/75 hover:bg-white/10 hover:text-white"
+    } ${active ? "bg-white/15 text-amber-100" : ""}`}
+  >
+    {children}
+    <span>{label}</span>
+    {badge && <span className="absolute right-1 top-1 rounded-full bg-amber-200 px-1.5 text-[10px] font-semibold leading-4 text-black tabular-nums">{badge}</span>}
+  </button>
+);
+
 /**
  * `hosted` is for the standalone preview, which runs on a host that forbids frames from other
  * sites: hosted games and the playlist link out instead of embedding.
@@ -77,6 +94,8 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
   const [consoleReady, setConsoleReady] = useState(false);
   const [section, setSection] = useState<PortfolioId | null>(null);
   const [keyboardOpen, setKeyboardOpen] = useState(false);
+  // one pop-up at a time above the dock
+  const [menu, setMenu] = useState<"portfolio" | "views" | null>(null);
   const keyboardOpenRef = useRef(false);
   keyboardOpenRef.current = keyboardOpen;
   const sectionRef = useRef<PortfolioId | null>(null);
@@ -156,7 +175,10 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
       else if (key === "b") roomRef.current?.setView(viewRef.current === "binoculars" ? lastRoomView.current : "binoculars");
       else if (key === "escape") {
         if (viewRef.current === "binoculars") roomRef.current?.setView(lastRoomView.current);
-        else setPanelOpen(false);
+        else {
+          setPanelOpen(false);
+          setMenu(null);
+        }
       }
     };
     window.addEventListener("keydown", onKey);
@@ -181,6 +203,16 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
     roomRef.current?.setSpeakerPlaying(playerOpen);
   }, [playerOpen]);
 
+  const toggleMenu = (m: "portfolio" | "views" | "lights") => {
+    if (m === "lights") {
+      setMenu(null);
+      setPanelOpen((o) => !o);
+    } else {
+      setPanelOpen(false);
+      setMenu((cur) => (cur === m ? null : m));
+    }
+  };
+
   const inBinoculars = view === "binoculars";
   const inConsole = view === "console";
   const away = inBinoculars || inConsole;
@@ -195,9 +227,9 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
           <Link to="/" className={chip}>
             <ArrowLeft className="h-4 w-4" /> Home
           </Link>
-          {!away && (
-            <p className="rounded-full bg-black/40 px-4 py-1.5 text-xs text-white/75 backdrop-blur-md" aria-live="polite">
-              {found.length === PORTFOLIO_IDS.length ? "You found the whole portfolio" : `Portfolio found: ${found.length} of ${PORTFOLIO_IDS.length} · click around the room`}
+          {!away && found.length === PORTFOLIO_IDS.length && (
+            <p className="rounded-full bg-black/40 px-4 py-1.5 text-xs text-amber-100/85 backdrop-blur-md" aria-live="polite">
+              You found the whole portfolio
             </p>
           )}
         </div>
@@ -253,7 +285,9 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
         <div className="pointer-events-auto absolute inset-y-0 right-0 z-10 flex w-full max-w-xl flex-col border-l border-white/10 bg-[#0b0c10]/85 backdrop-blur-xl animate-in slide-in-from-right-8 fade-in duration-300" role="dialog" aria-label={PORTFOLIO_SPOTS[section].title}>
           <div className="flex items-start justify-between gap-4 border-b border-white/10 px-6 pb-4 pt-6">
             <div className="min-w-0">
-              <p className="text-xs uppercase tracking-[0.2em] text-amber-200/70">Found · {PORTFOLIO_SPOTS[section].object}</p>
+              <p className="text-xs uppercase tracking-[0.2em] text-amber-200/70">
+                {found.includes(section) ? `Found · ${PORTFOLIO_SPOTS[section].object}` : "Portfolio · also hidden somewhere in the room"}
+              </p>
               <h2 className="mt-1 text-2xl font-bold">{PORTFOLIO_SPOTS[section].title}</h2>
             </div>
             <button type="button" aria-label="Close (Esc)" className="rounded-full p-2 text-white/60 hover:bg-white/10 hover:text-white" onClick={() => setSection(null)}>
@@ -269,7 +303,7 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
         <p className="pointer-events-none absolute left-1/2 top-4 -translate-x-1/2 rounded-full bg-black/55 px-4 py-1.5 text-xs text-white/85 backdrop-blur-md">{hover}</p>
       )}
       {panelOpen && !away && (
-        <div className="pointer-events-auto absolute bottom-36 right-4 max-h-[calc(100%-13rem)] w-[min(320px,calc(100%-32px))] overflow-y-auto overscroll-contain rounded-2xl border border-white/10 bg-black/70 p-5 backdrop-blur-xl">
+        <div className="pointer-events-auto absolute bottom-32 right-4 z-10 max-h-[calc(100%-12rem)] w-[min(320px,calc(100%-32px))] overflow-y-auto overscroll-contain rounded-2xl border border-white/10 bg-black/70 p-5 backdrop-blur-xl">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-base font-semibold">Lights</h2>
             <button type="button" aria-label="Close light settings" className="rounded-full p-1.5 text-white/60 hover:bg-white/10 hover:text-white" onClick={() => setPanelOpen(false)}>
@@ -385,40 +419,103 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
         </div>
       )}
 
-      <div className={`pointer-events-none absolute inset-x-0 bottom-0 flex flex-col items-center gap-2 p-4 pb-6 ${inConsole ? "hidden" : ""}`}>
-        <div className="flex flex-wrap justify-center gap-2">
-          {inBinoculars ? (
+      {/* the portfolio menu: every section, found or not */}
+      {menu === "portfolio" && !away && (
+        <div className="pointer-events-auto absolute inset-x-4 bottom-32 z-10 mx-auto max-h-[calc(100%-12rem)] max-w-2xl overflow-y-auto overscroll-contain rounded-2xl border border-white/10 bg-[#0b0c10]/90 p-5 backdrop-blur-xl animate-in fade-in slide-in-from-bottom-2 duration-200 sm:p-6" role="dialog" aria-label="My portfolio">
+          <div className="mb-4 flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-semibold">My portfolio</h2>
+              <p className="mt-0.5 text-sm text-white/60">Pick a section, or find each one hidden in the room.</p>
+            </div>
+            <button type="button" aria-label="Close" className="rounded-full p-1.5 text-white/60 hover:bg-white/10 hover:text-white" onClick={() => setMenu(null)}>
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {PORTFOLIO_IDS.map((id) => {
+              const isFound = found.includes(id);
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => {
+                    setMenu(null);
+                    setSection(id);
+                  }}
+                  className="group flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 text-left transition hover:border-amber-200/40 hover:bg-white/[0.07]"
+                >
+                  <span className="min-w-0">
+                    <span className="block font-medium text-white">{PORTFOLIO_SPOTS[id].title}</span>
+                    <span className="block truncate text-xs text-white/50">{isFound ? `Found · ${PORTFOLIO_SPOTS[id].object}` : "Still hidden in the room"}</span>
+                  </span>
+                  {isFound ? <Check className="h-4 w-4 shrink-0 text-amber-200" /> : <Search className="h-4 w-4 shrink-0 text-white/35 group-hover:text-white/70" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* camera views */}
+      {menu === "views" && !away && (
+        <div className="pointer-events-auto absolute bottom-32 left-1/2 z-10 w-56 -translate-x-1/2 overflow-hidden rounded-2xl border border-white/10 bg-[#0b0c10]/90 py-2 backdrop-blur-xl animate-in fade-in slide-in-from-bottom-2 duration-200" role="menu" aria-label="Views">
+          {VIEWS.map(([v, label]) => (
+            <button
+              key={v}
+              type="button"
+              role="menuitemradio"
+              aria-checked={view === v}
+              onClick={() => {
+                setMenu(null);
+                roomRef.current?.setView(v);
+              }}
+              className="flex w-full items-center justify-between px-4 py-2 text-left text-sm text-white/80 hover:bg-white/10 hover:text-white"
+            >
+              {label}
+              {view === v && <Check className="h-4 w-4 text-amber-200" />}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* the dock */}
+      <div className={`pointer-events-none absolute inset-x-0 bottom-0 flex flex-col items-center gap-2 px-4 pb-[calc(16px+env(safe-area-inset-bottom,0px))] ${inConsole ? "hidden" : ""}`}>
+        {inBinoculars ? (
+          <>
             <button type="button" className={chip} onClick={() => roomRef.current?.setView(lastRoomView.current)}>
               Back to the room (Esc)
             </button>
-          ) : (
-            <>
-              {VIEWS.map(([v, label]) => (
-                <button key={v} type="button" className={chip} aria-pressed={view === v} onClick={() => roomRef.current?.setView(v)}>
-                  {label}
-                </button>
-              ))}
-              <button type="button" className={chip} onClick={() => roomRef.current?.setView("console")}>
-                <Gamepad2 className="h-4 w-4" /> PlayStation
-              </button>
-              <button type="button" className={chip} aria-pressed={playlist ? playerOpen : radioOn} onClick={() => (playlist ? setPlayerOpen((o) => !o) : roomRef.current?.toggleRadio())}>
-                <Radio className="h-4 w-4" /> Music
-              </button>
-              <button type="button" className={chip} onClick={() => roomRef.current?.setView("binoculars")}>
-                <Binoculars className="h-4 w-4" /> Binoculars (B)
-              </button>
-              <button type="button" className={chip} aria-pressed={lamp.on} onClick={() => roomRef.current?.toggleLamp()}>
-                {lamp.on ? <Lightbulb className="h-4 w-4" /> : <LightbulbOff className="h-4 w-4" />} Lamp (L)
-              </button>
-              <button type="button" className={chip} aria-pressed={panelOpen} aria-label="Light settings" onClick={() => setPanelOpen((o) => !o)}>
-                <SlidersHorizontal className="h-4 w-4" />
-              </button>
-            </>
-          )}
-        </div>
-        <p className="text-xs text-white/50">
-          {inBinoculars ? "Drag to look around · scroll to zoom · Esc to step back" : "Drag to orbit · scroll to zoom · click around the room: the PS5 and its controller, lights, the speaker, the plushies, the perfume, the blind, the binoculars (B)"}
-        </p>
+            <p className="text-xs text-white/50">Drag to look around · scroll to zoom</p>
+          </>
+        ) : (
+          <>
+            <nav className="pointer-events-auto flex max-w-full items-stretch gap-1 overflow-x-auto rounded-2xl border border-white/10 bg-black/55 p-1.5 backdrop-blur-xl [scrollbar-width:none]" aria-label="Room controls">
+              <DockButton label="Portfolio" active={menu === "portfolio"} onClick={() => toggleMenu("portfolio")} accent badge={`${found.length}/${PORTFOLIO_IDS.length}`}>
+                <LayoutGrid className="h-5 w-5" />
+              </DockButton>
+              <span className="mx-1 hidden w-px self-stretch bg-white/10 sm:block" aria-hidden="true" />
+              <DockButton label="PlayStation" onClick={() => roomRef.current?.setView("console")}>
+                <Gamepad2 className="h-5 w-5" />
+              </DockButton>
+              <DockButton label="Binoculars" onClick={() => roomRef.current?.setView("binoculars")}>
+                <Binoculars className="h-5 w-5" />
+              </DockButton>
+              <DockButton label="Music" active={playlist ? playerOpen : radioOn} onClick={() => (playlist ? setPlayerOpen((o) => !o) : roomRef.current?.toggleRadio())}>
+                <Radio className="h-5 w-5" />
+              </DockButton>
+              <DockButton label="Lamp" className="hidden sm:flex" active={lamp.on} onClick={() => roomRef.current?.toggleLamp()}>
+                {lamp.on ? <Lightbulb className="h-5 w-5" /> : <LightbulbOff className="h-5 w-5" />}
+              </DockButton>
+              <DockButton label="Lights" active={panelOpen} onClick={() => toggleMenu("lights")}>
+                <SlidersHorizontal className="h-5 w-5" />
+              </DockButton>
+              <DockButton label="Views" active={menu === "views"} onClick={() => toggleMenu("views")}>
+                <Camera className="h-5 w-5" />
+              </DockButton>
+            </nav>
+            <p className="hidden text-center text-xs text-white/45 sm:block">Drag to look around · click things in the room · L lamp · B binoculars · M sound</p>
+          </>
+        )}
       </div>
     </main>
   );

@@ -5,8 +5,8 @@
 export type PortfolioId = "about" | "projects" | "experience" | "resume" | "leadership" | "skills" | "services" | "contact";
 
 export const PORTFOLIO_SPOTS: Record<PortfolioId, { object: string; title: string }> = {
-  about: { object: "The tapestry", title: "About Me" },
-  projects: { object: "The laptop", title: "Projects" },
+  about: { object: "The fragrances", title: "About Me" },
+  projects: { object: "The laptop screen", title: "Projects" },
   experience: { object: "The closet", title: "Experience" },
   resume: { object: "The resume in the drawer", title: "Resume" },
   leadership: { object: "The Western lanyard", title: "Leadership" },

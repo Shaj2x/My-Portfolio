@@ -628,7 +628,6 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
   {
     const [x, , z] = LAYOUT.laptop.pos;
     const g = anchor(x, deskTop, z, -Math.PI / 2 + 0.15);
-    spots.push({ id: "projects", root: g });
     const alu = std("#c9cacc", 0.35, 0.7);
     // stand: two raked rails
     for (const s of [-1, 1]) block(0.02, 0.012, 0.26, alu, s * 0.13, 0.05, 0, g).rotation.x = 0.28;
@@ -647,6 +646,8 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     const deck = rounded(0.33, 0.012, 0.23, 0.006, new THREE.MeshStandardMaterial({ map: keysTex, roughness: 0.4, metalness: 0.4 }), 0, 0, 0, tilt);
     deck.rotation.y = Math.PI;
     const hinge = new THREE.Group();
+    // the lid and its screen open Projects
+    spots.push({ id: "projects", root: hinge });
     hinge.position.set(0, 0.006, -0.115);
     hinge.rotation.x = -0.35;
     tilt.add(hinge);
@@ -934,7 +935,6 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     const cloth = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95 }));
     cloth.rotation.y = -Math.PI / 2;
     place(cloth, pos[0] - 0.01, pos[1], pos[2], group, false);
-    spots.push({ id: "about", root: cloth });
   }
 
   // ---------- window sill: plants, plushies and the binoculars ----------
