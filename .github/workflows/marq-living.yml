@@ -1,0 +1,67 @@
+name: Marq Living
+
+on:
+  push:
+    paths: ["marq-living/**", ".github/workflows/marq-living.yml"]
+  pull_request:
+    paths: ["marq-living/**", ".github/workflows/marq-living.yml"]
+
+jobs:
+  database:
+    name: Schema + RLS tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Migrations, seed and RLS tests on Postgres 16
+        run: marq-living/supabase/tests/run.sh
+
+  web:
+    name: Web app
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: marq-living/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: marq-living/web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  e2e:
+    name: End-to-end (GoTrue + PostgREST)
+    runs-on: ubuntu-24.04
+    needs: [database, web]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: marq-living/web/package-lock.json
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+          cache: false
+      - uses: actions/cache@v4
+        with:
+          path: marq-living/e2e/.work/bin
+          key: e2e-bin-${{ hashFiles('marq-living/e2e/run.sh') }}
+      - run: npm ci
+        working-directory: marq-living/web
+      - run: npm install --no-audit --no-fund && npx playwright install --with-deps chromium
+        working-directory: marq-living/e2e
+      - run: marq-living/e2e/run.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-screenshots-and-logs
+          path: |
+            marq-living/e2e/.work/shots
+            marq-living/e2e/.work/logs

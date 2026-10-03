@@ -1,0 +1,53 @@
+# Supabase CLI config for local development (`supabase start` from marq-living/).
+project_id = "marq-living"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 17
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
+
+[realtime]
+enabled = true
+
+[storage]
+enabled = true
+file_size_limit = "10MiB"
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000/auth/callback"]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+enable_signup = true
+minimum_password_length = 8
+
+[auth.email]
+enable_signup = true
+enable_confirmations = true
+double_confirm_changes = true
+
+# Links go to /auth/confirm (token-hash flow) so they work in any browser —
+# required for admin invites, which can't use PKCE. Use the same templates in
+# the hosted project (Authentication → Email Templates).
+[auth.email.template.confirmation]
+subject = "Confirm your Marq Living account"
+content_path = "./supabase/templates/confirmation.html"
+
+[auth.email.template.invite]
+subject = "You're invited to Marq Living"
+content_path = "./supabase/templates/invite.html"
+
+[auth.email.template.recovery]
+subject = "Reset your Marq Living password"
+content_path = "./supabase/templates/recovery.html"

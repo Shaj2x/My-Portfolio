@@ -1,0 +1,72 @@
+@import "tailwindcss";
+
+/* Marq Living palette: deep navy brand, warm brass accent, neutral surfaces. */
+:root {
+  --bg: #f6f5f2;
+  --surface: #ffffff;
+  --surface-2: #efede8;
+  --ink: #16181d;
+  --ink-2: #555a64;
+  --line: #e2dfd8;
+  --brand: #1b2a4a;
+  --brand-ink: #ffffff;
+  --accent: #b08a4f;
+  --ok: #1f7a4d;
+  --ok-bg: #e5f3eb;
+  --warn: #946200;
+  --warn-bg: #fbf1d9;
+  --bad: #b3261e;
+  --bad-bg: #fbe7e5;
+  --focus: #3b6fd8;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1115;
+    --surface: #171a20;
+    --surface-2: #1f232b;
+    --ink: #eceef2;
+    --ink-2: #a2a8b3;
+    --line: #2a2f38;
+    --brand: #c9d6f2;
+    --brand-ink: #0f1115;
+    --accent: #d2ae73;
+    --ok: #6cd39c;
+    --ok-bg: #12291d;
+    --warn: #f0c35a;
+    --warn-bg: #2b2412;
+    --bad: #ff8a80;
+    --bad-bg: #2e1513;
+    --focus: #8fb0ff;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-line: var(--line);
+  --color-brand: var(--brand);
+  --color-brand-ink: var(--brand-ink);
+  --color-accent: var(--accent);
+  --color-ok: var(--ok);
+  --color-ok-bg: var(--ok-bg);
+  --color-warn: var(--warn);
+  --color-warn-bg: var(--warn-bg);
+  --color-bad: var(--bad);
+  --color-bad-bg: var(--bad-bg);
+  --color-focus: var(--focus);
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
