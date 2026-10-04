@@ -95,7 +95,9 @@ insert into public.runs (id, route_id, service_date, scheduled_departure) values
   ('20000000-0000-0000-0000-000000000005', :route, current_date, now() - interval '6 min'),
   ('20000000-0000-0000-0000-000000000006', :route, current_date, now() - interval '6 min');
 update public.runs set delay_minutes = 10 where id = '20000000-0000-0000-0000-000000000006';
-select tests.eq(public.flag_late_runs(), 1, 'run 6 min past departure is flagged; delayed run is not');
+select public.flag_late_runs();
+select tests.ok((select late_flagged_at is not null from public.runs where id = '20000000-0000-0000-0000-000000000005'), 'run 6 min past departure is flagged');
+select tests.ok((select late_flagged_at is null from public.runs where id = '20000000-0000-0000-0000-000000000006'), 'a run delayed 10 min is not flagged yet');
 select tests.eq(public.flag_late_runs(), 0, 'a late run is flagged once');
 select tests.ok((select count(*) >= 3 from public.notifications where kind = 'staff_alert' and ref ->> 'run_id' = '20000000-0000-0000-0000-000000000005'), 'all staff alerted about the late run');
 
