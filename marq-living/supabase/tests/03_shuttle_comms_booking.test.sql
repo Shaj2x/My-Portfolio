@@ -235,3 +235,19 @@ select tests.eq((public.run_maintenance() ->> 'reminders')::int, 0, 'reminders a
 select tests.login(:alice);
 select tests.throws($$select public.run_maintenance()$$, 'tenants cannot run maintenance', '42501');
 select tests.logout();
+
+-- =========================================================================
+-- Offline devices: brief drops don't open tickets; 15 minutes does
+-- =========================================================================
+insert into public.devices (id, hardware_id, name, type, location, status, last_seen)
+values ('60000000-0000-0000-0000-000000000009', 'pir-blip', 'Blip PIR', 'pir', 'Gym', 'online', now() - interval '20 minutes');
+insert into public.device_events (device_id, type) values ('60000000-0000-0000-0000-000000000009', 'offline');
+select tests.eq((select status::text from public.devices where id = '60000000-0000-0000-0000-000000000009'), 'offline', 'offline event marks the device offline');
+select tests.eq((select count(*) from public.tickets where device_id = '60000000-0000-0000-0000-000000000009'), 0::bigint, 'going offline does not open a ticket by itself');
+insert into public.device_events (device_id, type) values ('60000000-0000-0000-0000-000000000009', 'online');
+update public.devices set last_seen = now() where id = '60000000-0000-0000-0000-000000000009';
+select tests.eq(public.escalate_offline_devices(), 0, 'a device that came back is not escalated');
+insert into public.device_events (device_id, type) values ('60000000-0000-0000-0000-000000000009', 'offline');
+update public.devices set last_seen = now() - interval '16 minutes' where id = '60000000-0000-0000-0000-000000000009';
+select tests.eq(public.escalate_offline_devices(), 1, 'offline for 15+ minutes opens a ticket');
+select tests.eq(public.escalate_offline_devices(), 0, 'and only one');

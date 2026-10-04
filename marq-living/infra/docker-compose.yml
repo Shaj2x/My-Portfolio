@@ -1,0 +1,91 @@
+# Marq Living building operations stack.
+#   docker compose up -d                      # broker, telemetry DB, services
+#   docker compose --profile demo up -d       # + simulator (no hardware needed)
+name: marq-living
+
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    ports: ["1883:1883"]          # add "8883:8883" with TLS for building devices
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./mosquitto/acl:/mosquitto/config/acl:ro
+      - ./mosquitto/passwd:/mosquitto/config/passwd:ro
+      - mosquitto-data:/mosquitto/data
+    healthcheck:
+      test: ["CMD-SHELL", "mosquitto_sub -h localhost -u ingest -P \"$$MQTT_INGEST_PASSWORD\" -t '$$SYS/broker/uptime' -C 1 -W 3"]
+      interval: 30s
+    environment:
+      MQTT_INGEST_PASSWORD: ${MQTT_INGEST_PASSWORD}
+
+  timescaledb:
+    image: timescale/timescaledb:latest-pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: telemetry
+      POSTGRES_PASSWORD: ${TIMESCALE_PASSWORD}
+    ports: ["127.0.0.1:5433:5432"]
+    volumes: [timescale-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-d", "telemetry"]
+      interval: 10s
+
+  ingest:
+    build: { context: ../services, args: { CMD: ingest } }
+    restart: unless-stopped
+    depends_on: { mosquitto: { condition: service_started }, timescaledb: { condition: service_healthy } }
+    environment:
+      MQTT_URL: tcp://mosquitto:1883
+      MQTT_USERNAME: ingest
+      MQTT_PASSWORD: ${MQTT_INGEST_PASSWORD}
+      TIMESCALE_URL: postgres://postgres:${TIMESCALE_PASSWORD}@timescaledb:5432/telemetry
+      SUPABASE_DB_URL: ${SUPABASE_DB_URL}
+      APP_NOTIFY_URL: ${APP_URL}/api/internal/notify
+      INTERNAL_API_SECRET: ${INTERNAL_API_SECRET}
+    ports: ["127.0.0.1:8081:8081"]
+
+  automation:
+    build: { context: ../services, args: { CMD: automation } }
+    restart: unless-stopped
+    depends_on: { mosquitto: { condition: service_started }, timescaledb: { condition: service_healthy } }
+    environment:
+      MQTT_URL: tcp://mosquitto:1883
+      MQTT_USERNAME: automation
+      MQTT_PASSWORD: ${MQTT_AUTOMATION_PASSWORD}
+      TIMESCALE_URL: postgres://postgres:${TIMESCALE_PASSWORD}@timescaledb:5432/telemetry
+      SUPABASE_DB_URL: ${SUPABASE_DB_URL}
+      APP_URL: ${APP_URL}
+      INTERNAL_API_SECRET: ${INTERNAL_API_SECRET}
+      CRON_SECRET: ${CRON_SECRET}
+      ANALYTICS_URL: http://analytics:8000
+      ANALYTICS_API_KEY: ${ANALYTICS_API_KEY}
+    ports: ["127.0.0.1:8082:8082"]
+
+  analytics:
+    build: ../analytics
+    restart: unless-stopped
+    depends_on: { timescaledb: { condition: service_healthy } }
+    environment:
+      TIMESCALE_URL: postgresql://postgres:${TIMESCALE_PASSWORD}@timescaledb:5432/telemetry
+      SUPABASE_DB_URL: ${SUPABASE_DB_URL}
+      ANALYTICS_API_KEY: ${ANALYTICS_API_KEY}
+      SCHEDULER_ENABLED: "true"
+    ports: ["8000:8000"]
+
+  simulator:
+    profiles: [demo]
+    build: ../simulator
+    restart: unless-stopped
+    depends_on: [mosquitto, ingest]
+    environment:
+      MQTT_URL: tcp://mosquitto:1883
+      MQTT_USERNAME: simulator
+      MQTT_PASSWORD: ${MQTT_SIMULATOR_PASSWORD}
+      SUPABASE_DB_URL: ${SUPABASE_DB_URL}
+      TIMESCALE_URL: postgresql://postgres:${TIMESCALE_PASSWORD}@timescaledb:5432/telemetry
+    command: ["live", "--drive-shuttle"]
+
+volumes:
+  mosquitto-data:
+  timescale-data:

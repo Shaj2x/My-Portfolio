@@ -1,0 +1,28 @@
+# Devices: username = hardware_id. Each device can only touch its own topics.
+pattern write marq/dev/%u/telemetry
+pattern write marq/dev/%u/status
+pattern write marq/dev/%u/event
+pattern write marq/dev/%u/ack
+pattern read  marq/dev/%u/cmd
+topic read marq/sys/heartbeat
+
+# Ingest service.
+user ingest
+topic read marq/dev/+/telemetry
+topic read marq/dev/+/status
+topic read marq/dev/+/event
+topic write marq/sys/events
+
+# Automation engine.
+user automation
+topic read marq/dev/+/event
+topic read marq/dev/+/ack
+topic read marq/dev/+/status
+topic read marq/sys/events
+topic write marq/dev/+/cmd
+topic write marq/sys/heartbeat
+
+# Demo simulator: speaks for every simulated device.
+user simulator
+topic readwrite marq/dev/#
+topic read marq/sys/heartbeat
