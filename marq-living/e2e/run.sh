@@ -44,7 +44,7 @@ fi
 
 # --- processes -----------------------------------------------------------------
 as_pg() { if [ "$(id -u)" = 0 ]; then runuser -u postgres -- "$@"; else "$@"; fi; }
-bg() { local name=$1; shift; "$@" >"$work/logs/$name.log" 2>&1 & echo $! >>"$work/pids"; }
+bg() { local name=$1; shift; "$@" >"$work/logs/$name.log" 2>&1 & echo $! >>"$work/pids"; echo $! >"$work/$name.pid"; }
 cleanup() {
   [ -f "$work/pids" ] && xargs -r kill 2>/dev/null <"$work/pids" || true
   as_pg "$pgbin/pg_ctl" -D "$pgdata/data" stop -m fast >/dev/null 2>&1 || true
@@ -113,6 +113,38 @@ PGRST_DB_EXTRA_SEARCH_PATH=public,extensions \
 wait_for "http://127.0.0.1:$PGRST_PORT/"
 echo "stack up"
 
+# --- building operations stack (broker, Go services, analytics, simulator) ----
+export E2E_WORK="$work" MQTT_PORT="${MQTT_PORT:-18883}" ANALYTICS_PORT="${ANALYTICS_PORT:-18000}"
+psql_run -c "create database telemetry"
+export APP_DSN="postgresql://postgres@127.0.0.1:$E2E_PG_PORT/postgres" TSDB_DSN="postgresql://postgres@127.0.0.1:$E2E_PG_PORT/telemetry"
+mq="$pgdata/mq"; mkdir -p "$mq"
+cp "$root/infra/mosquitto/acl" "$mq/acl"
+mosquitto_passwd -c -b "$mq/passwd" ingest ingest-pw
+mosquitto_passwd -b "$mq/passwd" automation automation-pw
+mosquitto_passwd -b "$mq/passwd" simulator simulator-pw
+sed -e "s#/mosquitto/config/#$mq/#; s#/mosquitto/data/#$mq/#; s#^listener 1883#listener $MQTT_PORT 127.0.0.1#" \
+  "$root/infra/mosquitto/mosquitto.conf" > "$mq/mosquitto.conf"
+chmod 755 "$mq"; chmod 644 "$mq/acl" "$mq/mosquitto.conf"; chmod 640 "$mq/passwd"
+[ "$(id -u)" = 0 ] && chown -R mosquitto "$mq" 2>/dev/null || true
+bg mosquitto mosquitto -c "$mq/mosquitto.conf"
+(cd "$root/services" && go build -o "$work/bin/ingest" ./cmd/ingest && go build -o "$work/bin/automation" ./cmd/automation)
+(cd "$root/simulator" && SUPABASE_DB_URL="$APP_DSN" python3 -m marq_sim seed >/dev/null 2>&1)
+(cd "$root/simulator" && SUPABASE_DB_URL="$APP_DSN" TIMESCALE_URL="$TSDB_DSN" python3 -c "
+import os, psycopg
+psycopg.connect(os.environ['TIMESCALE_URL'], autocommit=True).execute(open('$root/services/internal/store/telemetry.sql').read())
+from marq_sim import backfill
+backfill.backfill(os.environ['TIMESCALE_URL'], os.environ['SUPABASE_DB_URL'], days=10, automation_from_day=5)" >"$work/logs/backfill.log" 2>&1)
+export ANALYTICS_API_KEY="e2e-analytics-key" ANALYTICS_URL="http://127.0.0.1:$ANALYTICS_PORT"
+MQTT_URL="tcp://127.0.0.1:$MQTT_PORT" MQTT_USERNAME=ingest MQTT_PASSWORD=ingest-pw TIMESCALE_URL="$TSDB_DSN" SUPABASE_DB_URL="$APP_DSN" \
+  HTTP_ADDR="127.0.0.1:18081" APP_NOTIFY_URL="http://localhost:$APP_PORT/api/internal/notify" INTERNAL_API_SECRET="e2e-internal-secret" \
+  bg ingest "$work/bin/ingest"
+(cd "$root/analytics" && TIMESCALE_URL="$TSDB_DSN" SUPABASE_DB_URL="$APP_DSN" ANALYTICS_API_KEY="$ANALYTICS_API_KEY" \
+  WEATHER_URL="http://127.0.0.1:9/offline" SCHEDULER_ENABLED=true \
+  bg analytics python3 -m uvicorn marq_analytics.api:app --host 127.0.0.1 --port "$ANALYTICS_PORT")
+wait_for "http://127.0.0.1:$ANALYTICS_PORT/health"
+wait_for "http://127.0.0.1:18081/healthz"
+echo "building stack up"
+
 # --- app -------------------------------------------------------------------------
 anon_key="$(node "$here/jwt.js" "$SECRET" anon)"
 service_key="$(node "$here/jwt.js" "$SECRET" service_role)"
@@ -128,7 +160,16 @@ cd "$root/web"; NEXT_DIST_DIR=.next-e2e bg app node node_modules/next/dist/bin/n
 wait_for "http://localhost:$APP_PORT/login"
 echo "app up"
 
-for t in "${@:-stage1 stage2to4}"; do
+# Automation and the simulator start after the app (the engine calls its tick).
+MQTT_URL="tcp://127.0.0.1:$MQTT_PORT" MQTT_USERNAME=automation MQTT_PASSWORD=automation-pw TIMESCALE_URL="$TSDB_DSN" SUPABASE_DB_URL="$APP_DSN" \
+  HTTP_ADDR="127.0.0.1:18082" APP_URL="http://localhost:$APP_PORT" CRON_SECRET="$CRON_SECRET" INTERNAL_API_SECRET="$INTERNAL_API_SECRET" \
+  bg automation "$work/bin/automation"
+wait_for "http://127.0.0.1:18082/healthz"
+(cd "$root/simulator" && MQTT_URL="tcp://127.0.0.1:$MQTT_PORT" MQTT_USERNAME=simulator MQTT_PASSWORD=simulator-pw SUPABASE_DB_URL="$APP_DSN" \
+  bg simulator python3 -m marq_sim live --seed 3)
+echo "automation and simulator up"
+
+for t in "${@:-stage1 stage2to4 system}"; do
   for name in $t; do echo "== $name"; node "$here/$name.test.js"; done
 done
 echo "screenshots: $E2E_SHOTS"

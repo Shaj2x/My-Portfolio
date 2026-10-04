@@ -67,3 +67,24 @@ const mobile = { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 };
 const timeLabel = (d) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Toronto", hour: "numeric", minute: "2-digit" }).format(d);
 
 module.exports = { BASE, API, MAIL, SHOTS, ok, count, sql, linkFor, now, signIn, makeUser, launch, mobile, timeLabel };
+
+const sqlT = (q) =>
+  execSync(`psql -X -t -A -h 127.0.0.1 -p ${process.env.E2E_PG_PORT} -U postgres -d telemetry`, { input: q }).toString().trim();
+
+async function until(label, fn, timeoutMs = 60000, everyMs = 2000) {
+  const end = Date.now() + timeoutMs;
+  let last;
+  while (Date.now() < end) {
+    try {
+      last = await fn();
+      if (last) return last;
+    } catch (e) {
+      last = e;
+    }
+    await new Promise((r) => setTimeout(r, everyMs));
+  }
+  throw new Error(`timed out waiting for: ${label} (last: ${last})`);
+}
+
+module.exports.sqlT = sqlT;
+module.exports.until = until;

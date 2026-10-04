@@ -179,12 +179,12 @@ const { BASE, SHOTS, ok, count, sql, signIn, makeUser, launch, mobile, timeLabel
 
   // --- Device fault → ticket + laundry announcement ---------------------------
   sql(`insert into public.devices (id, hardware_id, name, type, location) values ('6e000000-0000-0000-0000-000000000001', 'ct-laundry-e2e', 'Laundry CT', 'ct_node', 'Laundry room');
-       insert into public.laundry_machines (label, kind, device_id, channel, state) values ('Dryer 2', 'dryer', '6e000000-0000-0000-0000-000000000001', 1, 'idle');
+       insert into public.laundry_machines (label, kind, device_id, channel, state) values ('Test Dryer', 'dryer', '6e000000-0000-0000-0000-000000000001', 1, 'idle');
        insert into public.device_events (device_id, type, payload) values ('6e000000-0000-0000-0000-000000000001', 'fault', '{"channel":1,"message":"Heating element drawing 0 W"}');`);
   await stanP.goto(BASE + "/staff/tickets");
   ok(await stanP.getByText("Laundry CT: fault").isVisible(), "device fault opened a system ticket");
   await umaP.goto(BASE + "/announcements");
-  ok(await umaP.getByRole("heading", { name: "Dryer 2 is out of service" }).isVisible(), "tenants see the automatic out-of-service post");
+  ok(await umaP.getByRole("heading", { name: "Test Dryer is out of service" }).isVisible(), "tenants see the automatic out-of-service post");
 
   await browser.close();
   console.log(`\n${count()} stage 2–4 checks passed`);

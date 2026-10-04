@@ -197,7 +197,7 @@ func ParseEvent(b []byte, now time.Time) (Event, error) {
 
 // Command is sent on marq/dev/{hw}/cmd. Exactly one action is set.
 type Command struct {
-	ID     int64           `json:"id"`
+	ID     int64           `json:"id,omitempty"`
 	Relay  *RelayCmd       `json:"relay,omitempty"`
 	HVAC   *HVACCmd        `json:"hvac,omitempty"`
 	EV     *EVCmd          `json:"ev,omitempty"`

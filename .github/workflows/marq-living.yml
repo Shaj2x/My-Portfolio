@@ -6,58 +6,90 @@ on:
   pull_request:
     paths: ["marq-living/**", ".github/workflows/marq-living.yml"]
 
+defaults:
+  run:
+    working-directory: marq-living
+
 jobs:
   database:
     name: Schema + RLS tests
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - name: Migrations, seed and RLS tests on Postgres 16
-        run: marq-living/supabase/tests/run.sh
+      - run: supabase/tests/run.sh
 
   web:
     name: Web app
     runs-on: ubuntu-24.04
-    defaults:
-      run:
-        working-directory: marq-living/web
+    defaults: { run: { working-directory: marq-living/web } }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: marq-living/web/package-lock.json
+        with: { node-version: 22, cache: npm, cache-dependency-path: marq-living/web/package-lock.json }
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
 
-  e2e:
-    name: End-to-end (GoTrue + PostgREST)
+  services:
+    name: Go services
     runs-on: ubuntu-24.04
-    needs: [database, web]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: "1.24", cache-dependency-path: marq-living/services/go.sum }
+      - run: test -z "$(gofmt -l services)"
+      - run: cd services && go vet ./... && go test ./...
+      - run: services/test-integration.sh
+
+  python:
+    name: Analytics + simulator
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -r analytics/requirements.txt -r simulator/requirements.txt pytest
+      - run: cd simulator && python -m pytest -q
+      - run: scripts/with-test-db.sh sh -c 'cd analytics && python -m pytest -q'
+
+  firmware:
+    name: ESP32 firmware
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: make -C firmware/test/host
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: pio-${{ hashFiles('marq-living/firmware/platformio.ini') }}
+      - run: pip install platformio
+      - run: cd firmware && cp include/config.example.h include/config.h && pio run -e ct_node -e room_node
+
+  e2e:
+    name: End-to-end (auth, app, building stack, simulator)
+    runs-on: ubuntu-24.04
+    needs: [database, web, services, python]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: marq-living/web/package-lock.json
+        with: { node-version: 22, cache: npm, cache-dependency-path: marq-living/web/package-lock.json }
       - uses: actions/setup-go@v5
-        with:
-          go-version: "1.24"
-          cache: false
+        with: { go-version: "1.24", cache-dependency-path: marq-living/services/go.sum }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
       - uses: actions/cache@v4
         with:
           path: marq-living/e2e/.work/bin
           key: e2e-bin-${{ hashFiles('marq-living/e2e/run.sh') }}
-      - run: npm ci
-        working-directory: marq-living/web
-      - run: npm install --no-audit --no-fund && npx playwright install --with-deps chromium
-        working-directory: marq-living/e2e
-      - run: marq-living/e2e/run.sh
+      - run: sudo apt-get update && sudo apt-get install -y mosquitto && sudo systemctl stop mosquitto || true
+      - run: pip install -r analytics/requirements.txt -r simulator/requirements.txt
+      - run: cd web && npm ci
+      - run: cd e2e && npm install --no-audit --no-fund && npx playwright install --with-deps chromium
+      - run: e2e/run.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:

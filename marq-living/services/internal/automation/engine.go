@@ -113,7 +113,7 @@ func (e *Engine) Evaluate(rules []Rule, s Snapshot) (actions []Planned, skipped 
 					// Fire once when its moment has passed (but not for bookings
 					// that ended long before the engine started).
 					if !s.Now.Before(at) && s.Now.Before(until) && at.After(e.started.Add(-6*time.Hour)) {
-						fires = append(fires, firing{r, slug, t.Type + "|" + b.ID, fmt.Sprintf("%s (booking %s–%s)", humanTrigger(t.Type), b.Start.Format("15:04"), b.End.Format("15:04"))})
+						fires = append(fires, firing{r, slug, t.Type + "|" + b.ID, fmt.Sprintf("%s (booking %s–%s)", humanTrigger(t.Type), b.Start.In(s.Now.Location()).Format("15:04"), b.End.In(s.Now.Location()).Format("15:04"))})
 					}
 				}
 			case "motion.detected":

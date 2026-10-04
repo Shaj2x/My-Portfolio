@@ -76,7 +76,7 @@ export default async function AnalyticsPage({ searchParams }: PageProps<"/staff/
         </Card>
         <Card>
           <h2 className="mb-3 font-medium">Laundry cycles</h2>
-          {laundry.data?.length ? <BarList rows={laundry.data.map((l) => ({ label: l.label!, value: l.cycles ?? 0 }))} unit="cycles" format={(v) => v.toFixed(0)} /> : <p className="text-sm text-ink-2">No laundry data.</p>}
+          {laundry.data?.length ? <BarList rows={laundry.data.map((l) => ({ label: l.label!, value: l.cycles ?? 0 }))} unit="cycles" decimals={0} /> : <p className="text-sm text-ink-2">No laundry data.</p>}
         </Card>
         <Card>
           <h2 className="mb-3 font-medium">Energy by system</h2>

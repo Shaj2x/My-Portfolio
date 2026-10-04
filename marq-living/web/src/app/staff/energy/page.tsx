@@ -59,7 +59,7 @@ export default async function EnergyPage({ searchParams }: PageProps<"/staff/ene
         <Card>
           <h2 className="mb-3 text-sm text-ink-2">By system now</h2>
           {live?.systems.length ? (
-            <BarList rows={live.systems.map((s) => ({ label: s.name, value: s.kw }))} unit="kW" format={(v) => v.toFixed(2)} />
+            <BarList rows={live.systems.map((s) => ({ label: s.name, value: s.kw }))} unit="kW" decimals={2} />
           ) : <p className="text-sm text-ink-2">No devices reporting in the last 10 minutes.</p>}
         </Card>
       </div>
@@ -96,7 +96,7 @@ export default async function EnergyPage({ searchParams }: PageProps<"/staff/ene
           <Card>
             <h2 className="mb-3 font-medium">Cost by price period ({summary.plan.toUpperCase()})</h2>
             <BarList rows={summary.by_period.map((p) => ({ label: PERIOD_LABEL[p.period] ?? p.period, value: p.cost, note: `${p.kwh} kWh @ ${p.cents_per_kwh}¢` }))}
-              unit="" format={money} />
+              unit="" currency />
           </Card>
         </div>
       ) : null}

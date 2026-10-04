@@ -97,8 +97,8 @@ export default async function StaffOverview() {
                 <li key={r.slug} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2">
                   <span className="font-medium">{r.name}</span>
                   <span className="flex flex-wrap gap-1">
-                    <Badge tone={st.lights === "on" ? "ok" : "neutral"}>Lights {st.lights ?? "?"}</Badge>
-                    <Badge>HVAC {st.hvac_mode ?? "?"}</Badge>
+                    <Badge tone={st.lights === "on" ? "ok" : "neutral"}>Lights {st.lights ?? "—"}</Badge>
+                    <Badge>HVAC {st.hvac_mode ?? "—"}</Badge>
                     <Badge tone={occ ? "brand" : "neutral"}>{occ ? "Occupied" : "Empty"}</Badge>
                     {r.override_mode !== "auto" ? <Badge tone="warn">Manual</Badge> : null}
                   </span>

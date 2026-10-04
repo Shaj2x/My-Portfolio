@@ -86,7 +86,7 @@ export default async function RoomsPage() {
                   <td className="whitespace-nowrap px-4 py-2">{relativeMinutes(c.created_at, now) === "now" ? formatTime(c.created_at) : formatDateTime(c.created_at)}</td>
                   <td>{devices?.find((d) => d.id === c.device_id)?.name ?? "—"}</td>
                   <td className="font-mono text-xs">{JSON.stringify(c.command)}</td>
-                  <td>{who(c)}{c.reason ? <span className="block text-xs text-ink-2">{c.reason}</span> : null}</td>
+                  <td>{who(c)}{c.reason ? <span className="block text-xs text-ink-2">{c.reason.startsWith(`${who(c)}: `) ? c.reason.slice(who(c).length + 2) : c.reason}</span> : null}</td>
                   <td className="px-4"><Badge tone={c.status === "acked" ? "ok" : c.status === "failed" || c.status === "expired" ? "bad" : "neutral"}>{c.status}</Badge>{c.error ? <span className="block text-xs text-bad">{c.error}</span> : null}</td>
                 </tr>
               ))}

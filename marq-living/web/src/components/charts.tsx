@@ -33,7 +33,11 @@ export function StackedArea({
       return [y0, acc] as const;
     });
   }), [points, series]);
-  const maxY = Math.max(1, limit?.value ?? 0, ...stacks.map((st) => st.at(-1)?.[1] ?? 0)) * 1.08;
+  const dataMax = Math.max(1, ...stacks.map((st) => st.at(-1)?.[1] ?? 0));
+  // Keep the data readable: only stretch the axis to the limit when the load
+  // gets within reach of it; otherwise state the limit instead of drawing it.
+  const limitOnScale = !!limit && limit.value <= dataMax * 2.5;
+  const maxY = Math.max(dataMax, limitOnScale ? limit!.value : 0) * 1.08;
   const x = (i: number) => padL + (points.length <= 1 ? 0 : (i / (points.length - 1)) * (W - padL - padR));
   const y = (v: number) => padT + (1 - v / maxY) * (H - padT - padB);
   const ticks = niceTicks(maxY);
@@ -68,11 +72,13 @@ export function StackedArea({
             </g>
           ))}
           {areas}
-          {limit ? (
+          {limit && limitOnScale ? (
             <g>
               <line x1={padL} x2={W - padR} y1={y(limit.value)} y2={y(limit.value)} stroke="var(--bad)" strokeWidth={2} strokeDasharray="6 4" />
               <text x={W - padR} y={y(limit.value) - 5} textAnchor="end" fontSize={11} fill="var(--ink-2)">{limit.label}</text>
             </g>
+          ) : limit ? (
+            <text x={W - padR} y={padT + 10} textAnchor="end" fontSize={11} fill="var(--ink-2)">{`${limit.label} — well above this range`}</text>
           ) : null}
           {[0, Math.floor(points.length / 2), points.length - 1].map((i) => (
             <text key={i} x={x(i)} y={H - 6} textAnchor={i === 0 ? "start" : i === points.length - 1 ? "end" : "middle"} fontSize={11} fill="var(--ink-2)">
@@ -130,12 +136,17 @@ export function Legend({ items }: { items: { name: string; color: string }[] }) 
 }
 
 /** Horizontal bars with direct value labels (magnitude, one hue). */
-export function BarList({ rows, unit, color = "var(--series-1)", format = (v: number) => v.toFixed(1) }: {
+export function BarList({ rows, unit, color = "var(--series-1)", decimals = 1, currency = false }: {
   rows: { label: string; value: number; note?: string }[];
   unit: string;
   color?: string;
-  format?: (v: number) => string;
+  // Options rather than a formatter function: this renders on the client and
+  // server components can't pass functions to it.
+  decimals?: number;
+  currency?: boolean;
 }) {
+  const format = (v: number) =>
+    currency ? v.toLocaleString("en-CA", { style: "currency", currency: "CAD" }) : v.toFixed(decimals);
   const max = Math.max(...rows.map((r) => r.value), 0.0001);
   return (
     <ul className="flex flex-col gap-2">
@@ -193,7 +204,9 @@ export function ForecastChart({ points, limit, height = 220 }: {
   const [hover, setHover] = useState<number | null>(null);
   const W = 720, H = height, padL = 40, padR = 8, padT = 10, padB = 24;
   if (!points.length) return <p className="text-sm text-ink-2">No forecast yet. It runs nightly at 9:30 pm, or use “Run forecast now”.</p>;
-  const maxY = Math.max(limit ?? 0, ...points.map((p) => Math.max(p.upper_kw, p.actual_kw ?? 0))) * 1.1 || 1;
+  const dataMax = Math.max(1, ...points.map((p) => Math.max(p.upper_kw, p.actual_kw ?? 0)));
+  const limitOnScale = !!limit && limit <= dataMax * 2.5;
+  const maxY = Math.max(dataMax, limitOnScale ? limit! : 0) * 1.1;
   const x = (i: number) => padL + (i / Math.max(points.length - 1, 1)) * (W - padL - padR);
   const y = (v: number) => padT + (1 - v / maxY) * (H - padT - padB);
   const band = [...points.map((p, i) => `${x(i)},${y(p.upper_kw)}`), ...points.map((p, i) => `${x(i)},${y(p.lower_kw)}`).reverse()].join(" ");
@@ -226,11 +239,13 @@ export function ForecastChart({ points, limit, height = 220 }: {
           <polygon points={band} fill="var(--series-1)" opacity={0.15} />
           <path d={line(points.map((p) => p.predicted_kw))} fill="none" stroke="var(--series-1)" strokeWidth={2} />
           <path d={line(points.map((p) => p.actual_kw))} fill="none" stroke="var(--series-2)" strokeWidth={2} />
-          {limit ? (
+          {limit && limitOnScale ? (
             <g>
               <line x1={padL} x2={W - padR} y1={y(limit)} y2={y(limit)} stroke="var(--bad)" strokeWidth={2} strokeDasharray="6 4" />
               <text x={W - padR} y={y(limit) - 5} textAnchor="end" fontSize={11} fill="var(--ink-2)">Peak limit {limit} kW</text>
             </g>
+          ) : limit ? (
+            <text x={W - padR} y={padT + 10} textAnchor="end" fontSize={11} fill="var(--ink-2)">{`Peak limit ${limit} kW — well above this range`}</text>
           ) : null}
           {[0, Math.floor(points.length / 2), points.length - 1].map((i) => (
             <text key={i} x={x(i)} y={H - 6} textAnchor={i === 0 ? "start" : i === points.length - 1 ? "end" : "middle"} fontSize={11} fill="var(--ink-2)">
