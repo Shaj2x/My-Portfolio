@@ -2,7 +2,7 @@ import Link from "next/link";
 import { signOut } from "@/app/(auth)/actions";
 import { Badge, Logo } from "@/components/ui";
 import { ROLE_LABEL } from "@/lib/roles";
-import type { Profile } from "@/lib/database.types";
+import type { Profile } from "@/lib/types";
 
 export function AppHeader({ profile, homeHref = "/" }: { profile: Profile; homeHref?: string }) {
   return (

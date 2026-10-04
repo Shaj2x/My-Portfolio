@@ -96,20 +96,20 @@ select tests.logout();
 -- =========================================================================
 select tests.login(:alice);
 insert into public.bookings (amenity_id, tenant_id, unit, period)
-values ('30000000-0000-0000-0000-000000000001', :alice, '502', tstzrange(date_trunc('hour', now()) + interval '1 day 19 hours', date_trunc('hour', now()) + interval '1 day 21 hours'));
-select tests.throws(format($$insert into public.bookings (amenity_id, tenant_id, unit, period) values ('30000000-0000-0000-0000-000000000001', %L, '702', tstzrange(now() + interval '3 days', now() + interval '3 days 1 hour'))$$, :bob), 'tenant cannot book as someone else', '42501');
+values ('30000000-0000-0000-0000-000000000001', :alice, '502', tests.slot(1, 19, 120));
+select tests.throws(format($$insert into public.bookings (amenity_id, tenant_id, unit, period) values ('30000000-0000-0000-0000-000000000001', %L, '702', tests.slot(3, 12, 60))$$, :bob), 'tenant cannot book as someone else', '42501');
 select tests.logout();
 
 select tests.login(:bob);
 select tests.eq((select count(*) from public.bookings), 0::bigint, 'tenant cannot see another tenant''s booking');
 select tests.eq((select count(*) from public.amenity_busy_periods('30000000-0000-0000-0000-000000000001', now(), now() + interval '7 days')), 1::bigint, 'busy periods show the slot without who booked it');
-select tests.throws(format($$insert into public.bookings (amenity_id, tenant_id, unit, period) values ('30000000-0000-0000-0000-000000000001', %L, '702', tstzrange(date_trunc('hour', now()) + interval '1 day 20 hours', date_trunc('hour', now()) + interval '1 day 22 hours'))$$, :bob), 'overlapping booking is rejected', '23P01');
+select tests.throws(format($$insert into public.bookings (amenity_id, tenant_id, unit, period) values ('30000000-0000-0000-0000-000000000001', %L, '702', tests.slot(1, 20, 120))$$, :bob), 'overlapping booking is rejected', '23P01');
 select tests.eq(tests.rows($$update public.bookings set status = 'cancelled'$$), 0::bigint, 'tenant cannot cancel another tenant''s booking');
 select tests.logout();
 
 select tests.login(:carol);
 select tests.eq((select count(*) from public.amenity_busy_periods('30000000-0000-0000-0000-000000000001', now(), now() + interval '7 days')), 0::bigint, 'pending tenant gets no availability data');
-select tests.throws(format($$insert into public.bookings (amenity_id, tenant_id, unit, period) values ('30000000-0000-0000-0000-000000000001', %L, '503', tstzrange(now() + interval '4 days', now() + interval '4 days 1 hour'))$$, :carol), 'pending tenant cannot book', '42501');
+select tests.throws(format($$insert into public.bookings (amenity_id, tenant_id, unit, period) values ('30000000-0000-0000-0000-000000000001', %L, '503', tests.slot(4, 12, 60))$$, :carol), 'pending tenant cannot book', '42501');
 select tests.logout();
 
 select tests.login(:alice);
@@ -121,10 +121,10 @@ select tests.logout();
 -- Shuttle: runs and live location
 -- =========================================================================
 select tests.login(:dee);
-select tests.eq(tests.rows(format($$update public.runs set status = 'active', driver_id = %L, started_at = now() where id = '20000000-0000-0000-0000-000000000001'$$, :dee)), 1::bigint, 'driver starts a run');
+select tests.eq((public.start_run('20000000-0000-0000-0000-000000000001')).status::text, 'active', 'driver starts a run');
 insert into public.shuttle_locations (run_id, lat, lng) values ('20000000-0000-0000-0000-000000000001', 42.9849, -81.2453);
 select tests.throws($$insert into public.shuttle_locations (run_id, lat, lng) values ('20000000-0000-0000-0000-000000000002', 42.98, -81.24)$$, 'driver cannot post location for a run that is not active', '42501');
-select tests.throws(format($$update public.runs set driver_id = %L where id = '20000000-0000-0000-0000-000000000002'$$, :alice), 'driver cannot assign a run to someone else', '42501');
+select tests.eq(tests.rows(format($$update public.runs set driver_id = %L$$, :alice)), 0::bigint, 'drivers cannot edit runs directly');
 select tests.logout();
 
 select tests.login(:alice);

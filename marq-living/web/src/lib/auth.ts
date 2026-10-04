@@ -3,7 +3,7 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { canAccess, homeFor, type Area } from "@/lib/roles";
-import type { Profile } from "@/lib/database.types";
+import type { Profile } from "@/lib/types";
 
 /**
  * The signed-in user's profile, or null when signed out. Verified against

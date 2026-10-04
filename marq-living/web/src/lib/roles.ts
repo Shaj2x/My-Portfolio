@@ -1,9 +1,9 @@
-import type { AccountStatus, AppRole } from "@/lib/database.types";
+import type { AccountStatus, AppRole } from "@/lib/types";
 
 // Pure routing rules for who lands where. Kept free of I/O so they can be
 // unit-tested and shared by the proxy, pages and actions.
 
-export const PUBLIC_PATHS = ["/login", "/signup", "/forgot-password", "/auth/"] as const;
+export const PUBLIC_PATHS = ["/login", "/signup", "/forgot-password", "/auth/", "/api/cron/", "/api/internal/"] as const;
 
 export function isPublicPath(path: string): boolean {
   return PUBLIC_PATHS.some((p) => (p.endsWith("/") ? path.startsWith(p) : path === p || path.startsWith(p + "/")));

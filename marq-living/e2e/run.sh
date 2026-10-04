@@ -118,11 +118,17 @@ anon_key="$(node "$here/jwt.js" "$SECRET" anon)"
 service_key="$(node "$here/jwt.js" "$SECRET" service_role)"
 export NEXT_PUBLIC_SUPABASE_URL="http://localhost:$GATEWAY_PORT"
 export NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="$anon_key" SUPABASE_SECRET_KEY="$service_key"
-export NEXT_PUBLIC_SITE_URL="http://localhost:$APP_PORT"
+export NEXT_PUBLIC_SITE_URL="http://localhost:$APP_PORT" SERVICE_KEY="$service_key"
+export CRON_SECRET="e2e-cron-secret" INTERNAL_API_SECRET="e2e-internal-secret"
+vapid="$(cd "$root/web" && npx --no-install web-push generate-vapid-keys --json)"
+export NEXT_PUBLIC_VAPID_PUBLIC_KEY="$(node -e "console.log(JSON.parse(process.argv[1]).publicKey)" "$vapid")"
+export VAPID_PRIVATE_KEY="$(node -e "console.log(JSON.parse(process.argv[1]).privateKey)" "$vapid")"
 (cd "$root/web" && NEXT_DIST_DIR=.next-e2e npx next build >"$work/logs/build.log" 2>&1) || { tail -30 "$work/logs/build.log"; exit 1; }
 cd "$root/web"; NEXT_DIST_DIR=.next-e2e bg app node node_modules/next/dist/bin/next start --port "$APP_PORT"; cd "$here"
 wait_for "http://localhost:$APP_PORT/login"
 echo "app up"
 
-node "$here/stage1.test.js"
+for t in "${@:-stage1 stage2to4}"; do
+  for name in $t; do echo "== $name"; node "$here/$name.test.js"; done
+done
 echo "screenshots: $E2E_SHOTS"

@@ -62,3 +62,11 @@ begin
 end $$;
 
 grant execute on all functions in schema tests to anon, authenticated, service_role;
+
+-- A booking slot d days from today at local hour h, lasting dur minutes.
+create or replace function tests.slot(d int, h int, dur int) returns tstzrange language sql stable as $$
+  select tstzrange(s, s + make_interval(mins => dur))
+    from (select ((((now() at time zone 'America/Toronto')::date + d) + make_time(h, 0, 0))::timestamp
+                  at time zone 'America/Toronto') as s) x
+$$;
+grant execute on function tests.slot(int, int, int) to authenticated, anon;

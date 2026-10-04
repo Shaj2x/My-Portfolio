@@ -3,7 +3,7 @@ import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { ROLE_LABEL } from "@/lib/roles";
 import { Badge, Button, Card } from "@/components/ui";
-import type { AppRole } from "@/lib/database.types";
+import type { AppRole } from "@/lib/types";
 import { changeRole, reviewAccount } from "../actions";
 import { InviteForm } from "./invite-form";
 

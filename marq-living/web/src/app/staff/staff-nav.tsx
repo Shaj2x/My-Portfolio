@@ -4,12 +4,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cx } from "@/components/ui";
 
-export function StaffNav({ pendingCount, isAdmin }: { pendingCount: number; isAdmin: boolean }) {
+export function StaffNav({ pendingCount, openTickets = 0, isAdmin }: { pendingCount: number; openTickets?: number; isAdmin: boolean }) {
   const path = usePathname();
   const items = [
     { href: "/staff", label: "Overview" },
     { href: "/staff/approvals", label: "Approvals", count: pendingCount },
     { href: "/staff/residents", label: "Residents" },
+    { href: "/staff/shuttle", label: "Shuttle" },
+    { href: "/staff/announcements", label: "News" },
+    { href: "/staff/tickets", label: "Tickets", count: openTickets },
+    { href: "/staff/amenities", label: "Amenities" },
     ...(isAdmin ? [{ href: "/staff/team", label: "Team" }] : []),
   ];
   return (

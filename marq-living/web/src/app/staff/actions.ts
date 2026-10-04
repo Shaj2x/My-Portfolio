@@ -29,7 +29,7 @@ export async function reviewAccount(formData: FormData) {
   const { error } = await supabase.rpc("review_tenant", {
     target: input.id,
     decision: input.decision,
-    note: input.note ?? null,
+    note: input.note,
   });
   if (error) throw new Error(error.message);
 

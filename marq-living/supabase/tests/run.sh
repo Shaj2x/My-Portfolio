@@ -29,6 +29,11 @@ if [ -f "$here/../seed.sql" ]; then
   echo "seed"
   psql_run -f "$here/../seed.sql"
 fi
+if [ "${1:-}" = "--types" ]; then
+  node "$here/../../scripts/gen-types.mjs" "postgres://postgres@127.0.0.1:$port/postgres?host=$work" > "$here/../../web/src/lib/database.types.ts"
+  echo "wrote web/src/lib/database.types.ts"
+  exit 0
+fi
 for t in "$here"/[0-9]*_*.test.sql; do
   echo "test $(basename "$t")"
   psql_run -f "$t" 2>&1 | grep -v "^$" | sed "s/^psql:[^ ]* NOTICE:  /  /"
