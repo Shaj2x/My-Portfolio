@@ -13,7 +13,7 @@ port="${PGTEST_PORT:-54329}"
 as_pg() { if [ "$(id -u)" = 0 ]; then runuser -u postgres -- "$@"; else "$@"; fi; }
 
 chmod 777 "$work"
-as_pg "$pgbin/initdb" -D "$work/data" -U postgres --auth=trust >/dev/null
+as_pg "$pgbin/initdb" -D "$work/data" -U postgres --auth=trust -E UTF8 --locale=C >/dev/null
 as_pg "$pgbin/pg_ctl" -D "$work/data" -o "-p $port -k $work -c listen_addresses=''" -l "$work/log" start >/dev/null
 trap 'as_pg "$pgbin/pg_ctl" -D "$work/data" stop -m fast >/dev/null; rm -rf "$work"' EXIT
 

@@ -51,3 +51,28 @@ on conflict (route_id, day_of_week, departure_time) do nothing;
 
 select public.materialize_runs((now() at time zone 'America/Toronto')::date);
 select public.materialize_runs((now() at time zone 'America/Toronto')::date + 1);
+
+-- Default automation rules (editable in Staff → Rules).
+insert into public.automation_rules (name, description, trigger, conditions, actions, priority)
+select * from (values
+  ('Get room ready before a booking',
+   'Lights on and HVAC to comfort 15 minutes before each booking.',
+   '{"type": "booking.starting", "room": "*", "minutes": 15}'::jsonb, '[]'::jsonb,
+   '[{"type": "set_lights", "room": "$room", "state": "on"}, {"type": "set_hvac", "room": "$room", "mode": "comfort"}]'::jsonb, 10),
+  ('Power down after a booking once the room is empty',
+   'When a booking ends and there has been no motion for 10 minutes, lights off and HVAC setback.',
+   '{"type": "booking.ended", "room": "*", "wait_up_to_minutes": 90}'::jsonb,
+   '[{"type": "no_motion_for", "room": "$room", "minutes": 10}, {"type": "no_active_booking", "room": "$room"}]'::jsonb,
+   '[{"type": "set_lights", "room": "$room", "state": "off"}, {"type": "set_hvac", "room": "$room", "mode": "setback"}]'::jsonb, 20),
+  ('Power down an empty room',
+   'Catch-all: no booking and no motion for 30 minutes.',
+   '{"type": "room.vacant", "room": "*", "minutes": 30}'::jsonb,
+   '[{"type": "no_active_booking", "room": "$room", "minutes": 15}]'::jsonb,
+   '[{"type": "set_lights", "room": "$room", "state": "off"}, {"type": "set_hvac", "room": "$room", "mode": "setback"}]'::jsonb, 30),
+  ('Tell staff about use without a booking',
+   'Motion with no booking in progress or starting within 15 minutes.',
+   '{"type": "motion.detected", "room": "*", "cooldown_minutes": 60}'::jsonb,
+   '[{"type": "no_active_booking", "room": "$room", "minutes": 15}]'::jsonb,
+   '[{"type": "notify_staff", "title": "$room in use without a booking", "body": "Occupancy sensor detected motion and nothing is booked."}]'::jsonb, 40)
+) v(name, description, trigger, conditions, actions, priority)
+where not exists (select 1 from public.automation_rules);

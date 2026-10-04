@@ -37,12 +37,12 @@ func TestParseTelemetryValid(t *testing.T) {
 
 func TestParseTelemetryRejects(t *testing.T) {
 	cases := map[string][]byte{
-		"not json":     []byte("{"),
-		"no ts":        []byte(`{"channels":[{"ch":0,"current_a":1}]}`),
-		"too old":      msg(now.Add(-25*time.Hour), `{"ch":0,"current_a":1}`),
-		"future":       msg(now.Add(10*time.Minute), `{"ch":0,"current_a":1}`),
-		"no channels":  msg(now, ``),
-		"all invalid":  msg(now, `{"ch":0,"current_a":-1}`),
+		"not json":    []byte("{"),
+		"no ts":       []byte(`{"channels":[{"ch":0,"current_a":1}]}`),
+		"too old":     msg(now.Add(-25*time.Hour), `{"ch":0,"current_a":1}`),
+		"future":      msg(now.Add(10*time.Minute), `{"ch":0,"current_a":1}`),
+		"no channels": msg(now, ``),
+		"all invalid": msg(now, `{"ch":0,"current_a":-1}`),
 	}
 	for name, b := range cases {
 		if _, _, err := ParseTelemetry(b, now); err == nil {

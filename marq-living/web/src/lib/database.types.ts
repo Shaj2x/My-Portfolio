@@ -1121,12 +1121,15 @@ export type Database = {
       delay_run: { Args: { p_run: string; p_minutes: number; p_note?: string }; Returns: Database["public"]["Tables"]["runs"]["Row"] };
       deliver_announcement: { Args: { p_id: string }; Returns: number };
       end_run: { Args: { p_run: string }; Returns: Database["public"]["Tables"]["runs"]["Row"] };
+      escalate_offline_devices: { Args: { p_after?: string }; Returns: number };
       flag_late_runs: { Args: Record<PropertyKey, never>; Returns: number };
       haversine_km: { Args: { lat1: number; lng1: number; lat2: number; lng2: number }; Returns: number };
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
       is_approved: { Args: Record<PropertyKey, never>; Returns: boolean };
       is_driver: { Args: Record<PropertyKey, never>; Returns: boolean };
       is_staff: { Args: Record<PropertyKey, never>; Returns: boolean };
+      laundry_machine_freed: { Args: { p_machine: string }; Returns: number };
+      laundry_usage: { Args: { p_from: string; p_to: string }; Returns: { machine_id: string | null; label: string | null; kind: Database["public"]["Enums"]["machine_kind"] | null; cycles: number | null }[] };
       local_time_label: { Args: { ts: string }; Returns: string };
       mark_notifications_read: { Args: { p_ids?: number[] }; Returns: number };
       materialize_runs: { Args: { p_date: string }; Returns: number };
@@ -1138,6 +1141,7 @@ export type Database = {
       notify_users: { Args: { p_users: string[]; p_kind: Database["public"]["Enums"]["notification_kind"]; p_title: string; p_body: string; p_url?: string; p_urgent?: boolean; p_push?: boolean; p_email?: boolean; p_ref?: Json }; Returns: number };
       review_tenant: { Args: { target: string; decision: Database["public"]["Enums"]["account_status"]; note?: string }; Returns: Database["public"]["Tables"]["profiles"]["Row"] };
       run_maintenance: { Args: Record<PropertyKey, never>; Returns: Json };
+      set_room_override: { Args: { p_room: string; p_mode: Database["public"]["Enums"]["override_mode"]; p_minutes?: number }; Returns: Database["public"]["Tables"]["rooms"]["Row"] };
       set_user_role: { Args: { target: string; new_role: Database["public"]["Enums"]["app_role"] }; Returns: Database["public"]["Tables"]["profiles"]["Row"] };
       shuttle_alert_recipients: { Args: Record<PropertyKey, never>; Returns: string[] };
       staff_ids: { Args: Record<PropertyKey, never>; Returns: string[] };

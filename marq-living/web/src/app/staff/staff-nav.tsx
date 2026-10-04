@@ -14,6 +14,8 @@ export function StaffNav({ pendingCount, openTickets = 0, isAdmin }: { pendingCo
     { href: "/staff/announcements", label: "News" },
     { href: "/staff/tickets", label: "Tickets", count: openTickets },
     { href: "/staff/amenities", label: "Amenities" },
+    { href: "/staff/energy", label: "Energy" },
+    { href: "/staff/rooms", label: "Rooms" },
     ...(isAdmin ? [{ href: "/staff/team", label: "Team" }] : []),
   ];
   return (

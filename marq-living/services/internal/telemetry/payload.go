@@ -121,13 +121,13 @@ func ParseTelemetry(b []byte, now time.Time) (Telemetry, []string, error) {
 func bad(f float64) bool { return math.IsNaN(f) || math.IsInf(f, 0) }
 
 type Status struct {
-	State      string   `json:"state"`
-	FW         string   `json:"fw"`
-	RSSI       *int     `json:"rssi"`
-	BatteryPct *int     `json:"battery_pct"`
-	UptimeS    *int64   `json:"uptime_s"`
-	Buffered   *int     `json:"buffered"`
-	IP         string   `json:"ip"`
+	State      string `json:"state"`
+	FW         string `json:"fw"`
+	RSSI       *int   `json:"rssi"`
+	BatteryPct *int   `json:"battery_pct"`
+	UptimeS    *int64 `json:"uptime_s"`
+	Buffered   *int   `json:"buffered"`
+	IP         string `json:"ip"`
 }
 
 func ParseStatus(b []byte) (Status, error) {
@@ -210,8 +210,8 @@ type RelayCmd struct {
 	State string `json:"state"`
 }
 type HVACCmd struct {
-	Mode       string   `json:"mode"` // comfort | setback | off
-	SetpointC  *float64 `json:"setpoint_c,omitempty"`
+	Mode      string   `json:"mode"` // comfort | setback | off
+	SetpointC *float64 `json:"setpoint_c,omitempty"`
 }
 type EVCmd struct {
 	LimitKW float64 `json:"limit_kw"`

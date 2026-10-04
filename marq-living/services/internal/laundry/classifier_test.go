@@ -43,13 +43,13 @@ func eq(a, b []State) bool {
 func TestWasherCycle(t *testing.T) {
 	m := NewMachine(DefaultSignature("washer"), Idle)
 	got := run(m, []step{
-		{2, 3},     // idle
-		{5, 60},    // fill
-		{2, 2},     // soak: quiet, but shorter than DoneAfter — not finished
-		{15, 350},  // wash
-		{8, 200},   // rinse
-		{6, 520},   // spin
-		{5, 2},     // done
+		{2, 3},    // idle
+		{5, 60},   // fill
+		{2, 2},    // soak: quiet, but shorter than DoneAfter — not finished
+		{15, 350}, // wash
+		{8, 200},  // rinse
+		{6, 520},  // spin
+		{5, 2},    // done
 	})
 	want := []State{Running, Finishing, Idle}
 	if !eq(got, want) {
@@ -63,7 +63,7 @@ func TestDryerCycleWithCooldown(t *testing.T) {
 		{30, 5300}, // heater + motor
 		{3, 300},   // heater cycling off briefly — not cool-down yet (< 2 min would be; 3 min triggers)
 		{10, 5300},
-		{6, 300},   // cool-down
+		{6, 300}, // cool-down
 		{3, 5},
 	})
 	if got[0] != Running || got[len(got)-1] != Idle {

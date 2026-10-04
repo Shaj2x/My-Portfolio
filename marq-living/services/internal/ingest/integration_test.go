@@ -40,8 +40,8 @@ type clock struct {
 	t  time.Time
 }
 
-func (c *clock) Now() time.Time      { c.mu.Lock(); defer c.mu.Unlock(); return c.t }
-func (c *clock) Set(t time.Time)     { c.mu.Lock(); c.t = t; c.mu.Unlock() }
+func (c *clock) Now() time.Time  { c.mu.Lock(); defer c.mu.Unlock(); return c.t }
+func (c *clock) Set(t time.Time) { c.mu.Lock(); c.t = t; c.mu.Unlock() }
 
 func TestIngestPipeline(t *testing.T) {
 	ctx := context.Background()

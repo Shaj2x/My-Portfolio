@@ -54,7 +54,7 @@ wait_for() { for _ in $(seq 90); do curl -sf -o /dev/null "$1" && return 0; slee
 
 rm -rf "$pgdata"; mkdir -p "$pgdata"
 [ "$(id -u)" = 0 ] && chown postgres "$pgdata"
-as_pg "$pgbin/initdb" -D "$pgdata/data" -U postgres --auth=trust >/dev/null
+as_pg "$pgbin/initdb" -D "$pgdata/data" -U postgres --auth=trust -E UTF8 --locale=C >/dev/null
 as_pg "$pgbin/pg_ctl" -D "$pgdata/data" -o "-p $E2E_PG_PORT -k $pgdata -c listen_addresses=127.0.0.1" -l "$pgdata/pg.log" start >/dev/null
 psql_run() { psql -X -q -v ON_ERROR_STOP=1 -h 127.0.0.1 -p "$E2E_PG_PORT" -U postgres -d postgres "$@"; }
 
