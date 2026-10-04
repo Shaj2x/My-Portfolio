@@ -70,3 +70,16 @@ export const PERIOD_LABEL: Record<string, string> = {
 };
 
 export const money = (v: number) => v.toLocaleString("en-CA", { style: "currency", currency: "CAD" });
+
+export type Forecast = {
+  points: { t: string; predicted_kw: number; lower_kw: number; upper_kw: number; actual_kw: number | null }[];
+  limit_kw: number; model: string | null; mape_pct: number | null;
+  recommendations: { t: string; label: string; forecast_upper_kw: number; limit_kw: number; over_kw: number; actions: string[] }[];
+};
+export type Electrification = {
+  stats: { runs: number; distance_km_p50: number; distance_km_p90: number; duration_min_p90: number; idle_min_p90: number; stops_p90: number };
+  assumptions: Record<string, number>;
+  kwh_per_run: number; kwh_per_run_winter: number; runs_per_day: Record<string, number>; daily_kwh_winter: number; worst_day: string;
+  blocks: { departures: string[]; kwh_winter: number }[]; hardest_block_kwh: number; required_battery_kwh: number;
+  recommended_pack_kwh: number; charge_windows: Record<string, string | number>[]; min_soc_pct: number; feasible: boolean; notes: string[];
+};

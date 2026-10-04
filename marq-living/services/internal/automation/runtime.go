@@ -42,7 +42,8 @@ type Service struct {
 	roomBy map[string]string // room id → slug
 	motion map[string]bool
 	events []DeviceEvent
-	saved  map[string]string // slug → last persisted state JSON
+	saved  map[string]string  // slug → last persisted state JSON
+	evSent map[string]float64 // charger hw → last limit sent
 }
 
 func NewService(log *slog.Logger, app, tsdb *pgxpool.Pool, reg *registry.Cache, n *notify.Poker) *Service {

@@ -1122,6 +1122,7 @@ export type Database = {
       deliver_announcement: { Args: { p_id: string }; Returns: number };
       end_run: { Args: { p_run: string }; Returns: Database["public"]["Tables"]["runs"]["Row"] };
       escalate_offline_devices: { Args: { p_after?: string }; Returns: number };
+      ev_charger_status: { Args: Record<PropertyKey, never>; Returns: { charger_id: string | null; label: string | null; max_kw: number | null; busy: boolean | null }[] };
       flag_late_runs: { Args: Record<PropertyKey, never>; Returns: number };
       haversine_km: { Args: { lat1: number; lng1: number; lat2: number; lng2: number }; Returns: number };
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean };

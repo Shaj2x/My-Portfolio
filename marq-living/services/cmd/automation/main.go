@@ -112,6 +112,7 @@ func run(log *slog.Logger) error {
 	every(2*time.Second, "dispatch", func() error { return svc.Dispatch(ctx) })
 	every(time.Minute, "reload devices", func() error { return reg.Load(ctx, app) })
 	every(5*time.Minute, "booking energy", func() error { return svc.RecordBookingEnergy(ctx) })
+	every(time.Minute, "ev load management", func() error { return svc.ApplyEV(ctx) })
 	if appURL != "" && os.Getenv("CRON_SECRET") != "" {
 		every(time.Minute, "app tick", func() error { return tick(ctx, appURL, os.Getenv("CRON_SECRET")) })
 	}

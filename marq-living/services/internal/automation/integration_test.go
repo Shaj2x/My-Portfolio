@@ -307,3 +307,80 @@ func TestAutomationLoop(t *testing.T) {
 		t.Fatal("heartbeat not received")
 	}
 }
+
+func TestEVLoadManagement(t *testing.T) {
+	ctx := context.Background()
+	if os.Getenv("APP_DB_URL") == "" {
+		t.Skip("run via services/test-integration.sh")
+	}
+	log := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelWarn}))
+	app, _ := pgxpool.New(ctx, os.Getenv("APP_DB_URL"))
+	tsdb, _ := pgxpool.New(ctx, os.Getenv("TSDB_URL"))
+	defer app.Close()
+	defer tsdb.Close()
+	_ = store.Migrate(ctx, tsdb)
+	exec := func(db *pgxpool.Pool, sql string, args ...any) {
+		t.Helper()
+		if _, err := db.Exec(ctx, sql, args...); err != nil {
+			t.Fatalf("%s: %v", sql, err)
+		}
+	}
+	const evDev, lobby, tenant = "d3000000-0000-0000-0000-000000000001", "d3000000-0000-0000-0000-000000000002", "a6000000-0000-0000-0000-000000000006"
+	exec(app, `insert into auth.users (id, email, raw_user_meta_data) values ($1, 'ev2@marq.test', '{"full_name":"Ev","unit":"606","room_letter":"A","floor":"6"}')`, tenant)
+	exec(app, `insert into public.devices (id, hardware_id, name, type, location) values ($1, 'ev-it', 'EV P9', 'ev_charger', 'Parking'), ($2, 'ct-lobby-ev', 'Lobby', 'ct_node', 'Lobby')`, evDev, lobby)
+	exec(app, `insert into public.ev_chargers (id, label, device_id, max_kw) values ('c3000000-0000-0000-0000-000000000001', 'P9', $1, 7.2)`, evDev)
+	now := time.Now()
+	plan := fmt.Sprintf(`{"slots":[{"start":%q,"end":%q,"kw":7.2}]}`, now.Add(-5*time.Minute).UTC().Format(time.RFC3339), now.Add(time.Hour).UTC().Format(time.RFC3339))
+	exec(app, `insert into public.ev_sessions (id, tenant_id, charger_id, requested_kwh, departure_time, status, plan)
+		values ('e3000000-0000-0000-0000-000000000001', $1, 'c3000000-0000-0000-0000-000000000001', 5, now() + interval '8 hours', 'scheduled', $2)`, tenant, plan)
+	// Building at 130 kW (limit 150): plenty of headroom.
+	exec(tsdb, `insert into readings (ts, device_id, channel, current_a, power_w, energy_kwh) values (now(), $1, 0, 1, 130000, 1), (now() - interval '1 minute', $2, 0, 0, 0, 10.0)`, lobby, evDev)
+
+	reg := registry.NewCache()
+	_ = reg.Load(ctx, app)
+	svc := NewService(log, app, tsdb, reg, nil)
+	cmd := func() (string, string) {
+		var c, r string
+		if err := app.QueryRow(ctx, `select command::text, reason from public.control_commands where device_id = $1 order by id desc limit 1`, evDev).Scan(&c, &r); err != nil {
+			t.Fatal(err)
+		}
+		return c, r
+	}
+	if err := svc.ApplyEV(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if c, _ := cmd(); c != `{"ev": {"limit_kw": 7.2}}` {
+		t.Fatalf("plan not followed: %s", c)
+	}
+	var status string
+	_ = app.QueryRow(ctx, `select status::text from public.ev_sessions where id = 'e3000000-0000-0000-0000-000000000001'`).Scan(&status)
+	if status != "charging" {
+		t.Fatalf("status %s", status)
+	}
+
+	// Building load jumps to 146 kW: only 4 kW of headroom left.
+	exec(tsdb, `insert into readings (ts, device_id, channel, current_a, power_w, energy_kwh) values (now() + interval '1 second', $1, 0, 1, 146000, 1)`, lobby)
+	if err := svc.ApplyEV(ctx); err != nil {
+		t.Fatal(err)
+	}
+	c, reason := cmd()
+	if c != `{"ev": {"limit_kw": 4}}` || len(reason) < 10 || reason[:10] != "Peak guard" {
+		t.Fatalf("peak guard: %s (%s)", c, reason)
+	}
+
+	// The car's meter shows 5 kWh delivered → session completes, charger to 0.
+	exec(tsdb, `insert into readings (ts, device_id, channel, current_a, power_w, energy_kwh) values (now() + interval '2 seconds', $1, 0, 30, 7200, 15.0)`, evDev)
+	exec(app, `update public.ev_sessions set started_at = now() - interval '2 minutes' where id = 'e3000000-0000-0000-0000-000000000001'`)
+	if err := svc.ApplyEV(ctx); err != nil {
+		t.Fatal(err)
+	}
+	_ = app.QueryRow(ctx, `select status::text from public.ev_sessions where id = 'e3000000-0000-0000-0000-000000000001'`).Scan(&status)
+	if c, _ := cmd(); status != "completed" || c != `{"ev": {"limit_kw": 0}}` {
+		t.Fatalf("completion: %s %s", status, c)
+	}
+	var n int
+	_ = app.QueryRow(ctx, `select count(*) from public.notifications where user_id = $1 and title = 'Charging complete'`, tenant).Scan(&n)
+	if n != 1 {
+		t.Fatal("tenant not told charging is complete")
+	}
+}

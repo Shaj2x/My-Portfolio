@@ -210,3 +210,23 @@ func TestPricePeriodCondition(t *testing.T) {
 		t.Fatal("on-peak pre-cool/setback")
 	}
 }
+
+func TestEVPlanAndPeakGuard(t *testing.T) {
+	base := time.Date(2026, 10, 8, 3, 0, 0, 0, time.UTC)
+	slots := []planSlot{{base, base.Add(15 * time.Minute), 7.2}, {base.Add(15 * time.Minute), base.Add(30 * time.Minute), 3.6}}
+	if PlannedKW(slots, base.Add(5*time.Minute)) != 7.2 || PlannedKW(slots, base.Add(20*time.Minute)) != 3.6 || PlannedKW(slots, base.Add(time.Hour)) != 0 {
+		t.Fatal("plan lookup")
+	}
+	planned := map[string]float64{"a": 7.2, "b": 7.2, "c": 7.2}
+	if got := ScaleToHeadroom(planned, 30); got["a"] != 7.2 {
+		t.Fatal("under limit: unchanged")
+	}
+	got := ScaleToHeadroom(planned, 10.8)
+	sum := got["a"] + got["b"] + got["c"]
+	if sum > 10.8 || got["a"] != 3.6 {
+		t.Fatalf("scaled: %v", got)
+	}
+	if z := ScaleToHeadroom(planned, -5); z["a"] != 0 {
+		t.Fatal("no headroom: stop charging")
+	}
+}

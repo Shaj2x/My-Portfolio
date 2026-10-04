@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Badge, Button, Card } from "@/components/ui";
 import { formatDay, formatTime, localDate, localToUtc } from "@/lib/format";
 import * as A from "@/lib/actions/shuttle-admin";
+import { analytics, type Electrification } from "@/lib/analytics";
 
 export const metadata: Metadata = { title: "Shuttle" };
 
@@ -29,6 +30,7 @@ export default async function StaffShuttlePage() {
     supabase.from("shuttle_run_metrics").select("*").order("created_at", { ascending: false }).limit(15),
     supabase.from("profiles").select("id, full_name").in("role", ["driver", "staff", "admin"]),
   ]);
+  const ev = await analytics<Electrification>("/shuttle/electrification");
   const driverName = (pid: string | null) => drivers?.find((d) => d.id === pid)?.full_name ?? "—";
   const routeName = (rid: string | null) => routes?.find((r) => r.id === rid)?.name ?? "All routes";
 
@@ -205,6 +207,39 @@ export default async function StaffShuttlePage() {
           <Button type="submit" variant="secondary">Add</Button>
         </form>
       </Card>
+
+      {ev ? (
+        <Card className="flex flex-col gap-3">
+          <h2 className="font-medium">Electric shuttle readiness</h2>
+          <p className="text-sm text-ink-2">
+            From {ev.stats.runs} logged runs (p90: {ev.stats.distance_km_p90} km, {ev.stats.duration_min_p90} min, {ev.stats.idle_min_p90} min idle)
+            and the current timetable.
+          </p>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {[
+              ["Per run", `${ev.kwh_per_run} kWh`, `${ev.kwh_per_run_winter} kWh in winter`],
+              ["Worst day", `${ev.daily_kwh_winter} kWh`, `${ev.worst_day}, winter`],
+              ["Battery needed", `${ev.required_battery_kwh} kWh`, `→ ${ev.recommended_pack_kwh} kWh pack`],
+              ["Lowest charge", `${ev.min_soc_pct}%`, ev.feasible ? "stays above reserve" : "below reserve"],
+            ].map(([k, v, n]) => (
+              <div key={k} className="rounded-lg bg-surface-2 p-3">
+                <p className="text-xs text-ink-2">{k}</p><p className="text-lg font-semibold tabular-nums">{v}</p><p className="text-xs text-ink-2">{n}</p>
+              </div>
+            ))}
+          </div>
+          <details className="text-sm">
+            <summary className="cursor-pointer">Blocks and charge windows</summary>
+            <ul className="mt-2 list-disc pl-5">
+              {ev.blocks.map((b, i) => <li key={i}>Block {i + 1}: {b.departures.join(", ")} — {b.kwh_winter} kWh (winter)</li>)}
+            </ul>
+            <ul className="mt-2 list-disc pl-5">
+              {ev.charge_windows.map((w, i) => <li key={i}>{String(w.from)} → {String(w.to)}{w.kwh_possible != null ? `: up to ${w.kwh_possible} kWh at ${ev.assumptions.charger_kw} kW, next block needs ${w.kwh_needed_for_next_block} kWh` : ` overnight: ${w.kwh_needed} kWh`}</li>)}
+            </ul>
+            <p className="mt-2 text-xs text-ink-2">Assumptions: {Object.entries(ev.assumptions).map(([k, v]) => `${k.replaceAll("_", " ")} ${v}`).join(" · ")}</p>
+          </details>
+          {ev.notes.map((n) => <p key={n} className="text-sm text-warn">{n}</p>)}
+        </Card>
+      ) : null}
 
       <Card className="p-0">
         <h2 className="border-b border-line px-4 py-3 font-medium">Recent run metrics</h2>

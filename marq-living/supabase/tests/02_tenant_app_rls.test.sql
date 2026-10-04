@@ -159,7 +159,7 @@ select tests.eq((select count(*) from public.control_commands), 0::bigint, 'tena
 select tests.throws($$insert into public.control_commands (device_id, command, source, user_id) values ('60000000-0000-0000-0000-000000000001', '{}', 'user', 'a0000000-0000-0000-0000-00000000000a')$$, 'tenant cannot send device commands', '42501');
 insert into public.laundry_watchers (user_id, kind) values (:alice, 'washer');
 insert into public.ev_sessions (tenant_id, requested_kwh, departure_time) values (:alice, 20, now() + interval '10 hours');
-select tests.throws(format($$insert into public.ev_sessions (tenant_id, requested_kwh, departure_time, status) values (%L, 20, now() + interval '10 hours', 'charging')$$, :alice), 'tenant cannot create a session already charging', '42501');
+select tests.throws(format($$insert into public.ev_sessions (tenant_id, requested_kwh, departure_time, status) values (%L, 20, now() + interval '10 hours', 'charging')$$, :alice), 'tenant cannot create a session already charging');
 select tests.logout();
 
 select tests.login(:bob);

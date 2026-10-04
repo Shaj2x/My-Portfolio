@@ -183,3 +183,81 @@ function niceTicks(max: number): number[] {
   for (let v = 0; v <= max; v += step) out.push(v);
   return out;
 }
+
+/** Forecast line with its 80% band, actuals, and a reference limit. */
+export function ForecastChart({ points, limit, height = 220 }: {
+  points: { t: string; predicted_kw: number; lower_kw: number; upper_kw: number; actual_kw: number | null }[];
+  limit: number | null;
+  height?: number;
+}) {
+  const [hover, setHover] = useState<number | null>(null);
+  const W = 720, H = height, padL = 40, padR = 8, padT = 10, padB = 24;
+  if (!points.length) return <p className="text-sm text-ink-2">No forecast yet. It runs nightly at 9:30 pm, or use “Run forecast now”.</p>;
+  const maxY = Math.max(limit ?? 0, ...points.map((p) => Math.max(p.upper_kw, p.actual_kw ?? 0))) * 1.1 || 1;
+  const x = (i: number) => padL + (i / Math.max(points.length - 1, 1)) * (W - padL - padR);
+  const y = (v: number) => padT + (1 - v / maxY) * (H - padT - padB);
+  const band = [...points.map((p, i) => `${x(i)},${y(p.upper_kw)}`), ...points.map((p, i) => `${x(i)},${y(p.lower_kw)}`).reverse()].join(" ");
+  const line = (vals: (number | null)[]) => {
+    let d = "";
+    vals.forEach((v, i) => {
+      if (v === null) return;
+      d += `${d && vals[i - 1] !== null ? "L" : "M"}${x(i)},${y(v)}`;
+    });
+    return d;
+  };
+  const hp = hover !== null ? points[hover] : null;
+  return (
+    <figure className="flex flex-col gap-2">
+      <Legend items={[{ name: "Forecast (80% band)", color: "var(--series-1)" }, { name: "Actual", color: "var(--series-2)" }]} />
+      <div className="relative">
+        <svg viewBox={`0 0 ${W} ${H}`} className="w-full touch-none" role="img" aria-label="Load forecast versus actual"
+          onPointerMove={(e) => {
+            const r = e.currentTarget.getBoundingClientRect();
+            const i = Math.round((((e.clientX - r.left) / r.width) * W - padL) / (W - padL - padR) * (points.length - 1));
+            setHover(Math.max(0, Math.min(points.length - 1, i)));
+          }}
+          onPointerLeave={() => setHover(null)}>
+          {niceTicks(maxY).map((t) => (
+            <g key={t}>
+              <line x1={padL} x2={W - padR} y1={y(t)} y2={y(t)} stroke="var(--chart-grid)" />
+              <text x={padL - 6} y={y(t) + 4} textAnchor="end" fontSize={11} fill="var(--ink-2)">{t}</text>
+            </g>
+          ))}
+          <polygon points={band} fill="var(--series-1)" opacity={0.15} />
+          <path d={line(points.map((p) => p.predicted_kw))} fill="none" stroke="var(--series-1)" strokeWidth={2} />
+          <path d={line(points.map((p) => p.actual_kw))} fill="none" stroke="var(--series-2)" strokeWidth={2} />
+          {limit ? (
+            <g>
+              <line x1={padL} x2={W - padR} y1={y(limit)} y2={y(limit)} stroke="var(--bad)" strokeWidth={2} strokeDasharray="6 4" />
+              <text x={W - padR} y={y(limit) - 5} textAnchor="end" fontSize={11} fill="var(--ink-2)">Peak limit {limit} kW</text>
+            </g>
+          ) : null}
+          {[0, Math.floor(points.length / 2), points.length - 1].map((i) => (
+            <text key={i} x={x(i)} y={H - 6} textAnchor={i === 0 ? "start" : i === points.length - 1 ? "end" : "middle"} fontSize={11} fill="var(--ink-2)">
+              {fmtTime.format(new Date(points[i].t))}
+            </text>
+          ))}
+          {hover !== null ? <line x1={x(hover)} x2={x(hover)} y1={padT} y2={H - padB} stroke="var(--ink)" /> : null}
+        </svg>
+        {hp ? (
+          <div className="pointer-events-none absolute top-1 z-10 rounded-lg border border-line bg-surface p-2 text-xs shadow" style={{ left: `${Math.min(70, (x(hover!) / W) * 100)}%` }}>
+            <p className="mb-1 text-ink-2">{fmtTime.format(new Date(hp.t))}</p>
+            <p className="flex items-center gap-2 tabular-nums"><span className="inline-block h-0.5 w-3" style={{ background: "var(--series-1)" }} /><strong>{hp.predicted_kw.toFixed(1)} kW</strong> <span className="text-ink-2">forecast ({hp.lower_kw.toFixed(0)}–{hp.upper_kw.toFixed(0)})</span></p>
+            {hp.actual_kw !== null ? <p className="flex items-center gap-2 tabular-nums"><span className="inline-block h-0.5 w-3" style={{ background: "var(--series-2)" }} /><strong>{hp.actual_kw.toFixed(1)} kW</strong> <span className="text-ink-2">actual</span></p> : null}
+          </div>
+        ) : null}
+      </div>
+      <details className="text-sm">
+        <summary className="cursor-pointer text-ink-2">View as table</summary>
+        <div className="max-h-64 overflow-auto">
+          <table className="w-full text-xs tabular-nums">
+            <thead><tr><th className="text-left">Time</th><th className="text-right">Forecast</th><th className="text-right">Low</th><th className="text-right">High</th><th className="text-right">Actual</th></tr></thead>
+            <tbody>{points.map((p) => (
+              <tr key={p.t} className="border-t border-line"><td>{fmtTime.format(new Date(p.t))}</td><td className="text-right">{p.predicted_kw.toFixed(1)}</td><td className="text-right">{p.lower_kw.toFixed(1)}</td><td className="text-right">{p.upper_kw.toFixed(1)}</td><td className="text-right">{p.actual_kw?.toFixed(1) ?? "—"}</td></tr>
+            ))}</tbody>
+          </table>
+        </div>
+      </details>
+    </figure>
+  );
+}

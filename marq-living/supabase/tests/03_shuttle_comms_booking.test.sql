@@ -251,3 +251,14 @@ insert into public.device_events (device_id, type) values ('60000000-0000-0000-0
 update public.devices set last_seen = now() - interval '16 minutes' where id = '60000000-0000-0000-0000-000000000009';
 select tests.eq(public.escalate_offline_devices(), 1, 'offline for 15+ minutes opens a ticket');
 select tests.eq(public.escalate_offline_devices(), 0, 'and only one');
+
+-- =========================================================================
+-- EV charge requests
+-- =========================================================================
+select tests.login(:alice);
+select tests.throws(format($$insert into public.ev_sessions (tenant_id, requested_kwh, departure_time) values (%L, 20, now() + interval '5 minutes')$$, :alice), 'departure must be at least 15 minutes away', 'P0001');
+select tests.throws(format($$insert into public.ev_sessions (tenant_id, requested_kwh, departure_time) values (%L, 20, now() + interval '10 days')$$, :alice), 'departure within 7 days', 'P0001');
+-- Alice already has an active request from 02.
+select tests.throws(format($$insert into public.ev_sessions (tenant_id, requested_kwh, departure_time) values (%L, 20, now() + interval '9 hours')$$, :alice), 'one active request per tenant', 'P0001');
+select tests.ok((select count(*) >= 0 from public.ev_charger_status()), 'tenants can see charger availability');
+select tests.logout();
