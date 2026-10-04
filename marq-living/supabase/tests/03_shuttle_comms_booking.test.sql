@@ -262,3 +262,17 @@ select tests.throws(format($$insert into public.ev_sessions (tenant_id, requeste
 select tests.throws(format($$insert into public.ev_sessions (tenant_id, requested_kwh, departure_time) values (%L, 20, now() + interval '9 hours')$$, :alice), 'one active request per tenant', 'P0001');
 select tests.ok((select count(*) >= 0 from public.ev_charger_status()), 'tenants can see charger availability');
 select tests.logout();
+
+-- =========================================================================
+-- Staff analytics helpers
+-- =========================================================================
+select tests.login(:sam);
+select tests.ok((select scheduled >= 3 and on_time = 0 from public.shuttle_on_time_stats(now() - interval '1 day', now() + interval '1 day')), 'shuttle on-time stats count past runs; a 5-min-late start is not on time');
+select tests.ok((select total >= 1 from public.device_health()), 'device health summary');
+select tests.ok((select approved >= 2 from public.tenant_counts()), 'tenant counts');
+select tests.logout();
+select tests.login(:alice);
+select tests.eq((select total from public.device_health()), 0, 'tenants get no device health');
+select tests.eq((select count(*) from public.shuttle_on_time_stats(now() - interval '1 day', now())), 1::bigint, 'aggregate always returns one row');
+select tests.eq((select scheduled from public.shuttle_on_time_stats(now() - interval '1 day', now())), 0, 'but tenants see zero');
+select tests.logout();

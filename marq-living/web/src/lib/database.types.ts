@@ -1120,6 +1120,7 @@ export type Database = {
       create_profile_for: { Args: { u: string }; Returns: undefined };
       delay_run: { Args: { p_run: string; p_minutes: number; p_note?: string }; Returns: Database["public"]["Tables"]["runs"]["Row"] };
       deliver_announcement: { Args: { p_id: string }; Returns: number };
+      device_health: { Args: Record<PropertyKey, never>; Returns: { total: number | null; online: number | null; offline: number | null; fault: number | null; provisioning: number | null; low_battery: number | null; stale_firmware: number | null; open_device_tickets: number | null }[] };
       end_run: { Args: { p_run: string }; Returns: Database["public"]["Tables"]["runs"]["Row"] };
       escalate_offline_devices: { Args: { p_after?: string }; Returns: number };
       ev_charger_status: { Args: Record<PropertyKey, never>; Returns: { charger_id: string | null; label: string | null; max_kw: number | null; busy: boolean | null }[] };
@@ -1145,9 +1146,11 @@ export type Database = {
       set_room_override: { Args: { p_room: string; p_mode: Database["public"]["Enums"]["override_mode"]; p_minutes?: number }; Returns: Database["public"]["Tables"]["rooms"]["Row"] };
       set_user_role: { Args: { target: string; new_role: Database["public"]["Enums"]["app_role"] }; Returns: Database["public"]["Tables"]["profiles"]["Row"] };
       shuttle_alert_recipients: { Args: Record<PropertyKey, never>; Returns: string[] };
+      shuttle_on_time_stats: { Args: { p_from: string; p_to: string }; Returns: { scheduled: number | null; completed: number | null; cancelled: number | null; on_time: number | null; on_time_pct: number | null; avg_start_delay_min: number | null; total_km: number | null }[] };
       staff_ids: { Args: Record<PropertyKey, never>; Returns: string[] };
       start_run: { Args: { p_run: string }; Returns: Database["public"]["Tables"]["runs"]["Row"] };
       start_unscheduled_run: { Args: { p_route: string }; Returns: Database["public"]["Tables"]["runs"]["Row"] };
+      tenant_counts: { Args: Record<PropertyKey, never>; Returns: { approved: number | null; pending: number | null; floors: number | null }[] };
       ticket_resolution_stats: { Args: { p_from: string; p_to: string }; Returns: { category: Database["public"]["Enums"]["ticket_category"] | null; opened: number | null; resolved: number | null; median_hours: number | null; avg_hours: number | null }[] };
     };
     Enums: {
