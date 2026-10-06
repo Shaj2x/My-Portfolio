@@ -1,0 +1,1208 @@
+<title>Marq Living Prototype</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F4F1EA; --app-bg:#F8F6F1; --surface:#FFFFFF; --surface-2:#F6F3EC; --text:#1A2133; --muted:#5D6575; --faint:#8A909C;
+  --border:#E3DDD0; --primary:#1D2C4D; --on-primary:#FFFFFF; --accent:#A47D43; --accent-strong:#8A6630; --accent-soft:#F3E9D6;
+  --ok:#2C7A4B; --ok-soft:#E2F1E7; --warn:#9A6210; --warn-soft:#FBEFD8; --bad:#B03838; --bad-soft:#F8E0E0; --info:#2C5AA0; --info-soft:#E1E9F6;
+  --s1:#2F5D9E; --s2:#C0883A; --s3:#2F8C7A; --s4:#8B5BA8; --s5:#9AA2B1;
+  --map-bg:#EEF0EA; --map-street:#DADDD4; --map-water:#BFD5E6; --map-park:#DCE8D3;
+  --shadow:0 1px 2px rgba(20,25,40,.05),0 6px 20px rgba(20,25,40,.06); --shadow-lg:0 2px 6px rgba(20,25,40,.06),0 24px 60px rgba(20,25,40,.14);
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E131D; --app-bg:#111827; --surface:#172033; --surface-2:#1C2639; --text:#ECE8DF; --muted:#A3AABA; --faint:#7A8294;
+    --border:#2A3549; --primary:#D2AE70; --on-primary:#171D2B; --accent:#D2AE70; --accent-strong:#E0BF86; --accent-soft:#2D2A23;
+    --ok:#62C08A; --ok-soft:#173226; --warn:#E3AA50; --warn-soft:#352816; --bad:#EE7B7B; --bad-soft:#3A1D21; --info:#7FA7E6; --info-soft:#1B2944;
+    --s1:#6F9BE0; --s2:#E0A957; --s3:#4FC0A8; --s4:#B88AD6; --s5:#7D8699;
+    --map-bg:#1A2232; --map-street:#263048; --map-water:#1F3A57; --map-park:#1D3027;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.25); --shadow-lg:0 2px 6px rgba(0,0,0,.35),0 24px 60px rgba(0,0,0,.45);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E131D; --app-bg:#111827; --surface:#172033; --surface-2:#1C2639; --text:#ECE8DF; --muted:#A3AABA; --faint:#7A8294;
+  --border:#2A3549; --primary:#D2AE70; --on-primary:#171D2B; --accent:#D2AE70; --accent-strong:#E0BF86; --accent-soft:#2D2A23;
+  --ok:#62C08A; --ok-soft:#173226; --warn:#E3AA50; --warn-soft:#352816; --bad:#EE7B7B; --bad-soft:#3A1D21; --info:#7FA7E6; --info-soft:#1B2944;
+  --s1:#6F9BE0; --s2:#E0A957; --s3:#4FC0A8; --s4:#B88AD6; --s5:#7D8699;
+  --map-bg:#1A2232; --map-street:#263048; --map-water:#1F3A57; --map-park:#1D3027;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.25); --shadow-lg:0 2px 6px rgba(0,0,0,.35),0 24px 60px rgba(0,0,0,.45);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font:14px/1.45 Inter,system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+h1,h2,h3{font-family:Fraunces,Georgia,serif;font-weight:600;margin:0;letter-spacing:-.01em;line-height:1.2}
+h1{font-size:24px} h2{font-size:20px} h3{font-size:16px}
+p{margin:0}
+button{font:inherit;color:inherit;cursor:pointer}
+input,select,textarea{font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:9px 11px;width:100%;min-width:0}
+textarea{resize:vertical;min-height:84px}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+label.f{display:block;font-size:12px;font-weight:600;color:var(--muted);margin:0 0 5px}
+.i{width:18px;height:18px;flex:none}
+.muted{color:var(--muted)} .faint{color:var(--faint)} .small{font-size:12px} .tiny{font-size:11px}
+.num{font-variant-numeric:tabular-nums}
+.row{display:flex;align-items:center;gap:8px}
+.row.wrap{flex-wrap:wrap} .row.between{justify-content:space-between} .row.top{align-items:flex-start}
+.stack{display:flex;flex-direction:column;gap:12px}
+.stack.sm{gap:8px}
+.grow{flex:1;min-width:0}
+.mt{margin-top:16px} .mt-s{margin-top:8px}
+.ellipsis{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* top bar */
+.topbar{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--border)}
+.topbar-in{max-width:1320px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;margin-right:auto;min-width:0}
+.brand b{font-family:Fraunces,Georgia,serif;font-size:18px;font-weight:600;letter-spacing:-.01em}
+.mark{width:34px;height:34px;border-radius:9px;background:#1D2C4D;display:grid;place-items:center;flex:none}
+.proto{font-size:11px;font-weight:600;color:var(--accent-strong);background:var(--accent-soft);border-radius:999px;padding:2px 8px;white-space:nowrap}
+.seg{display:inline-flex;background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:3px;max-width:100%;overflow-x:auto}
+.seg button{border:0;background:transparent;padding:6px 13px;border-radius:999px;color:var(--muted);font-weight:500;white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--primary);color:var(--on-primary)}
+.iconbtn{border:1px solid var(--border);background:var(--surface);border-radius:999px;width:36px;height:36px;display:grid;place-items:center;flex:none}
+
+.wrap{max-width:1320px;margin:0 auto;padding:20px 16px 56px}
+
+/* cards & bits */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px;box-shadow:var(--shadow)}
+.card.flat{box-shadow:none}
+.card.tight{padding:12px}
+.card.link{display:block;width:100%;text-align:left;border:1px solid var(--border)}
+.card.link:hover{border-color:var(--accent)}
+.card h3{margin-bottom:2px}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:2px 9px;border-radius:999px;background:var(--surface-2);color:var(--muted);white-space:nowrap;border:0}
+.chip.ok{background:var(--ok-soft);color:var(--ok)} .chip.warn{background:var(--warn-soft);color:var(--warn)}
+.chip.bad{background:var(--bad-soft);color:var(--bad)} .chip.info{background:var(--info-soft);color:var(--info)}
+.chip.brass{background:var(--accent-soft);color:var(--accent-strong)}
+button.chip{cursor:pointer;padding:5px 12px;font-size:12.5px;border:1px solid var(--border);background:var(--surface)}
+button.chip[aria-pressed="true"]{background:var(--primary);color:var(--on-primary);border-color:var(--primary)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--faint);display:inline-block;flex:none}
+.dot.ok{background:var(--ok)} .dot.warn{background:var(--warn)} .dot.bad{background:var(--bad)}
+.dot.live{background:var(--ok);box-shadow:0 0 0 0 var(--ok);animation:pulse 1.8s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--ok) 60%,transparent)}70%{box-shadow:0 0 0 8px transparent}100%{box-shadow:0 0 0 0 transparent}}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--border);background:var(--surface);border-radius:10px;padding:9px 14px;font-weight:600;white-space:nowrap}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--primary);color:var(--on-primary);border-color:var(--primary)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 40%,var(--border))}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn.sm{padding:6px 10px;font-size:12.5px;border-radius:8px}
+.btn.block{width:100%}
+.btn.lg{padding:14px 18px;font-size:16px;border-radius:14px}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.switch{width:40px;height:24px;border-radius:999px;border:0;background:var(--border);position:relative;flex:none;padding:0}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform .15s;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+.switch[aria-pressed="true"]{background:var(--ok)}
+.switch[aria-pressed="true"]::after{transform:translateX(16px)}
+.banner{display:flex;gap:10px;align-items:flex-start;padding:11px 13px;border-radius:12px;background:var(--warn-soft);color:var(--warn);font-weight:500}
+.banner.bad{background:var(--bad-soft);color:var(--bad)}
+.banner.info{background:var(--info-soft);color:var(--info)}
+.banner .i{margin-top:1px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px}
+.kv dt{color:var(--muted)} .kv dd{margin:0;font-weight:500}
+.list{display:flex;flex-direction:column}
+.list > *{padding:11px 0;border-top:1px solid var(--border)}
+.list > *:first-child{border-top:0}
+.sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:20px 0 8px}
+.sec-h h3{font-size:15px}
+.empty{padding:22px;text-align:center;color:var(--muted);border:1px dashed var(--border);border-radius:12px}
+hr.sep{border:0;border-top:1px solid var(--border);margin:14px 0}
+
+/* resident & driver phone */
+.res-layout{display:grid;grid-template-columns:minmax(0,410px) minmax(0,330px);gap:32px;justify-content:center;align-items:start}
+.phone{background:var(--app-bg);border:1px solid var(--border);border-radius:34px;box-shadow:var(--shadow-lg);overflow:hidden;display:flex;flex-direction:column;height:min(820px,calc(100vh - 100px));min-height:600px;position:relative}
+.phone-head{padding:14px 18px 10px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);background:var(--surface)}
+.phone-body{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+.tabbar{display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid var(--border);background:var(--surface);padding-bottom:4px}
+.tabbar button{border:0;background:none;padding:9px 0 7px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;color:var(--muted);position:relative}
+.tabbar button[aria-current="page"]{color:var(--accent-strong);font-weight:600}
+.tabbar .badge{position:absolute;top:4px;left:calc(50% + 6px)}
+.badge{min-width:17px;height:17px;padding:0 5px;border-radius:999px;background:var(--bad);color:#fff;font-size:10.5px;font-weight:700;display:inline-grid;place-items:center}
+.side-notes{position:sticky;top:84px}
+.side-notes ol{margin:8px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+.hello{background:linear-gradient(135deg,#1D2C4D,#2A3D66);color:#F3EEE3;border:0}
+.hello .muted{color:#C8CEDB}
+.hello h2{font-size:24px;color:#fff}
+.hello .chip.ok{background:rgba(255,255,255,.14);color:#E9D9B8}
+.big-eta{font-family:Fraunces,Georgia,serif;font-size:30px;font-weight:600;line-height:1}
+.tile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.back{display:inline-flex;align-items:center;gap:4px;border:0;background:none;color:var(--accent-strong);font-weight:600;padding:0}
+.map{width:100%;height:auto;display:block;border-radius:12px}
+.stop-row{display:flex;align-items:center;gap:10px}
+.stop-row .pin{width:12px;height:12px;border-radius:50%;border:3px solid var(--accent);background:var(--surface);flex:none}
+.stop-row.home .pin{border-color:var(--primary);background:var(--primary)}
+.machines{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.machine{min-width:0;border:1px solid var(--border);border-radius:14px;padding:12px;background:var(--surface);display:flex;flex-direction:column;gap:6px}
+.machine.free{border-color:color-mix(in srgb,var(--ok) 45%,var(--border))}
+.machine.fault{background:var(--surface-2)}
+.machine .row{flex-wrap:wrap;gap:4px 8px}
+.mbar{height:5px;border-radius:999px;background:var(--surface-2);overflow:hidden}
+.mbar > i{display:block;height:100%;background:var(--accent)}
+.slots{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.slot{border:1px solid var(--border);background:var(--surface);border-radius:9px;padding:8px 0;font-size:12.5px;font-weight:600;text-align:center}
+.slot[disabled]{color:var(--faint);background:var(--surface-2);text-decoration:line-through;cursor:not-allowed}
+.slot.mine{background:var(--info-soft);color:var(--info);border-color:transparent;text-decoration:none}
+.slot.sel{background:var(--primary);color:var(--on-primary);border-color:var(--primary)}
+.days{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
+.days button{flex:none;border:1px solid var(--border);background:var(--surface);border-radius:12px;padding:7px 10px;text-align:center;min-width:52px}
+.days button b{display:block;font-size:16px}
+.days button[aria-pressed="true"]{background:var(--primary);color:var(--on-primary);border-color:var(--primary)}
+.msg{padding:10px 12px;border-radius:12px;background:var(--surface-2);max-width:88%}
+.msg.me{align-self:flex-end;background:var(--info-soft)}
+.msg.internal{background:var(--warn-soft);border:1px dashed color-mix(in srgb,var(--warn) 50%,transparent)}
+.drv-big{font-family:Fraunces,Georgia,serif;font-size:26px;font-weight:600}
+.gps{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted)}
+
+/* staff */
+.staff{display:grid;grid-template-columns:220px minmax(0,1fr);gap:24px;align-items:start}
+.snav{position:sticky;top:76px;display:flex;flex-direction:column;gap:2px}
+.snav button{display:flex;align-items:center;gap:10px;border:0;background:none;padding:8px 10px;border-radius:10px;color:var(--muted);font-weight:500;text-align:left}
+.snav button:hover{background:var(--surface)}
+.snav button[aria-current="page"]{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
+.snav button[aria-current="page"] .i{color:var(--accent)}
+.snav .badge{margin-left:auto}
+.snav .who{padding:10px;margin-bottom:6px;border-bottom:1px solid var(--border)}
+.page-h{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.page-h p{margin-top:3px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.kpi .v{font-family:Fraunces,Georgia,serif;font-size:26px;font-weight:600;line-height:1.1;margin-top:4px}
+.kpi .l{font-size:12px;color:var(--muted);font-weight:500}
+.grid2{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:16px}
+.grid2.even{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.tbl-wrap{overflow-x:auto;margin:0 -16px;padding:0 16px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:10px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+tr.sel td{background:var(--surface-2)}
+.meter{height:10px;border-radius:999px;background:var(--surface-2);overflow:hidden;position:relative}
+.meter > i{display:block;height:100%;border-radius:999px;background:var(--s1)}
+.meter.warn > i{background:var(--warn)}
+.bars{display:flex;flex-direction:column;gap:9px}
+.bar{display:grid;grid-template-columns:minmax(90px,140px) 1fr auto;gap:10px;align-items:center;font-size:13px}
+.bar .t{height:10px;border-radius:999px;background:var(--surface-2);overflow:hidden}
+.bar .t > i{display:block;height:100%;border-radius:999px}
+.cols{display:flex;align-items:flex-end;gap:6px;height:150px;padding-top:18px}
+.cols .c{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end;min-width:0}
+.cols .c i{display:block;width:100%;max-width:34px;border-radius:6px 6px 2px 2px;background:var(--s1)}
+.cols .c span{font-size:10.5px;color:var(--muted);white-space:nowrap}
+.cols .c em{font-style:normal;font-size:10.5px;font-weight:600}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.chart{width:100%;height:auto;display:block}
+.chart text{fill:var(--muted);font-size:11px;font-family:Inter,system-ui,sans-serif}
+.room{display:flex;flex-direction:column;gap:10px}
+.state-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.state-grid > div{background:var(--surface-2);border-radius:10px;padding:8px 10px}
+.state-grid b{display:block;font-size:14px}
+.timeline{position:relative;height:30px;border-radius:8px;background:var(--surface-2);overflow:hidden}
+.timeline .blk{position:absolute;top:4px;bottom:4px;border-radius:6px;font-size:11px;font-weight:600;color:#fff;display:flex;align-items:center;padding:0 6px;white-space:nowrap;overflow:hidden}
+.tl-axis{display:flex;justify-content:space-between;font-size:10.5px;color:var(--muted);margin-top:4px}
+.rule{display:flex;gap:12px;align-items:flex-start}
+.rule .when{font-weight:600}
+.code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
+.note{font-size:12.5px;color:var(--muted);background:var(--surface-2);border-radius:10px;padding:10px 12px}
+
+/* modal & toasts */
+#modal{position:fixed;inset:0;z-index:60;display:none;place-items:center;background:rgba(10,14,24,.5);padding:16px}
+#modal.open{display:grid}
+.dialog{background:var(--surface);border-radius:18px;max-width:520px;width:100%;max-height:calc(100vh - 32px);overflow:auto;padding:20px;box-shadow:var(--shadow-lg)}
+#toasts{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:70;display:flex;flex-direction:column;gap:8px;width:min(420px,calc(100vw - 32px))}
+.toast{background:var(--primary);color:var(--on-primary);padding:11px 14px;border-radius:12px;box-shadow:var(--shadow-lg);font-weight:500;display:flex;gap:8px;align-items:flex-start;animation:tin .2s ease-out}
+@keyframes tin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+@media (max-width:980px){
+  .staff{grid-template-columns:minmax(0,1fr)}
+  .snav{position:static;flex-direction:row;overflow-x:auto;gap:4px;padding-bottom:4px;margin:0 -16px;padding-left:16px;padding-right:16px}
+  .snav .who{display:none}
+  .snav button{flex:none;white-space:nowrap;padding:7px 11px;border:1px solid var(--border);background:var(--surface)}
+  .snav .badge{margin-left:2px}
+  .grid2,.grid2.even{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:820px){
+  .res-layout{grid-template-columns:minmax(0,1fr);gap:20px}
+  .side-notes{position:static}
+  .phone{height:auto;min-height:0;border-radius:22px;overflow:visible}
+  .phone-body{overflow:visible}
+  .tabbar{position:sticky;bottom:0;border-radius:0 0 22px 22px;z-index:5}
+}
+@media (max-width:520px){
+  .brand small{display:none}
+  .wrap{padding-top:14px}
+  .state-grid{grid-template-columns:repeat(2,1fr)}
+  .bar{grid-template-columns:minmax(70px,100px) 1fr auto}
+}
+</style>
+
+<div id="app"></div>
+<div id="modal" role="dialog" aria-modal="true"></div>
+<div id="toasts" aria-live="polite"></div>
+
+<script>
+/* ===== icons ===== */
+const IC = {
+  home:'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z',
+  bus:'M6 18V6a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3v12zM6 12h12M8 21v-3M16 21v-3M9 15h.01M15 15h.01',
+  cal:'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4',
+  washer:'M5 3h14v18H5zM5 7h14M8 5h.01M12 18a4 4 0 1 0 0-8 4 4 0 0 0 0 8z',
+  more:'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z',
+  bell:'M6 16v-5a6 6 0 0 1 12 0v5l2 2H4zM10 21a2 2 0 0 0 4 0',
+  wrench:'M14.5 5.5a4 4 0 0 0 5 5L11 19a2.1 2.1 0 0 1-3-3l8.5-8.5a4 4 0 0 0-2-2z',
+  bolt:'M13 2L4 14h7l-1 8 9-12h-7z',
+  gear:'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19 12h2M3 12h2M12 3v2M12 19v2M5.6 5.6L7 7M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4',
+  chev:'M9 6l6 6-6 6', backc:'M15 6l-6 6 6 6',
+  users:'M16 20v-1a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v1M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 20v-1a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8',
+  ticket:'M3 7h18v4a2 2 0 0 0 0 4v4H3v-4a2 2 0 0 0 0-4zM14 7v12',
+  mega:'M3 11v2a1 1 0 0 0 1 1h3l6 4V6L7 10H4a1 1 0 0 0-1 1zM17 8a5 5 0 0 1 0 8',
+  door:'M5 21V4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v17M3 21h18M15 12h.01',
+  chart:'M4 20V10M10 20V4M16 20v-7M22 20H2',
+  cpu:'M7 7h10v10H7zM10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4',
+  sliders:'M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1M15 4v4M9 10v4M17 16v4',
+  overview:'M3 3h8v8H3zM13 3h8v5h-8zM13 10h8v11h-8zM3 13h8v8H3z',
+  moon:'M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10z',
+  sun:'M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4',
+  plus:'M12 5v14M5 12h14', check:'M5 12l5 5 9-11', x:'M6 6l12 12M18 6L6 18',
+  pin:'M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11zM12 12a2 2 0 1 0 0-4 2 2 0 0 0 0 4z',
+  clock:'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2',
+  plug:'M9 2v6M15 2v6M6 8h12v3a6 6 0 0 1-12 0zM12 17v5',
+  alert:'M12 3l10 18H2zM12 10v5M12 18h.01',
+  leaf:'M5 19c0-9 6-14 15-14 0 9-5 15-14 15M5 19l7-7',
+  camera:'M4 8h3l2-3h6l2 3h3v11H4zM12 17a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z',
+  steer:'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM3.5 10.5l6.6 1M13.9 11.5l6.6-1M12 14v7',
+  shield:'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z'
+};
+const icon = (n, cls='') => `<svg class="i ${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${IC[n]}"/></svg>`;
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* ===== time helpers ===== */
+const fmtT = d => d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+const hLabel = h => { const hh = ((h % 24) + 24) % 24; const s = hh >= 12 ? 'PM' : 'AM'; const v = hh % 12 || 12; return `${v} ${s}`; };
+const hmLabel = x => { const h = Math.floor(x), m = Math.round((x - h) * 60); const d = new Date(); d.setHours(h % 24, m, 0, 0); return fmtT(d); };
+const dayDate = i => { const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() + i); return d; };
+const dayShort = i => i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : dayDate(i).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+const ago = mins => mins < 1 ? 'just now' : mins < 60 ? `${Math.round(mins)} min ago` : mins < 1440 ? `${Math.round(mins/60)} h ago` : `${Math.round(mins/1440)} d ago`;
+const nowH = () => { const d = new Date(); return d.getHours() + d.getMinutes()/60; };
+const greeting = () => { const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'; };
+const money = v => '$' + v.toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2});
+const n0 = v => Math.round(v).toLocaleString('en-CA');
+const T0 = Date.now();
+const minsAgo = m => T0 - m*60000;
+
+/* ===== mock data ===== */
+const ME = {name:'Priya Sharma', first:'Priya', unit:'1204', room:'B', floor:12, email:'priya.s@example.com'};
+const STAFF = {name:'Alex Chen', role:'Front desk'};
+const DRIVER = {name:'Sam Okafor'};
+let _id = 5000; const nid = () => ++_id;
+
+const STOPS = [
+  {name:'The Marq', sub:'75 Ann St', at:0},
+  {name:'Richmond & Oxford', sub:'Richmond Row', at:0.13},
+  {name:'Western Rd at Sarnia', sub:'Western Gates', at:0.34},
+  {name:'UCC', sub:'Western University', at:0.48},
+  {name:'Natural Sciences', sub:'Western University', at:0.6},
+  {name:'Talbot & Ann', sub:'Downtown', at:0.86},
+];
+const LOOP_MIN = 28;
+
+const AMEN = [
+  {id:'theatre', name:'Theatre room', cap:12, maxH:3, color:'var(--s1)'},
+  {id:'game', name:'Game room', cap:10, maxH:2, color:'var(--s4)'},
+];
+
+const S = {
+  role:'resident', rtab:'home', rview:null, rparam:null, stab:'overview',
+  theme:null,
+  banner:null,
+  shuttle:{running:true, p:0.71, delay:0, started:minsAgo(20), cancelled:false, notify5:false, notifiedLoop:false},
+  ann:[
+    {id:nid(), title:'Water shut-off Thursday, 10 AM–12 PM', body:'Plumbers are replacing a riser valve. Water will be off on floors 10–14 from 10 AM to noon on Thursday. Please fill a jug the night before.', cat:'maintenance', urgent:true, aud:'floors', floors:[10,11,12,13,14], units:[], at:minsAgo(95), read:false, reads:61, audSize:88, source:'staff'},
+    {id:nid(), title:'Dryer 2 is out of service', body:'Dryer 2 in the laundry room is out of service. We\'ve logged it for repair — please use another machine.', cat:'maintenance', urgent:false, aud:'building', floors:[], units:[], at:minsAgo(180), read:false, reads:102, audSize:312, source:'system'},
+    {id:nid(), title:'Movie night Friday in the theatre', body:'Free popcorn and a crowd-pick double feature from 7 PM. Bring a friend from the building — seats are first come, first served.', cat:'event', urgent:false, aud:'building', floors:[], units:[], at:minsAgo(60*26), read:true, reads:198, audSize:312, source:'staff'},
+    {id:nid(), title:'Fire alarm testing on Oct 14', body:'Annual fire alarm testing runs 9 AM–3 PM. Alarms will sound briefly on each floor. No need to evacuate during the test.', cat:'safety', urgent:false, aud:'building', floors:[], units:[], at:minsAgo(60*50), read:true, reads:241, audSize:312, source:'staff'},
+    {id:nid(), title:'Welcome to Marq Living', body:'Track the shuttle, book the theatre and game room, check laundry, and message the front desk — all in one place.', cat:'building', urgent:false, aud:'building', floors:[], units:[], at:minsAgo(60*24*9), read:true, reads:288, audSize:312, source:'staff'},
+  ],
+  tickets:[
+    {id:'T-1048', subject:'Kitchen faucet dripping', cat:'maintenance', status:'in_progress', priority:'normal', unit:'1204', name:'Priya Sharma', source:'tenant', at:minsAgo(60*20), enter:true,
+      thread:[{who:'Priya Sharma', tenant:true, body:'The kitchen faucet drips constantly, even when fully closed.', at:minsAgo(60*20)},
+              {who:'Alex Chen', body:'Thanks Priya — maintenance is booked for tomorrow between 10 and 12. You said we can enter if you\'re out.', at:minsAgo(60*18)},
+              {who:'Alex Chen', internal:true, body:'Likely cartridge. Jordan has spares in B2 storage.', at:minsAgo(60*18)}]},
+    {id:'T-1047', subject:'Hallway light out near 712', cat:'maintenance', status:'open', priority:'low', unit:'0712', name:'Marcus Lee', source:'tenant', at:minsAgo(140), enter:false,
+      thread:[{who:'Marcus Lee', tenant:true, body:'The ceiling light outside 712 has been out since last night.', at:minsAgo(140)}]},
+    {id:'T-1046', subject:'Dryer 2: fault', cat:'device_fault', status:'open', priority:'high', unit:null, name:'System', source:'system', at:minsAgo(181), device:'ct-laundry-01',
+      thread:[{who:'System', body:'Heater not drawing power during a dry cycle (0.3 A, expected ~22 A). Laundry room, panel L1. Raised automatically.', at:minsAgo(181)},
+              {who:'System', internal:true, body:'Dryer 2 marked out of service and a building announcement was posted.', at:minsAgo(181)}]},
+    {id:'T-1045', subject:'Fob doesn\'t open the parking gate', cat:'access', status:'open', priority:'high', unit:'0903', name:'Hannah Wu', source:'tenant', at:minsAgo(55), enter:false,
+      thread:[{who:'Hannah Wu', tenant:true, body:'My fob works on the front door but not the P1 gate.', at:minsAgo(55)}]},
+    {id:'T-1044', subject:'Package marked delivered but not here', cat:'package', status:'resolved', priority:'normal', unit:'1508', name:'Diego Alvarez', source:'tenant', at:minsAgo(60*30), enter:false,
+      thread:[{who:'Diego Alvarez', tenant:true, body:'Amazon says delivered at 2 PM, but there\'s nothing in my locker.', at:minsAgo(60*30)},
+              {who:'Alex Chen', body:'Found it in the overflow room — it\'s at the front desk with your name on it.', at:minsAgo(60*28)}]},
+  ],
+  bookings:[
+    {id:nid(), amen:'theatre', day:2, start:19, dur:2, unit:'1204', name:'Priya S.'},
+    {id:nid(), amen:'theatre', day:0, start:18, dur:2, unit:'0815', name:'Jordan P.'},
+    {id:nid(), amen:'game', day:0, start:20, dur:2, unit:'1508', name:'Diego A.'},
+    {id:nid(), amen:'theatre', day:0, start:21, dur:2, unit:'0412', name:'Mei L.'},
+    {id:nid(), amen:'game', day:1, start:15, dur:2, unit:'0712', name:'Marcus L.'},
+    {id:nid(), amen:'theatre', day:1, start:19, dur:3, unit:'1103', name:'Sara K.'},
+    {id:nid(), amen:'game', day:2, start:18, dur:1, unit:'0903', name:'Hannah W.'},
+    {id:nid(), amen:'theatre', day:4, start:19, dur:3, unit:'Staff', name:'Movie night'},
+    {id:nid(), amen:'game', day:5, start:13, dur:2, unit:'0815', name:'Jordan P.'},
+  ],
+  bk:{amen:'theatre', day:0, start:null, dur:2},
+  machines:[
+    {id:'W1', type:'Washer', state:'free', mins:0, total:34},
+    {id:'W2', type:'Washer', state:'in_use', mins:23, total:34},
+    {id:'W3', type:'Washer', state:'in_use', mins:4, total:34},
+    {id:'W4', type:'Washer', state:'free', mins:0, total:34},
+    {id:'D1', type:'Dryer', state:'in_use', mins:41, total:55},
+    {id:'D2', type:'Dryer', state:'fault', mins:0, total:55},
+    {id:'D3', type:'Dryer', state:'free', mins:0, total:55},
+    {id:'D4', type:'Dryer', state:'in_use', mins:12, total:55},
+  ],
+  laundryNotify:new Set(),
+  myEv:null,
+  chargers:[
+    {id:'EV-1', state:'charging', kw:7.2, unit:'0815', soc:'+14 kWh'},
+    {id:'EV-2', state:'scheduled', kw:0, unit:'1103', soc:'starts 11:00 PM'},
+    {id:'EV-3', state:'free', kw:0, unit:null},
+    {id:'EV-4', state:'offline', kw:0, unit:null},
+  ],
+  evReqs:[
+    {id:nid(), unit:'0815', name:'Jordan P.', charger:'EV-1', kwh:22, by:7, plan:[[16.5,19.5]], status:'charging'},
+    {id:nid(), unit:'1103', name:'Sara K.', charger:'EV-2', kwh:30, by:8, plan:[[23,27.2]], status:'scheduled'},
+  ],
+  pending:[
+    {id:nid(), name:'Olivia Martin', email:'o.martin@example.com', unit:'1610', room:'C', floor:16, at:minsAgo(40)},
+    {id:nid(), name:'Ahmed Rahman', email:'ahmed.r@example.com', unit:'0807', room:'A', floor:8, at:minsAgo(60*3)},
+    {id:nid(), name:'Chloé Tremblay', email:'chloe.t@example.com', unit:'2104', room:'D', floor:21, at:minsAgo(60*22)},
+  ],
+  residents:[
+    {name:'Priya Sharma', unit:'1204B', floor:12, status:'approved', joined:'Sep 2'},
+    {name:'Marcus Lee', unit:'0712A', floor:7, status:'approved', joined:'Aug 30'},
+    {name:'Hannah Wu', unit:'0903C', floor:9, status:'approved', joined:'Aug 29'},
+    {name:'Diego Alvarez', unit:'1508A', floor:15, status:'approved', joined:'Aug 29'},
+    {name:'Jordan Park', unit:'0815D', floor:8, status:'approved', joined:'Aug 28'},
+    {name:'Sara Kim', unit:'1103B', floor:11, status:'approved', joined:'Aug 28'},
+    {name:'Mei Lin', unit:'0412A', floor:4, status:'approved', joined:'Aug 27'},
+  ],
+  team:[
+    {name:'Alex Chen', role:'Staff', note:'Front desk'},
+    {name:'Jordan Bell', role:'Staff', note:'Maintenance'},
+    {name:'Sam Okafor', role:'Driver', note:'Shuttle'},
+    {name:'Rina Patel', role:'Admin', note:'Property manager'},
+  ],
+  devices:[
+    {hw:'ct-main-01', type:'CT node', sys:'Main panel', loc:'Electrical room B1', status:'online', seen:0.1, rssi:-54, fw:'1.3.0', ch:4},
+    {hw:'ct-laundry-01', type:'CT node', sys:'Laundry', loc:'Laundry room, panel L1', status:'fault', seen:0.1, rssi:-61, fw:'1.3.0', ch:4},
+    {hw:'ct-laundry-02', type:'CT node', sys:'Laundry', loc:'Laundry room, panel L1', status:'online', seen:0.1, rssi:-63, fw:'1.3.0', ch:4},
+    {hw:'room-theatre-01', type:'Room node', sys:'Amenity', loc:'Theatre room, L2', status:'online', seen:0.2, rssi:-58, fw:'1.3.0', ch:2},
+    {hw:'room-game-01', type:'Room node', sys:'Amenity', loc:'Game room, L2', status:'online', seen:0.2, rssi:-66, fw:'1.3.0', ch:2},
+    {hw:'room-lobby-01', type:'Room node', sys:'Common', loc:'Lobby', status:'online', seen:0.3, rssi:-49, fw:'1.2.4', ch:2},
+    {hw:'ct-ev-01', type:'CT node', sys:'EV', loc:'P1 charger panel', status:'online', seen:0.1, rssi:-71, fw:'1.3.0', ch:4},
+    {hw:'evse-04', type:'EV charger', sys:'EV', loc:'P1 bay 4', status:'offline', seen:9, rssi:null, fw:'OCPP 1.6', ch:1},
+    {hw:'ct-hvac-01', type:'CT node', sys:'HVAC', loc:'Roof mechanical', status:'online', seen:0.1, rssi:-74, fw:'1.3.0', ch:3},
+  ],
+  devFilter:'all',
+  rooms:[
+    {id:'theatre', name:'Theatre room', occ:true, lights:'on', hvac:'comfort', set:22, mode:'auto', kw:1.8, why:'Booking 6–8 PM (unit 0815)'},
+    {id:'game', name:'Game room', occ:false, lights:'off', hvac:'setback', set:17, mode:'auto', kw:0.2, why:'Empty — next booking 8 PM'},
+    {id:'lobby', name:'Lobby', occ:true, lights:'on', hvac:'comfort', set:21, mode:'auto', kw:3.1, why:'Schedule 6 AM–midnight'},
+  ],
+  failsafe:false,
+  cmdlog:[
+    {at:minsAgo(3), room:'Theatre room', act:'Lights on, HVAC comfort 22 °C', by:'Rule · Booking starts', ok:true},
+    {at:minsAgo(48), room:'Game room', act:'Lights off, HVAC setback 17 °C', by:'Rule · Empty 10 min after booking', ok:true},
+    {at:minsAgo(130), room:'Lobby', act:'Lights on', by:'Alex Chen (staff)', ok:true},
+    {at:minsAgo(60*5), room:'Game room', act:'HVAC setback', by:'Rule · Empty 10 min after booking', ok:false, err:'manual override active'},
+  ],
+  rules:[
+    {id:nid(), on:true, when:'A booking starts', cond:'15 min before', then:'Lights on · HVAC comfort (22 °C)', where:'Theatre, Game room', fired:minsAgo(3)},
+    {id:nid(), on:true, when:'A booking ends', cond:'and no motion for 10 min', then:'Lights off · HVAC setback (17 °C)', where:'Theatre, Game room', fired:minsAgo(48)},
+    {id:nid(), on:true, when:'Motion in a room with no booking', cond:'after 11 PM', then:'Alert staff', where:'Theatre, Game room', fired:minsAgo(60*27)},
+    {id:nid(), on:true, when:'Building load passes 90% of limit', cond:'any time', then:'Cut EV chargers to 3.6 kW', where:'All chargers', fired:minsAgo(60*50)},
+  ],
+  annFilter:'all', annOpen:null,
+  load:97,
+  stTicket:'T-1046', tkFilter:'open',
+  anRange:'30d',
+  notif:{push:true, email:true, shuttle:true, laundry:true, events:false},
+};
+
+/* ===== energy model (mock) ===== */
+const bump = (h, c, w) => Math.exp(-((h - c) ** 2) / (2 * w * w));
+const noise = i => (Math.sin(i * 12.9898) * 43758.5453) % 1;
+const SYS = [
+  {name:'HVAC & common', color:'var(--s1)', f:h => 34 + 10*Math.sin((h-10)/24*2*Math.PI) + (h>=7 && h<23 ? 8 : 0)},
+  {name:'Laundry', color:'var(--s2)', f:h => 1.5 + (h>=8 && h<23 ? 11*bump(h,19.5,2.2) + 7*bump(h,10.5,1.6) : 0)},
+  {name:'EV charging', color:'var(--s3)', f:h => (h>=23 || h<5.5) ? 21 : (h>=16.5 && h<19.5 ? 7 : 0)},
+  {name:'Amenity rooms', color:'var(--s4)', f:h => (h>=18 && h<23.5) ? 4.5 : 0.7},
+  {name:'Other', color:'var(--s5)', f:h => 13 + 6*bump(h,7.8,1.3) + 9*bump(h,19,2.4)},
+];
+const LIMIT = 150;
+const price = h => (h >= 23 || h < 7) ? 0.028 : (h >= 16 && h < 21) ? 0.284 : 0.122; // ULO-style ¢/kWh → $/kWh
+function energyDay(){
+  const n = 96, nowIdx = Math.min(95, Math.floor(nowH() * 4));
+  const series = SYS.map((s, k) => ({...s, data:Array.from({length:n}, (_, i) => i <= nowIdx ? Math.max(0, s.f(i/4) * (1 + 0.06*noise(i + k*97))) : null)}));
+  const forecast = Array.from({length:n}, (_, i) => SYS.reduce((a, s) => a + s.f(i/4), 0) * 1.015);
+  let kwh = 0, cost = 0, peak = 0;
+  for (let i = 0; i <= nowIdx; i++) { const t = series.reduce((a, s) => a + s.data[i], 0); kwh += t/4; cost += t/4 * price(i/4); peak = Math.max(peak, t); }
+  const bySys = series.map(s => ({label:s.name, color:s.color, value:s.data.reduce((a, v) => a + (v || 0), 0)/4}));
+  return {n, nowIdx, series, forecast, kwh, cost, peak, bySys};
+}
+
+/* ===== charts ===== */
+function areaChart({series, n, forecast, limit, nowIdx, h = 240}){
+  const W = 680, H = h, pl = 38, pr = 12, pt = 12, pb = 24;
+  const tot = i => series.reduce((a, s) => a + (s.data[i] || 0), 0);
+  let max = Math.max(limit || 0, ...forecast);
+  for (let i = 0; i <= nowIdx; i++) max = Math.max(max, tot(i));
+  max = Math.ceil(max * 1.08 / 20) * 20;
+  const x = i => pl + i * (W - pl - pr) / (n - 1), y = v => pt + (H - pt - pb) * (1 - v / max);
+  let out = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Building load by system">`;
+  for (let k = 0; k <= 4; k++) { const v = max * k / 4; out += `<line x1="${pl}" x2="${W-pr}" y1="${y(v)}" y2="${y(v)}" stroke="var(--border)"/><text x="${pl-6}" y="${y(v)+4}" text-anchor="end">${Math.round(v)}</text>`; }
+  for (let hh = 0; hh <= 24; hh += 4) { const i = Math.min(n-1, hh*4); out += `<text x="${x(i)}" y="${H-6}" text-anchor="middle">${hh === 24 ? '' : hLabel(hh).replace(' ', '')}</text>`; }
+  const base = Array(n).fill(0);
+  series.forEach(s => {
+    const top = base.map((b, i) => b + (s.data[i] || 0));
+    let d = '';
+    for (let i = 0; i <= nowIdx; i++) d += `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(top[i]).toFixed(1)}`;
+    for (let i = nowIdx; i >= 0; i--) d += `L${x(i).toFixed(1)} ${y(base[i]).toFixed(1)}`;
+    out += `<path d="${d}Z" fill="${s.color}" fill-opacity=".85"/>`;
+    for (let i = 0; i <= nowIdx; i++) base[i] = top[i];
+  });
+  let fd = ''; forecast.forEach((v, i) => fd += `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(v).toFixed(1)}`);
+  out += `<path d="${fd}" fill="none" stroke="var(--text)" stroke-opacity=".55" stroke-width="1.6" stroke-dasharray="4 4"/>`;
+  if (limit) out += `<line x1="${pl}" x2="${W-pr}" y1="${y(limit)}" y2="${y(limit)}" stroke="var(--bad)" stroke-width="1.5" stroke-dasharray="6 4"/><text x="${W-pr}" y="${y(limit)-5}" text-anchor="end" style="fill:var(--bad)">Peak limit ${limit} kW</text>`;
+  out += `<line x1="${x(nowIdx)}" x2="${x(nowIdx)}" y1="${pt}" y2="${H-pb}" stroke="var(--accent)" stroke-width="1.5"/><text x="${x(nowIdx)+4}" y="${pt+10}" style="fill:var(--accent-strong);font-weight:600">now</text>`;
+  return out + '</svg>';
+}
+const legend = items => `<div class="legend">${items.map(s => `<span><i style="background:${s.color}"></i>${esc(s.name)}</span>`).join('')}</div>`;
+function bars(items, fmt = v => n0(v), color = 'var(--s1)'){
+  const max = Math.max(...items.map(i => i.value), 1);
+  return `<div class="bars">${items.map(i => `<div class="bar"><span class="ellipsis">${esc(i.label)}</span><div class="t"><i style="width:${(i.value/max*100).toFixed(1)}%;background:${i.color || color}"></i></div><b class="num">${fmt(i.value)}</b></div>`).join('')}</div>`;
+}
+function cols(items, fmt = v => n0(v), color = 'var(--s1)', max){
+  max = max || Math.max(...items.map(i => i.value), 1);
+  return `<div class="cols">${items.map(i => `<div class="c"><em class="num">${fmt(i.value)}</em><i style="height:${Math.max(2, i.value/max*100).toFixed(1)}%;background:${i.color || color}"></i><span>${esc(i.label)}</span></div>`).join('')}</div>`;
+}
+function spark(data, color = 'var(--s1)', w = 200, h = 44){
+  const max = Math.max(...data), min = Math.min(...data);
+  const d = data.map((v, i) => `${i ? 'L' : 'M'}${(i*(w/(data.length-1))).toFixed(1)} ${(h - 3 - (v-min)/(max-min || 1)*(h-6)).toFixed(1)}`).join('');
+  return `<svg class="chart" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="height:${h}px"><path d="${d}" fill="none" stroke="${color}" stroke-width="2"/></svg>`;
+}
+
+/* ===== shuttle model ===== */
+function etaMin(i){
+  const sh = S.shuttle; if (!sh.running) return null;
+  const frac = (((STOPS[i].at - sh.p) % 1) + 1) % 1;
+  return frac * LOOP_MIN + sh.delay;
+}
+const etaText = m => m == null ? '—' : m < 1 ? 'Now' : `${Math.round(m)} min`;
+function nextStopIdx(){ const p = S.shuttle.p; let best = 0, bf = 2; STOPS.forEach((s, i) => { const f = (((s.at - p) % 1) + 1) % 1; if (f > 0.004 && f < bf) { bf = f; best = i; } }); return best; }
+function departures(n = 4){
+  const out = [], d = new Date(); let h = 7.5;
+  while (out.length < n && h <= 22) { if (h > nowH()) out.push(h); h += 0.5; }
+  if (out.length < n) { h = 7.5; while (out.length < n) { out.push(h + 24); h += 0.5; } }
+  return out.map(x => (x >= 24 ? 'Tomorrow ' : '') + hmLabel(x % 24));
+}
+
+/* ===== shell ===== */
+const app = document.getElementById('app');
+function render(){
+  app.innerHTML = topbar() + `<main class="wrap">${S.role === 'resident' ? residentView() : S.role === 'driver' ? driverView() : staffView()}</main>`;
+  afterRender();
+}
+function topbar(){
+  const dark = document.documentElement.getAttribute('data-theme') === 'dark' || (!document.documentElement.getAttribute('data-theme') && matchMedia('(prefers-color-scheme: dark)').matches);
+  return `<header class="topbar"><div class="topbar-in">
+    <div class="brand">
+      <span class="mark"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D2AE70" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V6l8 8 8-8v13"/></svg></span>
+      <div style="min-width:0"><b>Marq Living</b> <span class="proto">Prototype · mock data</span><br><small class="muted">The Marq · 75 Ann St, London ON</small></div>
+    </div>
+    <div class="seg" role="group" aria-label="View as">
+      ${[['resident','Resident'],['driver','Driver'],['staff','Staff']].map(([k, l]) => `<button data-act="role" data-v="${k}" aria-pressed="${S.role === k}">${l}</button>`).join('')}
+    </div>
+    <button class="iconbtn" data-act="theme" aria-label="Switch to ${dark ? 'light' : 'dark'} theme" title="Theme">${icon(dark ? 'sun' : 'moon')}</button>
+  </div></header>`;
+}
+
+/* ===== resident ===== */
+const unreadCount = () => S.ann.filter(a => visibleToMe(a) && !a.read).length;
+function visibleToMe(a){ return a.aud === 'building' || (a.aud === 'floors' && a.floors.includes(ME.floor)) || (a.aud === 'units' && a.units.includes(ME.unit)); }
+function residentView(){
+  const tabs = [['home','Home','home'],['shuttle','Shuttle','bus'],['book','Book','cal'],['laundry','Laundry','washer'],['more','More','more']];
+  const unread = unreadCount();
+  let body;
+  if (S.rview) body = ({announcements:rAnnouncements, requests:rRequests, request:rRequest, newreq:rNewRequest, ev:rEv, settings:rSettings})[S.rview]();
+  else body = ({home:rHome, shuttle:rShuttle, book:rBook, laundry:rLaundry, more:rMore})[S.rtab]();
+  return `<div class="res-layout">
+    <section class="phone" aria-label="Resident app">
+      <div class="phone-head">
+        <div class="grow"><div class="small muted">Marq Living</div><b>${S.rview ? viewTitle(S.rview) : tabs.find(t => t[0] === S.rtab)[1]}</b></div>
+        <button class="iconbtn" data-act="rgo" data-view="announcements" aria-label="Announcements" style="position:relative">${icon('bell')}${unread ? `<span class="badge" style="position:absolute;top:-4px;right:-4px">${unread}</span>` : ''}</button>
+      </div>
+      <div class="phone-body" id="pbody">${body}</div>
+      <nav class="tabbar" aria-label="Resident sections">
+        ${tabs.map(([k, l, ic]) => `<button data-act="rtab" data-v="${k}" ${!S.rview && S.rtab === k ? 'aria-current="page"' : ''}>${icon(ic)}${l}${k === 'more' && unread ? `<span class="badge">${unread}</span>` : ''}</button>`).join('')}
+      </nav>
+    </section>
+    <aside class="side-notes stack">
+      <div class="card">
+        <h3>Try it</h3>
+        <ol class="small">
+          <li>Book the theatre, then open <b>Staff → Rooms</b> to see the booking that will switch it on.</li>
+          <li>Send a front desk request here, then answer it from <b>Staff → Tickets</b>.</li>
+          <li>Switch to <b>Driver</b> and press "Running late". The shuttle screen here shows the delay.</li>
+          <li>Tap <b>Notify me</b> on a washer that's running. A toast appears when it's done.</li>
+          <li>Post an urgent announcement from <b>Staff</b>, then come back here.</li>
+        </ol>
+      </div>
+      <div class="note">${icon('leaf')} Utilities are included in rent, so residents never see energy costs. Laundry and EV charging are included too. Savings and costs appear only in the staff views.</div>
+    </aside>
+  </div>`;
+}
+const viewTitle = v => ({announcements:'Announcements', requests:'Front desk', request:'Request', newreq:'New request', ev:'EV charging', settings:'Settings'})[v];
+function bannerHtml(){
+  const out = [];
+  const sh = S.shuttle;
+  if (sh.running && sh.delay > 0) out.push(`<div class="banner">${icon('clock')}<div>Shuttle is running about <b>${sh.delay} min late</b>.</div></div>`);
+  if (sh.cancelled) out.push(`<div class="banner bad">${icon('alert')}<div>The current shuttle run was cancelled. Next departure ${departures(1)[0]}.</div></div>`);
+  const urgent = S.ann.find(a => a.urgent && !a.read && visibleToMe(a));
+  if (urgent) out.push(`<button class="banner bad" style="border:0;text-align:left;width:100%" data-act="rgo" data-view="announcements" data-open="${urgent.id}">${icon('alert')}<div><b>Urgent:</b> ${esc(urgent.title)}</div></button>`);
+  return out.join('');
+}
+function homeEta(){
+  const sh = S.shuttle;
+  if (!sh.running) return `<div class="big-eta">—</div><div class="small muted">Not running · next departure ${departures(1)[0]}</div>`;
+  const m = etaMin(0);
+  return `<div class="big-eta num">${etaText(m)}</div><div class="small muted">to The Marq${sh.delay ? ` · ${sh.delay} min late` : ''}</div>`;
+}
+function rHome(){
+  const free = t => S.machines.filter(m => m.type === t && m.state === 'free').length;
+  const mine = S.bookings.filter(b => b.unit === ME.unit).sort((a, b) => a.day - b.day || a.start - b.start);
+  const openReq = S.tickets.filter(t => t.unit === ME.unit && t.status !== 'resolved');
+  const latest = S.ann.filter(visibleToMe).slice(0, 2);
+  return `${bannerHtml()}
+  <div class="card hello">
+    <div class="small muted">${greeting()}</div>
+    <h2>${esc(ME.first)}</h2>
+    <div class="row wrap small mt-s"><span>Unit ${ME.unit}${ME.room} · Floor ${ME.floor}</span><span class="chip ok">${icon('check')}All utilities included</span></div>
+  </div>
+  <div class="tile-grid">
+    <button class="card link" data-act="rtab" data-v="shuttle"><div class="row small muted">${icon('bus')}Next shuttle</div><div class="mt-s" id="home-eta">${homeEta()}</div></button>
+    <button class="card link" data-act="rtab" data-v="laundry"><div class="row small muted">${icon('washer')}Laundry</div><div class="mt-s"><div class="big-eta num">${free('Washer')}<span class="muted" style="font-size:18px"> / ${free('Dryer')}</span></div><div class="small muted">washers / dryers free</div></div></button>
+  </div>
+  <div class="sec-h"><h3>Your bookings</h3><button class="back" data-act="rtab" data-v="book">Book ${icon('chev')}</button></div>
+  ${mine.length ? `<div class="card tight list">${mine.map(b => `<div class="row"><span class="chip info">${dayShort(b.day)}</span><div class="grow"><b>${AMEN.find(a => a.id === b.amen).name}</b><div class="small muted">${hLabel(b.start)} – ${hLabel(b.start + b.dur)}</div></div></div>`).join('')}</div>` : `<div class="empty small">No upcoming bookings.</div>`}
+  <div class="sec-h"><h3>Announcements</h3><button class="back" data-act="rgo" data-view="announcements">All ${icon('chev')}</button></div>
+  <div class="card tight list">${latest.map(a => `<button class="row top" style="border-left:0;border-right:0;border-bottom:0;background:none;text-align:left;width:100%" data-act="rgo" data-view="announcements" data-open="${a.id}"><span class="dot ${a.read ? '' : a.urgent ? 'bad' : 'warn'}" style="margin-top:6px"></span><div class="grow"><b>${esc(a.title)}</b><div class="small muted">${ago((Date.now() - a.at)/60000)}</div></div></button>`).join('')}</div>
+  <button class="card link row" data-act="rgo" data-view="requests"><span style="color:var(--accent)">${icon('wrench')}</span><div class="grow"><b>Front desk</b><div class="small muted">${openReq.length ? `${openReq.length} open request${openReq.length > 1 ? 's' : ''}` : 'Ask for help or report a problem'}</div></div>${icon('chev')}</button>`;
+}
+function routeMap(){
+  return `<svg class="map" viewBox="0 0 360 250" role="img" aria-label="Shuttle route map (schematic)">
+    <rect width="360" height="250" fill="var(--map-bg)"/>
+    <path d="M0 60 C 80 70, 120 30, 200 40 S 320 20, 360 30" stroke="var(--map-water)" stroke-width="12" fill="none" opacity=".9"/>
+    <rect x="232" y="122" width="92" height="56" rx="10" fill="var(--map-park)"/>
+    <text x="278" y="154" text-anchor="middle" font-size="9" fill="var(--faint)" font-family="Inter">Western campus</text>
+    ${[40,95,150,205,260,315].map(x => `<line x1="${x}" y1="0" x2="${x - 18}" y2="250" stroke="var(--map-street)" stroke-width="3"/>`).join('')}
+    ${[90,140,190,230].map(y => `<line x1="0" y1="${y}" x2="360" y2="${y - 14}" stroke="var(--map-street)" stroke-width="3"/>`).join('')}
+    <path id="route-path" d="M70 205 C 52 160, 84 126, 132 118 L 222 80 C 268 62, 320 82, 316 124 C 312 160, 278 176, 236 184 L 134 214 C 104 224, 80 224, 70 205 Z" fill="none" stroke="var(--accent)" stroke-width="4" stroke-linejoin="round" opacity=".9"/>
+    ${STOPS.map((s, i) => `<g id="stop-${i}"><circle r="${i === 0 ? 7 : 5.5}" fill="${i === 0 ? 'var(--primary)' : 'var(--surface)'}" stroke="${i === 0 ? 'var(--surface)' : 'var(--accent)'}" stroke-width="2.5"/><text font-size="9.5" font-weight="600" fill="var(--text)" font-family="Inter" paint-order="stroke" stroke="var(--map-bg)" stroke-width="3">${esc(s.name)}</text></g>`).join('')}
+    <g id="bus" style="display:${S.shuttle.running ? '' : 'none'}"><circle r="12" fill="var(--primary)" opacity=".18"/><circle r="8" fill="var(--primary)" stroke="var(--surface)" stroke-width="2"/></g>
+  </svg>`;
+}
+function rShuttle(){
+  const sh = S.shuttle;
+  return `${bannerHtml()}
+  <div class="card tight">${routeMap()}
+    <div class="row between mt-s"><div class="row small">${sh.running ? `<span class="dot live"></span><b>Live</b><span class="muted">· Bus 1 · Western Campus Loop</span>` : `<span class="dot"></span><span class="muted">Not running right now</span>`}</div>${sh.delay ? `<span class="chip warn">${sh.delay} min late</span>` : sh.running ? '<span class="chip ok">On time</span>' : ''}</div>
+  </div>
+  <div class="card tight">
+    <div class="list">${STOPS.map((s, i) => `<div class="stop-row ${i === 0 ? 'home' : ''}"><span class="pin"></span><div class="grow"><b>${esc(s.name)}</b><div class="small muted">${esc(s.sub)}</div></div><b class="num" id="eta-${i}">${etaText(etaMin(i))}</b></div>`).join('')}</div>
+  </div>
+  <div class="card tight row"><div class="grow"><b>Alert me 5 min before</b><div class="small muted">Push when the bus is 5 min from The Marq</div></div><button class="switch" data-act="notify5" aria-pressed="${sh.notify5}" aria-label="Alert me 5 minutes before"></button></div>
+  <div class="sec-h"><h3>Next departures from The Marq</h3></div>
+  <div class="row wrap">${departures(4).map(d => `<span class="chip brass">${d}</span>`).join('')}</div>
+  <p class="small faint">Weekdays every 30 min, 7:30 AM – 10 PM. Holiday changes are posted here. Stops shown are placeholders until the real route is confirmed.</p>`;
+}
+function bookState(){
+  const bk = S.bk, a = AMEN.find(x => x.id === bk.amen);
+  const taken = {}, mine = {};
+  S.bookings.filter(b => b.amen === bk.amen && b.day === bk.day).forEach(b => { for (let h = b.start; h < b.start + b.dur; h++) (b.unit === ME.unit ? mine : taken)[h] = true; });
+  return {a, taken, mine};
+}
+function rBook(){
+  const bk = S.bk, {a, taken, mine} = bookState();
+  const hours = []; for (let h = 9; h <= 22; h++) hours.push(h);
+  const past = h => bk.day === 0 && h <= nowH();
+  const sel = h => bk.start != null && h >= bk.start && h < bk.start + bk.dur;
+  const myWeek = S.bookings.filter(b => b.unit === ME.unit).length;
+  let summary = '';
+  if (bk.start != null) {
+    const clash = Array.from({length:bk.dur}, (_, k) => bk.start + k).some(h => taken[h] || mine[h] || h >= 23);
+    summary = `<div class="card tight"><div class="row between"><div><b>${a.name}</b><div class="small muted">${dayShort(bk.day)} · ${hLabel(bk.start)} – ${hLabel(bk.start + bk.dur)}</div></div>
+      <div class="seg" role="group" aria-label="Length">${[1,2,3].filter(d => d <= a.maxH).map(d => `<button data-act="bkdur" data-v="${d}" aria-pressed="${bk.dur === d}">${d} h</button>`).join('')}</div></div>
+      ${clash ? `<div class="banner bad mt-s small">${icon('alert')}That overlaps another booking or runs past 11 PM.</div>` : ''}
+      <button class="btn primary block mt-s" data-act="bkconfirm" ${clash ? 'disabled' : ''}>${icon('check')}Confirm booking</button>
+      <p class="tiny muted mt-s">The room's lights and climate will be ready when you arrive.</p></div>`;
+  }
+  const mineList = S.bookings.filter(b => b.unit === ME.unit).sort((x, y) => x.day - y.day || x.start - y.start);
+  return `<div class="seg" role="group" aria-label="Amenity" style="align-self:flex-start">${AMEN.map(x => `<button data-act="bkamen" data-v="${x.id}" aria-pressed="${bk.amen === x.id}">${x.name}</button>`).join('')}</div>
+  <div class="small muted">Up to ${a.cap} people · max ${a.maxH} h · 9 AM–11 PM · ${myWeek}/2 bookings this week</div>
+  <div class="days">${[0,1,2,3,4,5,6].map(i => { const d = dayDate(i); return `<button data-act="bkday" data-v="${i}" aria-pressed="${bk.day === i}"><span class="tiny">${i === 0 ? 'Today' : d.toLocaleDateString('en-US',{weekday:'short'})}</span><b>${d.getDate()}</b></button>`; }).join('')}</div>
+  <div class="slots">${hours.map(h => { const isMine = mine[h], dis = taken[h] || past(h); return `<button class="slot ${isMine ? 'mine' : ''} ${sel(h) && !isMine ? 'sel' : ''}" data-act="bkslot" data-v="${h}" ${dis || isMine ? 'disabled' : ''} title="${isMine ? 'Your booking' : taken[h] ? 'Booked' : ''}">${hLabel(h).replace(' ', '')}</button>`; }).join('')}</div>
+  <div class="legend"><span><i style="background:var(--surface);border:1px solid var(--border)"></i>Free</span><span><i style="background:var(--surface-2)"></i>Taken</span><span><i style="background:var(--info-soft)"></i>Yours</span></div>
+  ${summary}
+  <div class="sec-h"><h3>Upcoming</h3></div>
+  ${mineList.length ? `<div class="card tight list">${mineList.map(b => `<div class="row"><div class="grow"><b>${AMEN.find(x => x.id === b.amen).name}</b><div class="small muted">${dayShort(b.day)} · ${hLabel(b.start)} – ${hLabel(b.start + b.dur)}</div></div><button class="btn sm danger" data-act="bkcancel" data-id="${b.id}">Cancel</button></div>`).join('')}</div>` : `<div class="empty small">Nothing booked yet.</div>`}`;
+}
+function machineCard(m){
+  const lbl = {free:'Free', in_use:'In use', finishing:'Finishing soon', fault:'Out of service'}[m.state];
+  const chip = {free:'ok', in_use:'info', finishing:'warn', fault:'bad'}[m.state];
+  const on = S.laundryNotify.has(m.id);
+  return `<div class="machine ${m.state}">
+    <div class="row between"><b>${m.type} ${m.id.slice(1)}</b><span class="chip ${chip}">${lbl}</span></div>
+    ${m.state === 'in_use' || m.state === 'finishing' ? `<div class="small muted num">~${m.mins} min left</div><div class="mbar"><i style="width:${(100 - m.mins/m.total*100).toFixed(0)}%"></i></div>
+      <button class="btn sm ${on ? 'primary' : ''}" data-act="lnotify" data-id="${m.id}">${icon('bell')}${on ? 'We\'ll tell you' : 'Notify me'}</button>`
+    : m.state === 'fault' ? `<div class="small muted">Reported for repair</div>` : `<div class="small muted">Ready to go</div>`}
+  </div>`;
+}
+function rLaundry(){
+  return `<div class="note">${icon('check')} Laundry is included. No cards or coins needed. Availability comes from each machine's power draw.</div>
+  <div class="sec-h" style="margin-top:4px"><h3>Washers</h3></div><div class="machines">${S.machines.filter(m => m.type === 'Washer').map(machineCard).join('')}</div>
+  <div class="sec-h"><h3>Dryers</h3></div><div class="machines">${S.machines.filter(m => m.type === 'Dryer').map(machineCard).join('')}</div>
+  <p class="tiny faint">Times are estimates from typical cycles. Laundry room, level 1.</p>`;
+}
+function rMore(){
+  const unread = unreadCount();
+  const item = (view, ic, title, sub, badge) => `<button class="card link row" data-act="rgo" data-view="${view}"><span style="color:var(--accent)">${icon(ic)}</span><div class="grow"><b>${title}</b><div class="small muted">${sub}</div></div>${badge ? `<span class="badge">${badge}</span>` : ''}${icon('chev')}</button>`;
+  return item('announcements','mega','Announcements','Building news, maintenance, events', unread)
+    + item('requests','wrench','Front desk','Requests, repairs, packages')
+    + item('ev','plug','EV charging', S.myEv ? 'Scheduled for tonight' : 'Request a charge — included')
+    + item('settings','gear','Settings','Notifications, profile');
+}
+function rAnnouncements(){
+  const cats = [['all','All'],['maintenance','Maintenance'],['event','Events'],['safety','Safety'],['building','Building']];
+  const list = S.ann.filter(visibleToMe).filter(a => S.annFilter === 'all' || a.cat === S.annFilter);
+  return `<button class="back" data-act="rback">${icon('backc')}Back</button>
+  <div class="row wrap">${cats.map(([k, l]) => `<button class="chip" data-act="annf" data-v="${k}" aria-pressed="${S.annFilter === k}">${l}</button>`).join('')}</div>
+  ${list.map(a => `<div class="card tight" id="ann-${a.id}" ${a.urgent ? 'style="border-color:color-mix(in srgb,var(--bad) 40%,var(--border))"' : ''}>
+    <button class="row top" style="border:0;background:none;padding:0;text-align:left;width:100%" data-act="annopen" data-id="${a.id}">
+      <span class="dot ${a.read ? '' : a.urgent ? 'bad' : 'warn'}" style="margin-top:6px"></span>
+      <div class="grow"><div class="row wrap">${a.urgent ? '<span class="chip bad">Urgent</span>' : ''}<span class="chip">${a.cat}</span>${a.aud === 'floors' ? `<span class="chip info">Floors ${a.floors[0]}–${a.floors[a.floors.length-1]}</span>` : ''}</div>
+      <b style="display:block;margin-top:5px">${esc(a.title)}</b><div class="small muted">${ago((Date.now() - a.at)/60000)}${a.source === 'system' ? ' · automatic' : ''}</div></div>
+    </button>
+    ${S.annOpen === a.id ? `<p class="mt-s">${esc(a.body)}</p>` : ''}
+  </div>`).join('') || '<div class="empty">Nothing here.</div>'}`;
+}
+const statusChip = s => ({open:'<span class="chip warn">Open</span>', in_progress:'<span class="chip info">In progress</span>', resolved:'<span class="chip ok">Resolved</span>'})[s];
+const catLabel = c => ({maintenance:'Maintenance', access:'Access & fobs', package:'Package', noise:'Noise', device_fault:'Device fault', other:'Other'})[c] || c;
+function rRequests(){
+  const mine = S.tickets.filter(t => t.unit === ME.unit);
+  return `<button class="back" data-act="rback">${icon('backc')}Back</button>
+  <button class="btn primary block" data-act="rgo" data-view="newreq">${icon('plus')}New request</button>
+  ${mine.length ? `<div class="card tight list">${mine.map(t => `<button class="row" style="border-left:0;border-right:0;border-bottom:0;background:none;text-align:left;width:100%" data-act="rgo" data-view="request" data-id="${t.id}"><div class="grow"><b>${esc(t.subject)}</b><div class="small muted">${t.id} · ${catLabel(t.cat)} · ${ago((Date.now() - t.at)/60000)}</div></div>${statusChip(t.status)}</button>`).join('')}</div>` : '<div class="empty">No requests yet.</div>'}
+  <p class="small faint">Front desk hours: 8 AM–10 PM. For emergencies (fire, flood, no heat) call 519-555-0175 any time.</p>`;
+}
+function rRequest(){
+  const t = S.tickets.find(x => x.id === S.rparam);
+  return `<button class="back" data-act="rgo" data-view="requests">${icon('backc')}Requests</button>
+  <div class="card tight"><div class="row between"><b>${esc(t.subject)}</b>${statusChip(t.status)}</div><div class="small muted">${t.id} · ${catLabel(t.cat)}${t.enter ? ' · OK to enter' : ''}</div></div>
+  <div class="stack sm">${t.thread.filter(m => !m.internal).map(m => `<div class="msg ${m.tenant ? 'me' : ''}"><div class="tiny muted">${m.tenant ? 'You' : esc(m.who) + ' · Front desk'} · ${ago((Date.now() - m.at)/60000)}</div>${esc(m.body)}</div>`).join('')}</div>
+  <div class="row"><input id="rreply" placeholder="Write a reply" aria-label="Reply"><button class="btn primary" data-act="rreply" data-id="${t.id}">Send</button></div>`;
+}
+function rNewRequest(){
+  return `<button class="back" data-act="rgo" data-view="requests">${icon('backc')}Requests</button>
+  <div class="card stack">
+    <div><label class="f" for="nq-cat">Category</label><select id="nq-cat"><option value="maintenance">Maintenance</option><option value="access">Access & fobs</option><option value="package">Package</option><option value="noise">Noise</option><option value="other">Other</option></select></div>
+    <div><label class="f" for="nq-sub">Subject</label><input id="nq-sub" placeholder="e.g. Bathroom fan is loud"></div>
+    <div><label class="f" for="nq-body">Details</label><textarea id="nq-body" placeholder="What's happening, and where?"></textarea></div>
+    <button class="btn" data-act="photo">${icon('camera')}Add photos</button>
+    <label class="row small"><input type="checkbox" id="nq-enter" style="width:auto" checked> Staff may enter if I'm not home</label>
+    <button class="btn primary" data-act="nqsubmit">Send to front desk</button>
+  </div>`;
+}
+function evPlanFor(kwh, by){
+  const hrs = kwh / 7.2; let start = 23; const end = start + hrs;
+  return {start, end, ready: end <= by + 24};
+}
+function rEv(){
+  const r = S.myEv;
+  const head = `<button class="back" data-act="rback">${icon('backc')}Back</button>
+  <div class="note">${icon('leaf')} Charging is included. We charge overnight when the building is quiet, so your car is ready by the time you choose and the building stays under its power limit.</div>`;
+  if (r) {
+    return head + `<div class="card">
+      <div class="row between"><b>${r.charger} · tonight</b><span class="chip info">Scheduled</span></div>
+      <div class="small muted mt-s">About ${r.km} km (${r.kwh} kWh) · ready by ${hLabel(r.by)}</div>
+      <div class="timeline mt"><div class="blk" style="left:${(r.plan[0][0]-18)/14*100}%;width:${(r.plan[0][1]-r.plan[0][0])/14*100}%;background:var(--s3)">Charging</div></div>
+      <div class="tl-axis"><span>6 PM</span><span>10 PM</span><span>2 AM</span><span>8 AM</span></div>
+      <p class="small mt-s">Starts at <b>${hmLabel(r.plan[0][0] % 24)}</b> and finishes around <b>${hmLabel(r.plan[0][1] % 24)}</b>.</p>
+      <button class="btn danger block mt-s" data-act="evcancel">Cancel request</button></div>`;
+  }
+  const freeCh = S.chargers.filter(c => c.state === 'free');
+  return head + `<div class="card stack">
+    <div><label class="f" for="ev-ch">Charger</label><select id="ev-ch">${freeCh.map(c => `<option>${c.id}</option>`).join('')}<option value="">I'll plug in later</option></select></div>
+    <div><label class="f" for="ev-km">How much range do you need?</label><select id="ev-km"><option value="60">About 60 km</option><option value="120" selected>About 120 km</option><option value="200">About 200 km</option><option value="300">About 300 km</option></select></div>
+    <div><label class="f" for="ev-by">Ready by</label><select id="ev-by"><option value="6">6 AM</option><option value="7" selected>7 AM</option><option value="8">8 AM</option><option value="9">9 AM</option></select></div>
+    <button class="btn primary" data-act="evsubmit">${icon('plug')}Request a charge</button>
+  </div>
+  <div class="card tight"><b>Chargers now</b><div class="list mt-s">${S.chargers.map(c => `<div class="row"><span class="dot ${c.state === 'free' ? 'ok' : c.state === 'offline' ? 'bad' : 'warn'}"></span><span class="grow">${c.id}</span><span class="small muted">${c.state === 'free' ? 'Free' : c.state === 'offline' ? 'Out of service' : 'In use'}</span></div>`).join('')}</div></div>`;
+}
+function rSettings(){
+  const t = (k, l, s) => `<div class="row"><div class="grow"><b>${l}</b><div class="small muted">${s}</div></div><button class="switch" data-act="notif" data-k="${k}" aria-pressed="${S.notif[k]}" aria-label="${l}"></button></div>`;
+  return `<button class="back" data-act="rback">${icon('backc')}Back</button>
+  <div class="card"><b>${esc(ME.name)}</b><div class="small muted">${esc(ME.email)}</div><dl class="kv small mt-s"><dt>Unit</dt><dd>${ME.unit}${ME.room}</dd><dt>Floor</dt><dd>${ME.floor}</dd><dt>Status</dt><dd><span class="chip ok">Approved</span></dd></dl></div>
+  <div class="card tight list">
+    ${t('push','Push notifications','Urgent posts, replies, bookings')}
+    ${t('email','Email','Confirmations and request updates')}
+    ${t('shuttle','Shuttle alerts','Delays and cancellations')}
+    ${t('laundry','Laundry','When a machine you\'re watching is done')}
+    ${t('events','Events','Social events in the building')}
+  </div>
+  <button class="btn block" data-act="signout">Sign out</button>`;
+}
+
+/* ===== driver ===== */
+function driverView(){
+  const sh = S.shuttle;
+  const inner = sh.running ? `
+    <div class="card hello"><div class="row between"><div class="small muted">Run in progress</div><span class="chip ok"><span class="dot live"></span> GPS on</span></div>
+      <div class="drv-big num" id="drv-elapsed" style="color:#fff">${elapsed()}</div><div class="small muted">Western Campus Loop · Bus 1</div></div>
+    <div class="card"><div class="small muted">Next stop</div><div class="drv-big" id="drv-next">${esc(STOPS[nextStopIdx()].name)}</div><div class="small muted num" id="drv-eta">in ${etaText(etaMin(nextStopIdx()) - sh.delay)}</div></div>
+    <div class="card stack sm"><b>Running late?</b>
+      <div class="row"><button class="btn grow" data-act="dlate" data-v="5">+5 min</button><button class="btn grow" data-act="dlate" data-v="10">+10 min</button><button class="btn grow" data-act="dlate" data-v="0" ${sh.delay ? '' : 'disabled'}>On time</button></div>
+      <div class="small muted">${sh.delay ? `Riders were told: about ${sh.delay} min late.` : 'Riders see a banner and get a push.'}</div>
+    </div>
+    <button class="btn primary lg block" data-act="dend">${icon('check')}End run</button>
+    <button class="btn danger block" data-act="dcancel">Cancel this run</button>
+    <div class="gps">${icon('shield')}Your location is shared only during a run and deleted when it ends.</div>`
+  : `<div class="card"><div class="small muted">Today's route</div><div class="drv-big">Western Campus Loop</div><div class="small muted">${STOPS.length} stops · about ${LOOP_MIN} min</div>
+      <hr class="sep"><div class="row between"><span class="muted">Next scheduled departure</span><b>${departures(1)[0]}</b></div></div>
+    <button class="btn primary lg block" data-act="dstart" style="padding:22px">${icon('steer')}Start run</button>
+    <div class="gps">${icon('shield')}Location is shared every 5–10 s only while a run is active.</div>
+    <div class="card tight"><b>Today</b><div class="list mt-s small">
+      <div class="row"><span class="grow">7:30 AM loop</span><span class="chip ok">On time</span></div>
+      <div class="row"><span class="grow">8:00 AM loop</span><span class="chip warn">+6 min</span></div>
+      <div class="row"><span class="grow">8:30 AM loop</span><span class="chip ok">On time</span></div></div></div>`;
+  return `<div class="res-layout">
+    <section class="phone" aria-label="Driver console">
+      <div class="phone-head"><div class="grow"><div class="small muted">Driver</div><b>${DRIVER.name}</b></div><span class="chip ${sh.running ? 'ok' : ''}">${sh.running ? 'On run' : 'Off run'}</span></div>
+      <div class="phone-body">${inner}</div>
+    </section>
+    <aside class="side-notes stack"><div class="card"><h3>Driver console</h3><p class="small muted mt-s">Big buttons and nothing else, for use at a stop, never while driving. Start and End run control GPS sharing. Delays and cancellations notify every rider who has shuttle alerts on.</p></div>
+    <div class="note">Switch to <b>Resident → Shuttle</b> to see the bus move and the delay banner.</div></aside>
+  </div>`;
+}
+const elapsed = () => { const s = Math.max(0, Math.floor((Date.now() - S.shuttle.started)/1000)); return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`; };
+
+/* ===== staff ===== */
+const SNAV = [
+  ['overview','Overview','overview'],['residents','Residents','users'],['tickets','Tickets','ticket'],['announcements','Announcements','mega'],
+  ['shuttle','Shuttle','bus'],['amenities','Amenities','cal'],['rooms','Rooms','door'],['energy','Energy','bolt'],['ev','EV charging','plug'],
+  ['devices','Devices','cpu'],['rules','Rules','sliders'],['analytics','Analytics','chart']
+];
+function staffView(){
+  const badges = {residents:S.pending.length, tickets:S.tickets.filter(t => t.status !== 'resolved').length, devices:S.devices.filter(d => d.status !== 'online').length};
+  const page = ({overview:sOverview, residents:sResidents, tickets:sTickets, announcements:sAnnouncements, shuttle:sShuttle, amenities:sAmenities, rooms:sRooms, energy:sEnergy, ev:sEv, devices:sDevices, rules:sRules, analytics:sAnalytics})[S.stab]();
+  return `<div class="staff">
+    <nav class="snav" aria-label="Staff sections">
+      <div class="who"><b>${STAFF.name}</b><div class="small muted">${STAFF.role}</div></div>
+      ${SNAV.map(([k, l, ic]) => `<button data-act="stab" data-v="${k}" ${S.stab === k ? 'aria-current="page"' : ''}>${icon(ic)}${l}${badges[k] ? `<span class="badge">${badges[k]}</span>` : ''}</button>`).join('')}
+    </nav>
+    <section>${page}</section>
+  </div>`;
+}
+const pageH = (t, sub, right = '') => `<div class="page-h"><div><h1>${t}</h1>${sub ? `<p class="muted">${sub}</p>` : ''}</div>${right}</div>`;
+const kpi = (l, v, sub = '', id = '') => `<div class="card kpi"><div class="l">${l}</div><div class="v num" ${id ? `id="${id}"` : ''}>${v}</div>${sub ? `<div class="small muted">${sub}</div>` : ''}</div>`;
+function sOverview(){
+  const e = energyDay();
+  const open = S.tickets.filter(t => t.status !== 'resolved');
+  const todayB = S.bookings.filter(b => b.day === 0).sort((a, b) => a.start - b.start);
+  const off = S.devices.filter(d => d.status !== 'online');
+  const alerts = [
+    ...S.tickets.filter(t => t.source === 'system' && t.status !== 'resolved').map(t => ({lvl:'bad', t:t.subject, s:'System ticket · ' + ago((Date.now() - t.at)/60000), go:'tickets', id:t.id})),
+    ...S.tickets.filter(t => t.priority === 'high' && t.source === 'tenant' && t.status !== 'resolved').map(t => ({lvl:'warn', t:t.subject, s:`Unit ${t.unit} · high priority`, go:'tickets', id:t.id})),
+    ...off.filter(d => d.status === 'offline').map(d => ({lvl:'warn', t:`${d.hw} offline`, s:`${d.loc} · ${Math.round(d.seen)} min — a ticket opens at 15 min`, go:'devices'})),
+    ...(S.pending.length ? [{lvl:'info', t:`${S.pending.length} resident sign-ups to approve`, s:'Waiting for approval', go:'residents'}] : []),
+  ];
+  return pageH('Overview', new Date().toLocaleDateString('en-US',{weekday:'long', month:'long', day:'numeric'}), `<span class="chip ok"><span class="dot live"></span> Live</span>`)
+  + `<div class="kpis">
+      <div class="card kpi"><div class="l">Building load now</div><div class="v num"><span id="ov-load">${S.load}</span> <span class="muted" style="font-size:15px">kW</span></div><div class="meter mt-s"><i id="ov-meter" style="width:${S.load/LIMIT*100}%"></i></div><div class="small muted mt-s">Limit ${LIMIT} kW · peak today ${Math.round(e.peak)} kW</div></div>
+      ${kpi('Shuttle', `<span id="ov-shuttle">${S.shuttle.running ? (S.shuttle.delay ? S.shuttle.delay + ' min late' : 'On time') : 'Not running'}</span>`, '94% on time this month')}
+      ${kpi('Open tickets', open.length, `${open.filter(t => t.priority === 'high').length} high priority`)}
+      ${kpi('Devices online', `${S.devices.length - off.length}/${S.devices.length}`, off.length ? `${off.length} need attention` : 'All healthy')}
+    </div>
+    <div class="grid2 mt">
+      <div class="card"><div class="row between"><h3>Load today</h3><button class="btn sm ghost" data-act="stab" data-v="energy">Energy ${icon('chev')}</button></div>
+        <div class="mt-s">${areaChart({series:e.series, n:e.n, forecast:e.forecast, limit:LIMIT, nowIdx:e.nowIdx, h:220})}</div>${legend([...SYS, {name:'Forecast', color:'transparent;border:1.5px dashed var(--muted)'}])}</div>
+      <div class="card"><h3>Needs attention</h3><div class="list mt-s">${alerts.map(a => `<button class="row top" style="border-left:0;border-right:0;border-bottom:0;background:none;text-align:left;width:100%" data-act="stab" data-v="${a.go}" ${a.id ? `data-ticket="${a.id}"` : ''}><span class="dot ${a.lvl === 'info' ? '' : a.lvl}" style="margin-top:6px"></span><div class="grow"><b>${esc(a.t)}</b><div class="small muted">${esc(a.s)}</div></div>${icon('chev')}</button>`).join('') || '<div class="muted">All clear.</div>'}</div></div>
+    </div>
+    <div class="grid2 even mt">
+      <div class="card"><h3>Today's bookings</h3><div class="list mt-s">${todayB.map(b => `<div class="row"><span class="chip" style="min-width:86px;justify-content:center">${hLabel(b.start)}–${hLabel(b.start + b.dur)}</span><span class="grow">${AMEN.find(a => a.id === b.amen).name}</span><span class="small muted">${b.unit === 'Staff' ? esc(b.name) : 'Unit ' + b.unit}</span></div>`).join('') || '<div class="muted">No bookings today.</div>'}</div></div>
+      <div class="card"><h3>Laundry now</h3><div class="row wrap mt-s">${S.machines.map(m => `<span class="chip ${({free:'ok', in_use:'info', finishing:'warn', fault:'bad'})[m.state]}">${m.id} · ${({free:'free', in_use:m.mins + ' min', finishing:m.mins + ' min', fault:'fault'})[m.state]}</span>`).join('')}</div>
+        <hr class="sep"><h3>Rooms</h3><div class="list mt-s">${S.rooms.map(r => `<div class="row"><span class="dot ${r.occ ? 'ok' : ''}"></span><span class="grow">${r.name}</span><span class="small muted">Lights ${r.lights} · ${r.hvac} · ${r.mode}</span></div>`).join('')}</div></div>
+    </div>`;
+}
+function sResidents(){
+  return pageH('Residents', 'Approve sign-ups and manage who has access.', `<button class="btn" data-act="invite">${icon('plus')}Invite staff or driver</button>`)
+  + `<div class="card"><h3>Waiting for approval</h3><p class="small muted">Every self sign-up starts as pending. Check the unit against the lease before approving.</p>
+    ${S.pending.length ? `<div class="tbl-wrap mt-s"><table><thead><tr><th>Name</th><th>Unit</th><th>Floor</th><th>Signed up</th><th></th></tr></thead><tbody>${S.pending.map(p => `<tr><td><b>${esc(p.name)}</b><div class="small muted">${esc(p.email)}</div></td><td>${p.unit}${p.room}</td><td>${p.floor}</td><td>${ago((Date.now() - p.at)/60000)}</td><td><div class="row" style="justify-content:flex-end"><button class="btn sm danger" data-act="decline" data-id="${p.id}">Decline</button><button class="btn sm primary" data-act="approve" data-id="${p.id}">${icon('check')}Approve</button></div></td></tr>`).join('')}</tbody></table></div>` : '<div class="empty mt-s">No one waiting.</div>'}</div>
+  <div class="grid2 mt">
+    <div class="card"><h3>Residents</h3><div class="tbl-wrap mt-s"><table><thead><tr><th>Name</th><th>Unit</th><th>Floor</th><th>Joined</th></tr></thead><tbody>${S.residents.map(r => `<tr><td>${esc(r.name)}</td><td>${r.unit}</td><td>${r.floor}</td><td class="muted">${r.joined}</td></tr>`).join('')}</tbody></table></div><p class="small faint mt-s">Showing ${S.residents.length} of 312 approved residents.</p></div>
+    <div class="card"><h3>Team</h3><div class="list mt-s">${S.team.map(t => `<div class="row"><div class="grow"><b>${esc(t.name)}</b><div class="small muted">${t.note}</div></div><span class="chip ${t.role === 'Admin' ? 'brass' : t.role === 'Driver' ? 'info' : ''}">${t.role}</span></div>`).join('')}</div></div>
+  </div>`;
+}
+function sTickets(){
+  const f = S.tkFilter;
+  const list = S.tickets.filter(t => f === 'all' || (f === 'open' ? t.status !== 'resolved' : t.status === f));
+  const t = S.tickets.find(x => x.id === S.stTicket) || list[0];
+  const pr = p => `<span class="chip ${({high:'bad', urgent:'bad', normal:'', low:''})[p]}">${p}</span>`;
+  return pageH('Tickets', 'Front desk requests and faults raised by devices.')
+  + `<div class="row wrap" style="margin-bottom:12px">${[['open','Open'],['resolved','Resolved'],['all','All']].map(([k, l]) => `<button class="chip" data-act="tkf" data-v="${k}" aria-pressed="${f === k}">${l}</button>`).join('')}</div>
+  <div class="grid2" style="grid-template-columns:minmax(0,1fr) minmax(0,1.25fr)">
+    <div class="card tight list">${list.map(x => `<button class="row top" style="border-left:0;border-right:0;border-bottom:0;background:${x === t ? 'var(--surface-2)' : 'none'};text-align:left;width:100%;padding:11px 8px;border-radius:8px" data-act="tksel" data-id="${x.id}"><span style="color:${x.source === 'system' ? 'var(--bad)' : 'var(--accent)'}">${icon(x.source === 'system' ? 'cpu' : 'wrench')}</span><div class="grow"><b>${esc(x.subject)}</b><div class="small muted">${x.id} · ${x.unit ? 'Unit ' + x.unit : 'System'} · ${ago((Date.now() - x.at)/60000)}</div></div><div class="stack sm" style="align-items:flex-end">${statusChip(x.status)}${x.priority === 'high' ? pr('high') : ''}</div></button>`).join('') || '<div class="empty">No tickets.</div>'}</div>
+    ${t ? `<div class="card stack">
+      <div><div class="row between top"><h2>${esc(t.subject)}</h2>${statusChip(t.status)}</div>
+      <div class="small muted">${t.id} · ${catLabel(t.cat)} · ${t.unit ? `${esc(t.name)}, unit ${t.unit}` : 'Raised by ' + esc(t.device)}${t.enter ? ' · OK to enter' : ''}</div></div>
+      <div class="seg" role="group" aria-label="Status" style="align-self:flex-start">${[['open','Open'],['in_progress','In progress'],['resolved','Resolved']].map(([k, l]) => `<button data-act="tkstatus" data-id="${t.id}" data-v="${k}" aria-pressed="${t.status === k}">${l}</button>`).join('')}</div>
+      ${t.source === 'system' && t.status !== 'resolved' ? '<div class="note">Resolving this puts the machine back in service and clears the laundry warning.</div>' : ''}
+      <div class="stack sm">${t.thread.map(m => `<div class="msg ${m.internal ? 'internal' : m.tenant ? '' : 'me'}"><div class="tiny muted">${esc(m.who)}${m.internal ? ' · internal note' : ''} · ${ago((Date.now() - m.at)/60000)}</div>${esc(m.body)}</div>`).join('')}</div>
+      <div><textarea id="tk-reply" placeholder="${t.unit ? 'Reply to ' + esc(t.name.split(' ')[0]) + ' or add an internal note' : 'Add an internal note'}" aria-label="Reply"></textarea>
+      <div class="row between mt-s"><label class="row small"><input type="checkbox" id="tk-internal" style="width:auto" ${t.unit ? '' : 'checked disabled'}> Internal note (staff only)</label><button class="btn primary" data-act="tkreply" data-id="${t.id}">Send</button></div></div>
+    </div>` : '<div class="empty">Select a ticket.</div>'}
+  </div>`;
+}
+function sAnnouncements(){
+  return pageH('Announcements', 'Post to the whole building, specific floors or units.')
+  + `<div class="grid2" style="grid-template-columns:minmax(0,1fr) minmax(0,1.1fr)">
+    <div class="card stack">
+      <h3>New announcement</h3>
+      <div><label class="f" for="an-title">Title</label><input id="an-title" placeholder="e.g. Elevator B maintenance"></div>
+      <div><label class="f" for="an-body">Message</label><textarea id="an-body"></textarea></div>
+      <div class="row"><div class="grow"><label class="f" for="an-cat">Category</label><select id="an-cat"><option value="building">Building</option><option value="maintenance">Maintenance</option><option value="event">Event</option><option value="safety">Safety</option></select></div>
+      <div class="grow"><label class="f" for="an-aud">Audience</label><select id="an-aud"><option value="building">Whole building</option><option value="floors">Floors…</option><option value="units">Units…</option></select></div></div>
+      <div><label class="f" for="an-target">Floors or units <span class="faint">(e.g. 10-14, 20 or 1204, 0712)</span></label><input id="an-target" placeholder="Only for floors or units"></div>
+      <div class="row"><div class="grow"><b>Urgent</b><div class="small muted">Sends a push and pins a banner</div></div><button class="switch" id="an-urgent" data-act="toggleself" aria-pressed="false" aria-label="Urgent"></button></div>
+      <button class="btn primary" data-act="anpost">${icon('mega')}Publish</button>
+    </div>
+    <div class="card"><h3>Published</h3><div class="list mt-s">${S.ann.map(a => `<div><div class="row between top"><div class="grow"><div class="row wrap">${a.urgent ? '<span class="chip bad">Urgent</span>' : ''}<span class="chip">${a.cat}</span>${a.source === 'system' ? '<span class="chip info">Automatic</span>' : ''}</div><b style="display:block;margin-top:4px">${esc(a.title)}</b><div class="small muted">${a.aud === 'building' ? 'Whole building' : a.aud === 'floors' ? 'Floors ' + a.floors.join(', ') : 'Units ' + a.units.join(', ')} · ${ago((Date.now() - a.at)/60000)}</div></div><div style="text-align:right"><b class="num">${a.reads}/${a.audSize}</b><div class="tiny muted">read</div></div></div><div class="meter mt-s" style="height:6px"><i style="width:${a.reads/a.audSize*100}%;background:var(--s3)"></i></div></div>`).join('')}</div></div>
+  </div>`;
+}
+function sShuttle(){
+  const sh = S.shuttle;
+  const runs = [['7:30 AM','Sam Okafor','Completed','On time',0],['8:00 AM','Sam Okafor','Completed','+6 min',6],['8:30 AM','Sam Okafor','Completed','On time',1],['9:00 AM','Sam Okafor','Completed','On time',0],['9:30 AM','Sam Okafor','Completed','+3 min',3]];
+  return pageH('Shuttle', 'Western Campus Loop · Bus 1', `<span class="chip ${sh.running ? 'ok' : ''}">${sh.running ? '<span class="dot live"></span> Run in progress' : 'No active run'}</span>`)
+  + `<div class="grid2">
+    <div class="card">${routeMap()}<div class="row between mt-s small"><span class="muted">Driver: ${DRIVER.name}</span><span>${sh.running ? (sh.delay ? `<span class="chip warn">${sh.delay} min late</span>` : '<span class="chip ok">On time</span>') : ''}</span></div></div>
+    <div class="card"><h3>Today's runs</h3><div class="tbl-wrap mt-s"><table><thead><tr><th>Departure</th><th>Status</th><th>Arrival</th></tr></thead><tbody>${runs.map(r => `<tr><td>${r[0]}</td><td class="muted">${r[2]}</td><td><span class="chip ${r[4] > 5 ? 'warn' : 'ok'}">${r[3]}</span></td></tr>`).join('')}</tbody></table></div>
+      <p class="small muted mt-s">A run that hasn't started 5 minutes after its departure alerts staff.</p></div>
+  </div>
+  <div class="grid2 even mt">
+    <div class="card"><h3>Timetable</h3><dl class="kv small mt-s"><dt>Weekdays</dt><dd>Every 30 min, 7:30 AM – 10 PM</dd><dt>Weekends</dt><dd>Every 60 min, 10 AM – 8 PM</dd><dt>Exceptions</dt><dd>Thanksgiving (Oct 12): weekend schedule</dd></dl>
+      <div class="note mt">The stops are placeholders until the real route and coordinates are confirmed.</div></div>
+    <div class="card"><div class="row between"><h3>Going electric</h3><span class="chip brass">Model</span></div>
+      <p class="small muted mt-s">Based on 28 days of runs: 142 km a day, mostly stop-and-go.</p>
+      <dl class="kv small mt-s"><dt>Suggested vehicle</dt><dd>Electric minibus, ~120 kWh battery</dd><dt>Daily energy</dt><dd>~78 kWh (with winter heating)</dd><dt>Margin</dt><dd>38% at −20 °C</dd><dt>Charging</dt><dd>11 PM – 5 AM at 19 kW, inside the peak limit</dd><dt>Fuel → electricity</dt><dd>~$11,900 / yr saved</dd><dt>CO₂</dt><dd>~29 t / yr avoided</dd></dl></div>
+  </div>`;
+}
+function sAmenities(){
+  const todayB = S.bookings.filter(b => b.day === 0);
+  const span = [9, 23];
+  return pageH('Amenities', 'Bookings and the rules the app enforces.')
+  + `<div class="card"><h3>Today</h3>${AMEN.map(a => `<div class="mt"><div class="row between small"><b>${a.name}</b><span class="muted">${todayB.filter(b => b.amen === a.id).length} bookings</span></div>
+      <div class="timeline mt-s">${todayB.filter(b => b.amen === a.id).map(b => `<div class="blk" style="left:${(b.start - span[0])/(span[1]-span[0])*100}%;width:${b.dur/(span[1]-span[0])*100}%;background:${a.color}">${b.unit === 'Staff' ? esc(b.name) : b.unit}</div>`).join('')}
+      <div style="position:absolute;top:0;bottom:0;width:2px;background:var(--accent);left:${Math.min(100, Math.max(0, (nowH() - span[0])/(span[1]-span[0])*100))}%"></div></div></div>`).join('')}
+      <div class="tl-axis"><span>9 AM</span><span>1 PM</span><span>5 PM</span><span>9 PM</span><span>11 PM</span></div></div>
+  <div class="grid2 even mt">
+    <div class="card"><h3>Rules</h3><dl class="kv small mt-s"><dt>Hours</dt><dd>9 AM – 11 PM</dd><dt>Length</dt><dd>Theatre up to 3 h, game room up to 2 h</dd><dt>Notice</dt><dd>At least 1 h ahead, up to 14 days</dd><dt>Limit</dt><dd>2 bookings per unit per week</dd><dt>Buffer</dt><dd>15 min between bookings for cleaning</dd></dl><button class="btn sm mt" data-act="toast" data-msg="Rule editing is wired to the database in the real app.">Edit rules</button></div>
+    <div class="card"><h3>Blackouts</h3><div class="list mt-s"><div class="row"><span class="grow">Theatre · Oct 31, all day</span><span class="chip">Halloween event</span></div><div class="row"><span class="grow">Game room · Oct 20, 9–12</span><span class="chip">Deep clean</span></div></div><button class="btn sm mt" data-act="toast" data-msg="Blackout added (prototype).">${icon('plus')}Add blackout</button></div>
+  </div>`;
+}
+function sRooms(){
+  const next = id => { const b = S.bookings.filter(x => x.amen === id && (x.day > 0 || x.start + x.dur > nowH())).sort((a, b) => a.day - b.day || a.start - b.start)[0]; return b ? `${dayShort(b.day)} ${hLabel(b.start)}–${hLabel(b.start + b.dur)} · ${b.unit === 'Staff' ? b.name : 'unit ' + b.unit}` : 'None'; };
+  return pageH('Rooms', 'Lights and climate follow bookings and occupancy. You can always override.', S.failsafe ? `<button class="btn primary" data-act="fsrestore">Restore automation</button>` : `<button class="btn" data-act="fstest">${icon('shield')}Test fail-safe</button>`)
+  + (S.failsafe ? `<div class="banner bad" style="margin-bottom:12px">${icon('alert')}<div><b>Fail-safe active.</b> No engine heartbeat for 120 s, so every room went to lights on and normal heating. Nothing will switch off until automation is back.</div></div>` : '')
+  + `<div class="kpis">${S.rooms.map(r => `<div class="card room">
+      <div class="row between"><h3>${r.name}</h3><span class="chip ${r.mode === 'auto' ? 'ok' : r.mode === 'failsafe' ? 'bad' : 'warn'}">${r.mode === 'auto' ? 'Automatic' : r.mode === 'failsafe' ? 'Fail-safe' : 'Override'}</span></div>
+      <div class="state-grid small"><div><span class="muted">Occupied</span><b>${r.occ ? 'Yes' : 'No'}</b></div><div><span class="muted">Lights</span><b>${r.lights === 'on' ? 'On' : 'Off'}</b></div><div><span class="muted">HVAC</span><b>${r.hvac === 'comfort' ? 'Comfort' : 'Setback'} ${r.set}°</b></div><div><span class="muted">Power</span><b class="num">${r.kw} kW</b></div></div>
+      <div class="small muted">${esc(r.why)}</div>
+      ${r.id !== 'lobby' ? `<div class="small"><span class="muted">Next booking:</span> ${esc(next(r.id))}</div>` : ''}
+      <div class="row wrap"><button class="btn sm" data-act="rlights" data-id="${r.id}" ${S.failsafe ? 'disabled' : ''}>Lights ${r.lights === 'on' ? 'off' : 'on'}</button><button class="btn sm" data-act="rhvac" data-id="${r.id}" ${S.failsafe ? 'disabled' : ''}>${r.hvac === 'comfort' ? 'Setback' : 'Comfort'}</button>${r.mode === 'override' ? `<button class="btn sm primary" data-act="rauto" data-id="${r.id}">Back to auto</button>` : ''}</div>
+    </div>`).join('')}</div>
+  <div class="card mt"><h3>Command log</h3><p class="small muted">Every physical action, who or what caused it, and whether the device confirmed it.</p><div class="tbl-wrap mt-s"><table><thead><tr><th>When</th><th>Room</th><th>Action</th><th>Caused by</th><th>Result</th></tr></thead><tbody>${S.cmdlog.slice(0, 10).map(c => `<tr><td class="muted" style="white-space:nowrap">${fmtT(new Date(c.at))}</td><td>${c.room}</td><td>${esc(c.act)}</td><td>${esc(c.by)}</td><td>${c.ok ? '<span class="chip ok">Confirmed</span>' : `<span class="chip warn" title="${esc(c.err)}">Refused · ${esc(c.err)}</span>`}</td></tr>`).join('')}</tbody></table></div></div>`;
+}
+function sEnergy(){
+  const e = energyDay();
+  return pageH('Energy', 'Whole-building monitoring from CT clamps, 15-minute resolution.')
+  + `<div class="banner info" style="margin-bottom:14px">${icon('leaf')}<div>Utilities are included in rent, so costs here are the building's own and are never shown to residents.</div></div>
+  <div class="kpis">
+    ${kpi('Now', `<span id="en-load">${S.load}</span> <span class="muted" style="font-size:15px">kW</span>`, `${Math.round(S.load/LIMIT*100)}% of the ${LIMIT} kW limit`)}
+    ${kpi('Today so far', n0(e.kwh) + ' <span class="muted" style="font-size:15px">kWh</span>', `Peak ${Math.round(e.peak)} kW`)}
+    ${kpi('Cost today', money(e.cost), 'Ontario ULO rates')}
+    ${kpi('Saved this month', '1,840 <span class="muted" style="font-size:15px">kWh</span>', '$214 · 55 kg CO₂ from automation')}
+  </div>
+  <div class="card mt"><div class="row between wrap"><h3>Load by system</h3><span class="small muted">Dashed line: forecast made at midnight</span></div><div class="mt-s">${areaChart({series:e.series, n:e.n, forecast:e.forecast, limit:LIMIT, nowIdx:e.nowIdx, h:260})}</div>${legend(SYS)}</div>
+  <div class="grid2 even mt">
+    <div class="card"><h3>Today by system</h3><div class="mt-s">${bars(e.bySys, v => n0(v) + ' kWh')}</div></div>
+    <div class="card"><h3>Anomalies</h3><div class="list mt-s">
+      <div class="row top"><span class="dot bad" style="margin-top:6px"></span><div class="grow"><b>Dryer 2 not heating</b><div class="small muted">0.3 A during a dry cycle, expected ~22 A. Ticket T-1046 opened.</div></div></div>
+      <div class="row top"><span class="dot warn" style="margin-top:6px"></span><div class="grow"><b>Lobby HVAC at 3 AM</b><div class="small muted">2.1 kW above its usual night level for 3 nights.</div></div></div>
+      <div class="row top"><span class="dot" style="margin-top:6px"></span><div class="grow"><b>Game room lights left on</b><div class="small muted">Switched off after 10 min empty. Saved ~1.2 kWh.</div></div></div>
+    </div></div>
+  </div>`;
+}
+function sEv(){
+  const span = [16, 32];
+  const pos = h => ((h - span[0])/(span[1]-span[0])*100).toFixed(2);
+  const reqs = S.evReqs;
+  return pageH('EV charging', 'Charge plans fit under the peak limit and favour overnight rates.')
+  + `<div class="kpis">
+    ${kpi('Charging now', S.chargers.filter(c => c.state === 'charging').length + ' / ' + S.chargers.length, S.chargers.reduce((a, c) => a + c.kw, 0).toFixed(1) + ' kW')}
+    ${kpi('Headroom', `${Math.max(0, LIMIT - S.load)} kW`, 'Under the building limit')}
+    ${kpi('Requests tonight', reqs.length, reqs.reduce((a, r) => a + r.kwh, 0) + ' kWh total')}
+    ${kpi('Peak guard', 'Armed', 'Cuts chargers to 3.6 kW at 90%')}
+  </div>
+  <div class="card mt"><h3>Tonight's plan</h3>
+    <div class="timeline mt" style="height:22px;background:none">
+      <div class="blk" style="left:0;width:${pos(16)}%;background:transparent"></div>
+      <div class="blk" style="left:${pos(16)}%;width:${pos(21) - pos(16)}%;background:var(--bad);opacity:.25"></div>
+      <div class="blk" style="left:${pos(21)}%;width:${pos(23) - pos(21)}%;background:var(--warn);opacity:.25"></div>
+      <div class="blk" style="left:${pos(23)}%;width:${pos(31) - pos(23)}%;background:var(--ok);opacity:.25"></div>
+    </div>
+    <div class="legend mt-s"><span><i style="background:var(--bad);opacity:.4"></i>On-peak 28.4¢</span><span><i style="background:var(--warn);opacity:.4"></i>Mid 12.2¢</span><span><i style="background:var(--ok);opacity:.4"></i>Ultra-low 2.8¢</span></div>
+    ${reqs.map(r => `<div class="mt"><div class="row between small"><b>Unit ${r.unit} · ${r.charger}</b><span class="muted">${r.kwh} kWh · ready by ${hLabel(r.by)}</span></div><div class="timeline mt-s">${r.plan.map(p => `<div class="blk" style="left:${pos(p[0])}%;width:${pos(p[1]) - pos(p[0])}%;background:var(--s3)">${r.status === 'charging' ? 'Charging' : 'Planned'}</div>`).join('')}</div></div>`).join('')}
+    <div class="tl-axis"><span>4 PM</span><span>8 PM</span><span>12 AM</span><span>4 AM</span><span>8 AM</span></div>
+  </div>
+  <div class="card mt"><h3>Chargers</h3><div class="tbl-wrap mt-s"><table><thead><tr><th>Charger</th><th>Status</th><th>Power</th><th>Unit</th></tr></thead><tbody>${S.chargers.map(c => `<tr><td><b>${c.id}</b></td><td><span class="chip ${({charging:'ok', scheduled:'info', free:'', offline:'bad'})[c.state]}">${c.state}</span></td><td class="num">${c.kw ? c.kw + ' kW' : '—'}</td><td>${c.unit || '—'}</td></tr>`).join('')}</tbody></table></div></div>`;
+}
+function sDevices(){
+  const f = S.devFilter;
+  const list = S.devices.filter(d => f === 'all' || d.status === f);
+  const chip = s => `<span class="chip ${({online:'ok', offline:'warn', fault:'bad'})[s]}">${s}</span>`;
+  return pageH('Devices', 'Sensors, room nodes and chargers on the building network.', `<button class="btn" data-act="toast" data-msg="In the real app this registers a device and creates its MQTT login.">${icon('plus')}Register device</button>`)
+  + `<div class="row wrap" style="margin-bottom:12px">${['all','online','offline','fault'].map(k => `<button class="chip" data-act="devf" data-v="${k}" aria-pressed="${f === k}">${k[0].toUpperCase() + k.slice(1)}</button>`).join('')}</div>
+  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>Device</th><th>Type</th><th>Location</th><th>Status</th><th>Last seen</th><th>Signal</th><th>Firmware</th><th></th></tr></thead><tbody>
+    ${list.map(d => `<tr><td><b class="code">${d.hw}</b><div class="small muted">${d.sys}</div></td><td>${d.type}</td><td class="small">${esc(d.loc)}</td><td>${chip(d.status)}</td><td class="muted small">${d.seen < 1 ? 'seconds ago' : Math.round(d.seen) + ' min ago'}</td><td class="num small">${d.rssi ? d.rssi + ' dBm' : '—'}</td><td class="small">${d.fw}</td><td><button class="btn sm" data-act="calib" data-hw="${d.hw}" ${d.type === 'EV charger' ? 'disabled' : ''}>Calibrate</button></td></tr>`).join('')}
+  </tbody></table></div></div>
+  <div class="note mt">A device that stays offline for 15 minutes opens a ticket automatically. A fault opens one right away.</div>`;
+}
+function sRules(){
+  return pageH('Rules', 'What the building does on its own. Overrides and fail-safes always win.', `<button class="btn primary" data-act="newrule">${icon('plus')}New rule</button>`)
+  + `<div class="stack">${S.rules.map(r => `<div class="card rule">
+      <button class="switch" data-act="ruletoggle" data-id="${r.id}" aria-pressed="${r.on}" aria-label="Enable rule"></button>
+      <div class="grow"><div><span class="muted">When</span> <span class="when">${esc(r.when)}</span> <span class="muted">${esc(r.cond)}</span></div>
+      <div class="mt-s"><span class="muted">Then</span> <b>${esc(r.then)}</b></div>
+      <div class="small muted mt-s">${esc(r.where)} · last ran ${ago((Date.now() - r.fired)/60000)}</div></div>
+      <span class="chip ${r.on ? 'ok' : ''}">${r.on ? 'On' : 'Off'}</span>
+    </div>`).join('')}</div>`;
+}
+function sAnalytics(){
+  const weeks = [91, 93, 89, 95, 96, 94, 97, 94].map((v, i) => ({label:'W' + (33 + i), value:v, color:v < 92 ? 'var(--s2)' : 'var(--s1)'}));
+  const res = [{label:'Maintenance', value:9.4}, {label:'Access & fobs', value:2.1}, {label:'Package', value:1.3}, {label:'Device fault', value:5.8}, {label:'Noise', value:0.8}];
+  const use = [['Mon',6,3],['Tue',5,4],['Wed',7,4],['Thu',8,5],['Fri',14,9],['Sat',18,12],['Sun',12,8]];
+  const sav = [{label:'May', value:980}, {label:'Jun', value:1210}, {label:'Jul', value:1460}, {label:'Aug', value:1690}, {label:'Sep', value:1840}];
+  return pageH('Analytics', 'How the building is running.', `<div class="seg" role="group" aria-label="Range">${['7d','30d','90d'].map(r => `<button data-act="anr" data-v="${r}" aria-pressed="${S.anRange === r}">${r}</button>`).join('')}</div>`)
+  + `<div class="kpis">${kpi('Shuttle on time', '94%', 'Within 5 min of the timetable')}${kpi('Ticket resolution', '6.2 h', 'Median, all categories')}${kpi('Amenity hours', '128 h', '64% of evening slots used')}${kpi('Energy saved', '1,840 kWh', '$214 · 55 kg CO₂ this month')}</div>
+  <div class="grid2 even mt">
+    <div class="card"><h3>Shuttle on-time rate by week</h3>${cols(weeks, v => v + '%', 'var(--s1)', 100)}</div>
+    <div class="card"><h3>Median hours to resolve</h3><div class="mt">${bars(res, v => v.toFixed(1) + ' h', 'var(--s4)')}</div></div>
+    <div class="card"><h3>Amenity hours by weekday</h3><div class="cols">${use.map(([d, t, g]) => `<div class="c"><em class="num">${t + g}</em><i style="height:${(g/30*100).toFixed(1)}%;background:var(--s4);border-radius:0 0 2px 2px"></i><i style="height:${(t/30*100).toFixed(1)}%;background:var(--s1);border-radius:6px 6px 0 0;order:-1"></i><span>${d}</span></div>`).join('')}</div>${legend([{name:'Theatre', color:'var(--s1)'}, {name:'Game room', color:'var(--s4)'}])}</div>
+    <div class="card"><h3>Energy saved by automation</h3>${cols(sav, v => n0(v), 'var(--s3)')}<p class="small muted">kWh compared with the same rooms and loads without automation.</p></div>
+  </div>`;
+}
+
+/* ===== modal & toast ===== */
+const modal = document.getElementById('modal');
+function openModal(html){ modal.innerHTML = `<div class="dialog">${html}</div>`; modal.classList.add('open'); const f = modal.querySelector('input,select,textarea,button'); if (f) f.focus(); }
+function closeModal(){ modal.classList.remove('open'); modal.innerHTML = ''; }
+modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+function toast(msg, ic = 'check'){
+  const el = document.createElement('div'); el.className = 'toast'; el.innerHTML = icon(ic) + `<span>${msg}</span>`;
+  document.getElementById('toasts').appendChild(el); setTimeout(() => el.remove(), 4200);
+}
+const val = id => (document.getElementById(id)?.value || '').trim();
+
+/* ===== actions ===== */
+function logCmd(room, act, by, ok = true, err){ S.cmdlog.unshift({at:Date.now(), room, act, by, ok, err}); }
+const A = {
+  role: el => { S.role = el.dataset.v; render(); window.scrollTo(0, 0); },
+  theme: () => {
+    const r = document.documentElement, cur = r.getAttribute('data-theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    const next = cur === 'dark' ? 'light' : 'dark'; r.setAttribute('data-theme', next);
+    try { localStorage.setItem('marq-theme', next); } catch (e) {}
+    render();
+  },
+  rtab: el => { S.rtab = el.dataset.v; S.rview = null; render(); scrollPhone(); },
+  rgo: el => { S.rview = el.dataset.view; if (el.dataset.id) S.rparam = el.dataset.id; if (el.dataset.open) { const a = S.ann.find(x => String(x.id) === el.dataset.open); if (a) { S.annOpen = a.id; markRead(a); } } render(); scrollPhone(); },
+  rback: () => { S.rview = null; render(); },
+  notify5: () => { S.shuttle.notify5 = !S.shuttle.notify5; S.shuttle.notifiedLoop = false; render(); toast(S.shuttle.notify5 ? 'We\'ll alert you 5 min before the bus reaches The Marq.' : 'Shuttle alert off.', 'bell'); },
+  annf: el => { S.annFilter = el.dataset.v; render(); },
+  annopen: el => { const a = S.ann.find(x => String(x.id) === el.dataset.id); S.annOpen = S.annOpen === a.id ? null : a.id; markRead(a); render(); },
+  bkamen: el => { S.bk.amen = el.dataset.v; S.bk.start = null; S.bk.dur = Math.min(S.bk.dur, AMEN.find(a => a.id === el.dataset.v).maxH); render(); },
+  bkday: el => { S.bk.day = +el.dataset.v; S.bk.start = null; render(); },
+  bkslot: el => { S.bk.start = +el.dataset.v; render(); },
+  bkdur: el => { S.bk.dur = +el.dataset.v; render(); },
+  bkconfirm: () => {
+    const bk = S.bk;
+    if (S.bookings.filter(b => b.unit === ME.unit).length >= 2) return toast('You already have 2 bookings this week. That\'s the limit per unit.', 'alert');
+    if (bk.day === 0 && bk.start < nowH() + 1) return toast('Bookings need at least 1 hour\'s notice.', 'alert');
+    S.bookings.push({id:nid(), amen:bk.amen, day:bk.day, start:bk.start, dur:bk.dur, unit:ME.unit, name:'Priya S.'});
+    const a = AMEN.find(x => x.id === bk.amen);
+    toast(`${a.name} booked for ${dayShort(bk.day)}, ${hLabel(bk.start)}–${hLabel(bk.start + bk.dur)}. Reminder 1 h before.`);
+    bk.start = null; render();
+  },
+  bkcancel: el => { S.bookings = S.bookings.filter(b => String(b.id) !== el.dataset.id); toast('Booking cancelled.'); render(); },
+  lnotify: el => { const id = el.dataset.id; S.laundryNotify.has(id) ? S.laundryNotify.delete(id) : S.laundryNotify.add(id); render(); },
+  rreply: el => { const body = val('rreply'); if (!body) return; const t = S.tickets.find(x => x.id === el.dataset.id); t.thread.push({who:ME.name, tenant:true, body, at:Date.now()}); if (t.status === 'resolved') t.status = 'open'; render(); toast('Sent to the front desk.'); },
+  nqsubmit: () => {
+    const sub = val('nq-sub'), body = val('nq-body');
+    if (!sub) { document.getElementById('nq-sub').focus(); return toast('Add a short subject.', 'alert'); }
+    const id = 'T-' + (1049 + S.tickets.filter(t => +t.id.slice(2) >= 1049).length);
+    S.tickets.unshift({id, subject:sub, cat:val('nq-cat'), status:'open', priority:'normal', unit:ME.unit, name:ME.name, source:'tenant', at:Date.now(), enter:document.getElementById('nq-enter').checked, thread:[{who:ME.name, tenant:true, body:body || sub, at:Date.now()}]});
+    S.rview = 'request'; S.rparam = id; S.stTicket = id; render(); toast(`Request ${id} sent. You'll get a notification when we reply.`);
+  },
+  photo: () => toast('Photo upload works in the real app (Supabase Storage).', 'camera'),
+  evsubmit: () => {
+    const km = +val('ev-km'), by = +val('ev-by'), ch = val('ev-ch') || 'EV-3';
+    const kwh = Math.round(km * 0.18); const p = evPlanFor(kwh, by);
+    S.myEv = {km, kwh, by, charger:ch, plan:[[p.start, p.end]]};
+    S.evReqs.push({id:nid(), unit:ME.unit, name:'Priya S.', charger:ch, kwh, by, plan:[[p.start, p.end]], status:'scheduled'});
+    const c = S.chargers.find(x => x.id === ch); if (c) { c.state = 'scheduled'; c.unit = ME.unit; }
+    render(); toast(`Scheduled on ${ch}: ${hmLabel(p.start % 24)}–${hmLabel(p.end % 24)}. Ready by ${hLabel(by)}.`, 'plug');
+  },
+  evcancel: () => { const ch = S.myEv.charger; S.myEv = null; S.evReqs = S.evReqs.filter(r => r.unit !== ME.unit); const c = S.chargers.find(x => x.id === ch); if (c) { c.state = 'free'; c.unit = null; } render(); toast('Charge request cancelled.'); },
+  notif: el => { const k = el.dataset.k; S.notif[k] = !S.notif[k]; render(); },
+  signout: () => toast('Sign-out works in the real app.'),
+  dstart: () => { Object.assign(S.shuttle, {running:true, p:0, delay:0, started:Date.now(), cancelled:false, notifiedLoop:false}); render(); toast('Run started. Riders can see the bus now.', 'bus'); },
+  dend: () => { S.shuttle.running = false; S.shuttle.delay = 0; render(); toast('Run ended. GPS trail deleted, run metrics saved.'); },
+  dcancel: () => openModal(`<h2>Cancel this run?</h2><p class="muted mt-s">Every rider with shuttle alerts on gets a push and sees a banner.</p><div class="row mt" style="justify-content:flex-end"><button class="btn" data-act="close">Keep running</button><button class="btn danger" data-act="dcancelok">Cancel run</button></div>`),
+  dcancelok: () => { closeModal(); S.shuttle.running = false; S.shuttle.cancelled = true; S.shuttle.delay = 0; render(); toast('Run cancelled. Riders were notified.', 'alert'); },
+  dlate: el => { const v = +el.dataset.v; S.shuttle.delay = v === 0 ? 0 : S.shuttle.delay + v; render(); toast(v ? `Riders told the bus is ~${S.shuttle.delay} min late.` : 'Riders told the bus is back on time.', 'bell'); },
+  close: () => closeModal(),
+  stab: el => { S.stab = el.dataset.v; if (el.dataset.ticket) { S.stTicket = el.dataset.ticket; S.tkFilter = 'open'; } render(); window.scrollTo(0, 0); },
+  approve: el => { const p = S.pending.find(x => String(x.id) === el.dataset.id); S.pending = S.pending.filter(x => x !== p); S.residents.unshift({name:p.name, unit:p.unit + p.room, floor:p.floor, status:'approved', joined:'Today'}); render(); toast(`${p.name} approved. They've been emailed.`); },
+  decline: el => { const p = S.pending.find(x => String(x.id) === el.dataset.id); S.pending = S.pending.filter(x => x !== p); render(); toast(`${p.name}'s sign-up was declined.`); },
+  invite: () => openModal(`<h2>Invite to the team</h2><p class="muted small mt-s">Staff, drivers and admins join only by invite.</p>
+    <div class="stack mt"><div><label class="f" for="inv-email">Email</label><input id="inv-email" type="email" placeholder="name@themarq.ca"></div><div><label class="f" for="inv-role">Role</label><select id="inv-role"><option>Staff</option><option>Driver</option><option>Admin</option></select></div></div>
+    <div class="row mt" style="justify-content:flex-end"><button class="btn" data-act="close">Cancel</button><button class="btn primary" data-act="inviteok">Send invite</button></div>`),
+  inviteok: () => { const e = val('inv-email'); if (!e.includes('@')) return toast('Enter an email address.', 'alert'); const r = val('inv-role'); closeModal(); toast(`Invite sent to ${esc(e)} as ${r}.`); },
+  tkf: el => { S.tkFilter = el.dataset.v; render(); },
+  tksel: el => { S.stTicket = el.dataset.id; render(); },
+  tkstatus: el => {
+    const t = S.tickets.find(x => x.id === el.dataset.id); const was = t.status; t.status = el.dataset.v;
+    if (t.source === 'system' && t.status === 'resolved' && was !== 'resolved') {
+      const m = S.machines.find(x => x.id === 'D2'); if (m && m.state === 'fault') m.state = 'free';
+      const d = S.devices.find(x => x.hw === t.device); if (d) d.status = 'online';
+      toast('Resolved. Dryer 2 is back in service on the laundry page.');
+    } else if (t.unit) toast(`${t.name.split(' ')[0]} was notified: ${({open:'reopened', in_progress:'we\'re on it', resolved:'resolved'})[t.status]}.`, 'bell');
+    render();
+  },
+  tkreply: el => {
+    const body = val('tk-reply'); if (!body) return;
+    const t = S.tickets.find(x => x.id === el.dataset.id); const internal = document.getElementById('tk-internal').checked;
+    t.thread.push({who:STAFF.name, body, internal, at:Date.now()}); if (!internal && t.status === 'open') t.status = 'in_progress';
+    render(); toast(internal ? 'Internal note added.' : `Reply sent to ${t.name.split(' ')[0]}.`);
+  },
+  toggleself: el => el.setAttribute('aria-pressed', el.getAttribute('aria-pressed') === 'true' ? 'false' : 'true'),
+  anpost: () => {
+    const title = val('an-title'), body = val('an-body'); if (!title) return toast('Add a title.', 'alert');
+    const aud = val('an-aud'), tgt = val('an-target'), urgent = document.getElementById('an-urgent').getAttribute('aria-pressed') === 'true';
+    let floors = [], units = [];
+    if (aud === 'floors') { tgt.split(',').forEach(p => { const [a, b] = p.split('-').map(s => parseInt(s, 10)); if (!isNaN(a)) for (let f = a; f <= (isNaN(b) ? a : b); f++) floors.push(f); }); if (!floors.length) return toast('List the floors, e.g. 10-14.', 'alert'); }
+    if (aud === 'units') { units = tgt.split(',').map(s => s.trim().padStart(4, '0')).filter(Boolean); if (!units.length) return toast('List the units, e.g. 1204.', 'alert'); }
+    const size = aud === 'building' ? 312 : aud === 'floors' ? floors.length * 9 : units.length;
+    S.ann.unshift({id:nid(), title, body:body || title, cat:val('an-cat'), urgent, aud, floors, units, at:Date.now(), read:false, reads:0, audSize:size, source:'staff'});
+    render(); toast(urgent ? `Published and pushed to ${size} residents.` : `Published to ${size} residents.`, 'mega');
+  },
+  fstest: () => { S.failsafe = true; S.rooms.forEach(r => { r.mode = 'failsafe'; r.lights = 'on'; r.hvac = 'comfort'; r.set = r.id === 'lobby' ? 21 : 22; }); logCmd('All rooms', 'Lights on, HVAC normal', 'Fail-safe · no heartbeat 120 s'); render(); },
+  fsrestore: () => { S.failsafe = false; S.rooms.forEach(r => r.mode = 'auto'); const g = S.rooms.find(r => r.id === 'game'); if (!g.occ) { g.lights = 'off'; g.hvac = 'setback'; g.set = 17; logCmd('Game room', 'Lights off, HVAC setback 17 °C', 'Rule · Empty 10 min after booking'); } render(); toast('Automation restored. Rooms back on their rules.'); },
+  rlights: el => { const r = S.rooms.find(x => x.id === el.dataset.id); r.lights = r.lights === 'on' ? 'off' : 'on'; r.mode = 'override'; logCmd(r.name, `Lights ${r.lights} (override)`, `${STAFF.name} (staff)`); render(); },
+  rhvac: el => { const r = S.rooms.find(x => x.id === el.dataset.id); r.hvac = r.hvac === 'comfort' ? 'setback' : 'comfort'; r.set = r.hvac === 'comfort' ? 22 : 17; r.mode = 'override'; logCmd(r.name, `HVAC ${r.hvac} ${r.set} °C (override)`, `${STAFF.name} (staff)`); render(); },
+  rauto: el => { const r = S.rooms.find(x => x.id === el.dataset.id); r.mode = 'auto'; logCmd(r.name, 'Returned to automatic', `${STAFF.name} (staff)`); render(); toast(`${r.name} is back on automatic.`); },
+  devf: el => { S.devFilter = el.dataset.v; render(); },
+  calib: el => { const d = S.devices.find(x => x.hw === el.dataset.hw); openModal(`<h2>Calibrate <span class="code">${d.hw}</span></h2><p class="muted small mt-s">Compare with a true-RMS clamp meter under a known load. Applied by the ingest service, so no reflash is needed.</p>
+    <div class="tbl-wrap mt"><table><thead><tr><th>Ch</th><th>Scale</th><th>Offset A</th><th>Volts</th><th>PF</th></tr></thead><tbody>${Array.from({length:d.ch}, (_, i) => `<tr><td>${i}</td><td><input value="1.00" aria-label="Scale ch ${i}"></td><td><input value="0.02" aria-label="Offset ch ${i}"></td><td><select aria-label="Voltage ch ${i}"><option>120</option><option ${d.sys === 'Laundry' ? 'selected' : ''}>240</option></select></td><td><input value="${d.sys === 'HVAC' ? '0.85' : '1.00'}" aria-label="Power factor ch ${i}"></td></tr>`).join('')}</tbody></table></div>
+    <div class="row mt" style="justify-content:flex-end"><button class="btn" data-act="close">Cancel</button><button class="btn primary" data-act="calibok">Save</button></div>`); },
+  calibok: () => { closeModal(); toast('Calibration saved. New readings use it straight away.'); },
+  ruletoggle: el => { const r = S.rules.find(x => String(x.id) === el.dataset.id); r.on = !r.on; render(); },
+  newrule: () => openModal(`<h2>New rule</h2><div class="stack mt">
+    <div><label class="f" for="nr-when">When</label><select id="nr-when"><option>A booking starts</option><option>A booking ends</option><option>Motion in a room with no booking</option><option>No motion for 20 min</option><option>Building load passes 90% of limit</option><option>On-peak price period starts</option></select></div>
+    <div><label class="f" for="nr-where">Where</label><select id="nr-where"><option>Theatre, Game room</option><option>Theatre room</option><option>Game room</option><option>Lobby</option><option>All chargers</option></select></div>
+    <div><label class="f" for="nr-then">Then</label><select id="nr-then"><option>Lights off · HVAC setback (17 °C)</option><option>Lights on · HVAC comfort (22 °C)</option><option>Alert staff</option><option>Cut EV chargers to 3.6 kW</option></select></div>
+    <div class="note">Rules never override a manual override, and wait out a 10-minute cooldown before firing again.</div></div>
+    <div class="row mt" style="justify-content:flex-end"><button class="btn" data-act="close">Cancel</button><button class="btn primary" data-act="newruleok">Add rule</button></div>`),
+  newruleok: () => { S.rules.push({id:nid(), on:true, when:val('nr-when'), cond:'', then:val('nr-then'), where:val('nr-where'), fired:Date.now()}); closeModal(); render(); toast('Rule added and switched on.'); },
+  anr: el => { S.anRange = el.dataset.v; render(); },
+  toast: el => toast(el.dataset.msg, 'check'),
+};
+function markRead(a){ if (a && !a.read) { a.read = true; a.reads++; } }
+function scrollPhone(){ const b = document.getElementById('pbody'); if (b) b.scrollTop = 0; }
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]'); if (!el || el.disabled) return;
+  const fn = A[el.dataset.act]; if (fn) { e.preventDefault(); fn(el, e); }
+});
+
+/* ===== live updates ===== */
+function afterRender(){
+  const path = document.getElementById('route-path');
+  if (path) {
+    const len = path.getTotalLength();
+    STOPS.forEach((s, i) => {
+      const g = document.getElementById('stop-' + i); if (!g) return;
+      const pt = path.getPointAtLength(s.at * len); g.setAttribute('transform', `translate(${pt.x.toFixed(1)} ${pt.y.toFixed(1)})`);
+      const t = g.querySelector('text'); const right = pt.x > 200;
+      t.setAttribute('x', right ? -10 : 10); t.setAttribute('y', pt.y < 100 ? -9 : 14); t.setAttribute('text-anchor', right ? 'end' : 'start');
+    });
+  }
+  updateLive();
+}
+function updateLive(){
+  const sh = S.shuttle;
+  const path = document.getElementById('route-path'), bus = document.getElementById('bus');
+  if (path && bus && sh.running) { const pt = path.getPointAtLength(sh.p * path.getTotalLength()); bus.setAttribute('transform', `translate(${pt.x.toFixed(1)} ${pt.y.toFixed(1)})`); }
+  STOPS.forEach((s, i) => { const el = document.getElementById('eta-' + i); if (el) el.textContent = etaText(etaMin(i)); });
+  const he = document.getElementById('home-eta'); if (he) he.innerHTML = homeEta();
+  const de = document.getElementById('drv-elapsed'); if (de) de.textContent = elapsed();
+  const dn = document.getElementById('drv-next'); if (dn) { const i = nextStopIdx(); dn.textContent = STOPS[i].name; document.getElementById('drv-eta').textContent = 'in ' + etaText(etaMin(i) - sh.delay); }
+  const ol = document.getElementById('ov-load'); if (ol) { ol.textContent = S.load; document.getElementById('ov-meter').style.width = (S.load/LIMIT*100) + '%'; }
+  const el = document.getElementById('en-load'); if (el) el.textContent = S.load;
+}
+let tick = 0;
+setInterval(() => {
+  tick++;
+  const sh = S.shuttle;
+  if (sh.running) {
+    sh.p += 1/180;
+    if (sh.p >= 1) { sh.p -= 1; sh.notifiedLoop = false; }
+    const m = etaMin(0);
+    if (sh.notify5 && !sh.notifiedLoop && m <= 5 && m > 0.5) { sh.notifiedLoop = true; if (S.role === 'resident') toast('Shuttle is about 5 min from The Marq.', 'bus'); }
+  }
+  if (tick % 3 === 0) S.load = Math.round(92 + 8*Math.sin(tick/9) + 3*noise(tick));
+  if (tick % 8 === 0) {
+    let changed = false;
+    S.machines.forEach(m => {
+      if (m.state !== 'in_use' && m.state !== 'finishing') return;
+      m.mins = Math.max(0, m.mins - 1); changed = true;
+      if (m.mins === 0) {
+        m.state = 'free';
+        if (S.laundryNotify.has(m.id)) { S.laundryNotify.delete(m.id); toast(`${m.type} ${m.id.slice(1)} is done.`, 'washer'); }
+      } else if (m.mins <= 5) m.state = 'finishing';
+    });
+    if (changed && ((S.role === 'resident' && !S.rview && (S.rtab === 'laundry' || S.rtab === 'home')) || (S.role === 'staff' && S.stab === 'overview'))) render();
+  }
+  updateLive();
+}, 1000);
+
+/* ===== start ===== */
+try { const t = localStorage.getItem('marq-theme'); if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t); } catch (e) {}
+S.machines.forEach(m => { if (m.state === 'in_use' && m.mins <= 5) m.state = 'finishing'; });
+render();
+</script>
