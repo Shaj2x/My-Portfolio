@@ -55,19 +55,70 @@ label.f{display:block;font-size:12px;font-weight:600;color:var(--muted);margin:0
 .mt{margin-top:16px} .mt-s{margin-top:8px}
 .ellipsis{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-/* top bar */
-.topbar{position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--border)}
-.topbar-in{max-width:1320px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-.brand{display:flex;align-items:center;gap:10px;margin-right:auto;min-width:0}
-.brand b{font-family:Fraunces,Georgia,serif;font-size:18px;font-weight:600;letter-spacing:-.01em}
-.mark{width:34px;height:34px;border-radius:9px;background:#1D2C4D;display:grid;place-items:center;flex:none}
-.proto{font-size:11px;font-weight:600;color:var(--accent-strong);background:var(--accent-soft);border-radius:999px;padding:2px 8px;white-space:nowrap}
+/* app shell */
+.shell{display:grid;grid-template-columns:240px minmax(0,1fr);min-height:100vh}
+.rail{position:sticky;top:0;height:100vh;border-right:1px solid var(--border);background:var(--surface);padding:18px 12px;display:flex;flex-direction:column;gap:2px;overflow-y:auto}
+.brand{display:flex;align-items:center;gap:10px;padding:0 8px 16px;min-width:0}
+.brand b{font-family:Fraunces,Georgia,serif;font-size:18px;font-weight:600;letter-spacing:-.01em;display:block}
+.mark{width:36px;height:36px;border-radius:10px;background:#1D2C4D;display:grid;place-items:center;flex:none}
+.rail button.nav{display:flex;align-items:center;gap:10px;border:0;background:none;padding:9px 10px;border-radius:10px;color:var(--muted);font-weight:500;text-align:left;width:100%}
+.rail button.nav:hover{background:var(--surface-2)}
+.rail button.nav[aria-current="page"]{background:var(--accent-soft);color:var(--text)}
+.rail button.nav[aria-current="page"] .i{color:var(--accent-strong)}
+.rail .badge{margin-left:auto}
+.rail .me{margin-top:auto;padding:12px 10px 0;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.avatar{width:34px;height:34px;border-radius:50%;background:var(--accent-soft);color:var(--accent-strong);display:grid;place-items:center;font-weight:700;flex:none}
+.proto{font-size:10.5px;font-weight:600;color:var(--accent-strong);background:var(--accent-soft);border-radius:999px;padding:2px 8px;white-space:nowrap}
+.main{min-width:0;display:flex;flex-direction:column}
+.apphead{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--border)}
+.apphead-in{max-width:720px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;gap:10px}
+.apphead h1{font-size:20px}
+.apphead .mark{display:none;width:30px;height:30px;border-radius:8px}
+.content{width:100%;max-width:720px;margin:0 auto;padding:16px 16px 48px;display:flex;flex-direction:column;gap:12px}
 .seg{display:inline-flex;background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:3px;max-width:100%;overflow-x:auto}
 .seg button{border:0;background:transparent;padding:6px 13px;border-radius:999px;color:var(--muted);font-weight:500;white-space:nowrap}
 .seg button[aria-pressed="true"]{background:var(--primary);color:var(--on-primary)}
-.iconbtn{border:1px solid var(--border);background:var(--surface);border-radius:999px;width:36px;height:36px;display:grid;place-items:center;flex:none}
+.iconbtn{border:1px solid var(--border);background:var(--surface);border-radius:999px;width:38px;height:38px;display:grid;place-items:center;flex:none;position:relative}
+.iconbtn .badge{position:absolute;top:-4px;right:-4px}
+.badge{min-width:17px;height:17px;padding:0 5px;border-radius:999px;background:var(--bad);color:#fff;font-size:10.5px;font-weight:700;display:inline-grid;place-items:center}
+.tabbar{display:none}
+.card.hello{background:linear-gradient(135deg,#1D2C4D,#2A3D66);color:#F3EEE3;border:0}
+.hello .muted{color:#C8CEDB}
+.hello h2{font-size:26px;color:#fff}
+.hello .chip.ok{background:rgba(255,255,255,.14);color:#E9D9B8}
+.quick{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.quick button{border:1px solid var(--border);background:var(--surface);border-radius:14px;padding:12px 6px;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12px;font-weight:600;text-align:center}
+.quick button .i{color:var(--accent-strong);width:22px;height:22px}
+.quick button:hover{border-color:var(--accent)}
+.home-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.timeline{position:relative;height:30px;border-radius:8px;background:var(--surface-2);overflow:hidden}
+.timeline .blk{position:absolute;top:4px;bottom:4px;border-radius:6px;font-size:11px;font-weight:600;color:#fff;display:flex;align-items:center;padding:0 6px;white-space:nowrap;overflow:hidden}
+.tl-axis{display:flex;justify-content:space-between;font-size:10.5px;color:var(--muted);margin-top:4px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.note{font-size:12.5px;color:var(--muted);background:var(--surface-2);border-radius:10px;padding:10px 12px;display:flex;gap:8px;align-items:flex-start}
+.auth{min-height:100vh;display:grid;place-items:center;padding:24px 16px}
+.auth .card{width:100%;max-width:420px;padding:24px}
+.auth .mark{width:44px;height:44px;border-radius:12px}
+.steps{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+.steps > div{display:flex;gap:10px;align-items:flex-start}
+.steps .n{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;background:var(--surface-2);color:var(--muted);flex:none}
+.steps .done .n{background:var(--ok);color:#fff}
+.steps .now .n{background:var(--primary);color:var(--on-primary)}
 
-.wrap{max-width:1320px;margin:0 auto;padding:20px 16px 56px}
+@media (max-width:899px){
+  .shell{grid-template-columns:minmax(0,1fr)}
+  .rail{display:none}
+  .apphead .mark{display:grid}
+  .content{padding-bottom:96px}
+  .tabbar{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;left:0;right:0;bottom:0;z-index:25;border-top:1px solid var(--border);background:var(--surface);padding-bottom:env(safe-area-inset-bottom)}
+  .tabbar button{border:0;background:none;padding:9px 0 8px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;color:var(--muted);position:relative}
+  .tabbar button[aria-current="page"]{color:var(--accent-strong);font-weight:600}
+  .tabbar .badge{position:absolute;top:4px;left:calc(50% + 6px)}
+  #toasts{bottom:84px}
+}
+@media (max-width:420px){ .apphead .proto{display:none} }
 
 /* cards & bits */
 .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px;box-shadow:var(--shadow)}
@@ -75,6 +126,7 @@ label.f{display:block;font-size:12px;font-weight:600;color:var(--muted);margin:0
 .card.tight{padding:12px}
 .card.link{display:block;width:100%;text-align:left;border:1px solid var(--border)}
 .card.link:hover{border-color:var(--accent)}
+.card.link.row{display:flex}
 .card h3{margin-bottom:2px}
 .chip{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:2px 9px;border-radius:999px;background:var(--surface-2);color:var(--muted);white-space:nowrap;border:0}
 .chip.ok{background:var(--ok-soft);color:var(--ok)} .chip.warn{background:var(--warn-soft);color:var(--warn)}
@@ -114,24 +166,7 @@ button.chip[aria-pressed="true"]{background:var(--primary);color:var(--on-primar
 .empty{padding:22px;text-align:center;color:var(--muted);border:1px dashed var(--border);border-radius:12px}
 hr.sep{border:0;border-top:1px solid var(--border);margin:14px 0}
 
-/* resident & driver phone */
-.res-layout{display:grid;grid-template-columns:minmax(0,410px) minmax(0,330px);gap:32px;justify-content:center;align-items:start}
-.phone{background:var(--app-bg);border:1px solid var(--border);border-radius:34px;box-shadow:var(--shadow-lg);overflow:hidden;display:flex;flex-direction:column;height:min(820px,calc(100vh - 100px));min-height:600px;position:relative}
-.phone-head{padding:14px 18px 10px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);background:var(--surface)}
-.phone-body{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
-.tabbar{display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid var(--border);background:var(--surface);padding-bottom:4px}
-.tabbar button{border:0;background:none;padding:9px 0 7px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;color:var(--muted);position:relative}
-.tabbar button[aria-current="page"]{color:var(--accent-strong);font-weight:600}
-.tabbar .badge{position:absolute;top:4px;left:calc(50% + 6px)}
-.badge{min-width:17px;height:17px;padding:0 5px;border-radius:999px;background:var(--bad);color:#fff;font-size:10.5px;font-weight:700;display:inline-grid;place-items:center}
-.side-notes{position:sticky;top:84px}
-.side-notes ol{margin:8px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
-.hello{background:linear-gradient(135deg,#1D2C4D,#2A3D66);color:#F3EEE3;border:0}
-.hello .muted{color:#C8CEDB}
-.hello h2{font-size:24px;color:#fff}
-.hello .chip.ok{background:rgba(255,255,255,.14);color:#E9D9B8}
 .big-eta{font-family:Fraunces,Georgia,serif;font-size:30px;font-weight:600;line-height:1}
-.tile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .back{display:inline-flex;align-items:center;gap:4px;border:0;background:none;color:var(--accent-strong);font-weight:600;padding:0}
 .map{width:100%;height:auto;display:block;border-radius:12px}
 .stop-row{display:flex;align-items:center;gap:10px}
@@ -156,59 +191,6 @@ hr.sep{border:0;border-top:1px solid var(--border);margin:14px 0}
 .msg{padding:10px 12px;border-radius:12px;background:var(--surface-2);max-width:88%}
 .msg.me{align-self:flex-end;background:var(--info-soft)}
 .msg.internal{background:var(--warn-soft);border:1px dashed color-mix(in srgb,var(--warn) 50%,transparent)}
-.drv-big{font-family:Fraunces,Georgia,serif;font-size:26px;font-weight:600}
-.gps{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted)}
-
-/* staff */
-.staff{display:grid;grid-template-columns:220px minmax(0,1fr);gap:24px;align-items:start}
-.snav{position:sticky;top:76px;display:flex;flex-direction:column;gap:2px}
-.snav button{display:flex;align-items:center;gap:10px;border:0;background:none;padding:8px 10px;border-radius:10px;color:var(--muted);font-weight:500;text-align:left}
-.snav button:hover{background:var(--surface)}
-.snav button[aria-current="page"]{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
-.snav button[aria-current="page"] .i{color:var(--accent)}
-.snav .badge{margin-left:auto}
-.snav .who{padding:10px;margin-bottom:6px;border-bottom:1px solid var(--border)}
-.page-h{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
-.page-h p{margin-top:3px}
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
-.kpi .v{font-family:Fraunces,Georgia,serif;font-size:26px;font-weight:600;line-height:1.1;margin-top:4px}
-.kpi .l{font-size:12px;color:var(--muted);font-weight:500}
-.grid2{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:16px}
-.grid2.even{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
-.tbl-wrap{overflow-x:auto;margin:0 -16px;padding:0 16px}
-table{width:100%;border-collapse:collapse;font-size:13px}
-th{text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
-td{padding:10px;border-bottom:1px solid var(--border);vertical-align:middle}
-tr:last-child td{border-bottom:0}
-tr.sel td{background:var(--surface-2)}
-.meter{height:10px;border-radius:999px;background:var(--surface-2);overflow:hidden;position:relative}
-.meter > i{display:block;height:100%;border-radius:999px;background:var(--s1)}
-.meter.warn > i{background:var(--warn)}
-.bars{display:flex;flex-direction:column;gap:9px}
-.bar{display:grid;grid-template-columns:minmax(90px,140px) 1fr auto;gap:10px;align-items:center;font-size:13px}
-.bar .t{height:10px;border-radius:999px;background:var(--surface-2);overflow:hidden}
-.bar .t > i{display:block;height:100%;border-radius:999px}
-.cols{display:flex;align-items:flex-end;gap:6px;height:150px;padding-top:18px}
-.cols .c{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end;min-width:0}
-.cols .c i{display:block;width:100%;max-width:34px;border-radius:6px 6px 2px 2px;background:var(--s1)}
-.cols .c span{font-size:10.5px;color:var(--muted);white-space:nowrap}
-.cols .c em{font-style:normal;font-size:10.5px;font-weight:600}
-.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted)}
-.legend span{display:inline-flex;align-items:center;gap:6px}
-.legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
-.chart{width:100%;height:auto;display:block}
-.chart text{fill:var(--muted);font-size:11px;font-family:Inter,system-ui,sans-serif}
-.room{display:flex;flex-direction:column;gap:10px}
-.state-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.state-grid > div{background:var(--surface-2);border-radius:10px;padding:8px 10px}
-.state-grid b{display:block;font-size:14px}
-.timeline{position:relative;height:30px;border-radius:8px;background:var(--surface-2);overflow:hidden}
-.timeline .blk{position:absolute;top:4px;bottom:4px;border-radius:6px;font-size:11px;font-weight:600;color:#fff;display:flex;align-items:center;padding:0 6px;white-space:nowrap;overflow:hidden}
-.tl-axis{display:flex;justify-content:space-between;font-size:10.5px;color:var(--muted);margin-top:4px}
-.rule{display:flex;gap:12px;align-items:flex-start}
-.rule .when{font-weight:600}
-.code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
-.note{font-size:12.5px;color:var(--muted);background:var(--surface-2);border-radius:10px;padding:10px 12px}
 
 /* modal & toasts */
 #modal{position:fixed;inset:0;z-index:60;display:none;place-items:center;background:rgba(10,14,24,.5);padding:16px}
@@ -218,27 +200,6 @@ tr.sel td{background:var(--surface-2)}
 .toast{background:var(--primary);color:var(--on-primary);padding:11px 14px;border-radius:12px;box-shadow:var(--shadow-lg);font-weight:500;display:flex;gap:8px;align-items:flex-start;animation:tin .2s ease-out}
 @keyframes tin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 
-@media (max-width:980px){
-  .staff{grid-template-columns:minmax(0,1fr)}
-  .snav{position:static;flex-direction:row;overflow-x:auto;gap:4px;padding-bottom:4px;margin:0 -16px;padding-left:16px;padding-right:16px}
-  .snav .who{display:none}
-  .snav button{flex:none;white-space:nowrap;padding:7px 11px;border:1px solid var(--border);background:var(--surface)}
-  .snav .badge{margin-left:2px}
-  .grid2,.grid2.even{grid-template-columns:minmax(0,1fr)}
-}
-@media (max-width:820px){
-  .res-layout{grid-template-columns:minmax(0,1fr);gap:20px}
-  .side-notes{position:static}
-  .phone{height:auto;min-height:0;border-radius:22px;overflow:visible}
-  .phone-body{overflow:visible}
-  .tabbar{position:sticky;bottom:0;border-radius:0 0 22px 22px;z-index:5}
-}
-@media (max-width:520px){
-  .brand small{display:none}
-  .wrap{padding-top:14px}
-  .state-grid{grid-template-columns:repeat(2,1fr)}
-  .bar{grid-template-columns:minmax(70px,100px) 1fr auto}
-}
 </style>
 
 <div id="app"></div>
@@ -297,8 +258,6 @@ const minsAgo = m => T0 - m*60000;
 
 /* ===== mock data ===== */
 const ME = {name:'Priya Sharma', first:'Priya', unit:'1204', room:'B', floor:12, email:'priya.s@example.com'};
-const STAFF = {name:'Alex Chen', role:'Front desk'};
-const DRIVER = {name:'Sam Okafor'};
 let _id = 5000; const nid = () => ++_id;
 
 const STOPS = [
@@ -317,7 +276,7 @@ const AMEN = [
 ];
 
 const S = {
-  role:'resident', rtab:'home', rview:null, rparam:null, stab:'overview',
+  page:'home', param:null, stack:[],
   theme:null,
   banner:null,
   shuttle:{running:true, p:0.71, delay:0, started:minsAgo(20), cancelled:false, notify5:false, notifiedLoop:false},
@@ -329,20 +288,12 @@ const S = {
     {id:nid(), title:'Welcome to Marq Living', body:'Track the shuttle, book the theatre and game room, check laundry, and message the front desk — all in one place.', cat:'building', urgent:false, aud:'building', floors:[], units:[], at:minsAgo(60*24*9), read:true, reads:288, audSize:312, source:'staff'},
   ],
   tickets:[
-    {id:'T-1048', subject:'Kitchen faucet dripping', cat:'maintenance', status:'in_progress', priority:'normal', unit:'1204', name:'Priya Sharma', source:'tenant', at:minsAgo(60*20), enter:true,
+    {id:'T-1048', subject:'Kitchen faucet dripping', cat:'maintenance', status:'in_progress', unit:'1204', at:minsAgo(60*20), enter:true,
       thread:[{who:'Priya Sharma', tenant:true, body:'The kitchen faucet drips constantly, even when fully closed.', at:minsAgo(60*20)},
-              {who:'Alex Chen', body:'Thanks Priya — maintenance is booked for tomorrow between 10 and 12. You said we can enter if you\'re out.', at:minsAgo(60*18)},
-              {who:'Alex Chen', internal:true, body:'Likely cartridge. Jordan has spares in B2 storage.', at:minsAgo(60*18)}]},
-    {id:'T-1047', subject:'Hallway light out near 712', cat:'maintenance', status:'open', priority:'low', unit:'0712', name:'Marcus Lee', source:'tenant', at:minsAgo(140), enter:false,
-      thread:[{who:'Marcus Lee', tenant:true, body:'The ceiling light outside 712 has been out since last night.', at:minsAgo(140)}]},
-    {id:'T-1046', subject:'Dryer 2: fault', cat:'device_fault', status:'open', priority:'high', unit:null, name:'System', source:'system', at:minsAgo(181), device:'ct-laundry-01',
-      thread:[{who:'System', body:'Heater not drawing power during a dry cycle (0.3 A, expected ~22 A). Laundry room, panel L1. Raised automatically.', at:minsAgo(181)},
-              {who:'System', internal:true, body:'Dryer 2 marked out of service and a building announcement was posted.', at:minsAgo(181)}]},
-    {id:'T-1045', subject:'Fob doesn\'t open the parking gate', cat:'access', status:'open', priority:'high', unit:'0903', name:'Hannah Wu', source:'tenant', at:minsAgo(55), enter:false,
-      thread:[{who:'Hannah Wu', tenant:true, body:'My fob works on the front door but not the P1 gate.', at:minsAgo(55)}]},
-    {id:'T-1044', subject:'Package marked delivered but not here', cat:'package', status:'resolved', priority:'normal', unit:'1508', name:'Diego Alvarez', source:'tenant', at:minsAgo(60*30), enter:false,
-      thread:[{who:'Diego Alvarez', tenant:true, body:'Amazon says delivered at 2 PM, but there\'s nothing in my locker.', at:minsAgo(60*30)},
-              {who:'Alex Chen', body:'Found it in the overflow room — it\'s at the front desk with your name on it.', at:minsAgo(60*28)}]},
+              {who:'Alex', body:'Thanks Priya. Maintenance is booked for tomorrow between 10 and 12. You said we can enter if you\'re out.', at:minsAgo(60*18)}]},
+    {id:'T-1031', subject:'Package for 1204 at the desk?', cat:'package', status:'resolved', unit:'1204', at:minsAgo(60*24*6), enter:false,
+      thread:[{who:'Priya Sharma', tenant:true, body:'Tracking says delivered but it isn\'t in my locker.', at:minsAgo(60*24*6)},
+              {who:'Jordan', body:'Found it in the overflow room. It\'s at the front desk with your name on it.', at:minsAgo(60*24*6-40)}]},
   ],
   bookings:[
     {id:nid(), amen:'theatre', day:2, start:19, dur:2, unit:'1204', name:'Priya S.'},
@@ -374,129 +325,10 @@ const S = {
     {id:'EV-3', state:'free', kw:0, unit:null},
     {id:'EV-4', state:'offline', kw:0, unit:null},
   ],
-  evReqs:[
-    {id:nid(), unit:'0815', name:'Jordan P.', charger:'EV-1', kwh:22, by:7, plan:[[16.5,19.5]], status:'charging'},
-    {id:nid(), unit:'1103', name:'Sara K.', charger:'EV-2', kwh:30, by:8, plan:[[23,27.2]], status:'scheduled'},
-  ],
-  pending:[
-    {id:nid(), name:'Olivia Martin', email:'o.martin@example.com', unit:'1610', room:'C', floor:16, at:minsAgo(40)},
-    {id:nid(), name:'Ahmed Rahman', email:'ahmed.r@example.com', unit:'0807', room:'A', floor:8, at:minsAgo(60*3)},
-    {id:nid(), name:'Chloé Tremblay', email:'chloe.t@example.com', unit:'2104', room:'D', floor:21, at:minsAgo(60*22)},
-  ],
-  residents:[
-    {name:'Priya Sharma', unit:'1204B', floor:12, status:'approved', joined:'Sep 2'},
-    {name:'Marcus Lee', unit:'0712A', floor:7, status:'approved', joined:'Aug 30'},
-    {name:'Hannah Wu', unit:'0903C', floor:9, status:'approved', joined:'Aug 29'},
-    {name:'Diego Alvarez', unit:'1508A', floor:15, status:'approved', joined:'Aug 29'},
-    {name:'Jordan Park', unit:'0815D', floor:8, status:'approved', joined:'Aug 28'},
-    {name:'Sara Kim', unit:'1103B', floor:11, status:'approved', joined:'Aug 28'},
-    {name:'Mei Lin', unit:'0412A', floor:4, status:'approved', joined:'Aug 27'},
-  ],
-  team:[
-    {name:'Alex Chen', role:'Staff', note:'Front desk'},
-    {name:'Jordan Bell', role:'Staff', note:'Maintenance'},
-    {name:'Sam Okafor', role:'Driver', note:'Shuttle'},
-    {name:'Rina Patel', role:'Admin', note:'Property manager'},
-  ],
-  devices:[
-    {hw:'ct-main-01', type:'CT node', sys:'Main panel', loc:'Electrical room B1', status:'online', seen:0.1, rssi:-54, fw:'1.3.0', ch:4},
-    {hw:'ct-laundry-01', type:'CT node', sys:'Laundry', loc:'Laundry room, panel L1', status:'fault', seen:0.1, rssi:-61, fw:'1.3.0', ch:4},
-    {hw:'ct-laundry-02', type:'CT node', sys:'Laundry', loc:'Laundry room, panel L1', status:'online', seen:0.1, rssi:-63, fw:'1.3.0', ch:4},
-    {hw:'room-theatre-01', type:'Room node', sys:'Amenity', loc:'Theatre room, L2', status:'online', seen:0.2, rssi:-58, fw:'1.3.0', ch:2},
-    {hw:'room-game-01', type:'Room node', sys:'Amenity', loc:'Game room, L2', status:'online', seen:0.2, rssi:-66, fw:'1.3.0', ch:2},
-    {hw:'room-lobby-01', type:'Room node', sys:'Common', loc:'Lobby', status:'online', seen:0.3, rssi:-49, fw:'1.2.4', ch:2},
-    {hw:'ct-ev-01', type:'CT node', sys:'EV', loc:'P1 charger panel', status:'online', seen:0.1, rssi:-71, fw:'1.3.0', ch:4},
-    {hw:'evse-04', type:'EV charger', sys:'EV', loc:'P1 bay 4', status:'offline', seen:9, rssi:null, fw:'OCPP 1.6', ch:1},
-    {hw:'ct-hvac-01', type:'CT node', sys:'HVAC', loc:'Roof mechanical', status:'online', seen:0.1, rssi:-74, fw:'1.3.0', ch:3},
-  ],
-  devFilter:'all',
-  rooms:[
-    {id:'theatre', name:'Theatre room', occ:true, lights:'on', hvac:'comfort', set:22, mode:'auto', kw:1.8, why:'Booking 6–8 PM (unit 0815)'},
-    {id:'game', name:'Game room', occ:false, lights:'off', hvac:'setback', set:17, mode:'auto', kw:0.2, why:'Empty — next booking 8 PM'},
-    {id:'lobby', name:'Lobby', occ:true, lights:'on', hvac:'comfort', set:21, mode:'auto', kw:3.1, why:'Schedule 6 AM–midnight'},
-  ],
-  failsafe:false,
-  cmdlog:[
-    {at:minsAgo(3), room:'Theatre room', act:'Lights on, HVAC comfort 22 °C', by:'Rule · Booking starts', ok:true},
-    {at:minsAgo(48), room:'Game room', act:'Lights off, HVAC setback 17 °C', by:'Rule · Empty 10 min after booking', ok:true},
-    {at:minsAgo(130), room:'Lobby', act:'Lights on', by:'Alex Chen (staff)', ok:true},
-    {at:minsAgo(60*5), room:'Game room', act:'HVAC setback', by:'Rule · Empty 10 min after booking', ok:false, err:'manual override active'},
-  ],
-  rules:[
-    {id:nid(), on:true, when:'A booking starts', cond:'15 min before', then:'Lights on · HVAC comfort (22 °C)', where:'Theatre, Game room', fired:minsAgo(3)},
-    {id:nid(), on:true, when:'A booking ends', cond:'and no motion for 10 min', then:'Lights off · HVAC setback (17 °C)', where:'Theatre, Game room', fired:minsAgo(48)},
-    {id:nid(), on:true, when:'Motion in a room with no booking', cond:'after 11 PM', then:'Alert staff', where:'Theatre, Game room', fired:minsAgo(60*27)},
-    {id:nid(), on:true, when:'Building load passes 90% of limit', cond:'any time', then:'Cut EV chargers to 3.6 kW', where:'All chargers', fired:minsAgo(60*50)},
-  ],
   annFilter:'all', annOpen:null,
-  load:97,
-  stTicket:'T-1046', tkFilter:'open',
-  anRange:'30d',
+  auth:'in', signup:null,
   notif:{push:true, email:true, shuttle:true, laundry:true, events:false},
 };
-
-/* ===== energy model (mock) ===== */
-const bump = (h, c, w) => Math.exp(-((h - c) ** 2) / (2 * w * w));
-const noise = i => (Math.sin(i * 12.9898) * 43758.5453) % 1;
-const SYS = [
-  {name:'HVAC & common', color:'var(--s1)', f:h => 34 + 10*Math.sin((h-10)/24*2*Math.PI) + (h>=7 && h<23 ? 8 : 0)},
-  {name:'Laundry', color:'var(--s2)', f:h => 1.5 + (h>=8 && h<23 ? 11*bump(h,19.5,2.2) + 7*bump(h,10.5,1.6) : 0)},
-  {name:'EV charging', color:'var(--s3)', f:h => (h>=23 || h<5.5) ? 21 : (h>=16.5 && h<19.5 ? 7 : 0)},
-  {name:'Amenity rooms', color:'var(--s4)', f:h => (h>=18 && h<23.5) ? 4.5 : 0.7},
-  {name:'Other', color:'var(--s5)', f:h => 13 + 6*bump(h,7.8,1.3) + 9*bump(h,19,2.4)},
-];
-const LIMIT = 150;
-const price = h => (h >= 23 || h < 7) ? 0.028 : (h >= 16 && h < 21) ? 0.284 : 0.122; // ULO-style ¢/kWh → $/kWh
-function energyDay(){
-  const n = 96, nowIdx = Math.min(95, Math.floor(nowH() * 4));
-  const series = SYS.map((s, k) => ({...s, data:Array.from({length:n}, (_, i) => i <= nowIdx ? Math.max(0, s.f(i/4) * (1 + 0.06*noise(i + k*97))) : null)}));
-  const forecast = Array.from({length:n}, (_, i) => SYS.reduce((a, s) => a + s.f(i/4), 0) * 1.015);
-  let kwh = 0, cost = 0, peak = 0;
-  for (let i = 0; i <= nowIdx; i++) { const t = series.reduce((a, s) => a + s.data[i], 0); kwh += t/4; cost += t/4 * price(i/4); peak = Math.max(peak, t); }
-  const bySys = series.map(s => ({label:s.name, color:s.color, value:s.data.reduce((a, v) => a + (v || 0), 0)/4}));
-  return {n, nowIdx, series, forecast, kwh, cost, peak, bySys};
-}
-
-/* ===== charts ===== */
-function areaChart({series, n, forecast, limit, nowIdx, h = 240}){
-  const W = 680, H = h, pl = 38, pr = 12, pt = 12, pb = 24;
-  const tot = i => series.reduce((a, s) => a + (s.data[i] || 0), 0);
-  let max = Math.max(limit || 0, ...forecast);
-  for (let i = 0; i <= nowIdx; i++) max = Math.max(max, tot(i));
-  max = Math.ceil(max * 1.08 / 20) * 20;
-  const x = i => pl + i * (W - pl - pr) / (n - 1), y = v => pt + (H - pt - pb) * (1 - v / max);
-  let out = `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Building load by system">`;
-  for (let k = 0; k <= 4; k++) { const v = max * k / 4; out += `<line x1="${pl}" x2="${W-pr}" y1="${y(v)}" y2="${y(v)}" stroke="var(--border)"/><text x="${pl-6}" y="${y(v)+4}" text-anchor="end">${Math.round(v)}</text>`; }
-  for (let hh = 0; hh <= 24; hh += 4) { const i = Math.min(n-1, hh*4); out += `<text x="${x(i)}" y="${H-6}" text-anchor="middle">${hh === 24 ? '' : hLabel(hh).replace(' ', '')}</text>`; }
-  const base = Array(n).fill(0);
-  series.forEach(s => {
-    const top = base.map((b, i) => b + (s.data[i] || 0));
-    let d = '';
-    for (let i = 0; i <= nowIdx; i++) d += `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(top[i]).toFixed(1)}`;
-    for (let i = nowIdx; i >= 0; i--) d += `L${x(i).toFixed(1)} ${y(base[i]).toFixed(1)}`;
-    out += `<path d="${d}Z" fill="${s.color}" fill-opacity=".85"/>`;
-    for (let i = 0; i <= nowIdx; i++) base[i] = top[i];
-  });
-  let fd = ''; forecast.forEach((v, i) => fd += `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(v).toFixed(1)}`);
-  out += `<path d="${fd}" fill="none" stroke="var(--text)" stroke-opacity=".55" stroke-width="1.6" stroke-dasharray="4 4"/>`;
-  if (limit) out += `<line x1="${pl}" x2="${W-pr}" y1="${y(limit)}" y2="${y(limit)}" stroke="var(--bad)" stroke-width="1.5" stroke-dasharray="6 4"/><text x="${W-pr}" y="${y(limit)-5}" text-anchor="end" style="fill:var(--bad)">Peak limit ${limit} kW</text>`;
-  out += `<line x1="${x(nowIdx)}" x2="${x(nowIdx)}" y1="${pt}" y2="${H-pb}" stroke="var(--accent)" stroke-width="1.5"/><text x="${x(nowIdx)+4}" y="${pt+10}" style="fill:var(--accent-strong);font-weight:600">now</text>`;
-  return out + '</svg>';
-}
-const legend = items => `<div class="legend">${items.map(s => `<span><i style="background:${s.color}"></i>${esc(s.name)}</span>`).join('')}</div>`;
-function bars(items, fmt = v => n0(v), color = 'var(--s1)'){
-  const max = Math.max(...items.map(i => i.value), 1);
-  return `<div class="bars">${items.map(i => `<div class="bar"><span class="ellipsis">${esc(i.label)}</span><div class="t"><i style="width:${(i.value/max*100).toFixed(1)}%;background:${i.color || color}"></i></div><b class="num">${fmt(i.value)}</b></div>`).join('')}</div>`;
-}
-function cols(items, fmt = v => n0(v), color = 'var(--s1)', max){
-  max = max || Math.max(...items.map(i => i.value), 1);
-  return `<div class="cols">${items.map(i => `<div class="c"><em class="num">${fmt(i.value)}</em><i style="height:${Math.max(2, i.value/max*100).toFixed(1)}%;background:${i.color || color}"></i><span>${esc(i.label)}</span></div>`).join('')}</div>`;
-}
-function spark(data, color = 'var(--s1)', w = 200, h = 44){
-  const max = Math.max(...data), min = Math.min(...data);
-  const d = data.map((v, i) => `${i ? 'L' : 'M'}${(i*(w/(data.length-1))).toFixed(1)} ${(h - 3 - (v-min)/(max-min || 1)*(h-6)).toFixed(1)}`).join('');
-  return `<svg class="chart" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="height:${h}px"><path d="${d}" fill="none" stroke="${color}" stroke-width="2"/></svg>`;
-}
 
 /* ===== shuttle model ===== */
 function etaMin(i){
@@ -515,67 +347,85 @@ function departures(n = 4){
 
 /* ===== shell ===== */
 const app = document.getElementById('app');
+const MARK = (sz = 20) => `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="#D2AE70" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V6l8 8 8-8v13"/></svg>`;
+const PAGES = {
+  home:['Home', 'home'], shuttle:['Shuttle', 'bus'], book:['Book a room', 'cal'], laundry:['Laundry', 'washer'],
+  announcements:['Announcements', 'mega'], requests:['Front desk', 'wrench'], ev:['EV charging', 'plug'], settings:['Settings', 'gear'],
+  more:['More', 'more'], request:['Request', 'wrench'], newreq:['New request', 'wrench'],
+};
+const RAIL = ['home','shuttle','book','laundry','announcements','requests','ev','settings'];
+const TABS = ['home','shuttle','book','laundry','more'];
+const tabOf = p => TABS.includes(p) ? p : 'more';
+const railOf = p => p === 'request' || p === 'newreq' ? 'requests' : p;
+const isDark = () => document.documentElement.getAttribute('data-theme') === 'dark' || (!document.documentElement.getAttribute('data-theme') && matchMedia('(prefers-color-scheme: dark)').matches);
 function render(){
-  app.innerHTML = topbar() + `<main class="wrap">${S.role === 'resident' ? residentView() : S.role === 'driver' ? driverView() : staffView()}</main>`;
+  if (S.auth !== 'in') { app.innerHTML = authView(); return; }
+  const unread = unreadCount();
+  const openReq = S.tickets.filter(t => t.status !== 'resolved').length;
+  const body = ({home:rHome, shuttle:rShuttle, book:rBook, laundry:rLaundry, more:rMore, announcements:rAnnouncements, requests:rRequests, request:rRequest, newreq:rNewRequest, ev:rEv, settings:rSettings})[S.page]();
+  const badge = k => k === 'announcements' && unread ? unread : 0;
+  app.innerHTML = `<div class="shell">
+    <aside class="rail" aria-label="Marq Living">
+      <div class="brand"><span class="mark">${MARK()}</span><div><b>Marq Living</b><span class="small muted">75 Ann St</span></div></div>
+      ${RAIL.map(k => `<button class="nav" data-act="go" data-page="${k}" data-root="1" ${railOf(S.page) === k ? 'aria-current="page"' : ''}>${icon(PAGES[k][1])}${k === 'book' ? 'Book' : PAGES[k][0]}${badge(k) ? `<span class="badge">${badge(k)}</span>` : k === 'requests' && openReq ? `<span class="chip" style="margin-left:auto">${openReq}</span>` : ''}</button>`).join('')}
+      <div class="me"><span class="avatar">${ME.first[0]}</span><div class="grow"><b class="small">${esc(ME.name)}</b><div class="tiny muted">Unit ${ME.unit}${ME.room}</div></div></div>
+    </aside>
+    <div class="main">
+      <header class="apphead"><div class="apphead-in">
+        <span class="mark">${MARK(17)}</span>
+        <h1 class="grow ellipsis">${PAGES[S.page][0]}</h1>
+        <span class="proto">Prototype · mock data</span>
+        <button class="iconbtn" data-act="theme" aria-label="Switch to ${isDark() ? 'light' : 'dark'} theme">${icon(isDark() ? 'sun' : 'moon')}</button>
+        <button class="iconbtn" data-act="go" data-page="announcements" aria-label="Announcements${unread ? `, ${unread} unread` : ''}">${icon('bell')}${unread ? `<span class="badge">${unread}</span>` : ''}</button>
+      </div></header>
+      <main class="content" id="content">${body}</main>
+    </div>
+    <nav class="tabbar" aria-label="Sections">
+      ${TABS.map(k => `<button data-act="go" data-page="${k}" data-root="1" ${tabOf(S.page) === k ? 'aria-current="page"' : ''}>${icon(PAGES[k][1])}${k === 'book' ? 'Book' : PAGES[k][0]}${k === 'more' && unread ? `<span class="badge">${unread}</span>` : ''}</button>`).join('')}
+    </nav>
+  </div>`;
   afterRender();
 }
-function topbar(){
-  const dark = document.documentElement.getAttribute('data-theme') === 'dark' || (!document.documentElement.getAttribute('data-theme') && matchMedia('(prefers-color-scheme: dark)').matches);
-  return `<header class="topbar"><div class="topbar-in">
-    <div class="brand">
-      <span class="mark"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D2AE70" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V6l8 8 8-8v13"/></svg></span>
-      <div style="min-width:0"><b>Marq Living</b> <span class="proto">Prototype · mock data</span><br><small class="muted">The Marq · 75 Ann St, London ON</small></div>
-    </div>
-    <div class="seg" role="group" aria-label="View as">
-      ${[['resident','Resident'],['driver','Driver'],['staff','Staff']].map(([k, l]) => `<button data-act="role" data-v="${k}" aria-pressed="${S.role === k}">${l}</button>`).join('')}
-    </div>
-    <button class="iconbtn" data-act="theme" aria-label="Switch to ${dark ? 'light' : 'dark'} theme" title="Theme">${icon(dark ? 'sun' : 'moon')}</button>
-  </div></header>`;
+function authView(){
+  const brand = `<div class="row" style="gap:12px;margin-bottom:18px"><span class="mark">${MARK(24)}</span><div><h2>Marq Living</h2><div class="small muted">The Marq · 75 Ann St, London ON</div></div></div>`;
+  if (S.auth === 'signin') return `<div class="auth"><div class="card">${brand}
+    <h3>Sign in</h3><p class="small muted">For residents of The Marq.</p>
+    <div class="stack mt"><div><label class="f" for="si-email">Email</label><input id="si-email" type="email" autocomplete="email" value="${esc(ME.email)}"></div>
+    <div><label class="f" for="si-pw">Password</label><input id="si-pw" type="password" autocomplete="current-password" value="demo-password"></div>
+    <button class="btn primary" data-act="signin">Sign in</button>
+    <button class="btn ghost sm" data-act="toast" data-msg="We've emailed you a link to reset your password.">Forgot password?</button></div>
+    <hr class="sep"><p class="small muted" style="text-align:center">New to The Marq? <button class="back" data-act="auth" data-v="signup">Create an account</button></p></div></div>`;
+  if (S.auth === 'signup') return `<div class="auth"><div class="card">${brand}
+    <h3>Create your account</h3><p class="small muted">The front desk checks your unit against your lease before you get access.</p>
+    <div class="stack mt"><div><label class="f" for="su-name">Full name</label><input id="su-name" autocomplete="name"></div>
+    <div><label class="f" for="su-email">Email</label><input id="su-email" type="email" autocomplete="email"></div>
+    <div class="row"><div class="grow"><label class="f" for="su-unit">Unit</label><input id="su-unit" inputmode="numeric" placeholder="1204"></div>
+    <div style="width:84px"><label class="f" for="su-room">Room</label><select id="su-room">${'ABCDEF'.split('').map(c => `<option>${c}</option>`).join('')}</select></div>
+    <div style="width:84px"><label class="f" for="su-floor">Floor</label><input id="su-floor" inputmode="numeric" placeholder="12"></div></div>
+    <div><label class="f" for="su-pw">Password</label><input id="su-pw" type="password" autocomplete="new-password" placeholder="At least 8 characters"></div>
+    <button class="btn primary" data-act="signup">Create account</button></div>
+    <hr class="sep"><p class="small muted" style="text-align:center">Already have an account? <button class="back" data-act="auth" data-v="signin">Sign in</button></p></div></div>`;
+  const su = S.signup || {name:ME.name, unit:ME.unit + ME.room};
+  return `<div class="auth"><div class="card">${brand}
+    <h3>Thanks, ${esc(su.name.split(' ')[0])}. You're almost in.</h3>
+    <p class="small muted mt-s">The front desk is confirming unit ${esc(su.unit)}. We'll email you as soon as you're approved, usually within a business day.</p>
+    <div class="steps small"><div class="done"><span class="n">${icon('check')}</span><div><b>Email confirmed</b></div></div>
+    <div class="now"><span class="n">2</span><div><b>Front desk confirms your unit</b><div class="muted">Waiting</div></div></div>
+    <div><span class="n">3</span><div><b>Start using Marq Living</b></div></div></div>
+    <button class="btn primary block mt" data-act="approveme">Simulate approval (demo)</button>
+    <button class="btn ghost block sm mt-s" data-act="auth" data-v="signin">Back to sign in</button></div></div>`;
 }
 
 /* ===== resident ===== */
 const unreadCount = () => S.ann.filter(a => visibleToMe(a) && !a.read).length;
 function visibleToMe(a){ return a.aud === 'building' || (a.aud === 'floors' && a.floors.includes(ME.floor)) || (a.aud === 'units' && a.units.includes(ME.unit)); }
-function residentView(){
-  const tabs = [['home','Home','home'],['shuttle','Shuttle','bus'],['book','Book','cal'],['laundry','Laundry','washer'],['more','More','more']];
-  const unread = unreadCount();
-  let body;
-  if (S.rview) body = ({announcements:rAnnouncements, requests:rRequests, request:rRequest, newreq:rNewRequest, ev:rEv, settings:rSettings})[S.rview]();
-  else body = ({home:rHome, shuttle:rShuttle, book:rBook, laundry:rLaundry, more:rMore})[S.rtab]();
-  return `<div class="res-layout">
-    <section class="phone" aria-label="Resident app">
-      <div class="phone-head">
-        <div class="grow"><div class="small muted">Marq Living</div><b>${S.rview ? viewTitle(S.rview) : tabs.find(t => t[0] === S.rtab)[1]}</b></div>
-        <button class="iconbtn" data-act="rgo" data-view="announcements" aria-label="Announcements" style="position:relative">${icon('bell')}${unread ? `<span class="badge" style="position:absolute;top:-4px;right:-4px">${unread}</span>` : ''}</button>
-      </div>
-      <div class="phone-body" id="pbody">${body}</div>
-      <nav class="tabbar" aria-label="Resident sections">
-        ${tabs.map(([k, l, ic]) => `<button data-act="rtab" data-v="${k}" ${!S.rview && S.rtab === k ? 'aria-current="page"' : ''}>${icon(ic)}${l}${k === 'more' && unread ? `<span class="badge">${unread}</span>` : ''}</button>`).join('')}
-      </nav>
-    </section>
-    <aside class="side-notes stack">
-      <div class="card">
-        <h3>Try it</h3>
-        <ol class="small">
-          <li>Book the theatre, then open <b>Staff → Rooms</b> to see the booking that will switch it on.</li>
-          <li>Send a front desk request here, then answer it from <b>Staff → Tickets</b>.</li>
-          <li>Switch to <b>Driver</b> and press "Running late". The shuttle screen here shows the delay.</li>
-          <li>Tap <b>Notify me</b> on a washer that's running. A toast appears when it's done.</li>
-          <li>Post an urgent announcement from <b>Staff</b>, then come back here.</li>
-        </ol>
-      </div>
-      <div class="note">${icon('leaf')} Utilities are included in rent, so residents never see energy costs. Laundry and EV charging are included too. Savings and costs appear only in the staff views.</div>
-    </aside>
-  </div>`;
-}
-const viewTitle = v => ({announcements:'Announcements', requests:'Front desk', request:'Request', newreq:'New request', ev:'EV charging', settings:'Settings'})[v];
 function bannerHtml(){
   const out = [];
   const sh = S.shuttle;
   if (sh.running && sh.delay > 0) out.push(`<div class="banner">${icon('clock')}<div>Shuttle is running about <b>${sh.delay} min late</b>.</div></div>`);
   if (sh.cancelled) out.push(`<div class="banner bad">${icon('alert')}<div>The current shuttle run was cancelled. Next departure ${departures(1)[0]}.</div></div>`);
   const urgent = S.ann.find(a => a.urgent && !a.read && visibleToMe(a));
-  if (urgent) out.push(`<button class="banner bad" style="border:0;text-align:left;width:100%" data-act="rgo" data-view="announcements" data-open="${urgent.id}">${icon('alert')}<div><b>Urgent:</b> ${esc(urgent.title)}</div></button>`);
+  if (urgent) out.push(`<button class="banner bad" style="border:0;text-align:left;width:100%" data-act="go" data-page="announcements" data-open="${urgent.id}">${icon('alert')}<div><b>Urgent:</b> ${esc(urgent.title)}</div></button>`);
   return out.join('');
 }
 function homeEta(){
@@ -584,6 +434,7 @@ function homeEta(){
   const m = etaMin(0);
   return `<div class="big-eta num">${etaText(m)}</div><div class="small muted">to The Marq${sh.delay ? ` · ${sh.delay} min late` : ''}</div>`;
 }
+const backBtn = () => S.stack.length ? `<button class="back" data-act="back" style="align-self:flex-start">${icon('backc')}${PAGES[S.stack[S.stack.length - 1]][0]}</button>` : '';
 function rHome(){
   const free = t => S.machines.filter(m => m.type === t && m.state === 'free').length;
   const mine = S.bookings.filter(b => b.unit === ME.unit).sort((a, b) => a.day - b.day || a.start - b.start);
@@ -595,15 +446,18 @@ function rHome(){
     <h2>${esc(ME.first)}</h2>
     <div class="row wrap small mt-s"><span>Unit ${ME.unit}${ME.room} · Floor ${ME.floor}</span><span class="chip ok">${icon('check')}All utilities included</span></div>
   </div>
-  <div class="tile-grid">
-    <button class="card link" data-act="rtab" data-v="shuttle"><div class="row small muted">${icon('bus')}Next shuttle</div><div class="mt-s" id="home-eta">${homeEta()}</div></button>
-    <button class="card link" data-act="rtab" data-v="laundry"><div class="row small muted">${icon('washer')}Laundry</div><div class="mt-s"><div class="big-eta num">${free('Washer')}<span class="muted" style="font-size:18px"> / ${free('Dryer')}</span></div><div class="small muted">washers / dryers free</div></div></button>
+  <div class="home-grid">
+    <button class="card link" data-act="go" data-page="shuttle"><div class="row small muted">${icon('bus')}Next shuttle</div><div class="mt-s" id="home-eta">${homeEta()}</div></button>
+    <button class="card link" data-act="go" data-page="laundry"><div class="row small muted">${icon('washer')}Laundry</div><div class="mt-s"><div class="big-eta num">${free('Washer')}<span class="muted" style="font-size:18px"> / ${free('Dryer')}</span></div><div class="small muted">washers / dryers free</div></div></button>
   </div>
-  <div class="sec-h"><h3>Your bookings</h3><button class="back" data-act="rtab" data-v="book">Book ${icon('chev')}</button></div>
+  <div class="quick">
+    ${[['book','cal','Book a room'],['newreq','wrench','Ask the front desk'],['ev','plug','Charge my car'],['laundry','washer','Laundry']].map(([pg, ic, l]) => `<button data-act="go" data-page="${pg}">${icon(ic)}<span>${l}</span></button>`).join('')}
+  </div>
+  <div class="sec-h"><h3>Your bookings</h3><button class="back" data-act="go" data-page="book">Book ${icon('chev')}</button></div>
   ${mine.length ? `<div class="card tight list">${mine.map(b => `<div class="row"><span class="chip info">${dayShort(b.day)}</span><div class="grow"><b>${AMEN.find(a => a.id === b.amen).name}</b><div class="small muted">${hLabel(b.start)} – ${hLabel(b.start + b.dur)}</div></div></div>`).join('')}</div>` : `<div class="empty small">No upcoming bookings.</div>`}
-  <div class="sec-h"><h3>Announcements</h3><button class="back" data-act="rgo" data-view="announcements">All ${icon('chev')}</button></div>
-  <div class="card tight list">${latest.map(a => `<button class="row top" style="border-left:0;border-right:0;border-bottom:0;background:none;text-align:left;width:100%" data-act="rgo" data-view="announcements" data-open="${a.id}"><span class="dot ${a.read ? '' : a.urgent ? 'bad' : 'warn'}" style="margin-top:6px"></span><div class="grow"><b>${esc(a.title)}</b><div class="small muted">${ago((Date.now() - a.at)/60000)}</div></div></button>`).join('')}</div>
-  <button class="card link row" data-act="rgo" data-view="requests"><span style="color:var(--accent)">${icon('wrench')}</span><div class="grow"><b>Front desk</b><div class="small muted">${openReq.length ? `${openReq.length} open request${openReq.length > 1 ? 's' : ''}` : 'Ask for help or report a problem'}</div></div>${icon('chev')}</button>`;
+  <div class="sec-h"><h3>Announcements</h3><button class="back" data-act="go" data-page="announcements">All ${icon('chev')}</button></div>
+  <div class="card tight list">${latest.map(a => `<button class="row top" style="border-left:0;border-right:0;border-bottom:0;background:none;text-align:left;width:100%" data-act="go" data-page="announcements" data-open="${a.id}"><span class="dot ${a.read ? '' : a.urgent ? 'bad' : 'warn'}" style="margin-top:6px"></span><div class="grow"><b>${esc(a.title)}</b><div class="small muted">${ago((Date.now() - a.at)/60000)}</div></div></button>`).join('')}</div>
+  <button class="card link row" data-act="go" data-page="requests"><span style="color:var(--accent)">${icon('wrench')}</span><div class="grow"><b>Front desk</b><div class="small muted">${openReq.some(t => t.unread) ? '<b style="color:var(--bad)">New reply</b> · ' : ''}${openReq.length ? `${openReq.length} open request${openReq.length > 1 ? 's' : ''}` : 'Ask for help or report a problem'}</div></div>${icon('chev')}</button>`;
 }
 function routeMap(){
   return `<svg class="map" viewBox="0 0 360 250" role="img" aria-label="Shuttle route map (schematic)">
@@ -658,6 +512,7 @@ function rBook(){
   <div class="small muted">Up to ${a.cap} people · max ${a.maxH} h · 9 AM–11 PM · ${myWeek}/2 bookings this week</div>
   <div class="days">${[0,1,2,3,4,5,6].map(i => { const d = dayDate(i); return `<button data-act="bkday" data-v="${i}" aria-pressed="${bk.day === i}"><span class="tiny">${i === 0 ? 'Today' : d.toLocaleDateString('en-US',{weekday:'short'})}</span><b>${d.getDate()}</b></button>`; }).join('')}</div>
   <div class="slots">${hours.map(h => { const isMine = mine[h], dis = taken[h] || past(h); return `<button class="slot ${isMine ? 'mine' : ''} ${sel(h) && !isMine ? 'sel' : ''}" data-act="bkslot" data-v="${h}" ${dis || isMine ? 'disabled' : ''} title="${isMine ? 'Your booking' : taken[h] ? 'Booked' : ''}">${hLabel(h).replace(' ', '')}</button>`; }).join('')}</div>
+  ${hours.every(h => taken[h] || mine[h] || past(h)) ? `<div class="note">${icon('clock')}<span>No times left ${bk.day === 0 ? 'today' : 'this day'}. Try another day.</span></div>` : ''}
   <div class="legend"><span><i style="background:var(--surface);border:1px solid var(--border)"></i>Free</span><span><i style="background:var(--surface-2)"></i>Taken</span><span><i style="background:var(--info-soft)"></i>Yours</span></div>
   ${summary}
   <div class="sec-h"><h3>Upcoming</h3></div>
@@ -682,7 +537,7 @@ function rLaundry(){
 }
 function rMore(){
   const unread = unreadCount();
-  const item = (view, ic, title, sub, badge) => `<button class="card link row" data-act="rgo" data-view="${view}"><span style="color:var(--accent)">${icon(ic)}</span><div class="grow"><b>${title}</b><div class="small muted">${sub}</div></div>${badge ? `<span class="badge">${badge}</span>` : ''}${icon('chev')}</button>`;
+  const item = (view, ic, title, sub, badge) => `<button class="card link row" data-act="go" data-page="${view}"><span style="color:var(--accent)">${icon(ic)}</span><div class="grow"><b>${title}</b><div class="small muted">${sub}</div></div>${badge ? `<span class="badge">${badge}</span>` : ''}${icon('chev')}</button>`;
   return item('announcements','mega','Announcements','Building news, maintenance, events', unread)
     + item('requests','wrench','Front desk','Requests, repairs, packages')
     + item('ev','plug','EV charging', S.myEv ? 'Scheduled for tonight' : 'Request a charge — included')
@@ -691,7 +546,7 @@ function rMore(){
 function rAnnouncements(){
   const cats = [['all','All'],['maintenance','Maintenance'],['event','Events'],['safety','Safety'],['building','Building']];
   const list = S.ann.filter(visibleToMe).filter(a => S.annFilter === 'all' || a.cat === S.annFilter);
-  return `<button class="back" data-act="rback">${icon('backc')}Back</button>
+  return `${backBtn()}
   <div class="row wrap">${cats.map(([k, l]) => `<button class="chip" data-act="annf" data-v="${k}" aria-pressed="${S.annFilter === k}">${l}</button>`).join('')}</div>
   ${list.map(a => `<div class="card tight" id="ann-${a.id}" ${a.urgent ? 'style="border-color:color-mix(in srgb,var(--bad) 40%,var(--border))"' : ''}>
     <button class="row top" style="border:0;background:none;padding:0;text-align:left;width:100%" data-act="annopen" data-id="${a.id}">
@@ -706,20 +561,20 @@ const statusChip = s => ({open:'<span class="chip warn">Open</span>', in_progres
 const catLabel = c => ({maintenance:'Maintenance', access:'Access & fobs', package:'Package', noise:'Noise', device_fault:'Device fault', other:'Other'})[c] || c;
 function rRequests(){
   const mine = S.tickets.filter(t => t.unit === ME.unit);
-  return `<button class="back" data-act="rback">${icon('backc')}Back</button>
-  <button class="btn primary block" data-act="rgo" data-view="newreq">${icon('plus')}New request</button>
-  ${mine.length ? `<div class="card tight list">${mine.map(t => `<button class="row" style="border-left:0;border-right:0;border-bottom:0;background:none;text-align:left;width:100%" data-act="rgo" data-view="request" data-id="${t.id}"><div class="grow"><b>${esc(t.subject)}</b><div class="small muted">${t.id} · ${catLabel(t.cat)} · ${ago((Date.now() - t.at)/60000)}</div></div>${statusChip(t.status)}</button>`).join('')}</div>` : '<div class="empty">No requests yet.</div>'}
+  return `${backBtn()}
+  <button class="btn primary block" data-act="go" data-page="newreq">${icon('plus')}New request</button>
+  ${mine.length ? `<div class="card tight list">${mine.map(t => `<button class="row" style="border-left:0;border-right:0;border-bottom:0;background:none;text-align:left;width:100%" data-act="go" data-page="request" data-id="${t.id}">${t.unread ? '<span class="dot bad" aria-label="New reply"></span>' : ''}<div class="grow"><b>${esc(t.subject)}</b><div class="small muted">${t.id} · ${catLabel(t.cat)} · ${ago((Date.now() - t.at)/60000)}</div></div>${statusChip(t.status)}</button>`).join('')}</div>` : '<div class="empty">No requests yet.</div>'}
   <p class="small faint">Front desk hours: 8 AM–10 PM. For emergencies (fire, flood, no heat) call 519-555-0175 any time.</p>`;
 }
 function rRequest(){
-  const t = S.tickets.find(x => x.id === S.rparam);
-  return `<button class="back" data-act="rgo" data-view="requests">${icon('backc')}Requests</button>
+  const t = S.tickets.find(x => x.id === S.param);
+  return `${backBtn()}
   <div class="card tight"><div class="row between"><b>${esc(t.subject)}</b>${statusChip(t.status)}</div><div class="small muted">${t.id} · ${catLabel(t.cat)}${t.enter ? ' · OK to enter' : ''}</div></div>
   <div class="stack sm">${t.thread.filter(m => !m.internal).map(m => `<div class="msg ${m.tenant ? 'me' : ''}"><div class="tiny muted">${m.tenant ? 'You' : esc(m.who) + ' · Front desk'} · ${ago((Date.now() - m.at)/60000)}</div>${esc(m.body)}</div>`).join('')}</div>
   <div class="row"><input id="rreply" placeholder="Write a reply" aria-label="Reply"><button class="btn primary" data-act="rreply" data-id="${t.id}">Send</button></div>`;
 }
 function rNewRequest(){
-  return `<button class="back" data-act="rgo" data-view="requests">${icon('backc')}Requests</button>
+  return `${backBtn()}
   <div class="card stack">
     <div><label class="f" for="nq-cat">Category</label><select id="nq-cat"><option value="maintenance">Maintenance</option><option value="access">Access & fobs</option><option value="package">Package</option><option value="noise">Noise</option><option value="other">Other</option></select></div>
     <div><label class="f" for="nq-sub">Subject</label><input id="nq-sub" placeholder="e.g. Bathroom fan is loud"></div>
@@ -735,7 +590,7 @@ function evPlanFor(kwh, by){
 }
 function rEv(){
   const r = S.myEv;
-  const head = `<button class="back" data-act="rback">${icon('backc')}Back</button>
+  const head = `${backBtn()}
   <div class="note">${icon('leaf')} Charging is included. We charge overnight when the building is quiet, so your car is ready by the time you choose and the building stays under its power limit.</div>`;
   if (r) {
     return head + `<div class="card">
@@ -757,7 +612,7 @@ function rEv(){
 }
 function rSettings(){
   const t = (k, l, s) => `<div class="row"><div class="grow"><b>${l}</b><div class="small muted">${s}</div></div><button class="switch" data-act="notif" data-k="${k}" aria-pressed="${S.notif[k]}" aria-label="${l}"></button></div>`;
-  return `<button class="back" data-act="rback">${icon('backc')}Back</button>
+  return `${backBtn()}
   <div class="card"><b>${esc(ME.name)}</b><div class="small muted">${esc(ME.email)}</div><dl class="kv small mt-s"><dt>Unit</dt><dd>${ME.unit}${ME.room}</dd><dt>Floor</dt><dd>${ME.floor}</dd><dt>Status</dt><dd><span class="chip ok">Approved</span></dd></dl></div>
   <div class="card tight list">
     ${t('push','Push notifications','Urgent posts, replies, bookings')}
@@ -767,255 +622,6 @@ function rSettings(){
     ${t('events','Events','Social events in the building')}
   </div>
   <button class="btn block" data-act="signout">Sign out</button>`;
-}
-
-/* ===== driver ===== */
-function driverView(){
-  const sh = S.shuttle;
-  const inner = sh.running ? `
-    <div class="card hello"><div class="row between"><div class="small muted">Run in progress</div><span class="chip ok"><span class="dot live"></span> GPS on</span></div>
-      <div class="drv-big num" id="drv-elapsed" style="color:#fff">${elapsed()}</div><div class="small muted">Western Campus Loop · Bus 1</div></div>
-    <div class="card"><div class="small muted">Next stop</div><div class="drv-big" id="drv-next">${esc(STOPS[nextStopIdx()].name)}</div><div class="small muted num" id="drv-eta">in ${etaText(etaMin(nextStopIdx()) - sh.delay)}</div></div>
-    <div class="card stack sm"><b>Running late?</b>
-      <div class="row"><button class="btn grow" data-act="dlate" data-v="5">+5 min</button><button class="btn grow" data-act="dlate" data-v="10">+10 min</button><button class="btn grow" data-act="dlate" data-v="0" ${sh.delay ? '' : 'disabled'}>On time</button></div>
-      <div class="small muted">${sh.delay ? `Riders were told: about ${sh.delay} min late.` : 'Riders see a banner and get a push.'}</div>
-    </div>
-    <button class="btn primary lg block" data-act="dend">${icon('check')}End run</button>
-    <button class="btn danger block" data-act="dcancel">Cancel this run</button>
-    <div class="gps">${icon('shield')}Your location is shared only during a run and deleted when it ends.</div>`
-  : `<div class="card"><div class="small muted">Today's route</div><div class="drv-big">Western Campus Loop</div><div class="small muted">${STOPS.length} stops · about ${LOOP_MIN} min</div>
-      <hr class="sep"><div class="row between"><span class="muted">Next scheduled departure</span><b>${departures(1)[0]}</b></div></div>
-    <button class="btn primary lg block" data-act="dstart" style="padding:22px">${icon('steer')}Start run</button>
-    <div class="gps">${icon('shield')}Location is shared every 5–10 s only while a run is active.</div>
-    <div class="card tight"><b>Today</b><div class="list mt-s small">
-      <div class="row"><span class="grow">7:30 AM loop</span><span class="chip ok">On time</span></div>
-      <div class="row"><span class="grow">8:00 AM loop</span><span class="chip warn">+6 min</span></div>
-      <div class="row"><span class="grow">8:30 AM loop</span><span class="chip ok">On time</span></div></div></div>`;
-  return `<div class="res-layout">
-    <section class="phone" aria-label="Driver console">
-      <div class="phone-head"><div class="grow"><div class="small muted">Driver</div><b>${DRIVER.name}</b></div><span class="chip ${sh.running ? 'ok' : ''}">${sh.running ? 'On run' : 'Off run'}</span></div>
-      <div class="phone-body">${inner}</div>
-    </section>
-    <aside class="side-notes stack"><div class="card"><h3>Driver console</h3><p class="small muted mt-s">Big buttons and nothing else, for use at a stop, never while driving. Start and End run control GPS sharing. Delays and cancellations notify every rider who has shuttle alerts on.</p></div>
-    <div class="note">Switch to <b>Resident → Shuttle</b> to see the bus move and the delay banner.</div></aside>
-  </div>`;
-}
-const elapsed = () => { const s = Math.max(0, Math.floor((Date.now() - S.shuttle.started)/1000)); return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`; };
-
-/* ===== staff ===== */
-const SNAV = [
-  ['overview','Overview','overview'],['residents','Residents','users'],['tickets','Tickets','ticket'],['announcements','Announcements','mega'],
-  ['shuttle','Shuttle','bus'],['amenities','Amenities','cal'],['rooms','Rooms','door'],['energy','Energy','bolt'],['ev','EV charging','plug'],
-  ['devices','Devices','cpu'],['rules','Rules','sliders'],['analytics','Analytics','chart']
-];
-function staffView(){
-  const badges = {residents:S.pending.length, tickets:S.tickets.filter(t => t.status !== 'resolved').length, devices:S.devices.filter(d => d.status !== 'online').length};
-  const page = ({overview:sOverview, residents:sResidents, tickets:sTickets, announcements:sAnnouncements, shuttle:sShuttle, amenities:sAmenities, rooms:sRooms, energy:sEnergy, ev:sEv, devices:sDevices, rules:sRules, analytics:sAnalytics})[S.stab]();
-  return `<div class="staff">
-    <nav class="snav" aria-label="Staff sections">
-      <div class="who"><b>${STAFF.name}</b><div class="small muted">${STAFF.role}</div></div>
-      ${SNAV.map(([k, l, ic]) => `<button data-act="stab" data-v="${k}" ${S.stab === k ? 'aria-current="page"' : ''}>${icon(ic)}${l}${badges[k] ? `<span class="badge">${badges[k]}</span>` : ''}</button>`).join('')}
-    </nav>
-    <section>${page}</section>
-  </div>`;
-}
-const pageH = (t, sub, right = '') => `<div class="page-h"><div><h1>${t}</h1>${sub ? `<p class="muted">${sub}</p>` : ''}</div>${right}</div>`;
-const kpi = (l, v, sub = '', id = '') => `<div class="card kpi"><div class="l">${l}</div><div class="v num" ${id ? `id="${id}"` : ''}>${v}</div>${sub ? `<div class="small muted">${sub}</div>` : ''}</div>`;
-function sOverview(){
-  const e = energyDay();
-  const open = S.tickets.filter(t => t.status !== 'resolved');
-  const todayB = S.bookings.filter(b => b.day === 0).sort((a, b) => a.start - b.start);
-  const off = S.devices.filter(d => d.status !== 'online');
-  const alerts = [
-    ...S.tickets.filter(t => t.source === 'system' && t.status !== 'resolved').map(t => ({lvl:'bad', t:t.subject, s:'System ticket · ' + ago((Date.now() - t.at)/60000), go:'tickets', id:t.id})),
-    ...S.tickets.filter(t => t.priority === 'high' && t.source === 'tenant' && t.status !== 'resolved').map(t => ({lvl:'warn', t:t.subject, s:`Unit ${t.unit} · high priority`, go:'tickets', id:t.id})),
-    ...off.filter(d => d.status === 'offline').map(d => ({lvl:'warn', t:`${d.hw} offline`, s:`${d.loc} · ${Math.round(d.seen)} min — a ticket opens at 15 min`, go:'devices'})),
-    ...(S.pending.length ? [{lvl:'info', t:`${S.pending.length} resident sign-ups to approve`, s:'Waiting for approval', go:'residents'}] : []),
-  ];
-  return pageH('Overview', new Date().toLocaleDateString('en-US',{weekday:'long', month:'long', day:'numeric'}), `<span class="chip ok"><span class="dot live"></span> Live</span>`)
-  + `<div class="kpis">
-      <div class="card kpi"><div class="l">Building load now</div><div class="v num"><span id="ov-load">${S.load}</span> <span class="muted" style="font-size:15px">kW</span></div><div class="meter mt-s"><i id="ov-meter" style="width:${S.load/LIMIT*100}%"></i></div><div class="small muted mt-s">Limit ${LIMIT} kW · peak today ${Math.round(e.peak)} kW</div></div>
-      ${kpi('Shuttle', `<span id="ov-shuttle">${S.shuttle.running ? (S.shuttle.delay ? S.shuttle.delay + ' min late' : 'On time') : 'Not running'}</span>`, '94% on time this month')}
-      ${kpi('Open tickets', open.length, `${open.filter(t => t.priority === 'high').length} high priority`)}
-      ${kpi('Devices online', `${S.devices.length - off.length}/${S.devices.length}`, off.length ? `${off.length} need attention` : 'All healthy')}
-    </div>
-    <div class="grid2 mt">
-      <div class="card"><div class="row between"><h3>Load today</h3><button class="btn sm ghost" data-act="stab" data-v="energy">Energy ${icon('chev')}</button></div>
-        <div class="mt-s">${areaChart({series:e.series, n:e.n, forecast:e.forecast, limit:LIMIT, nowIdx:e.nowIdx, h:220})}</div>${legend([...SYS, {name:'Forecast', color:'transparent;border:1.5px dashed var(--muted)'}])}</div>
-      <div class="card"><h3>Needs attention</h3><div class="list mt-s">${alerts.map(a => `<button class="row top" style="border-left:0;border-right:0;border-bottom:0;background:none;text-align:left;width:100%" data-act="stab" data-v="${a.go}" ${a.id ? `data-ticket="${a.id}"` : ''}><span class="dot ${a.lvl === 'info' ? '' : a.lvl}" style="margin-top:6px"></span><div class="grow"><b>${esc(a.t)}</b><div class="small muted">${esc(a.s)}</div></div>${icon('chev')}</button>`).join('') || '<div class="muted">All clear.</div>'}</div></div>
-    </div>
-    <div class="grid2 even mt">
-      <div class="card"><h3>Today's bookings</h3><div class="list mt-s">${todayB.map(b => `<div class="row"><span class="chip" style="min-width:86px;justify-content:center">${hLabel(b.start)}–${hLabel(b.start + b.dur)}</span><span class="grow">${AMEN.find(a => a.id === b.amen).name}</span><span class="small muted">${b.unit === 'Staff' ? esc(b.name) : 'Unit ' + b.unit}</span></div>`).join('') || '<div class="muted">No bookings today.</div>'}</div></div>
-      <div class="card"><h3>Laundry now</h3><div class="row wrap mt-s">${S.machines.map(m => `<span class="chip ${({free:'ok', in_use:'info', finishing:'warn', fault:'bad'})[m.state]}">${m.id} · ${({free:'free', in_use:m.mins + ' min', finishing:m.mins + ' min', fault:'fault'})[m.state]}</span>`).join('')}</div>
-        <hr class="sep"><h3>Rooms</h3><div class="list mt-s">${S.rooms.map(r => `<div class="row"><span class="dot ${r.occ ? 'ok' : ''}"></span><span class="grow">${r.name}</span><span class="small muted">Lights ${r.lights} · ${r.hvac} · ${r.mode}</span></div>`).join('')}</div></div>
-    </div>`;
-}
-function sResidents(){
-  return pageH('Residents', 'Approve sign-ups and manage who has access.', `<button class="btn" data-act="invite">${icon('plus')}Invite staff or driver</button>`)
-  + `<div class="card"><h3>Waiting for approval</h3><p class="small muted">Every self sign-up starts as pending. Check the unit against the lease before approving.</p>
-    ${S.pending.length ? `<div class="tbl-wrap mt-s"><table><thead><tr><th>Name</th><th>Unit</th><th>Floor</th><th>Signed up</th><th></th></tr></thead><tbody>${S.pending.map(p => `<tr><td><b>${esc(p.name)}</b><div class="small muted">${esc(p.email)}</div></td><td>${p.unit}${p.room}</td><td>${p.floor}</td><td>${ago((Date.now() - p.at)/60000)}</td><td><div class="row" style="justify-content:flex-end"><button class="btn sm danger" data-act="decline" data-id="${p.id}">Decline</button><button class="btn sm primary" data-act="approve" data-id="${p.id}">${icon('check')}Approve</button></div></td></tr>`).join('')}</tbody></table></div>` : '<div class="empty mt-s">No one waiting.</div>'}</div>
-  <div class="grid2 mt">
-    <div class="card"><h3>Residents</h3><div class="tbl-wrap mt-s"><table><thead><tr><th>Name</th><th>Unit</th><th>Floor</th><th>Joined</th></tr></thead><tbody>${S.residents.map(r => `<tr><td>${esc(r.name)}</td><td>${r.unit}</td><td>${r.floor}</td><td class="muted">${r.joined}</td></tr>`).join('')}</tbody></table></div><p class="small faint mt-s">Showing ${S.residents.length} of 312 approved residents.</p></div>
-    <div class="card"><h3>Team</h3><div class="list mt-s">${S.team.map(t => `<div class="row"><div class="grow"><b>${esc(t.name)}</b><div class="small muted">${t.note}</div></div><span class="chip ${t.role === 'Admin' ? 'brass' : t.role === 'Driver' ? 'info' : ''}">${t.role}</span></div>`).join('')}</div></div>
-  </div>`;
-}
-function sTickets(){
-  const f = S.tkFilter;
-  const list = S.tickets.filter(t => f === 'all' || (f === 'open' ? t.status !== 'resolved' : t.status === f));
-  const t = S.tickets.find(x => x.id === S.stTicket) || list[0];
-  const pr = p => `<span class="chip ${({high:'bad', urgent:'bad', normal:'', low:''})[p]}">${p}</span>`;
-  return pageH('Tickets', 'Front desk requests and faults raised by devices.')
-  + `<div class="row wrap" style="margin-bottom:12px">${[['open','Open'],['resolved','Resolved'],['all','All']].map(([k, l]) => `<button class="chip" data-act="tkf" data-v="${k}" aria-pressed="${f === k}">${l}</button>`).join('')}</div>
-  <div class="grid2" style="grid-template-columns:minmax(0,1fr) minmax(0,1.25fr)">
-    <div class="card tight list">${list.map(x => `<button class="row top" style="border-left:0;border-right:0;border-bottom:0;background:${x === t ? 'var(--surface-2)' : 'none'};text-align:left;width:100%;padding:11px 8px;border-radius:8px" data-act="tksel" data-id="${x.id}"><span style="color:${x.source === 'system' ? 'var(--bad)' : 'var(--accent)'}">${icon(x.source === 'system' ? 'cpu' : 'wrench')}</span><div class="grow"><b>${esc(x.subject)}</b><div class="small muted">${x.id} · ${x.unit ? 'Unit ' + x.unit : 'System'} · ${ago((Date.now() - x.at)/60000)}</div></div><div class="stack sm" style="align-items:flex-end">${statusChip(x.status)}${x.priority === 'high' ? pr('high') : ''}</div></button>`).join('') || '<div class="empty">No tickets.</div>'}</div>
-    ${t ? `<div class="card stack">
-      <div><div class="row between top"><h2>${esc(t.subject)}</h2>${statusChip(t.status)}</div>
-      <div class="small muted">${t.id} · ${catLabel(t.cat)} · ${t.unit ? `${esc(t.name)}, unit ${t.unit}` : 'Raised by ' + esc(t.device)}${t.enter ? ' · OK to enter' : ''}</div></div>
-      <div class="seg" role="group" aria-label="Status" style="align-self:flex-start">${[['open','Open'],['in_progress','In progress'],['resolved','Resolved']].map(([k, l]) => `<button data-act="tkstatus" data-id="${t.id}" data-v="${k}" aria-pressed="${t.status === k}">${l}</button>`).join('')}</div>
-      ${t.source === 'system' && t.status !== 'resolved' ? '<div class="note">Resolving this puts the machine back in service and clears the laundry warning.</div>' : ''}
-      <div class="stack sm">${t.thread.map(m => `<div class="msg ${m.internal ? 'internal' : m.tenant ? '' : 'me'}"><div class="tiny muted">${esc(m.who)}${m.internal ? ' · internal note' : ''} · ${ago((Date.now() - m.at)/60000)}</div>${esc(m.body)}</div>`).join('')}</div>
-      <div><textarea id="tk-reply" placeholder="${t.unit ? 'Reply to ' + esc(t.name.split(' ')[0]) + ' or add an internal note' : 'Add an internal note'}" aria-label="Reply"></textarea>
-      <div class="row between mt-s"><label class="row small"><input type="checkbox" id="tk-internal" style="width:auto" ${t.unit ? '' : 'checked disabled'}> Internal note (staff only)</label><button class="btn primary" data-act="tkreply" data-id="${t.id}">Send</button></div></div>
-    </div>` : '<div class="empty">Select a ticket.</div>'}
-  </div>`;
-}
-function sAnnouncements(){
-  return pageH('Announcements', 'Post to the whole building, specific floors or units.')
-  + `<div class="grid2" style="grid-template-columns:minmax(0,1fr) minmax(0,1.1fr)">
-    <div class="card stack">
-      <h3>New announcement</h3>
-      <div><label class="f" for="an-title">Title</label><input id="an-title" placeholder="e.g. Elevator B maintenance"></div>
-      <div><label class="f" for="an-body">Message</label><textarea id="an-body"></textarea></div>
-      <div class="row"><div class="grow"><label class="f" for="an-cat">Category</label><select id="an-cat"><option value="building">Building</option><option value="maintenance">Maintenance</option><option value="event">Event</option><option value="safety">Safety</option></select></div>
-      <div class="grow"><label class="f" for="an-aud">Audience</label><select id="an-aud"><option value="building">Whole building</option><option value="floors">Floors…</option><option value="units">Units…</option></select></div></div>
-      <div><label class="f" for="an-target">Floors or units <span class="faint">(e.g. 10-14, 20 or 1204, 0712)</span></label><input id="an-target" placeholder="Only for floors or units"></div>
-      <div class="row"><div class="grow"><b>Urgent</b><div class="small muted">Sends a push and pins a banner</div></div><button class="switch" id="an-urgent" data-act="toggleself" aria-pressed="false" aria-label="Urgent"></button></div>
-      <button class="btn primary" data-act="anpost">${icon('mega')}Publish</button>
-    </div>
-    <div class="card"><h3>Published</h3><div class="list mt-s">${S.ann.map(a => `<div><div class="row between top"><div class="grow"><div class="row wrap">${a.urgent ? '<span class="chip bad">Urgent</span>' : ''}<span class="chip">${a.cat}</span>${a.source === 'system' ? '<span class="chip info">Automatic</span>' : ''}</div><b style="display:block;margin-top:4px">${esc(a.title)}</b><div class="small muted">${a.aud === 'building' ? 'Whole building' : a.aud === 'floors' ? 'Floors ' + a.floors.join(', ') : 'Units ' + a.units.join(', ')} · ${ago((Date.now() - a.at)/60000)}</div></div><div style="text-align:right"><b class="num">${a.reads}/${a.audSize}</b><div class="tiny muted">read</div></div></div><div class="meter mt-s" style="height:6px"><i style="width:${a.reads/a.audSize*100}%;background:var(--s3)"></i></div></div>`).join('')}</div></div>
-  </div>`;
-}
-function sShuttle(){
-  const sh = S.shuttle;
-  const runs = [['7:30 AM','Sam Okafor','Completed','On time',0],['8:00 AM','Sam Okafor','Completed','+6 min',6],['8:30 AM','Sam Okafor','Completed','On time',1],['9:00 AM','Sam Okafor','Completed','On time',0],['9:30 AM','Sam Okafor','Completed','+3 min',3]];
-  return pageH('Shuttle', 'Western Campus Loop · Bus 1', `<span class="chip ${sh.running ? 'ok' : ''}">${sh.running ? '<span class="dot live"></span> Run in progress' : 'No active run'}</span>`)
-  + `<div class="grid2">
-    <div class="card">${routeMap()}<div class="row between mt-s small"><span class="muted">Driver: ${DRIVER.name}</span><span>${sh.running ? (sh.delay ? `<span class="chip warn">${sh.delay} min late</span>` : '<span class="chip ok">On time</span>') : ''}</span></div></div>
-    <div class="card"><h3>Today's runs</h3><div class="tbl-wrap mt-s"><table><thead><tr><th>Departure</th><th>Status</th><th>Arrival</th></tr></thead><tbody>${runs.map(r => `<tr><td>${r[0]}</td><td class="muted">${r[2]}</td><td><span class="chip ${r[4] > 5 ? 'warn' : 'ok'}">${r[3]}</span></td></tr>`).join('')}</tbody></table></div>
-      <p class="small muted mt-s">A run that hasn't started 5 minutes after its departure alerts staff.</p></div>
-  </div>
-  <div class="grid2 even mt">
-    <div class="card"><h3>Timetable</h3><dl class="kv small mt-s"><dt>Weekdays</dt><dd>Every 30 min, 7:30 AM – 10 PM</dd><dt>Weekends</dt><dd>Every 60 min, 10 AM – 8 PM</dd><dt>Exceptions</dt><dd>Thanksgiving (Oct 12): weekend schedule</dd></dl>
-      <div class="note mt">The stops are placeholders until the real route and coordinates are confirmed.</div></div>
-    <div class="card"><div class="row between"><h3>Going electric</h3><span class="chip brass">Model</span></div>
-      <p class="small muted mt-s">Based on 28 days of runs: 142 km a day, mostly stop-and-go.</p>
-      <dl class="kv small mt-s"><dt>Suggested vehicle</dt><dd>Electric minibus, ~120 kWh battery</dd><dt>Daily energy</dt><dd>~78 kWh (with winter heating)</dd><dt>Margin</dt><dd>38% at −20 °C</dd><dt>Charging</dt><dd>11 PM – 5 AM at 19 kW, inside the peak limit</dd><dt>Fuel → electricity</dt><dd>~$11,900 / yr saved</dd><dt>CO₂</dt><dd>~29 t / yr avoided</dd></dl></div>
-  </div>`;
-}
-function sAmenities(){
-  const todayB = S.bookings.filter(b => b.day === 0);
-  const span = [9, 23];
-  return pageH('Amenities', 'Bookings and the rules the app enforces.')
-  + `<div class="card"><h3>Today</h3>${AMEN.map(a => `<div class="mt"><div class="row between small"><b>${a.name}</b><span class="muted">${todayB.filter(b => b.amen === a.id).length} bookings</span></div>
-      <div class="timeline mt-s">${todayB.filter(b => b.amen === a.id).map(b => `<div class="blk" style="left:${(b.start - span[0])/(span[1]-span[0])*100}%;width:${b.dur/(span[1]-span[0])*100}%;background:${a.color}">${b.unit === 'Staff' ? esc(b.name) : b.unit}</div>`).join('')}
-      <div style="position:absolute;top:0;bottom:0;width:2px;background:var(--accent);left:${Math.min(100, Math.max(0, (nowH() - span[0])/(span[1]-span[0])*100))}%"></div></div></div>`).join('')}
-      <div class="tl-axis"><span>9 AM</span><span>1 PM</span><span>5 PM</span><span>9 PM</span><span>11 PM</span></div></div>
-  <div class="grid2 even mt">
-    <div class="card"><h3>Rules</h3><dl class="kv small mt-s"><dt>Hours</dt><dd>9 AM – 11 PM</dd><dt>Length</dt><dd>Theatre up to 3 h, game room up to 2 h</dd><dt>Notice</dt><dd>At least 1 h ahead, up to 14 days</dd><dt>Limit</dt><dd>2 bookings per unit per week</dd><dt>Buffer</dt><dd>15 min between bookings for cleaning</dd></dl><button class="btn sm mt" data-act="toast" data-msg="Rule editing is wired to the database in the real app.">Edit rules</button></div>
-    <div class="card"><h3>Blackouts</h3><div class="list mt-s"><div class="row"><span class="grow">Theatre · Oct 31, all day</span><span class="chip">Halloween event</span></div><div class="row"><span class="grow">Game room · Oct 20, 9–12</span><span class="chip">Deep clean</span></div></div><button class="btn sm mt" data-act="toast" data-msg="Blackout added (prototype).">${icon('plus')}Add blackout</button></div>
-  </div>`;
-}
-function sRooms(){
-  const next = id => { const b = S.bookings.filter(x => x.amen === id && (x.day > 0 || x.start + x.dur > nowH())).sort((a, b) => a.day - b.day || a.start - b.start)[0]; return b ? `${dayShort(b.day)} ${hLabel(b.start)}–${hLabel(b.start + b.dur)} · ${b.unit === 'Staff' ? b.name : 'unit ' + b.unit}` : 'None'; };
-  return pageH('Rooms', 'Lights and climate follow bookings and occupancy. You can always override.', S.failsafe ? `<button class="btn primary" data-act="fsrestore">Restore automation</button>` : `<button class="btn" data-act="fstest">${icon('shield')}Test fail-safe</button>`)
-  + (S.failsafe ? `<div class="banner bad" style="margin-bottom:12px">${icon('alert')}<div><b>Fail-safe active.</b> No engine heartbeat for 120 s, so every room went to lights on and normal heating. Nothing will switch off until automation is back.</div></div>` : '')
-  + `<div class="kpis">${S.rooms.map(r => `<div class="card room">
-      <div class="row between"><h3>${r.name}</h3><span class="chip ${r.mode === 'auto' ? 'ok' : r.mode === 'failsafe' ? 'bad' : 'warn'}">${r.mode === 'auto' ? 'Automatic' : r.mode === 'failsafe' ? 'Fail-safe' : 'Override'}</span></div>
-      <div class="state-grid small"><div><span class="muted">Occupied</span><b>${r.occ ? 'Yes' : 'No'}</b></div><div><span class="muted">Lights</span><b>${r.lights === 'on' ? 'On' : 'Off'}</b></div><div><span class="muted">HVAC</span><b>${r.hvac === 'comfort' ? 'Comfort' : 'Setback'} ${r.set}°</b></div><div><span class="muted">Power</span><b class="num">${r.kw} kW</b></div></div>
-      <div class="small muted">${esc(r.why)}</div>
-      ${r.id !== 'lobby' ? `<div class="small"><span class="muted">Next booking:</span> ${esc(next(r.id))}</div>` : ''}
-      <div class="row wrap"><button class="btn sm" data-act="rlights" data-id="${r.id}" ${S.failsafe ? 'disabled' : ''}>Lights ${r.lights === 'on' ? 'off' : 'on'}</button><button class="btn sm" data-act="rhvac" data-id="${r.id}" ${S.failsafe ? 'disabled' : ''}>${r.hvac === 'comfort' ? 'Setback' : 'Comfort'}</button>${r.mode === 'override' ? `<button class="btn sm primary" data-act="rauto" data-id="${r.id}">Back to auto</button>` : ''}</div>
-    </div>`).join('')}</div>
-  <div class="card mt"><h3>Command log</h3><p class="small muted">Every physical action, who or what caused it, and whether the device confirmed it.</p><div class="tbl-wrap mt-s"><table><thead><tr><th>When</th><th>Room</th><th>Action</th><th>Caused by</th><th>Result</th></tr></thead><tbody>${S.cmdlog.slice(0, 10).map(c => `<tr><td class="muted" style="white-space:nowrap">${fmtT(new Date(c.at))}</td><td>${c.room}</td><td>${esc(c.act)}</td><td>${esc(c.by)}</td><td>${c.ok ? '<span class="chip ok">Confirmed</span>' : `<span class="chip warn" title="${esc(c.err)}">Refused · ${esc(c.err)}</span>`}</td></tr>`).join('')}</tbody></table></div></div>`;
-}
-function sEnergy(){
-  const e = energyDay();
-  return pageH('Energy', 'Whole-building monitoring from CT clamps, 15-minute resolution.')
-  + `<div class="banner info" style="margin-bottom:14px">${icon('leaf')}<div>Utilities are included in rent, so costs here are the building's own and are never shown to residents.</div></div>
-  <div class="kpis">
-    ${kpi('Now', `<span id="en-load">${S.load}</span> <span class="muted" style="font-size:15px">kW</span>`, `${Math.round(S.load/LIMIT*100)}% of the ${LIMIT} kW limit`)}
-    ${kpi('Today so far', n0(e.kwh) + ' <span class="muted" style="font-size:15px">kWh</span>', `Peak ${Math.round(e.peak)} kW`)}
-    ${kpi('Cost today', money(e.cost), 'Ontario ULO rates')}
-    ${kpi('Saved this month', '1,840 <span class="muted" style="font-size:15px">kWh</span>', '$214 · 55 kg CO₂ from automation')}
-  </div>
-  <div class="card mt"><div class="row between wrap"><h3>Load by system</h3><span class="small muted">Dashed line: forecast made at midnight</span></div><div class="mt-s">${areaChart({series:e.series, n:e.n, forecast:e.forecast, limit:LIMIT, nowIdx:e.nowIdx, h:260})}</div>${legend(SYS)}</div>
-  <div class="grid2 even mt">
-    <div class="card"><h3>Today by system</h3><div class="mt-s">${bars(e.bySys, v => n0(v) + ' kWh')}</div></div>
-    <div class="card"><h3>Anomalies</h3><div class="list mt-s">
-      <div class="row top"><span class="dot bad" style="margin-top:6px"></span><div class="grow"><b>Dryer 2 not heating</b><div class="small muted">0.3 A during a dry cycle, expected ~22 A. Ticket T-1046 opened.</div></div></div>
-      <div class="row top"><span class="dot warn" style="margin-top:6px"></span><div class="grow"><b>Lobby HVAC at 3 AM</b><div class="small muted">2.1 kW above its usual night level for 3 nights.</div></div></div>
-      <div class="row top"><span class="dot" style="margin-top:6px"></span><div class="grow"><b>Game room lights left on</b><div class="small muted">Switched off after 10 min empty. Saved ~1.2 kWh.</div></div></div>
-    </div></div>
-  </div>`;
-}
-function sEv(){
-  const span = [16, 32];
-  const pos = h => ((h - span[0])/(span[1]-span[0])*100).toFixed(2);
-  const reqs = S.evReqs;
-  return pageH('EV charging', 'Charge plans fit under the peak limit and favour overnight rates.')
-  + `<div class="kpis">
-    ${kpi('Charging now', S.chargers.filter(c => c.state === 'charging').length + ' / ' + S.chargers.length, S.chargers.reduce((a, c) => a + c.kw, 0).toFixed(1) + ' kW')}
-    ${kpi('Headroom', `${Math.max(0, LIMIT - S.load)} kW`, 'Under the building limit')}
-    ${kpi('Requests tonight', reqs.length, reqs.reduce((a, r) => a + r.kwh, 0) + ' kWh total')}
-    ${kpi('Peak guard', 'Armed', 'Cuts chargers to 3.6 kW at 90%')}
-  </div>
-  <div class="card mt"><h3>Tonight's plan</h3>
-    <div class="timeline mt" style="height:22px;background:none">
-      <div class="blk" style="left:0;width:${pos(16)}%;background:transparent"></div>
-      <div class="blk" style="left:${pos(16)}%;width:${pos(21) - pos(16)}%;background:var(--bad);opacity:.25"></div>
-      <div class="blk" style="left:${pos(21)}%;width:${pos(23) - pos(21)}%;background:var(--warn);opacity:.25"></div>
-      <div class="blk" style="left:${pos(23)}%;width:${pos(31) - pos(23)}%;background:var(--ok);opacity:.25"></div>
-    </div>
-    <div class="legend mt-s"><span><i style="background:var(--bad);opacity:.4"></i>On-peak 28.4¢</span><span><i style="background:var(--warn);opacity:.4"></i>Mid 12.2¢</span><span><i style="background:var(--ok);opacity:.4"></i>Ultra-low 2.8¢</span></div>
-    ${reqs.map(r => `<div class="mt"><div class="row between small"><b>Unit ${r.unit} · ${r.charger}</b><span class="muted">${r.kwh} kWh · ready by ${hLabel(r.by)}</span></div><div class="timeline mt-s">${r.plan.map(p => `<div class="blk" style="left:${pos(p[0])}%;width:${pos(p[1]) - pos(p[0])}%;background:var(--s3)">${r.status === 'charging' ? 'Charging' : 'Planned'}</div>`).join('')}</div></div>`).join('')}
-    <div class="tl-axis"><span>4 PM</span><span>8 PM</span><span>12 AM</span><span>4 AM</span><span>8 AM</span></div>
-  </div>
-  <div class="card mt"><h3>Chargers</h3><div class="tbl-wrap mt-s"><table><thead><tr><th>Charger</th><th>Status</th><th>Power</th><th>Unit</th></tr></thead><tbody>${S.chargers.map(c => `<tr><td><b>${c.id}</b></td><td><span class="chip ${({charging:'ok', scheduled:'info', free:'', offline:'bad'})[c.state]}">${c.state}</span></td><td class="num">${c.kw ? c.kw + ' kW' : '—'}</td><td>${c.unit || '—'}</td></tr>`).join('')}</tbody></table></div></div>`;
-}
-function sDevices(){
-  const f = S.devFilter;
-  const list = S.devices.filter(d => f === 'all' || d.status === f);
-  const chip = s => `<span class="chip ${({online:'ok', offline:'warn', fault:'bad'})[s]}">${s}</span>`;
-  return pageH('Devices', 'Sensors, room nodes and chargers on the building network.', `<button class="btn" data-act="toast" data-msg="In the real app this registers a device and creates its MQTT login.">${icon('plus')}Register device</button>`)
-  + `<div class="row wrap" style="margin-bottom:12px">${['all','online','offline','fault'].map(k => `<button class="chip" data-act="devf" data-v="${k}" aria-pressed="${f === k}">${k[0].toUpperCase() + k.slice(1)}</button>`).join('')}</div>
-  <div class="card"><div class="tbl-wrap"><table><thead><tr><th>Device</th><th>Type</th><th>Location</th><th>Status</th><th>Last seen</th><th>Signal</th><th>Firmware</th><th></th></tr></thead><tbody>
-    ${list.map(d => `<tr><td><b class="code">${d.hw}</b><div class="small muted">${d.sys}</div></td><td>${d.type}</td><td class="small">${esc(d.loc)}</td><td>${chip(d.status)}</td><td class="muted small">${d.seen < 1 ? 'seconds ago' : Math.round(d.seen) + ' min ago'}</td><td class="num small">${d.rssi ? d.rssi + ' dBm' : '—'}</td><td class="small">${d.fw}</td><td><button class="btn sm" data-act="calib" data-hw="${d.hw}" ${d.type === 'EV charger' ? 'disabled' : ''}>Calibrate</button></td></tr>`).join('')}
-  </tbody></table></div></div>
-  <div class="note mt">A device that stays offline for 15 minutes opens a ticket automatically. A fault opens one right away.</div>`;
-}
-function sRules(){
-  return pageH('Rules', 'What the building does on its own. Overrides and fail-safes always win.', `<button class="btn primary" data-act="newrule">${icon('plus')}New rule</button>`)
-  + `<div class="stack">${S.rules.map(r => `<div class="card rule">
-      <button class="switch" data-act="ruletoggle" data-id="${r.id}" aria-pressed="${r.on}" aria-label="Enable rule"></button>
-      <div class="grow"><div><span class="muted">When</span> <span class="when">${esc(r.when)}</span> <span class="muted">${esc(r.cond)}</span></div>
-      <div class="mt-s"><span class="muted">Then</span> <b>${esc(r.then)}</b></div>
-      <div class="small muted mt-s">${esc(r.where)} · last ran ${ago((Date.now() - r.fired)/60000)}</div></div>
-      <span class="chip ${r.on ? 'ok' : ''}">${r.on ? 'On' : 'Off'}</span>
-    </div>`).join('')}</div>`;
-}
-function sAnalytics(){
-  const weeks = [91, 93, 89, 95, 96, 94, 97, 94].map((v, i) => ({label:'W' + (33 + i), value:v, color:v < 92 ? 'var(--s2)' : 'var(--s1)'}));
-  const res = [{label:'Maintenance', value:9.4}, {label:'Access & fobs', value:2.1}, {label:'Package', value:1.3}, {label:'Device fault', value:5.8}, {label:'Noise', value:0.8}];
-  const use = [['Mon',6,3],['Tue',5,4],['Wed',7,4],['Thu',8,5],['Fri',14,9],['Sat',18,12],['Sun',12,8]];
-  const sav = [{label:'May', value:980}, {label:'Jun', value:1210}, {label:'Jul', value:1460}, {label:'Aug', value:1690}, {label:'Sep', value:1840}];
-  return pageH('Analytics', 'How the building is running.', `<div class="seg" role="group" aria-label="Range">${['7d','30d','90d'].map(r => `<button data-act="anr" data-v="${r}" aria-pressed="${S.anRange === r}">${r}</button>`).join('')}</div>`)
-  + `<div class="kpis">${kpi('Shuttle on time', '94%', 'Within 5 min of the timetable')}${kpi('Ticket resolution', '6.2 h', 'Median, all categories')}${kpi('Amenity hours', '128 h', '64% of evening slots used')}${kpi('Energy saved', '1,840 kWh', '$214 · 55 kg CO₂ this month')}</div>
-  <div class="grid2 even mt">
-    <div class="card"><h3>Shuttle on-time rate by week</h3>${cols(weeks, v => v + '%', 'var(--s1)', 100)}</div>
-    <div class="card"><h3>Median hours to resolve</h3><div class="mt">${bars(res, v => v.toFixed(1) + ' h', 'var(--s4)')}</div></div>
-    <div class="card"><h3>Amenity hours by weekday</h3><div class="cols">${use.map(([d, t, g]) => `<div class="c"><em class="num">${t + g}</em><i style="height:${(g/30*100).toFixed(1)}%;background:var(--s4);border-radius:0 0 2px 2px"></i><i style="height:${(t/30*100).toFixed(1)}%;background:var(--s1);border-radius:6px 6px 0 0;order:-1"></i><span>${d}</span></div>`).join('')}</div>${legend([{name:'Theatre', color:'var(--s1)'}, {name:'Game room', color:'var(--s4)'}])}</div>
-    <div class="card"><h3>Energy saved by automation</h3>${cols(sav, v => n0(v), 'var(--s3)')}<p class="small muted">kWh compared with the same rooms and loads without automation.</p></div>
-  </div>`;
 }
 
 /* ===== modal & toast ===== */
@@ -1031,21 +637,39 @@ function toast(msg, ic = 'check'){
 const val = id => (document.getElementById(id)?.value || '').trim();
 
 /* ===== actions ===== */
-function logCmd(room, act, by, ok = true, err){ S.cmdlog.unshift({at:Date.now(), room, act, by, ok, err}); }
+function go(page, opts = {}){
+  if (opts.root) S.stack = [];
+  else if (page !== S.page) S.stack.push(S.page);
+  S.page = page; if (opts.id) S.param = opts.id;
+  render(); window.scrollTo(0, 0);
+}
+// Re-render for a background change only when it can't wipe what the person is typing.
+const SAFE = ['home','shuttle','laundry','more','announcements','requests','request','settings'];
+function softRender(){ if (S.auth === 'in' && SAFE.includes(S.page) && !modal.classList.contains('open') && !(S.page === 'request' && val('rreply'))) render(); }
+function frontDeskReply(id, body, delay = 6000){
+  setTimeout(() => {
+    const t = S.tickets.find(x => x.id === id); if (!t) return;
+    t.thread.push({who:'Alex', body, at:Date.now()}); if (t.status === 'open') t.status = 'in_progress';
+    t.unread = true; toast(`Front desk replied to ${id}.`, 'bell'); softRender();
+  }, delay);
+}
 const A = {
-  role: el => { S.role = el.dataset.v; render(); window.scrollTo(0, 0); },
+  go: el => {
+    const page = el.dataset.page;
+    if (el.dataset.open) { const a = S.ann.find(x => String(x.id) === el.dataset.open); if (a) { S.annOpen = a.id; markRead(a); } }
+    if (page === 'request') { const t = S.tickets.find(x => x.id === el.dataset.id); if (t) t.unread = false; }
+    go(page, {root:!!el.dataset.root, id:el.dataset.id});
+  },
+  back: () => { S.page = S.stack.pop() || 'home'; render(); window.scrollTo(0, 0); },
   theme: () => {
-    const r = document.documentElement, cur = r.getAttribute('data-theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-    const next = cur === 'dark' ? 'light' : 'dark'; r.setAttribute('data-theme', next);
+    const next = isDark() ? 'light' : 'dark'; document.documentElement.setAttribute('data-theme', next);
     try { localStorage.setItem('marq-theme', next); } catch (e) {}
     render();
   },
-  rtab: el => { S.rtab = el.dataset.v; S.rview = null; render(); scrollPhone(); },
-  rgo: el => { S.rview = el.dataset.view; if (el.dataset.id) S.rparam = el.dataset.id; if (el.dataset.open) { const a = S.ann.find(x => String(x.id) === el.dataset.open); if (a) { S.annOpen = a.id; markRead(a); } } render(); scrollPhone(); },
-  rback: () => { S.rview = null; render(); },
   notify5: () => { S.shuttle.notify5 = !S.shuttle.notify5; S.shuttle.notifiedLoop = false; render(); toast(S.shuttle.notify5 ? 'We\'ll alert you 5 min before the bus reaches The Marq.' : 'Shuttle alert off.', 'bell'); },
   annf: el => { S.annFilter = el.dataset.v; render(); },
   annopen: el => { const a = S.ann.find(x => String(x.id) === el.dataset.id); S.annOpen = S.annOpen === a.id ? null : a.id; markRead(a); render(); },
+  readall: () => { S.ann.forEach(markRead); render(); },
   bkamen: el => { S.bk.amen = el.dataset.v; S.bk.start = null; S.bk.dur = Math.min(S.bk.dur, AMEN.find(a => a.id === el.dataset.v).maxH); render(); },
   bkday: el => { S.bk.day = +el.dataset.v; S.bk.start = null; render(); },
   bkslot: el => { S.bk.start = +el.dataset.v; render(); },
@@ -1056,99 +680,59 @@ const A = {
     if (bk.day === 0 && bk.start < nowH() + 1) return toast('Bookings need at least 1 hour\'s notice.', 'alert');
     S.bookings.push({id:nid(), amen:bk.amen, day:bk.day, start:bk.start, dur:bk.dur, unit:ME.unit, name:'Priya S.'});
     const a = AMEN.find(x => x.id === bk.amen);
-    toast(`${a.name} booked for ${dayShort(bk.day)}, ${hLabel(bk.start)}–${hLabel(bk.start + bk.dur)}. Reminder 1 h before.`);
+    toast(`${a.name} booked for ${dayShort(bk.day)}, ${hLabel(bk.start)}–${hLabel(bk.start + bk.dur)}. We'll remind you 1 h before.`);
     bk.start = null; render();
   },
-  bkcancel: el => { S.bookings = S.bookings.filter(b => String(b.id) !== el.dataset.id); toast('Booking cancelled.'); render(); },
+  bkcancel: el => { const b = S.bookings.find(x => String(x.id) === el.dataset.id); openModal(`<h2>Cancel this booking?</h2><p class="muted mt-s">${AMEN.find(a => a.id === b.amen).name}, ${dayShort(b.day)}, ${hLabel(b.start)}–${hLabel(b.start + b.dur)}. The slot opens up for other residents.</p><div class="row mt" style="justify-content:flex-end"><button class="btn" data-act="close">Keep it</button><button class="btn danger" data-act="bkcancelok" data-id="${b.id}">Cancel booking</button></div>`); },
+  bkcancelok: el => { S.bookings = S.bookings.filter(b => String(b.id) !== el.dataset.id); closeModal(); render(); toast('Booking cancelled.'); },
   lnotify: el => { const id = el.dataset.id; S.laundryNotify.has(id) ? S.laundryNotify.delete(id) : S.laundryNotify.add(id); render(); },
-  rreply: el => { const body = val('rreply'); if (!body) return; const t = S.tickets.find(x => x.id === el.dataset.id); t.thread.push({who:ME.name, tenant:true, body, at:Date.now()}); if (t.status === 'resolved') t.status = 'open'; render(); toast('Sent to the front desk.'); },
+  rreply: el => {
+    const body = val('rreply'); if (!body) return;
+    const t = S.tickets.find(x => x.id === el.dataset.id); t.thread.push({who:ME.name, tenant:true, body, at:Date.now()});
+    if (t.status === 'resolved') t.status = 'open';
+    document.getElementById('rreply').value = ''; render(); toast('Sent to the front desk.');
+  },
   nqsubmit: () => {
     const sub = val('nq-sub'), body = val('nq-body');
     if (!sub) { document.getElementById('nq-sub').focus(); return toast('Add a short subject.', 'alert'); }
     const id = 'T-' + (1049 + S.tickets.filter(t => +t.id.slice(2) >= 1049).length);
-    S.tickets.unshift({id, subject:sub, cat:val('nq-cat'), status:'open', priority:'normal', unit:ME.unit, name:ME.name, source:'tenant', at:Date.now(), enter:document.getElementById('nq-enter').checked, thread:[{who:ME.name, tenant:true, body:body || sub, at:Date.now()}]});
-    S.rview = 'request'; S.rparam = id; S.stTicket = id; render(); toast(`Request ${id} sent. You'll get a notification when we reply.`);
+    S.tickets.unshift({id, subject:sub, cat:val('nq-cat'), status:'open', unit:ME.unit, at:Date.now(), enter:document.getElementById('nq-enter').checked, thread:[{who:ME.name, tenant:true, body:body || sub, at:Date.now()}]});
+    S.stack = ['requests']; S.page = 'request'; S.param = id; render(); window.scrollTo(0, 0);
+    toast(`Request ${id} sent. You'll get a notification when we reply.`);
+    frontDeskReply(id, `Hi ${ME.first}, thanks for letting us know. We've passed this to maintenance and will confirm a time shortly.`);
   },
-  photo: () => toast('Photo upload works in the real app (Supabase Storage).', 'camera'),
+  photo: () => toast('Photo upload works in the real app.', 'camera'),
   evsubmit: () => {
     const km = +val('ev-km'), by = +val('ev-by'), ch = val('ev-ch') || 'EV-3';
     const kwh = Math.round(km * 0.18); const p = evPlanFor(kwh, by);
     S.myEv = {km, kwh, by, charger:ch, plan:[[p.start, p.end]]};
-    S.evReqs.push({id:nid(), unit:ME.unit, name:'Priya S.', charger:ch, kwh, by, plan:[[p.start, p.end]], status:'scheduled'});
     const c = S.chargers.find(x => x.id === ch); if (c) { c.state = 'scheduled'; c.unit = ME.unit; }
     render(); toast(`Scheduled on ${ch}: ${hmLabel(p.start % 24)}–${hmLabel(p.end % 24)}. Ready by ${hLabel(by)}.`, 'plug');
   },
-  evcancel: () => { const ch = S.myEv.charger; S.myEv = null; S.evReqs = S.evReqs.filter(r => r.unit !== ME.unit); const c = S.chargers.find(x => x.id === ch); if (c) { c.state = 'free'; c.unit = null; } render(); toast('Charge request cancelled.'); },
+  evcancel: () => { const ch = S.myEv.charger; S.myEv = null; const c = S.chargers.find(x => x.id === ch); if (c) { c.state = 'free'; c.unit = null; } render(); toast('Charge request cancelled.'); },
   notif: el => { const k = el.dataset.k; S.notif[k] = !S.notif[k]; render(); },
-  signout: () => toast('Sign-out works in the real app.'),
-  dstart: () => { Object.assign(S.shuttle, {running:true, p:0, delay:0, started:Date.now(), cancelled:false, notifiedLoop:false}); render(); toast('Run started. Riders can see the bus now.', 'bus'); },
-  dend: () => { S.shuttle.running = false; S.shuttle.delay = 0; render(); toast('Run ended. GPS trail deleted, run metrics saved.'); },
-  dcancel: () => openModal(`<h2>Cancel this run?</h2><p class="muted mt-s">Every rider with shuttle alerts on gets a push and sees a banner.</p><div class="row mt" style="justify-content:flex-end"><button class="btn" data-act="close">Keep running</button><button class="btn danger" data-act="dcancelok">Cancel run</button></div>`),
-  dcancelok: () => { closeModal(); S.shuttle.running = false; S.shuttle.cancelled = true; S.shuttle.delay = 0; render(); toast('Run cancelled. Riders were notified.', 'alert'); },
-  dlate: el => { const v = +el.dataset.v; S.shuttle.delay = v === 0 ? 0 : S.shuttle.delay + v; render(); toast(v ? `Riders told the bus is ~${S.shuttle.delay} min late.` : 'Riders told the bus is back on time.', 'bell'); },
+  signout: () => { S.auth = 'signin'; render(); window.scrollTo(0, 0); },
+  auth: el => { S.auth = el.dataset.v; render(); window.scrollTo(0, 0); },
+  signin: () => { if (!val('si-email').includes('@')) return toast('Enter your email address.', 'alert'); S.auth = 'in'; S.page = 'home'; S.stack = []; render(); toast(`Welcome back, ${ME.first}.`); },
+  signup: () => {
+    const name = val('su-name'), email = val('su-email'), unit = val('su-unit'), floor = val('su-floor'), pw = document.getElementById('su-pw').value;
+    if (!name) return toast('Enter your full name.', 'alert');
+    if (!email.includes('@')) return toast('Enter a valid email address.', 'alert');
+    if (!/^\d{3,4}$/.test(unit)) return toast('Unit numbers are 3 or 4 digits, like 1204.', 'alert');
+    if (!/^\d{1,2}$/.test(floor) || +floor < 1 || +floor > 40) return toast('Enter your floor (1–40).', 'alert');
+    if (pw.length < 8) return toast('Use a password with at least 8 characters.', 'alert');
+    S.signup = {name, unit:unit + val('su-room')}; S.auth = 'pending'; render(); window.scrollTo(0, 0);
+  },
+  approveme: () => { S.auth = 'in'; S.page = 'home'; S.stack = []; render(); toast('You\'re approved. Welcome to Marq Living!'); },
   close: () => closeModal(),
-  stab: el => { S.stab = el.dataset.v; if (el.dataset.ticket) { S.stTicket = el.dataset.ticket; S.tkFilter = 'open'; } render(); window.scrollTo(0, 0); },
-  approve: el => { const p = S.pending.find(x => String(x.id) === el.dataset.id); S.pending = S.pending.filter(x => x !== p); S.residents.unshift({name:p.name, unit:p.unit + p.room, floor:p.floor, status:'approved', joined:'Today'}); render(); toast(`${p.name} approved. They've been emailed.`); },
-  decline: el => { const p = S.pending.find(x => String(x.id) === el.dataset.id); S.pending = S.pending.filter(x => x !== p); render(); toast(`${p.name}'s sign-up was declined.`); },
-  invite: () => openModal(`<h2>Invite to the team</h2><p class="muted small mt-s">Staff, drivers and admins join only by invite.</p>
-    <div class="stack mt"><div><label class="f" for="inv-email">Email</label><input id="inv-email" type="email" placeholder="name@themarq.ca"></div><div><label class="f" for="inv-role">Role</label><select id="inv-role"><option>Staff</option><option>Driver</option><option>Admin</option></select></div></div>
-    <div class="row mt" style="justify-content:flex-end"><button class="btn" data-act="close">Cancel</button><button class="btn primary" data-act="inviteok">Send invite</button></div>`),
-  inviteok: () => { const e = val('inv-email'); if (!e.includes('@')) return toast('Enter an email address.', 'alert'); const r = val('inv-role'); closeModal(); toast(`Invite sent to ${esc(e)} as ${r}.`); },
-  tkf: el => { S.tkFilter = el.dataset.v; render(); },
-  tksel: el => { S.stTicket = el.dataset.id; render(); },
-  tkstatus: el => {
-    const t = S.tickets.find(x => x.id === el.dataset.id); const was = t.status; t.status = el.dataset.v;
-    if (t.source === 'system' && t.status === 'resolved' && was !== 'resolved') {
-      const m = S.machines.find(x => x.id === 'D2'); if (m && m.state === 'fault') m.state = 'free';
-      const d = S.devices.find(x => x.hw === t.device); if (d) d.status = 'online';
-      toast('Resolved. Dryer 2 is back in service on the laundry page.');
-    } else if (t.unit) toast(`${t.name.split(' ')[0]} was notified: ${({open:'reopened', in_progress:'we\'re on it', resolved:'resolved'})[t.status]}.`, 'bell');
-    render();
-  },
-  tkreply: el => {
-    const body = val('tk-reply'); if (!body) return;
-    const t = S.tickets.find(x => x.id === el.dataset.id); const internal = document.getElementById('tk-internal').checked;
-    t.thread.push({who:STAFF.name, body, internal, at:Date.now()}); if (!internal && t.status === 'open') t.status = 'in_progress';
-    render(); toast(internal ? 'Internal note added.' : `Reply sent to ${t.name.split(' ')[0]}.`);
-  },
-  toggleself: el => el.setAttribute('aria-pressed', el.getAttribute('aria-pressed') === 'true' ? 'false' : 'true'),
-  anpost: () => {
-    const title = val('an-title'), body = val('an-body'); if (!title) return toast('Add a title.', 'alert');
-    const aud = val('an-aud'), tgt = val('an-target'), urgent = document.getElementById('an-urgent').getAttribute('aria-pressed') === 'true';
-    let floors = [], units = [];
-    if (aud === 'floors') { tgt.split(',').forEach(p => { const [a, b] = p.split('-').map(s => parseInt(s, 10)); if (!isNaN(a)) for (let f = a; f <= (isNaN(b) ? a : b); f++) floors.push(f); }); if (!floors.length) return toast('List the floors, e.g. 10-14.', 'alert'); }
-    if (aud === 'units') { units = tgt.split(',').map(s => s.trim().padStart(4, '0')).filter(Boolean); if (!units.length) return toast('List the units, e.g. 1204.', 'alert'); }
-    const size = aud === 'building' ? 312 : aud === 'floors' ? floors.length * 9 : units.length;
-    S.ann.unshift({id:nid(), title, body:body || title, cat:val('an-cat'), urgent, aud, floors, units, at:Date.now(), read:false, reads:0, audSize:size, source:'staff'});
-    render(); toast(urgent ? `Published and pushed to ${size} residents.` : `Published to ${size} residents.`, 'mega');
-  },
-  fstest: () => { S.failsafe = true; S.rooms.forEach(r => { r.mode = 'failsafe'; r.lights = 'on'; r.hvac = 'comfort'; r.set = r.id === 'lobby' ? 21 : 22; }); logCmd('All rooms', 'Lights on, HVAC normal', 'Fail-safe · no heartbeat 120 s'); render(); },
-  fsrestore: () => { S.failsafe = false; S.rooms.forEach(r => r.mode = 'auto'); const g = S.rooms.find(r => r.id === 'game'); if (!g.occ) { g.lights = 'off'; g.hvac = 'setback'; g.set = 17; logCmd('Game room', 'Lights off, HVAC setback 17 °C', 'Rule · Empty 10 min after booking'); } render(); toast('Automation restored. Rooms back on their rules.'); },
-  rlights: el => { const r = S.rooms.find(x => x.id === el.dataset.id); r.lights = r.lights === 'on' ? 'off' : 'on'; r.mode = 'override'; logCmd(r.name, `Lights ${r.lights} (override)`, `${STAFF.name} (staff)`); render(); },
-  rhvac: el => { const r = S.rooms.find(x => x.id === el.dataset.id); r.hvac = r.hvac === 'comfort' ? 'setback' : 'comfort'; r.set = r.hvac === 'comfort' ? 22 : 17; r.mode = 'override'; logCmd(r.name, `HVAC ${r.hvac} ${r.set} °C (override)`, `${STAFF.name} (staff)`); render(); },
-  rauto: el => { const r = S.rooms.find(x => x.id === el.dataset.id); r.mode = 'auto'; logCmd(r.name, 'Returned to automatic', `${STAFF.name} (staff)`); render(); toast(`${r.name} is back on automatic.`); },
-  devf: el => { S.devFilter = el.dataset.v; render(); },
-  calib: el => { const d = S.devices.find(x => x.hw === el.dataset.hw); openModal(`<h2>Calibrate <span class="code">${d.hw}</span></h2><p class="muted small mt-s">Compare with a true-RMS clamp meter under a known load. Applied by the ingest service, so no reflash is needed.</p>
-    <div class="tbl-wrap mt"><table><thead><tr><th>Ch</th><th>Scale</th><th>Offset A</th><th>Volts</th><th>PF</th></tr></thead><tbody>${Array.from({length:d.ch}, (_, i) => `<tr><td>${i}</td><td><input value="1.00" aria-label="Scale ch ${i}"></td><td><input value="0.02" aria-label="Offset ch ${i}"></td><td><select aria-label="Voltage ch ${i}"><option>120</option><option ${d.sys === 'Laundry' ? 'selected' : ''}>240</option></select></td><td><input value="${d.sys === 'HVAC' ? '0.85' : '1.00'}" aria-label="Power factor ch ${i}"></td></tr>`).join('')}</tbody></table></div>
-    <div class="row mt" style="justify-content:flex-end"><button class="btn" data-act="close">Cancel</button><button class="btn primary" data-act="calibok">Save</button></div>`); },
-  calibok: () => { closeModal(); toast('Calibration saved. New readings use it straight away.'); },
-  ruletoggle: el => { const r = S.rules.find(x => String(x.id) === el.dataset.id); r.on = !r.on; render(); },
-  newrule: () => openModal(`<h2>New rule</h2><div class="stack mt">
-    <div><label class="f" for="nr-when">When</label><select id="nr-when"><option>A booking starts</option><option>A booking ends</option><option>Motion in a room with no booking</option><option>No motion for 20 min</option><option>Building load passes 90% of limit</option><option>On-peak price period starts</option></select></div>
-    <div><label class="f" for="nr-where">Where</label><select id="nr-where"><option>Theatre, Game room</option><option>Theatre room</option><option>Game room</option><option>Lobby</option><option>All chargers</option></select></div>
-    <div><label class="f" for="nr-then">Then</label><select id="nr-then"><option>Lights off · HVAC setback (17 °C)</option><option>Lights on · HVAC comfort (22 °C)</option><option>Alert staff</option><option>Cut EV chargers to 3.6 kW</option></select></div>
-    <div class="note">Rules never override a manual override, and wait out a 10-minute cooldown before firing again.</div></div>
-    <div class="row mt" style="justify-content:flex-end"><button class="btn" data-act="close">Cancel</button><button class="btn primary" data-act="newruleok">Add rule</button></div>`),
-  newruleok: () => { S.rules.push({id:nid(), on:true, when:val('nr-when'), cond:'', then:val('nr-then'), where:val('nr-where'), fired:Date.now()}); closeModal(); render(); toast('Rule added and switched on.'); },
-  anr: el => { S.anRange = el.dataset.v; render(); },
   toast: el => toast(el.dataset.msg, 'check'),
 };
-function markRead(a){ if (a && !a.read) { a.read = true; a.reads++; } }
-function scrollPhone(){ const b = document.getElementById('pbody'); if (b) b.scrollTop = 0; }
+function markRead(a){ if (a && !a.read) a.read = true; }
 document.addEventListener('click', e => {
   const el = e.target.closest('[data-act]'); if (!el || el.disabled) return;
   const fn = A[el.dataset.act]; if (fn) { e.preventDefault(); fn(el, e); }
 });
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'rreply') A.rreply(document.querySelector('[data-act=rreply]')); });
 
 /* ===== live updates ===== */
 function afterRender(){
@@ -1170,10 +754,6 @@ function updateLive(){
   if (path && bus && sh.running) { const pt = path.getPointAtLength(sh.p * path.getTotalLength()); bus.setAttribute('transform', `translate(${pt.x.toFixed(1)} ${pt.y.toFixed(1)})`); }
   STOPS.forEach((s, i) => { const el = document.getElementById('eta-' + i); if (el) el.textContent = etaText(etaMin(i)); });
   const he = document.getElementById('home-eta'); if (he) he.innerHTML = homeEta();
-  const de = document.getElementById('drv-elapsed'); if (de) de.textContent = elapsed();
-  const dn = document.getElementById('drv-next'); if (dn) { const i = nextStopIdx(); dn.textContent = STOPS[i].name; document.getElementById('drv-eta').textContent = 'in ' + etaText(etaMin(i) - sh.delay); }
-  const ol = document.getElementById('ov-load'); if (ol) { ol.textContent = S.load; document.getElementById('ov-meter').style.width = (S.load/LIMIT*100) + '%'; }
-  const el = document.getElementById('en-load'); if (el) el.textContent = S.load;
 }
 let tick = 0;
 setInterval(() => {
@@ -1181,11 +761,12 @@ setInterval(() => {
   const sh = S.shuttle;
   if (sh.running) {
     sh.p += 1/180;
-    if (sh.p >= 1) { sh.p -= 1; sh.notifiedLoop = false; }
+    if (sh.p >= 1) { sh.p -= 1; sh.notifiedLoop = false; if (sh.delay) { sh.delay = 0; softRender(); } }
     const m = etaMin(0);
-    if (sh.notify5 && !sh.notifiedLoop && m <= 5 && m > 0.5) { sh.notifiedLoop = true; if (S.role === 'resident') toast('Shuttle is about 5 min from The Marq.', 'bus'); }
+    if (sh.notify5 && !sh.notifiedLoop && m <= 5 && m > 0.5) { sh.notifiedLoop = true; toast('The shuttle is about 5 min from The Marq.', 'bus'); }
   }
-  if (tick % 3 === 0) S.load = Math.round(92 + 8*Math.sin(tick/9) + 3*noise(tick));
+  // Demo: the bus picks up a delay part-way through a loop, as the driver would report it.
+  if (tick === 40 && sh.running && !sh.delay) { sh.delay = 4; if (S.auth === 'in' && S.notif.shuttle) toast('Shuttle is running about 4 min late.', 'clock'); softRender(); }
   if (tick % 8 === 0) {
     let changed = false;
     S.machines.forEach(m => {
@@ -1196,7 +777,7 @@ setInterval(() => {
         if (S.laundryNotify.has(m.id)) { S.laundryNotify.delete(m.id); toast(`${m.type} ${m.id.slice(1)} is done.`, 'washer'); }
       } else if (m.mins <= 5) m.state = 'finishing';
     });
-    if (changed && ((S.role === 'resident' && !S.rview && (S.rtab === 'laundry' || S.rtab === 'home')) || (S.role === 'staff' && S.stab === 'overview'))) render();
+    if (changed && (S.page === 'laundry' || S.page === 'home')) softRender();
   }
   updateLive();
 }, 1000);
@@ -1204,5 +785,6 @@ setInterval(() => {
 /* ===== start ===== */
 try { const t = localStorage.getItem('marq-theme'); if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t); } catch (e) {}
 S.machines.forEach(m => { if (m.state === 'in_use' && m.mins <= 5) m.state = 'finishing'; });
+if (nowH() >= 21) S.bk.day = 1;
 render();
 </script>
