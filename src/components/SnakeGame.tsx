@@ -33,7 +33,7 @@ const SnakeGame = () => {
     nextDir: "RIGHT" as Dir,
     food: { x: 15, y: Math.floor(ROWS / 2) } as Point,
     score: 0,
-    intervalId: 0 as any,
+    intervalId: undefined as ReturnType<typeof setInterval> | undefined,
   });
 
   const logoImg = useRef<HTMLImageElement | null>(null);
@@ -152,10 +152,29 @@ const SnakeGame = () => {
     s.intervalId = setInterval(tick, TICK_MS);
   }, [draw, tick]);
 
+  // one way in for every control: keys, swipes and the touch D-pad
+  const steer = useCallback((newDir: Dir) => {
+    const s = state.current;
+    const opposites: Record<Dir, Dir> = { UP: "DOWN", DOWN: "UP", LEFT: "RIGHT", RIGHT: "LEFT" };
+    if (newDir !== opposites[s.dir]) s.nextDir = newDir;
+  }, []);
+
+  // touch: a swipe on the board turns the snake the way the finger went
+  const swipeFrom = useRef<{ x: number; y: number } | null>(null);
+  const onSwipeMove = (e: React.PointerEvent) => {
+    const from = swipeFrom.current;
+    if (!from) return;
+    const dx = e.clientX - from.x;
+    const dy = e.clientY - from.y;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < 18) return;
+    steer(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "RIGHT" : "LEFT") : dy > 0 ? "DOWN" : "UP");
+    // keep tracking from here, so one long drag can make several turns
+    swipeFrom.current = { x: e.clientX, y: e.clientY };
+  };
+
   useEffect(() => {
     if (!playing) return;
     const handleKey = (e: KeyboardEvent) => {
-      const s = state.current;
       const map: Record<string, Dir> = {
         ArrowUp: "UP", w: "UP", W: "UP",
         ArrowDown: "DOWN", s: "DOWN", S: "DOWN",
@@ -165,28 +184,34 @@ const SnakeGame = () => {
       const newDir = map[e.key];
       if (!newDir) return;
       e.preventDefault();
-      const opposites: Record<Dir, Dir> = { UP: "DOWN", DOWN: "UP", LEFT: "RIGHT", RIGHT: "LEFT" };
-      if (newDir !== opposites[s.dir]) s.nextDir = newDir;
+      steer(newDir);
     };
     window.addEventListener("keydown", handleKey);
     return () => {
       clearInterval(state.current.intervalId);
       window.removeEventListener("keydown", handleKey);
     };
-  }, [playing]);
+  }, [playing, steer]);
 
   return (
     <div className="text-center">
       <p className="text-muted-foreground mb-8">
-        Use <span className="text-primary font-mono">W/A/S/D</span> or <span className="text-primary font-mono">Arrow Keys</span> to move. Eat the logo to grow!
+        Use <span className="text-primary font-mono">W/A/S/D</span>, the <span className="text-primary font-mono">Arrow Keys</span>, or swipe on the board. Eat the logo to grow!
       </p>
       <div className="relative inline-block rounded-lg overflow-hidden border border-border">
         <canvas
           ref={canvasRef}
           width={CANVAS_W}
           height={CANVAS_H}
-          className="block bg-background max-w-full"
+          className="block bg-background max-w-full touch-none select-none"
           style={{ aspectRatio: `${CANVAS_W}/${CANVAS_H}` }}
+          onPointerDown={(e) => {
+            e.currentTarget.setPointerCapture(e.pointerId);
+            swipeFrom.current = { x: e.clientX, y: e.clientY };
+          }}
+          onPointerMove={onSwipeMove}
+          onPointerUp={() => (swipeFrom.current = null)}
+          onPointerCancel={() => (swipeFrom.current = null)}
         />
         {!playing && (
           <motion.div
@@ -212,6 +237,32 @@ const SnakeGame = () => {
           </motion.div>
         )}
       </div>
+      {/* a D-pad under the board, only on touch screens */}
+      {playing && (
+        <div className="mx-auto mt-4 hidden w-40 select-none grid-cols-3 gap-1.5 [@media(pointer:coarse)]:grid" aria-label="Steer">
+          {(
+            [
+              ["UP", "↑", "col-start-2"],
+              ["LEFT", "←", "col-start-1 row-start-2"],
+              ["RIGHT", "→", "col-start-3 row-start-2"],
+              ["DOWN", "↓", "col-start-2 row-start-3"],
+            ] as [Dir, string, string][]
+          ).map(([d, label, pos]) => (
+            <button
+              key={d}
+              type="button"
+              aria-label={d.toLowerCase()}
+              onPointerDown={(e) => {
+                e.preventDefault();
+                steer(d);
+              }}
+              className={`${pos} grid h-12 touch-none place-items-center rounded-xl border border-border bg-white/10 text-xl text-white active:scale-95 active:bg-white/25`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
       {playing && (
         <div className="mt-4 flex items-center justify-center gap-6">
           <p className="text-sm text-muted-foreground font-mono">

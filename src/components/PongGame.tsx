@@ -26,6 +26,9 @@ const PongGame = () => {
     playerY: CANVAS_H / 2 - PADDLE_H / 2,
     cpuY: CANVAS_H / 2 - PADDLE_H / 2,
     keys: {} as Record<string, boolean>,
+    /** where a finger (or a dragging mouse) wants the paddle's centre, in canvas units */
+    touchY: null as number | null,
+    lastT: 0,
     animId: 0,
     playerScore: 0,
     cpuScore: 0,
@@ -51,8 +54,19 @@ const PongGame = () => {
     if (winnerName) setWinner(winnerName);
   }, []);
 
+  // touch: drag anywhere on the board and the paddle follows your finger
+  const aim = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    gameState.current.touchY = ((e.clientY - rect.top) / rect.height) * CANVAS_H;
+  };
+  const release = () => {
+    gameState.current.touchY = null;
+  };
+
   const startGame = useCallback(() => {
     const g = gameState.current;
+    g.touchY = null;
+    g.lastT = 0;
     g.playerScore = 0;
     g.cpuScore = 0;
     g.playerY = CANVAS_H / 2 - PADDLE_H / 2;
@@ -74,26 +88,33 @@ const PongGame = () => {
     window.addEventListener("keydown", handleKey);
     window.addEventListener("keyup", handleKey);
 
-    const loop = () => {
+    const loop = (t: number) => {
+      // speeds are tuned per 60 Hz frame; scale them so 120 Hz phones don't play at double speed
+      const k = g.lastT ? Math.min(t - g.lastT, 50) / (1000 / 60) : 1;
+      g.lastT = t;
+
       // Player movement
-      if (g.keys["ArrowUp"] || g.keys["w"]) g.playerY = Math.max(0, g.playerY - PADDLE_SPEED);
-      if (g.keys["ArrowDown"] || g.keys["s"]) g.playerY = Math.min(CANVAS_H - PADDLE_H, g.playerY + PADDLE_SPEED);
+      if (g.keys["ArrowUp"] || g.keys["w"]) g.playerY = Math.max(0, g.playerY - PADDLE_SPEED * k);
+      if (g.keys["ArrowDown"] || g.keys["s"]) g.playerY = Math.min(CANVAS_H - PADDLE_H, g.playerY + PADDLE_SPEED * k);
+      if (g.touchY !== null) g.playerY = Math.max(0, Math.min(CANVAS_H - PADDLE_H, g.touchY - PADDLE_H / 2));
 
       // CPU AI
       // CPU AI — slower and with a dead zone so it's easier to beat
       const cpuCenter = g.cpuY + PADDLE_H / 2;
       const diff = g.ballY - cpuCenter;
       if (Math.abs(diff) > 30) {
-        g.cpuY += Math.sign(diff) * PADDLE_SPEED * 0.4;
+        g.cpuY += Math.sign(diff) * PADDLE_SPEED * 0.4 * k;
       }
       g.cpuY = Math.max(0, Math.min(CANVAS_H - PADDLE_H, g.cpuY));
 
       // Ball movement
-      g.ballX += g.ballVX;
-      g.ballY += g.ballVY;
+      g.ballX += g.ballVX * k;
+      g.ballY += g.ballVY * k;
 
       // Top/bottom bounce
-      if (g.ballY - BALL_R <= 0 || g.ballY + BALL_R >= CANVAS_H) g.ballVY *= -1;
+      // (pushed back inside so a long frame can't leave it stuck in the wall)
+      if (g.ballY - BALL_R <= 0) { g.ballY = BALL_R; g.ballVY = Math.abs(g.ballVY); }
+      else if (g.ballY + BALL_R >= CANVAS_H) { g.ballY = CANVAS_H - BALL_R; g.ballVY = -Math.abs(g.ballVY); }
 
       // Player paddle collision
       if (g.ballX - BALL_R <= PADDLE_W + 10 && g.ballY >= g.playerY && g.ballY <= g.playerY + PADDLE_H && g.ballVX < 0) {
@@ -188,7 +209,7 @@ const PongGame = () => {
   return (
     <div className="text-center">
       <p className="text-muted-foreground mb-8">
-        First to {WIN_SCORE} wins! Use <span className="text-primary font-mono">W/S</span> or <span className="text-primary font-mono">↑/↓</span> to move.
+        First to {WIN_SCORE} wins! Use <span className="text-primary font-mono">W/S</span> or <span className="text-primary font-mono">↑/↓</span> to move, or drag on the board.
       </p>
 
       <div className="relative inline-block rounded-lg overflow-hidden border border-border">
@@ -196,8 +217,17 @@ const PongGame = () => {
           ref={canvasRef}
           width={CANVAS_W}
           height={CANVAS_H}
-          className="block bg-background max-w-full"
+          className="block bg-background max-w-full touch-none select-none"
           style={{ aspectRatio: `${CANVAS_W}/${CANVAS_H}` }}
+          onPointerDown={(e) => {
+            e.currentTarget.setPointerCapture(e.pointerId);
+            aim(e);
+          }}
+          onPointerMove={(e) => {
+            if (e.buttons || e.pointerType === "touch") aim(e);
+          }}
+          onPointerUp={release}
+          onPointerCancel={release}
         />
         {!playing && (
           <motion.div
