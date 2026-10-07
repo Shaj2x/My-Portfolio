@@ -1,39 +1,6 @@
-import { Bot, Globe, Palette, Cpu, PhoneCall, Workflow } from "lucide-react";
 import { motion } from "framer-motion";
 import MotionSection from "./MotionSection";
-
-const services = [
-  {
-    icon: Bot,
-    title: "AI Receptionist Systems",
-    description: "Fully automated AI receptionists that handle calls, book appointments, answer FAQs, and route inquiries — 24/7 with zero downtime.",
-  },
-  {
-    icon: Workflow,
-    title: "End-to-End Automation",
-    description: "Custom AI pipelines that automate repetitive workflows: lead capture, email follow-ups, CRM updates, and data processing.",
-  },
-  {
-    icon: Globe,
-    title: "Full Website Development",
-    description: "High-converting, responsive websites built from scratch — landing pages, e-commerce stores, dashboards, and SaaS platforms.",
-  },
-  {
-    icon: Palette,
-    title: "Brand Identity & Logo Design",
-    description: "Complete visual identities including logos, color systems, typography, and brand guidelines that make businesses stand out.",
-  },
-  {
-    icon: PhoneCall,
-    title: "AI Voice Agents",
-    description: "Intelligent voice bots for inbound and outbound calling — qualifying leads, scheduling meetings, and providing customer support.",
-  },
-  {
-    icon: Cpu,
-    title: "Custom AI Solutions",
-    description: "Bespoke AI tools tailored to your business: chatbots, content generators, data analyzers, and smart recommendation engines.",
-  },
-];
+import { services } from "@/data/portfolio";
 
 const Services = () => {
   return (

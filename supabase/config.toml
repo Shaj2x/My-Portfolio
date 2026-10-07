@@ -1,10 +1,4 @@
-project_id = "wupzagcvknanhhazzoxx"
+project_id = "byztduagbykgtpekxomu"
 
 [functions.send-contact-email]
-verify_jwt = false
-
-[functions.dash-ai]
-verify_jwt = true
-
-[functions.dash-push]
 verify_jwt = false

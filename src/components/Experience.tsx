@@ -1,76 +1,7 @@
 import { Briefcase, GraduationCap } from "lucide-react";
 import MotionSection from "./MotionSection";
 import { MotionItem } from "./MotionSection";
-
-interface TimelineItem {
-  title: string;
-  org: string;
-  date: string;
-  description: string;
-  type: "work" | "education";
-}
-
-const education: TimelineItem[] = [
-  {
-    title: "BESc + Ivey HBA",
-    org: "Western University",
-    date: "2025 – 2029 (Expected)",
-    description: "Dual-degree in Engineering Science and Ivey Honors Business Administration.",
-    type: "education",
-  },
-  {
-    title: "High School Diploma",
-    org: "Chinguacousy Secondary School",
-    date: "2021 – 2025",
-    description: "Graduated with a full 4-year average of 96.3%.",
-    type: "education",
-  },
-];
-
-const experience: TimelineItem[] = [
-  {
-    title: "Private Tutor (Owner)",
-    org: "Self Employed",
-    date: "Aug 2025 – Present",
-    description: "Providing one-on-one tutoring (in-person and remotely) to middle and high school students to improve academic performance through personalized lesson plans.",
-    type: "work",
-  },
-  {
-    title: "Deputy Returning Officer",
-    org: "Elections Canada, Brampton",
-    date: "April 2025",
-    description: "Managed polling station operations, verified voter eligibility, and ensured compliance with federal election procedures.",
-    type: "work",
-  },
-  {
-    title: "Grad Trip Lead Volunteer",
-    org: "GradCity",
-    date: "Sep 2024 – Mar 2025",
-    description: "Promoted and increased awareness for high school Grad trip through advertisements on social media posts and word of mouth.",
-    type: "work",
-  },
-  {
-    title: "Carabram Lead Volunteer",
-    org: "Brampton Tamil Association",
-    date: "July 2024",
-    description: "Set up Carabram event, led and assisted groups/assigned roles, promoted merchandise, sold tickets, and handled social service.",
-    type: "work",
-  },
-  {
-    title: "Co-Owner",
-    org: "LoveYouReally Apparel",
-    date: "Aug 2023 – Aug 2025",
-    description: "Co-founded a streetwear brand; managed product design, customer engagement, and order fulfillment. Grew to 10K followers by age 15.",
-    type: "work",
-  },
-  {
-    title: "Program Assistant",
-    org: "Brampton Library",
-    date: "Jun 2023 – Apr 2024",
-    description: "Helped to direct programs, worked with children, presented and coordinated events like book fairs.",
-    type: "work",
-  },
-];
+import { education, experience, type TimelineItem } from "@/data/portfolio";
 
 const Experience = () => {
   return (

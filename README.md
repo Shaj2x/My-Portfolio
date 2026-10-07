@@ -4,19 +4,6 @@
 
 **URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
 
-## Deploying on Vercel
-
-The repo includes `vercel.json`, so Vercel builds it as a Vite site (`npm ci`, `npm run build`, output `dist`).
-
-1. On vercel.com, choose **Add New → Project** and import this GitHub repo. Keep the detected settings.
-2. Under **Environment Variables**, add `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` (Supabase, Project Settings, API). They are read at build time, so redeploy after changing them.
-3. Deploy. Every push to `main` then goes live, and other branches get preview links.
-4. After the first deploy, add your Vercel address (and any custom domain) in:
-   - Supabase, Authentication, URL Configuration: set the Site URL and add `https://<your-domain>/digital-dash.html` to the redirect URLs.
-   - Your Spotify app's redirect URIs, if you use the Now playing widget: `https://<your-domain>/digital-dash.html`.
-
-The Vercel site is Digital Dash: `/` and `/digital-dash` redirect to `/digital-dash.html` (the app keeps that address because sign-in, Spotify, reminders and the installable app are set up for it). `/smart-serve` redirects to its page. The React portfolio is still built but isn't linked from this site.
-
 ## How can I edit this code?
 
 There are several ways of editing your application.

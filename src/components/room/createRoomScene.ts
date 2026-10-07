@@ -1,0 +1,1976 @@
+import * as THREE from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
+import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
+import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
+import { ShaderPass } from "three/examples/jsm/postprocessing/ShaderPass.js";
+import { RectAreaLightUniformsLib } from "three/examples/jsm/lights/RectAreaLightUniformsLib.js";
+import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
+import { createFigure } from "./createFigure";
+import { createCampus } from "./createCampus";
+import { createCat, createPhoneScreen, createRadio, createSteam, createWallClock } from "./createDetails";
+import { createAudio, type Weather } from "./createAudio";
+
+/*
+ * A late-night study room, built entirely from primitives and canvas textures:
+ * a figure at a desk lit by a laptop, a bookshelf, a rainy city window,
+ * a bed, and a warm hallway light spilling through a half-open door.
+ *
+ * Room coordinates (metres): x ∈ [-4.3, 4.2], y ∈ [0, 3.2], z ∈ [-3, 4.2].
+ * The back wall is at z = -3; the camera starts in the doorway at z ≈ 5.
+ */
+
+export type RoomView = "doorway" | "explore" | "telescope";
+/** "auto" follows the visitor's own clock */
+export type TimeMode = "auto" | "day" | "sunset" | "night";
+export type { Weather };
+export interface Conditions {
+  weather: Weather;
+  timeMode: TimeMode;
+}
+type RoomCameraView = Exclude<RoomView, "telescope">;
+
+export interface RoomSceneHandle {
+  setView: (view: RoomView) => void;
+  /** flip the bedside lamp; returns the new state */
+  toggleLamp: () => boolean;
+  setWeather: (weather: Weather) => void;
+  setTimeMode: (mode: TimeMode) => void;
+  setMuted: (muted: boolean) => void;
+  /** turn the shelf radio on or off; returns the new state */
+  toggleRadio: () => boolean;
+  /** change any lighting settings; lights fade to the new values */
+  setLighting: (settings: Partial<LightingSettings>) => void;
+  getLighting: () => LightingSettings;
+  dispose: () => void;
+}
+
+const ROOM = { left: -4.3, right: 4.2, back: -3, front: 4.2, height: 3.2 };
+
+const VIEWS: Record<RoomCameraView, { pos: THREE.Vector3; target: THREE.Vector3; fov: number }> = {
+  doorway: { pos: new THREE.Vector3(0.3, 1.5, 5.4), target: new THREE.Vector3(-0.1, 1.25, -3), fov: 36 },
+  explore: { pos: new THREE.Vector3(0.9, 1.6, 1.3), target: new THREE.Vector3(-1.5, 1.05, -2.3), fov: 50 },
+};
+
+// ---------- small helpers ----------
+
+function mulberry32(seed: number) {
+  return () => {
+    seed |= 0;
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const rand = mulberry32(7);
+const rr = (a: number, b: number) => a + rand() * (b - a);
+const pick = <T,>(arr: T[]) => arr[Math.floor(rand() * arr.length)];
+
+function canvasTexture(
+  w: number,
+  h: number,
+  draw: (ctx: CanvasRenderingContext2D, w: number, h: number) => void,
+  opts: { repeat?: [number, number]; srgb?: boolean } = {},
+) {
+  const c = document.createElement("canvas");
+  c.width = w;
+  c.height = h;
+  const ctx = c.getContext("2d")!;
+  draw(ctx, w, h);
+  const tex = new THREE.CanvasTexture(c);
+  if (opts.srgb !== false) tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
+  if (opts.repeat) {
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(...opts.repeat);
+  }
+  return tex;
+}
+
+function noiseFill(ctx: CanvasRenderingContext2D, w: number, h: number, base: string, amount: number, count: number) {
+  ctx.fillStyle = base;
+  ctx.fillRect(0, 0, w, h);
+  for (let i = 0; i < count; i++) {
+    const v = Math.floor(rr(-amount, amount));
+    ctx.fillStyle = v > 0 ? `rgba(255,255,255,${v / 255})` : `rgba(0,0,0,${-v / 255})`;
+    ctx.fillRect(rand() * w, rand() * h, rr(1, 3), rr(1, 3));
+  }
+}
+
+// ---------- scene ----------
+
+/** Everything the light switch panel can change. */
+export interface LightingSettings {
+  /** overhead light, 0 (off) to 1 */
+  ceiling: number;
+  /** fairy lights, 0 (off) to 1.5 */
+  fairy: number;
+  /** fairy light colour as a hex string, or "rainbow" */
+  fairyColor: string;
+  /** bedside lamp, 0 (off) to 1.5 */
+  lamp: number;
+  candle: boolean;
+  /** overall colour temperature, -1 (cool) to 1 (warm) */
+  warmth: number;
+}
+
+export const LIGHTING_PRESETS: Record<string, LightingSettings> = {
+  "Late night": { ceiling: 0, fairy: 1, fairyColor: "#ffb36b", lamp: 1, candle: true, warmth: 0 },
+  Cozy: { ceiling: 0, fairy: 1.35, fairyColor: "#ffa24d", lamp: 1.3, candle: true, warmth: 0.45 },
+  "Lights on": { ceiling: 1, fairy: 0.8, fairyColor: "#ffb36b", lamp: 1, candle: true, warmth: 0.05 },
+  "Western purple": { ceiling: 0, fairy: 1.3, fairyColor: "#9b5cff", lamp: 0.55, candle: true, warmth: -0.15 },
+  Party: { ceiling: 0, fairy: 1.4, fairyColor: "rainbow", lamp: 0.4, candle: false, warmth: 0 },
+  "Screen only": { ceiling: 0, fairy: 0, fairyColor: "#ffb36b", lamp: 0, candle: false, warmth: -0.1 },
+};
+
+export interface RoomSceneOptions {
+  /** called when the lamp is switched, including by clicking it in the scene */
+  onLampChange?: (on: boolean) => void;
+  /** called when the view changes, including by clicking the telescope in the scene */
+  onViewChange?: (view: RoomView) => void;
+  /** the campus landmark nearest the centre of the telescope, or null */
+  onScopeTarget?: (landmark: { name: string; detail: string } | null) => void;
+  /** fires whenever lighting settings change, including from the lamp toggle */
+  onLightingChange?: (settings: LightingSettings) => void;
+  /** the light switch on the wall was clicked */
+  onLightSwitch?: () => void;
+  /** start in a remembered state instead of the defaults */
+  initial?: { lighting?: Partial<LightingSettings>; weather?: Weather; timeMode?: TimeMode; muted?: boolean };
+  onConditionsChange?: (c: Conditions) => void;
+  onRadioChange?: (on: boolean) => void;
+  /** the wall clock's time, e.g. "2:48 AM", whenever the minute changes */
+  onClockChange?: (label: string) => void;
+}
+
+export function createRoomScene(container: HTMLElement, options: RoomSceneOptions = {}): RoomSceneHandle {
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const disposables: { dispose: () => void }[] = [];
+  const track = <T extends { dispose: () => void }>(d: T) => {
+    disposables.push(d);
+    return d;
+  };
+
+  // Renderer
+  const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(container.clientWidth, container.clientHeight);
+  renderer.shadowMap.enabled = true;
+  // soft variance shadows: costly to filter, but maps are baked once (see autoUpdate below)
+  renderer.shadowMap.type = THREE.VSMShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.25;
+  container.appendChild(renderer.domElement);
+  renderer.domElement.style.display = "block";
+  renderer.domElement.style.touchAction = "none";
+
+  RectAreaLightUniformsLib.init();
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color("#030407");
+
+  const camera = new THREE.PerspectiveCamera(VIEWS.doorway.fov, container.clientWidth / container.clientHeight, 0.05, 1500);
+  camera.position.copy(VIEWS.doorway.pos);
+
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.06;
+  controls.enabled = false;
+  controls.enablePan = false;
+  controls.minDistance = 1.2;
+  controls.maxDistance = 4.8;
+  controls.minPolarAngle = 0.35;
+  controls.maxPolarAngle = Math.PI / 2 + 0.05;
+  controls.target.copy(VIEWS.doorway.target);
+  camera.lookAt(controls.target);
+
+  // Shared geometry / materials
+  const boxGeo = track(new THREE.BoxGeometry(1, 1, 1));
+  const mat = (params: THREE.MeshStandardMaterialParameters) => track(new THREE.MeshStandardMaterial(params));
+
+  function box(
+    w: number, h: number, d: number,
+    material: THREE.Material,
+    x: number, y: number, z: number,
+    parent: THREE.Object3D = scene,
+    shadows = true,
+  ) {
+    const m = new THREE.Mesh(boxGeo, material);
+    m.scale.set(w, h, d);
+    m.position.set(x, y, z);
+    m.castShadow = shadows;
+    m.receiveShadow = true;
+    parent.add(m);
+    return m;
+  }
+
+  // ---------- textures ----------
+
+  const plasterTex = track(canvasTexture(512, 512, (c, w, h) => noiseFill(c, w, h, "#9aa0ad", 22, 18000), { repeat: [4, 2] }));
+  const woodFloorTex = track(
+    canvasTexture(1024, 1024, (c, w, h) => {
+      const plankH = h / 8;
+      for (let i = 0; i < 8; i++) {
+        const shade = rr(40, 62);
+        c.fillStyle = `rgb(${shade + 22},${shade + 8},${shade - 6})`;
+        c.fillRect(0, i * plankH, w, plankH);
+        for (let g = 0; g < 40; g++) {
+          c.strokeStyle = `rgba(0,0,0,${rr(0.05, 0.18)})`;
+          c.lineWidth = rr(0.5, 2);
+          const y = i * plankH + rand() * plankH;
+          c.beginPath();
+          c.moveTo(0, y);
+          c.bezierCurveTo(w * 0.3, y + rr(-6, 6), w * 0.6, y + rr(-6, 6), w, y + rr(-4, 4));
+          c.stroke();
+        }
+        c.fillStyle = "rgba(0,0,0,0.55)";
+        c.fillRect(0, i * plankH, w, 3);
+        const seam = rand() * w;
+        c.fillRect(seam, i * plankH, 3, plankH);
+      }
+    }, { repeat: [3, 3] }),
+  );
+  const deskWoodTex = track(
+    canvasTexture(512, 256, (c, w, h) => {
+      c.fillStyle = "#6b4527";
+      c.fillRect(0, 0, w, h);
+      for (let g = 0; g < 120; g++) {
+        c.strokeStyle = `rgba(${rand() > 0.5 ? "30,15,5" : "140,95,55"},${rr(0.08, 0.25)})`;
+        c.lineWidth = rr(0.5, 2.5);
+        const y = rand() * h;
+        c.beginPath();
+        c.moveTo(0, y);
+        c.bezierCurveTo(w * 0.3, y + rr(-10, 10), w * 0.7, y + rr(-10, 10), w, y + rr(-6, 6));
+        c.stroke();
+      }
+    }),
+  );
+  const corkTex = track(
+    canvasTexture(512, 384, (c, w, h) => {
+      noiseFill(c, w, h, "#7a5530", 60, 30000);
+    }),
+  );
+  const blanketTex = track(
+    canvasTexture(512, 512, (c, w, h) => {
+      noiseFill(c, w, h, "#2a3b5c", 18, 20000);
+      c.strokeStyle = "rgba(0,0,0,0.12)";
+      for (let i = 0; i < w; i += 6) {
+        c.beginPath();
+        c.moveTo(i, 0);
+        c.lineTo(i, h);
+        c.stroke();
+      }
+    }, { repeat: [3, 3] }),
+  );
+  const rugTex = track(
+    canvasTexture(512, 512, (c, w, h) => {
+      c.fillStyle = "#23262f";
+      c.fillRect(0, 0, w, h);
+      for (let y = 0; y < h; y += 16) {
+        c.fillStyle = y % 64 === 0 ? "#3a3f4c" : "#2c3039";
+        c.fillRect(0, y, w, 8);
+      }
+      noiseFill(c, 0, 0, "#000", 0, 0);
+      for (let i = 0; i < 8000; i++) {
+        c.fillStyle = `rgba(255,255,255,${rr(0, 0.05)})`;
+        c.fillRect(rand() * w, rand() * h, 2, 1);
+      }
+    }),
+  );
+
+  const posterTex = track(
+    canvasTexture(420, 560, (c, w, h) => {
+      const sky = c.createLinearGradient(0, 0, 0, h);
+      sky.addColorStop(0, "#1d3a44");
+      sky.addColorStop(0.55, "#2c5159");
+      sky.addColorStop(1, "#1a2c33");
+      c.fillStyle = sky;
+      c.fillRect(0, 0, w, h);
+      c.fillStyle = "#e39a2e";
+      c.beginPath();
+      c.arc(w * 0.56, h * 0.3, w * 0.2, 0, Math.PI * 2);
+      c.fill();
+      const ridge = (base: number, amp: number, color: string, seed: number) => {
+        c.fillStyle = color;
+        c.beginPath();
+        c.moveTo(0, h);
+        for (let x = 0; x <= w; x += 6) {
+          const y = base - Math.abs(Math.sin(x * 0.012 + seed)) * amp - Math.sin(x * 0.041 + seed * 2) * amp * 0.25;
+          c.lineTo(x, y);
+        }
+        c.lineTo(w, h);
+        c.fill();
+      };
+      ridge(h * 0.52, 110, "#27454d", 1.3);
+      ridge(h * 0.6, 80, "#1e3940", 2.1);
+      ridge(h * 0.7, 60, "#162b31", 0.4);
+      c.fillStyle = "#284a52";
+      c.fillRect(0, h * 0.74, w, h * 0.1);
+      c.fillStyle = "rgba(227,154,46,0.25)";
+      c.fillRect(w * 0.48, h * 0.75, w * 0.16, 4);
+      c.fillStyle = "#101d22";
+      c.fillRect(0, h * 0.84, w, h * 0.16);
+    }),
+  );
+
+  const makePolaroid = (night: boolean) =>
+    track(
+      canvasTexture(160, 190, (c, w, h) => {
+        c.fillStyle = "#ddd8cc";
+        c.fillRect(0, 0, w, h);
+        const g = c.createLinearGradient(0, 12, 0, 150);
+        g.addColorStop(0, night ? "#0d1620" : "#3d5566");
+        g.addColorStop(1, night ? "#2a2218" : "#1c2830");
+        c.fillStyle = g;
+        c.fillRect(12, 12, w - 24, 138);
+        c.fillStyle = night ? "#e09a40" : "#8aa0ad";
+        c.beginPath();
+        c.arc(w * 0.5, 80, night ? 8 : 18, 0, Math.PI * 2);
+        c.fill();
+        c.fillStyle = "#101418";
+        c.beginPath();
+        c.moveTo(12, 150);
+        c.lineTo(50, 95);
+        c.lineTo(80, 120);
+        c.lineTo(120, 85);
+        c.lineTo(w - 12, 150);
+        c.fill();
+      }),
+    );
+
+  const codeScreenTex = track(
+    canvasTexture(512, 340, (c, w, h) => {
+      c.fillStyle = "#fff3dc";
+      c.fillRect(0, 0, w, h);
+      c.fillStyle = "#f1dcb6";
+      c.fillRect(0, 0, w, 26);
+      c.fillRect(0, 26, 90, h);
+      const colors = ["#c9894a", "#b07a4a", "#d8a46a", "#9a6a3e", "#e2b37e"];
+      for (let y = 44; y < h - 10; y += 14) {
+        let x = 104 + Math.floor(rr(0, 5)) * 16;
+        const words = Math.floor(rr(1, 6));
+        for (let i = 0; i < words; i++) {
+          const len = rr(18, 70);
+          c.fillStyle = pick(colors);
+          c.fillRect(x, y, len, 6);
+          x += len + 8;
+        }
+      }
+      for (let y = 44; y < h - 10; y += 22) {
+        c.fillStyle = "#d8b98a";
+        c.fillRect(14, y, rr(30, 64), 6);
+      }
+    }),
+  );
+
+  // Droplets stuck to the glass
+  const dropsTex = track(
+    canvasTexture(512, 512, (c, w, h) => {
+      c.clearRect(0, 0, w, h);
+      for (let i = 0; i < 380; i++) {
+        const x = rand() * w;
+        const y = rand() * h;
+        const r = rr(0.8, 3.2);
+        c.fillStyle = `rgba(170,200,230,${rr(0.15, 0.45)})`;
+        c.beginPath();
+        c.ellipse(x, y, r, r * 1.2, 0, 0, Math.PI * 2);
+        c.fill();
+        c.fillStyle = "rgba(255,255,255,0.5)";
+        c.fillRect(x - r * 0.3, y - r * 0.5, 1, 1);
+      }
+    }),
+  );
+  // Running streaks, scrolled downward every frame
+  const streakTex = track(
+    canvasTexture(256, 512, (c, w, h) => {
+      c.clearRect(0, 0, w, h);
+      for (let i = 0; i < 60; i++) {
+        const x = rand() * w;
+        const y = rand() * h;
+        const len = rr(20, 90);
+        const g = c.createLinearGradient(0, y, 0, y + len);
+        g.addColorStop(0, "rgba(180,210,240,0)");
+        g.addColorStop(1, "rgba(200,225,250,0.45)");
+        c.strokeStyle = g;
+        c.lineWidth = rr(0.8, 1.8);
+        c.beginPath();
+        c.moveTo(x, y);
+        c.lineTo(x + rr(-2, 2), y + len);
+        c.stroke();
+      }
+    }, { repeat: [2, 1] }),
+  );
+
+  // ---------- materials ----------
+
+  const wallMat = mat({ color: "#443f46", map: plasterTex, roughness: 0.95 });
+  const floorMat = mat({ color: "#948a80", map: woodFloorTex, roughness: 0.55 });
+  const ceilingMat = mat({ color: "#1c1f26", roughness: 1 });
+  const deskMat = mat({ color: "#ffffff", map: deskWoodTex, roughness: 0.55 });
+  const darkWoodMat = mat({ color: "#3b2817", roughness: 0.7 });
+  const metalMat = mat({ color: "#1d1f24", roughness: 0.4, metalness: 0.7 });
+  const chairMat = mat({ color: "#1c1e24", roughness: 0.75 });
+  const frameMat = mat({ color: "#16181d", roughness: 0.5 });
+  const paperMat = mat({ color: "#d9cfb6", roughness: 0.95 });
+  const leafMat = mat({ color: "#2f4a2c", roughness: 0.75, side: THREE.DoubleSide });
+  const potMat = mat({ color: "#4a3a30", roughness: 0.9 });
+
+  // ---------- architecture ----------
+
+  const W = ROOM.right - ROOM.left;
+  const D = ROOM.front - ROOM.back;
+  const floor = new THREE.Mesh(track(new THREE.PlaneGeometry(W, D)), floorMat);
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.set((ROOM.left + ROOM.right) / 2, 0, (ROOM.back + ROOM.front) / 2);
+  floor.receiveShadow = true;
+  scene.add(floor);
+
+  const ceiling = new THREE.Mesh(track(new THREE.PlaneGeometry(W, D)), ceilingMat);
+  ceiling.rotation.x = Math.PI / 2;
+  ceiling.position.set(floor.position.x, ROOM.height, floor.position.z);
+  scene.add(ceiling);
+
+  // Back wall with a window opening
+  const win = { x0: 1.15, x1: 2.95, y0: 1.0, y1: 2.65 };
+  const wallT = 0.12;
+  const bz = ROOM.back - wallT / 2;
+  box(win.x0 - ROOM.left, ROOM.height, wallT, wallMat, (ROOM.left + win.x0) / 2, ROOM.height / 2, bz, scene, false);
+  box(ROOM.right - win.x1, ROOM.height, wallT, wallMat, (win.x1 + ROOM.right) / 2, ROOM.height / 2, bz, scene, false);
+  box(win.x1 - win.x0, win.y0, wallT, wallMat, (win.x0 + win.x1) / 2, win.y0 / 2, bz, scene, false);
+  box(win.x1 - win.x0, ROOM.height - win.y1, wallT, wallMat, (win.x0 + win.x1) / 2, (win.y1 + ROOM.height) / 2, bz, scene, false);
+
+  // Side walls
+  box(wallT, ROOM.height, D, wallMat, ROOM.left - wallT / 2, ROOM.height / 2, (ROOM.back + ROOM.front) / 2, scene, false);
+  box(wallT, ROOM.height, D, wallMat, ROOM.right + wallT / 2, ROOM.height / 2, (ROOM.back + ROOM.front) / 2, scene, false);
+
+  // Skirting boards
+  const skirtMat = mat({ color: "#1b1d22", roughness: 0.6 });
+  box(W, 0.1, 0.02, skirtMat, (ROOM.left + ROOM.right) / 2, 0.05, ROOM.back + 0.01, scene, false);
+  box(0.02, 0.1, D, skirtMat, ROOM.left + 0.01, 0.05, (ROOM.back + ROOM.front) / 2, scene, false);
+  box(0.02, 0.1, D, skirtMat, ROOM.right - 0.01, 0.05, (ROOM.back + ROOM.front) / 2, scene, false);
+
+  // Front wall with doorway — the doorway view looks in from the hallway
+  const doorway = new THREE.Group();
+  scene.add(doorway);
+  const door = { x0: -0.25, x1: 0.8, h: 2.15 };
+  box(door.x0 - ROOM.left, ROOM.height, wallT, wallMat, (ROOM.left + door.x0) / 2, ROOM.height / 2, ROOM.front + wallT / 2, doorway, false);
+  box(ROOM.right - door.x1, ROOM.height, wallT, wallMat, (door.x1 + ROOM.right) / 2, ROOM.height / 2, ROOM.front + wallT / 2, doorway, false);
+  box(door.x1 - door.x0, ROOM.height - door.h, wallT, wallMat, (door.x0 + door.x1) / 2, (door.h + ROOM.height) / 2, ROOM.front + wallT / 2, doorway, false);
+  const jambMat = mat({ color: "#2a211a", roughness: 0.6 });
+  box(0.06, door.h, 0.16, jambMat, door.x0 - 0.03, door.h / 2, ROOM.front + wallT / 2, doorway);
+  box(0.06, door.h, 0.16, jambMat, door.x1 + 0.03, door.h / 2, ROOM.front + wallT / 2, doorway);
+
+  // Door leaf, swung open into the room, its edge catching the hallway light
+  const doorPivot = new THREE.Group();
+  doorPivot.position.set(door.x1, 0, ROOM.front);
+  doorPivot.rotation.y = -1.95;
+  doorway.add(doorPivot);
+  const doorMat = mat({ color: "#3a2a1c", roughness: 0.55 });
+  box(door.x1 - door.x0 - 0.02, door.h - 0.02, 0.04, doorMat, -(door.x1 - door.x0) / 2, door.h / 2, -0.02, doorPivot);
+  const glowEdge = new THREE.Mesh(boxGeo, track(new THREE.MeshBasicMaterial({ color: new THREE.Color(1.7, 0.95, 0.42) })));
+  // tucked just past the leaf's free edge, thinner than the leaf so no faces are coplanar
+  glowEdge.scale.set(0.01, door.h - 0.04, 0.032);
+  glowEdge.position.set(-(door.x1 - door.x0) + 0.006, door.h / 2, -0.02);
+  doorPivot.add(glowEdge);
+  const knob = new THREE.Mesh(track(new THREE.SphereGeometry(0.03, 16, 12)), mat({ color: "#6a5a45", metalness: 0.8, roughness: 0.35 }));
+  knob.position.set(-(door.x1 - door.x0) + 0.08, 1.0, -0.07);
+  doorPivot.add(knob);
+
+  // ---------- window ----------
+
+  const winW = win.x1 - win.x0;
+  const winH = win.y1 - win.y0;
+  const winCx = (win.x0 + win.x1) / 2;
+  const winCy = (win.y0 + win.y1) / 2;
+  const f = 0.05;
+  box(winW + f * 2, f, 0.14, frameMat, winCx, win.y0 - f / 2, ROOM.back, scene, false);
+  box(winW + f * 2, f, 0.14, frameMat, winCx, win.y1 + f / 2, ROOM.back, scene, false);
+  box(f, winH, 0.14, frameMat, win.x0 - f / 2, winCy, ROOM.back, scene, false);
+  box(f, winH, 0.14, frameMat, win.x1 + f / 2, winCy, ROOM.back, scene, false);
+  box(0.035, winH, 0.1, frameMat, winCx, winCy, ROOM.back, scene, false);
+  box(winW + 0.2, 0.04, 0.22, frameMat, winCx, win.y0 - 0.06, ROOM.back + 0.07, scene, false); // sill
+
+  // Western's campus, out past the rain. Only seen through the telescope; from the room the
+  // window shows a dark, rain-smeared night instead.
+  const campus = createCampus(track, rand);
+  scene.add(campus.group);
+  scene.fog = new THREE.FogExp2("#070b12", 0.0055);
+
+  // What you see through the glass from inside: soft and out of focus, repainted for time and weather
+  const backdropLights = Array.from({ length: 26 }, () => ({ x: rand(), y: rr(0.55, 0.95), r: rr(6, 16), tone: rand(), a: rr(0.5, 1) }));
+  const backdropStars = Array.from({ length: 140 }, () => ({ x: rand(), y: rr(0.02, 0.5), a: rr(0.3, 1) }));
+  const nightTex = track(canvasTexture(1024, 512, () => undefined));
+  const paintBackdrop = (day: number, dusk: number, weather: Weather) => {
+    const cv = nightTex.image as HTMLCanvasElement;
+    const c = cv.getContext("2d")!;
+    const w = cv.width;
+    const h = cv.height;
+    const overcast = weather !== "clear";
+    const pal = (night: string[], noon: string[], eve: string[]) =>
+      [0, 1, 2].map((i) => `#${new THREE.Color(night[i]).lerp(new THREE.Color(noon[i]), day).lerp(new THREE.Color(eve[i]), dusk).getHexString()}`);
+    const cols = overcast
+      ? pal(["#020308", "#060a12", "#0b0f17"], weather === "snow" ? ["#aab2bc", "#c3c9d0", "#d8dce1"] : ["#77828e", "#949ea8", "#a9b0b8"], ["#2b2a3a", "#6a5060", "#a07468"])
+      : pal(["#01030b", "#06112a", "#101c34"], ["#3a70b4", "#79a7d8", "#c3dbef"], ["#232a5c", "#8a5078", "#f3a060"]);
+    c.filter = "none";
+    const g = c.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, cols[0]);
+    g.addColorStop(0.6, cols[1]);
+    g.addColorStop(1, cols[2]);
+    c.fillStyle = g;
+    c.fillRect(0, 0, w, h);
+    if (weather === "clear" && day < 0.4) {
+      for (const st of backdropStars) {
+        c.fillStyle = `rgba(230,236,255,${st.a * (1 - day * 2.5) * (1 - dusk)})`;
+        c.fillRect(st.x * w, st.y * h, 1.6, 1.6);
+      }
+    }
+    // campus beyond, too soft to make out: silhouettes by day, a scatter of lights by night
+    c.filter = `blur(${overcast ? 16 : 9}px)`;
+    const land = new THREE.Color("#0a0d12").lerp(new THREE.Color(weather === "snow" ? "#b9bfc6" : "#4c5a4a"), day);
+    c.fillStyle = `#${land.getHexString()}`;
+    c.fillRect(0, h * 0.78, w, h);
+    c.fillStyle = `#${land.clone().multiplyScalar(0.8).getHexString()}`;
+    c.fillStyle = `#${new THREE.Color("#0a0d12").lerp(new THREE.Color("#7a6e60"), day).getHexString()}`;
+    c.fillRect(w * 0.42, h * 0.46, w * 0.06, h * 0.4); // the tower, just a shape in the haze
+    c.fillRect(w * 0.2, h * 0.66, w * 0.5, h * 0.2);
+    const lightsK = Math.max(0, 1 - day * 1.4);
+    for (const l of backdropLights) {
+      c.fillStyle =
+        l.tone < 0.65 ? `rgba(255,170,90,${0.25 * l.a * lightsK})` : l.tone < 0.85 ? `rgba(150,90,230,${0.2 * l.a * lightsK})` : `rgba(140,190,255,${0.15 * l.a * lightsK})`;
+      c.beginPath();
+      c.arc(l.x * w, l.y * h, l.r, 0, Math.PI * 2);
+      c.fill();
+    }
+    if (overcast) {
+      // a veil of rain or snow haze over everything
+      c.fillStyle = `rgba(${weather === "snow" ? "230,235,242" : "150,160,175"},${0.08 + day * 0.12})`;
+      c.fillRect(0, 0, w, h);
+    }
+    c.filter = "none";
+    nightTex.needsUpdate = true;
+  };
+  const nightBackdrop = new THREE.Mesh(track(new THREE.PlaneGeometry(60, 30)), track(new THREE.MeshBasicMaterial({ map: nightTex, fog: false })));
+  nightBackdrop.position.set(winCx, 1.5, ROOM.back - 22);
+  scene.add(nightBackdrop);
+
+  const dropsMat = track(new THREE.MeshBasicMaterial({ map: dropsTex, transparent: true, depthWrite: false, opacity: 0.45 }));
+  const streakMat = track(new THREE.MeshBasicMaterial({ map: streakTex, transparent: true, depthWrite: false, opacity: 0.55 }));
+  const glassGeo = track(new THREE.PlaneGeometry(winW, winH));
+  const glassDrops = new THREE.Mesh(glassGeo, dropsMat);
+  glassDrops.position.set(winCx, winCy, ROOM.back - 0.01);
+  const glassStreaks = new THREE.Mesh(glassGeo, streakMat);
+  glassStreaks.position.set(winCx, winCy, ROOM.back - 0.012);
+  scene.add(glassDrops, glassStreaks);
+
+  // Falling rain outside
+  const RAIN = 420;
+  const rainPos = new Float32Array(RAIN * 6);
+  const rainSpeed = new Float32Array(RAIN);
+  const rainBox = { x0: win.x0 - 1.5, x1: win.x1 + 1.5, y0: -1, y1: 4, z0: ROOM.back - 3, z1: ROOM.back - 0.15 };
+  let weather: Weather = options.initial?.weather ?? "rain";
+  const resetDrop = (i: number, y?: number) => {
+    const x = rr(rainBox.x0, rainBox.x1);
+    const yy = y ?? rr(rainBox.y0, rainBox.y1);
+    const z = rr(rainBox.z0, rainBox.z1);
+    const snow = weather === "snow";
+    const len = snow ? rr(0.012, 0.02) : rr(0.08, 0.18);
+    rainPos.set([x, yy, z, x - (snow ? 0.004 : 0.01), yy - len, z], i * 6);
+    rainSpeed[i] = snow ? rr(0.35, 0.8) : rr(5, 8);
+  };
+  for (let i = 0; i < RAIN; i++) resetDrop(i);
+  const rainGeo = track(new THREE.BufferGeometry());
+  rainGeo.setAttribute("position", new THREE.BufferAttribute(rainPos, 3));
+  const rainMat = track(new THREE.LineBasicMaterial({ color: "#8fb2d6", transparent: true, opacity: 0.16 }));
+  const rain = new THREE.LineSegments(rainGeo, rainMat);
+  scene.add(rain);
+
+  // Curtains — a wavy plane on each side of the window
+  const curtainMat = mat({ color: "#1c2a3c", roughness: 0.95, side: THREE.DoubleSide });
+  const makeCurtain = (x: number, width: number) => {
+    const g = track(new THREE.PlaneGeometry(width, 2.7, 40, 1));
+    const p = g.attributes.position as THREE.BufferAttribute;
+    for (let i = 0; i < p.count; i++) p.setZ(i, Math.sin(p.getX(i) * 22) * 0.04);
+    g.computeVertexNormals();
+    const m = new THREE.Mesh(g, curtainMat);
+    m.position.set(x, 1.55, ROOM.back + 0.14);
+    m.castShadow = true;
+    m.receiveShadow = true;
+    scene.add(m);
+  };
+  makeCurtain(win.x0 - 0.2, 0.55);
+  makeCurtain(win.x1 + 0.22, 0.55);
+  const rod = new THREE.Mesh(track(new THREE.CylinderGeometry(0.012, 0.012, winW + 1.1, 8)), metalMat);
+  rod.rotation.z = Math.PI / 2;
+  rod.position.set(winCx, 2.92, ROOM.back + 0.14);
+  scene.add(rod);
+
+  // ---------- desk area ----------
+
+  const desk = { x0: -4.05, x1: -0.3, z0: -2.72, z1: -1.95, top: 0.76 };
+  const deskCx = (desk.x0 + desk.x1) / 2;
+  const deskCz = (desk.z0 + desk.z1) / 2;
+  box(desk.x1 - desk.x0, 0.04, desk.z1 - desk.z0, deskMat, deskCx, desk.top - 0.02, deskCz);
+  for (const lx of [desk.x0 + 0.05, desk.x1 - 0.05])
+    for (const lz of [desk.z0 + 0.05, desk.z1 - 0.05]) box(0.04, desk.top - 0.04, 0.04, metalMat, lx, (desk.top - 0.04) / 2, lz);
+  box(desk.x1 - desk.x0 - 0.1, 0.06, 0.02, metalMat, deskCx, desk.top - 0.08, desk.z1 - 0.05);
+
+  // Laptop
+  const laptop = new THREE.Group();
+  laptop.position.set(-1.55, desk.top, -2.3);
+  laptop.rotation.y = -0.55;
+  scene.add(laptop);
+  const laptopMat = mat({ color: "#8a8d94", roughness: 0.35, metalness: 0.6 });
+  box(0.36, 0.018, 0.25, laptopMat, 0, 0.009, 0, laptop);
+  const lid = new THREE.Group();
+  lid.position.set(0, 0.018, -0.125);
+  lid.rotation.x = -0.28;
+  laptop.add(lid);
+  box(0.36, 0.24, 0.01, laptopMat, 0, 0.12, 0, lid);
+  const screenMat = track(new THREE.MeshBasicMaterial({ map: codeScreenTex, color: new THREE.Color(1.5, 1.35, 1.15) }));
+  const screen = new THREE.Mesh(track(new THREE.PlaneGeometry(0.33, 0.21)), screenMat);
+  screen.position.set(0, 0.125, 0.0056);
+  lid.add(screen);
+
+  // Mug
+  const mugMat = mat({ color: "#b9aa92", roughness: 0.55 });
+  const mug = new THREE.Group();
+  mug.position.set(-1.0, desk.top, -2.15);
+  scene.add(mug);
+  const mugBody = new THREE.Mesh(track(new THREE.CylinderGeometry(0.045, 0.042, 0.11, 24, 1, true)), mugMat);
+  mugBody.position.y = 0.055;
+  mugBody.castShadow = true;
+  (mugBody.material as THREE.MeshStandardMaterial).side = THREE.DoubleSide;
+  const mugBase = new THREE.Mesh(track(new THREE.CircleGeometry(0.042, 24)), mugMat);
+  mugBase.rotation.x = -Math.PI / 2;
+  mugBase.position.y = 0.004;
+  const coffee = new THREE.Mesh(track(new THREE.CircleGeometry(0.043, 24)), mat({ color: "#1d120a", roughness: 0.2 }));
+  coffee.rotation.x = -Math.PI / 2;
+  coffee.position.y = 0.09;
+  const handle = new THREE.Mesh(track(new THREE.TorusGeometry(0.028, 0.008, 8, 20)), mugMat);
+  handle.position.set(0.052, 0.058, 0);
+  handle.castShadow = true;
+  mug.add(mugBody, mugBase, coffee, handle);
+  const steam = createSteam(track);
+  steam.group.position.y = 0.092;
+  mug.add(steam.group);
+
+  // Phone, face up, glowing cyan
+  const phone = new THREE.Group();
+  phone.position.set(-0.62, desk.top, -2.08);
+  phone.rotation.y = 0.35;
+  scene.add(phone);
+  box(0.075, 0.008, 0.155, mat({ color: "#0c0d10", roughness: 0.3 }), 0, 0.004, 0, phone);
+  const phoneUi = createPhoneScreen(track);
+  const phoneScreenMat = track(new THREE.MeshBasicMaterial({ map: phoneUi.texture }));
+  const PHONE_IDLE = 0.42; // lock screen glow, as in the reference
+  phoneScreenMat.color.setScalar(PHONE_IDLE);
+  const phoneScreen = new THREE.Mesh(track(new THREE.PlaneGeometry(0.066, 0.142)), phoneScreenMat);
+  phoneScreen.rotation.x = -Math.PI / 2;
+  phoneScreen.position.y = 0.0085;
+  phone.add(phoneScreen);
+
+  // Pencil cup
+  const cup = new THREE.Mesh(track(new THREE.CylinderGeometry(0.045, 0.04, 0.12, 16, 1, true)), mat({ color: "#3d3a38", roughness: 0.7, side: THREE.DoubleSide }));
+  cup.position.set(-3.75, desk.top + 0.06, -2.45);
+  cup.castShadow = true;
+  scene.add(cup);
+  const pencilGeo = track(new THREE.CylinderGeometry(0.004, 0.004, 0.19, 6));
+  const pencilMats = ["#2a2a2a", "#6b4b2a", "#1d2b3a", "#503020"].map((c) => mat({ color: c, roughness: 0.6 }));
+  for (let i = 0; i < 6; i++) {
+    const p = new THREE.Mesh(pencilGeo, pencilMats[i % pencilMats.length]);
+    p.position.set(-3.75 + rr(-0.02, 0.02), desk.top + 0.12, -2.45 + rr(-0.02, 0.02));
+    p.rotation.set(rr(-0.25, 0.25), 0, rr(-0.25, 0.25));
+    p.castShadow = true;
+    scene.add(p);
+  }
+
+  // Book stack on the desk
+  const bookColors = ["#2d4a5a", "#6b2e22", "#3a4a3a", "#7a6a4a", "#2a3348", "#5a3a4a", "#8a7a5a", "#1f3a3a", "#6a5a3a", "#3a2a22"];
+  let stackY = desk.top;
+  for (let i = 0; i < 3; i++) {
+    const h = rr(0.025, 0.045);
+    const b = box(0.24 - i * 0.02, h, 0.17, mat({ color: pick(bookColors), roughness: 0.8 }), -3.45, stackY + h / 2, -2.2);
+    b.rotation.y = rr(-0.2, 0.2);
+    stackY += h;
+  }
+
+  // ---------- plants ----------
+
+  const leafGeo = track(new THREE.CircleGeometry(0.035, 8));
+  leafGeo.scale(1, 1.8, 1);
+  function makePlant(x: number, y: number, z: number, opts: { potR: number; vines: number; vineLen: number; bushy: number }) {
+    const g = new THREE.Group();
+    g.position.set(x, y, z);
+    const pot = new THREE.Mesh(track(new THREE.CylinderGeometry(opts.potR, opts.potR * 0.78, opts.potR * 1.6, 16)), potMat);
+    pot.position.y = opts.potR * 0.8;
+    pot.castShadow = true;
+    g.add(pot);
+    const leaves: THREE.Matrix4[] = [];
+    const tmp = new THREE.Object3D();
+    const addLeaf = (px: number, py: number, pz: number) => {
+      tmp.position.set(px, py, pz);
+      tmp.rotation.set(rr(-1.2, 1.2), rr(0, Math.PI * 2), rr(-1.2, 1.2));
+      const s = rr(0.7, 1.3);
+      tmp.scale.set(s, s, s);
+      tmp.updateMatrix();
+      leaves.push(tmp.matrix.clone());
+    };
+    const top = opts.potR * 1.6;
+    for (let i = 0; i < opts.bushy; i++) {
+      const a = rand() * Math.PI * 2;
+      const r = rr(0, opts.potR * 1.6);
+      addLeaf(Math.cos(a) * r, top + rr(0, opts.potR * 2.2), Math.sin(a) * r);
+    }
+    for (let v = 0; v < opts.vines; v++) {
+      const a = rand() * Math.PI * 2;
+      const len = opts.vineLen * rr(0.5, 1);
+      for (let t = 0; t < 1; t += 0.06) {
+        const out = opts.potR * (1 + t * 0.6);
+        addLeaf(Math.cos(a) * out + rr(-0.02, 0.02), top - t * len, Math.sin(a) * out + rr(-0.02, 0.02));
+      }
+    }
+    const inst = new THREE.InstancedMesh(leafGeo, leafMat, leaves.length);
+    leaves.forEach((m, i) => inst.setMatrixAt(i, m));
+    inst.castShadow = true;
+    g.add(inst);
+    scene.add(g);
+    return g;
+  }
+
+  makePlant(-3.95, desk.top, -2.55, { potR: 0.07, vines: 0, vineLen: 0, bushy: 60 });
+
+  // ---------- bookshelf ----------
+
+  const shelf = { x0: -1.25, x1: -0.05, z0: -2.99, z1: -2.63, h: 2.05 };
+  const shelfCx = (shelf.x0 + shelf.x1) / 2;
+  const shelfCz = (shelf.z0 + shelf.z1) / 2;
+  const sd = shelf.z1 - shelf.z0;
+  box(0.035, shelf.h, sd, darkWoodMat, shelf.x0, shelf.h / 2, shelfCz);
+  box(0.035, shelf.h, sd, darkWoodMat, shelf.x1, shelf.h / 2, shelfCz);
+  box(shelf.x1 - shelf.x0, shelf.h, 0.015, darkWoodMat, shelfCx, shelf.h / 2, shelf.z0 + 0.008);
+  const levels = [0.04, 0.5, 0.98, 1.46, shelf.h];
+  for (const ly of levels) box(shelf.x1 - shelf.x0, 0.03, sd, darkWoodMat, shelfCx, ly, shelfCz);
+
+  const bookMats = bookColors.map((c) => mat({ color: c, roughness: 0.8 }));
+  for (let l = 0; l < levels.length - 1; l++) {
+    const base = levels[l] + 0.015;
+    const maxH = levels[l + 1] - base - 0.04;
+    let x = shelf.x0 + 0.03;
+    const end = shelf.x1 - 0.03;
+    const gapAt = rr(0.5, 0.9);
+    while (x < end - 0.03) {
+      const progress = (x - shelf.x0) / (shelf.x1 - shelf.x0);
+      if (progress > gapAt && progress < gapAt + 0.08) {
+        // a small horizontal stack in the gap
+        let sy = base;
+        for (let s = 0; s < 3; s++) {
+          const hh = rr(0.025, 0.04);
+          box(0.2, hh, 0.24, pick(bookMats), x + 0.1, sy + hh / 2, shelfCz + 0.02);
+          sy += hh;
+        }
+        x += 0.22;
+        continue;
+      }
+      const bw = rr(0.025, 0.06);
+      const bh = Math.min(maxH, rr(0.26, 0.4));
+      const b = box(bw, bh, rr(0.2, 0.27), pick(bookMats), x + bw / 2, base + bh / 2, shelfCz + 0.02);
+      if (rand() < 0.06) b.rotation.z = rr(-0.18, -0.08);
+      x += bw + 0.003;
+    }
+  }
+  // Top of shelf: hanging plant, a small globe, stacked books
+  makePlant(-1.05, shelf.h + 0.015, shelfCz, { potR: 0.09, vines: 7, vineLen: 1.3, bushy: 70 });
+  // a little radio on top of the shelf; click it to play
+  const radio = createRadio(track);
+  radio.group.position.set(-0.3, shelf.h + 0.015, shelfCz + 0.02);
+  radio.group.rotation.y = -0.12;
+  scene.add(radio.group);
+  let ty = shelf.h + 0.015;
+  for (let i = 0; i < 3; i++) {
+    const hh = rr(0.03, 0.05);
+    box(0.26, hh, 0.19, pick(bookMats), -0.65, ty + hh / 2, shelfCz);
+    ty += hh;
+  }
+  box(0.2, 0.02, 0.06, darkWoodMat, -0.65, ty + 0.01, shelfCz); // incense holder-ish
+
+  // Poster above the shelf
+  const poster = new THREE.Group();
+  poster.position.set(-0.62, 2.72, ROOM.back + 0.02);
+  scene.add(poster);
+  box(0.6, 0.8, 0.03, frameMat, 0, 0, 0, poster, false);
+  const posterArt = new THREE.Mesh(track(new THREE.PlaneGeometry(0.52, 0.7)), mat({ map: posterTex, emissive: "#ffffff", emissiveMap: posterTex, emissiveIntensity: 0.12, roughness: 0.6 }));
+  posterArt.position.z = 0.016;
+  poster.add(posterArt);
+
+  // ---------- corkboard ----------
+
+  const cork = new THREE.Group();
+  cork.position.set(-3.1, 1.75, ROOM.back + 0.03);
+  scene.add(cork);
+  box(1.5, 1.05, 0.04, darkWoodMat, 0, 0, 0, cork, false);
+  const corkFace = new THREE.Mesh(track(new THREE.PlaneGeometry(1.42, 0.97)), mat({ map: corkTex, roughness: 1 }));
+  corkFace.position.z = 0.021;
+  cork.add(corkFace);
+  const pinMat = mat({ color: "#aa3a2a", roughness: 0.4 });
+  const pinGeo = track(new THREE.SphereGeometry(0.008, 8, 6));
+  const addPinned = (w: number, h: number, x: number, y: number, material: THREE.Material) => {
+    const n = new THREE.Mesh(track(new THREE.PlaneGeometry(w, h)), material);
+    n.position.set(x, y, 0.024);
+    n.rotation.z = rr(-0.08, 0.08);
+    cork.add(n);
+    const pin = new THREE.Mesh(pinGeo, pinMat);
+    pin.position.set(x, y + h / 2 - 0.02, 0.03);
+    cork.add(pin);
+  };
+  addPinned(0.2, 0.26, -0.45, 0.25, paperMat);
+  addPinned(0.18, 0.22, -0.12, 0.05, paperMat);
+  addPinned(0.19, 0.25, 0.35, 0.22, paperMat);
+  addPinned(0.17, 0.16, 0.38, -0.12, paperMat);
+  addPinned(0.2, 0.24, -0.5, -0.22, mat({ map: makePolaroid(false), roughness: 0.6 }));
+  addPinned(0.2, 0.24, -0.15, -0.3, mat({ map: makePolaroid(true), roughness: 0.6 }));
+
+  // ---------- chair & figure ----------
+
+  const seat = new THREE.Group();
+  seat.position.set(-2.25, 0, -1.45);
+  seat.rotation.y = -0.12;
+  scene.add(seat);
+  const cushion = new THREE.Mesh(track(new RoundedBoxGeometry(0.5, 0.075, 0.48, 4, 0.03)), chairMat);
+  cushion.position.y = 0.5;
+  const backGeo = track(new RoundedBoxGeometry(0.48, 0.6, 0.06, 4, 0.028));
+  {
+    // curve the backrest around the sitter
+    const p = backGeo.attributes.position as THREE.BufferAttribute;
+    for (let i = 0; i < p.count; i++) p.setZ(i, p.getZ(i) + p.getX(i) ** 2 * 0.5);
+    backGeo.computeVertexNormals();
+  }
+  const back = new THREE.Mesh(backGeo, chairMat);
+  back.position.set(0, 0.93, 0.27);
+  back.rotation.x = 0.1;
+  for (const m of [cushion, back]) {
+    m.castShadow = m.receiveShadow = true;
+    seat.add(m);
+  }
+  box(0.035, 0.26, 0.035, metalMat, -0.2, 0.66, 0.26, seat);
+  box(0.035, 0.26, 0.035, metalMat, 0.2, 0.66, 0.26, seat);
+  const post = new THREE.Mesh(track(new THREE.CylinderGeometry(0.03, 0.03, 0.4, 10)), metalMat);
+  post.position.y = 0.26;
+  seat.add(post);
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI * 2;
+    const leg = box(0.3, 0.03, 0.04, metalMat, Math.cos(a) * 0.15, 0.06, Math.sin(a) * 0.15, seat);
+    leg.rotation.y = -a;
+  }
+
+  // A seated figure seen from behind — the anchor of the scene
+  const person = createFigure(track, rand);
+  const figure = person.group;
+  figure.position.set(-2.22, 0.535, -1.55);
+  figure.rotation.y = -0.12;
+  scene.add(figure);
+
+  // ---------- bed ----------
+
+  const bed = { x0: 2.1, x1: 3.95, z0: -2.95, z1: 0.9, top: 0.58 };
+  const bedCx = (bed.x0 + bed.x1) / 2;
+  const bedW = bed.x1 - bed.x0;
+  const bedL = bed.z1 - bed.z0;
+  const bedCz = (bed.z0 + bed.z1) / 2;
+  box(bedW + 0.06, 0.28, bedL + 0.06, darkWoodMat, bedCx, 0.18, bedCz);
+  box(bedW, 0.22, bedL, mat({ color: "#6c6e78", roughness: 0.9 }), bedCx, 0.43, bedCz);
+  box(bedW + 0.08, 0.95, 0.06, darkWoodMat, bedCx, 0.48, bed.z0 - 0.02);
+
+  const blanketGeo = track(new THREE.PlaneGeometry(bedW + 0.7, bedL * 0.78 + 0.35, 70, 90));
+  blanketGeo.rotateX(-Math.PI / 2);
+  {
+    const p = blanketGeo.attributes.position as THREE.BufferAttribute;
+    const halfW = bedW / 2;
+    const coverL = bedL * 0.78;
+    const footZ = coverL / 2 - 0.35 / 2;
+    for (let i = 0; i < p.count; i++) {
+      let x = p.getX(i);
+      let z = p.getZ(i);
+      let y = 0;
+      const dx = Math.max(0, Math.abs(x) - halfW);
+      const dz = Math.max(0, z - footZ);
+      const wr = Math.sin(x * 9 + z * 3) * 0.012 + Math.sin(z * 13 + x * 2) * 0.01 + Math.sin(x * 23 - z * 17) * 0.004;
+      if (dx > 0) {
+        x = Math.sign(x) * (halfW + 0.02 + dx * 0.06);
+        y -= dx * 1.3;
+      }
+      if (dz > 0) {
+        z = footZ + 0.02 + dz * 0.06;
+        y -= dz * 1.3;
+      }
+      p.setXYZ(i, x, y + wr, z);
+    }
+    blanketGeo.computeVertexNormals();
+  }
+  const blanket = new THREE.Mesh(blanketGeo, mat({ map: blanketTex, color: "#a8b6d4", roughness: 1, side: THREE.DoubleSide }));
+  blanket.position.set(bedCx, bed.top + 0.02, bedCz + bedL * 0.11);
+  blanket.castShadow = true;
+  blanket.receiveShadow = true;
+  scene.add(blanket);
+  const pillowMat = mat({ color: "#394a66", roughness: 0.95 });
+  for (const px of [bedCx - 0.45, bedCx + 0.45]) {
+    const pillow = new THREE.Mesh(track(new THREE.SphereGeometry(0.5, 24, 12)), pillowMat);
+    pillow.scale.set(0.7, 0.2, 0.38);
+    pillow.position.set(px, bed.top + 0.06, bed.z0 + 0.3);
+    pillow.castShadow = true;
+    pillow.receiveShadow = true;
+    scene.add(pillow);
+  }
+
+  // A ginger cat asleep near the foot of the bed
+  const cat = createCat(track);
+  cat.group.position.set(2.48, 0.603, -1.35);
+  cat.group.rotation.y = 0.35;
+  scene.add(cat.group);
+
+  // Wall clock between the bookshelf and the window; it keeps real time from 2:47
+  const wallClock = createWallClock(track, 2 * 3600 + 47 * 60); // re-synced to the visitor's time below
+  wallClock.group.position.set(0.32, 2.3, ROOM.back + 0.03);
+  scene.add(wallClock.group);
+
+  // Rug
+  const rug = new THREE.Mesh(track(new THREE.PlaneGeometry(2.0, 2.8)), mat({ map: rugTex, roughness: 1 }));
+  rug.rotation.x = -Math.PI / 2;
+  rug.rotation.z = 0.02;
+  rug.position.set(0.9, 0.004, 1.3);
+  rug.receiveShadow = true;
+  scene.add(rug);
+
+  // A trailing plant high on the left wall, near the doorway
+  // (no shadows: the hallway spotlight would throw huge leaf shadows across the wall)
+  makePlant(ROOM.left + 0.25, 2.25, 0.6, { potR: 0.1, vines: 8, vineLen: 1.1, bushy: 60 }).traverse((o) => (o.castShadow = false));
+  box(0.3, 0.025, 0.3, darkWoodMat, ROOM.left + 0.16, 2.24, 0.6); // wall shelf
+
+  // ---------- warm practical lights ----------
+
+  // Fairy lights: a sagging string of bulbs whose glow blooms in post
+  const bulbGeo = track(new THREE.SphereGeometry(0.022, 12, 10));
+  const bulbMat = track(new THREE.MeshBasicMaterial({ color: "#ffffff" }));
+  const wireMat = track(new THREE.LineBasicMaterial({ color: "#1a1410" }));
+  const fairyBulbs: { mesh: THREE.InstancedMesh; phase: Float32Array }[] = [];
+  const fairyLights: THREE.PointLight[] = [];
+  const BULB_COLOR = new THREE.Color(2.2, 0.95, 0.28); // HDR so it blooms
+  function stringLights(points: THREE.Vector3[], sag: number, count: number, lights: number) {
+    const path = new THREE.CurvePath<THREE.Vector3>();
+    for (let i = 0; i < points.length - 1; i++) {
+      const a = points[i];
+      const b = points[i + 1];
+      const mid = a.clone().lerp(b, 0.5);
+      mid.y -= sag;
+      path.add(new THREE.QuadraticBezierCurve3(a, mid, b));
+    }
+    const wire = new THREE.Line(track(new THREE.BufferGeometry().setFromPoints(path.getSpacedPoints(120))), wireMat);
+    scene.add(wire);
+    const inst = new THREE.InstancedMesh(bulbGeo, bulbMat, count);
+    const phase = new Float32Array(count);
+    const o = new THREE.Object3D();
+    for (let i = 0; i < count; i++) {
+      o.position.copy(path.getPointAt((i + 0.5) / count));
+      o.position.y -= 0.02;
+      o.updateMatrix();
+      inst.setMatrixAt(i, o.matrix);
+      inst.setColorAt(i, BULB_COLOR);
+      phase[i] = rand() * Math.PI * 2;
+    }
+    scene.add(inst);
+    fairyBulbs.push({ mesh: inst, phase });
+    for (let i = 0; i < lights; i++) {
+      const l = new THREE.PointLight("#ffac55", 0.8, 2.8, 2);
+      l.position.copy(path.getPointAt((i + 0.5) / lights));
+      l.position.z += 0.12;
+      scene.add(l);
+      fairyLights.push(l);
+    }
+  }
+  // above the corkboard and desk, pinned to the back wall
+  stringLights(
+    [new THREE.Vector3(ROOM.left + 0.05, 2.75, ROOM.back + 0.06), new THREE.Vector3(-2.7, 2.8, ROOM.back + 0.06), new THREE.Vector3(-1.35, 2.72, ROOM.back + 0.06)],
+    0.22, 34, 2,
+  );
+  // along the left wall toward the doorway
+  stringLights(
+    [new THREE.Vector3(ROOM.left + 0.06, 2.75, ROOM.back + 0.1), new THREE.Vector3(ROOM.left + 0.06, 2.85, 0.1), new THREE.Vector3(ROOM.left + 0.06, 2.8, 2.6)],
+    0.25, 40, 2,
+  );
+
+  // Bedside table and lamp
+  const stand = new THREE.Group();
+  stand.position.set(1.72, 0, -2.55);
+  scene.add(stand);
+  box(0.5, 0.52, 0.42, darkWoodMat, 0, 0.26, 0, stand);
+  box(0.46, 0.01, 0.005, mat({ color: "#0e0a07" }), 0, 0.36, 0.212, stand, false); // drawer seam
+  const lampBase = new THREE.Mesh(track(new THREE.CylinderGeometry(0.06, 0.075, 0.03, 24)), mat({ color: "#2c2520", roughness: 0.4, metalness: 0.5 }));
+  lampBase.position.y = 0.535;
+  const lampStem = new THREE.Mesh(track(new THREE.CylinderGeometry(0.008, 0.008, 0.24, 8)), metalMat);
+  lampStem.position.y = 0.66;
+  const shadeMat = mat({ color: "#e8cfa6", emissive: "#ffb366", emissiveIntensity: 1.6, roughness: 0.9, side: THREE.DoubleSide });
+  const shade = new THREE.Mesh(track(new THREE.CylinderGeometry(0.1, 0.16, 0.2, 32, 1, true)), shadeMat);
+  shade.position.y = 0.82;
+  const bulbGlowMat = track(new THREE.MeshBasicMaterial({ color: new THREE.Color(3, 2, 1.1) }));
+  const bulbGlow = new THREE.Mesh(track(new THREE.SphereGeometry(0.035, 16, 12)), bulbGlowMat);
+  bulbGlow.position.y = 0.8;
+  stand.add(lampBase, lampStem, shade, bulbGlow);
+  const bedLamp = new THREE.PointLight("#ffac5c", 2.6, 5, 1.7);
+  bedLamp.position.set(0, 0.8, 0.02);
+  stand.add(bedLamp);
+  // a book and glasses-case on the nightstand
+  box(0.16, 0.03, 0.22, pick(bookMats), -0.13, 0.535, 0.06, stand).rotation.y = 0.3;
+
+  // Candle on the desk, beside the books
+  const candle = new THREE.Group();
+  candle.position.set(-3.05, desk.top, -2.45);
+  scene.add(candle);
+  const wax = new THREE.Mesh(track(new THREE.CylinderGeometry(0.035, 0.035, 0.09, 20)), mat({ color: "#e9dcc4", roughness: 0.6, emissive: "#ff9a40", emissiveIntensity: 0.15 }));
+  wax.position.y = 0.045;
+  wax.castShadow = true;
+  const flameMat = track(new THREE.MeshBasicMaterial({ color: new THREE.Color(3.2, 1.9, 0.7), transparent: true, opacity: 0.95 }));
+  const flame = new THREE.Mesh(track(new THREE.SphereGeometry(0.011, 12, 10)), flameMat);
+  flame.scale.set(1, 2.3, 1);
+  flame.position.y = 0.118;
+  candle.add(wax, flame);
+  const candleLight = new THREE.PointLight("#ff9440", 0.9, 2.8, 2);
+  candleLight.position.y = 0.16;
+  candle.add(candleLight);
+
+  // Ceiling light: a frosted dome, off by default; brightness is set from the light switch panel
+  const ceilingFixture = new THREE.Group();
+  ceilingFixture.position.set(0.2, ROOM.height, 0.4);
+  scene.add(ceilingFixture);
+  const domeMat = mat({ color: "#d9d3c8", emissive: "#fff0d8", emissiveIntensity: 0, roughness: 0.4, side: THREE.DoubleSide });
+  const dome = new THREE.Mesh(track(new THREE.SphereGeometry(0.24, 32, 16, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2)), domeMat);
+  dome.scale.y = 0.5;
+  const domeRim = new THREE.Mesh(track(new THREE.TorusGeometry(0.24, 0.012, 8, 40)), metalMat);
+  domeRim.rotation.x = Math.PI / 2;
+  domeRim.position.y = -0.005;
+  ceilingFixture.add(dome, domeRim);
+  const ceilingLight = new THREE.PointLight("#ffeedd", 0, 14, 1.4);
+  ceilingLight.position.y = -0.25;
+  ceilingFixture.add(ceilingLight);
+
+  // Light switch on the back wall, between the bookshelf and the telescope.
+  // A small amber locator LED makes it findable in the dark, as real ones do.
+  const lightSwitch = new THREE.Group();
+  lightSwitch.position.set(0.2, 1.22, ROOM.back + 0.006);
+  scene.add(lightSwitch);
+  const plateMat = mat({ color: "#e6e0d4", roughness: 0.35 });
+  const plate = new THREE.Mesh(track(new RoundedBoxGeometry(0.075, 0.118, 0.01, 3, 0.004)), plateMat);
+  const rocker = new THREE.Mesh(track(new RoundedBoxGeometry(0.03, 0.055, 0.012, 3, 0.004)), plateMat);
+  rocker.position.z = 0.008;
+  const switchLedMat = track(new THREE.MeshBasicMaterial({ color: new THREE.Color(2.2, 1.2, 0.35) }));
+  const switchLed = new THREE.Mesh(track(new THREE.CircleGeometry(0.0035, 12)), switchLedMat);
+  switchLed.position.set(0, -0.043, 0.0055);
+  for (const m of [plate, rocker]) {
+    m.castShadow = true;
+    m.receiveShadow = true;
+  }
+  lightSwitch.add(plate, rocker, switchLed);
+  const switchParts: THREE.Object3D[] = [plate, rocker, switchLed];
+
+  // ---------- lighting ----------
+
+  const hemi = new THREE.HemisphereLight("#2a3047", "#1c1109", 0.55);
+  scene.add(hemi);
+  // daylight bouncing in from the window, scaled by time of day (off at night)
+  const daylightFill = new THREE.PointLight("#dfe8f5", 0, 14, 1.2);
+  daylightFill.position.set(winCx, 1.9, ROOM.back + 1.3);
+  scene.add(daylightFill);
+
+  // The laptop is the key light
+  const laptopLight = new THREE.PointLight("#ffa04a", 4.5, 8, 1.5);
+  laptopLight.position.set(0, 0.16, 0.14);
+  laptopLight.castShadow = true;
+  laptopLight.shadow.mapSize.set(1024, 1024);
+  laptopLight.shadow.bias = -0.0005;
+  laptopLight.shadow.radius = 10;
+  laptopLight.shadow.blurSamples = 16;
+  laptop.add(laptopLight);
+
+  // Soft fill from the screen onto the wall and the figure's face side
+  const screenGlow = new THREE.RectAreaLight("#ffb068", 6, 0.35, 0.24);
+  screenGlow.position.set(0, 0.14, 0.02);
+  screenGlow.lookAt(new THREE.Vector3(0, 0.14, 1));
+  lid.add(screenGlow);
+
+  // Cool light from the city through the window — the one cold note
+  const windowLight = new THREE.RectAreaLight("#4a78b8", 1.8, winW, winH);
+  windowLight.position.set(winCx, winCy, ROOM.back - 0.02);
+  windowLight.lookAt(winCx, winCy - 0.4, 0);
+  scene.add(windowLight);
+
+  const moon = new THREE.DirectionalLight("#4c6a9a", 0.3);
+  moon.position.set(winCx, 3.5, ROOM.back - 4);
+  moon.target.position.set(1.5, 0, 0);
+  moon.castShadow = true;
+  moon.shadow.mapSize.set(1024, 1024);
+  moon.shadow.camera.left = -4;
+  moon.shadow.camera.right = 4;
+  moon.shadow.camera.top = 4;
+  moon.shadow.camera.bottom = -4;
+  moon.shadow.bias = -0.0005;
+  moon.shadow.radius = 6;
+  moon.shadow.blurSamples = 12;
+  scene.add(moon, moon.target);
+
+  // Phone glow
+  const phoneLight = new THREE.PointLight("#48d8ee", 0.15, 0.8, 2);
+  phoneLight.position.set(0, 0.05, 0);
+  phone.add(phoneLight);
+
+  // Warm hallway light spilling past the door
+  const hallLight = new THREE.SpotLight("#ffa458", 22, 12, 0.55, 0.75, 1.6);
+  hallLight.position.set(1.2, 2.0, ROOM.front + 1.2);
+  hallLight.target.position.set(-0.3, 0, 1.2);
+  hallLight.castShadow = true;
+  hallLight.shadow.mapSize.set(1024, 1024);
+  hallLight.shadow.bias = -0.0005;
+  hallLight.shadow.radius = 8;
+  hallLight.shadow.blurSamples = 16;
+  scene.add(hallLight, hallLight.target);
+  const hallFill = new THREE.PointLight("#ff9a4a", 1.4, 3, 2);
+  hallFill.position.set(door.x1 + 0.15, 1.3, ROOM.front + 0.5);
+  doorway.add(hallFill);
+
+  // Shadow maps are refreshed on a slow tick in the loop rather than every frame
+  renderer.shadowMap.autoUpdate = false;
+  renderer.shadowMap.needsUpdate = true;
+
+  // ---------- dust motes in the lamp light ----------
+
+  const DUST = 160;
+  const dustPos = new Float32Array(DUST * 3);
+  const dustSeed = new Float32Array(DUST);
+  for (let i = 0; i < DUST; i++) {
+    dustPos.set([rr(-2.8, -0.9), rr(0.8, 2.2), rr(-2.8, -1.6)], i * 3);
+    dustSeed[i] = rand() * 100;
+  }
+  const dustGeo = track(new THREE.BufferGeometry());
+  dustGeo.setAttribute("position", new THREE.BufferAttribute(dustPos, 3));
+  const dustTex = track(
+    canvasTexture(32, 32, (c) => {
+      const g = c.createRadialGradient(16, 16, 0, 16, 16, 16);
+      g.addColorStop(0, "rgba(255,255,255,1)");
+      g.addColorStop(1, "rgba(255,255,255,0)");
+      c.fillStyle = g;
+      c.fillRect(0, 0, 32, 32);
+    }),
+  );
+  const dust = new THREE.Points(
+    dustGeo,
+    track(new THREE.PointsMaterial({ map: dustTex, color: "#ffc58a", size: 0.008, transparent: true, opacity: 0.28, depthWrite: false, blending: THREE.AdditiveBlending })),
+  );
+  scene.add(dust);
+
+  // ---------- post-processing ----------
+
+  // Multisampled HDR target so edges stay clean and bright bulbs bloom without banding
+  const rt = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 });
+  const composer = new EffectComposer(renderer, rt);
+  composer.addPass(new RenderPass(scene, camera));
+  const bloom = new UnrealBloomPass(new THREE.Vector2(container.clientWidth, container.clientHeight), 0.5, 0.75, 0.9);
+  composer.addPass(bloom);
+  composer.addPass(new OutputPass());
+  // Final grade: warm vignette, fine film grain, and a fade in from black
+  const finish = new ShaderPass({
+    uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uFade: { value: 0 }, uScope: { value: 0 }, uAspect: { value: 1 }, uRadius: { value: 0.46 }, uTint: { value: new THREE.Vector3(1, 1, 1) } },
+    vertexShader: /* glsl */ `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: /* glsl */ `
+      uniform sampler2D tDiffuse; uniform float uTime; uniform float uFade; uniform float uScope; uniform float uAspect; uniform float uRadius; uniform vec3 uTint; varying vec2 vUv;
+      float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+      void main() {
+        vec4 c = texture2D(tDiffuse, vUv);
+        vec2 d = vUv - 0.5;
+        // telescope eyepiece: round aperture, darkened rim, a touch of colour fringing at the edge
+        float r = length(d * vec2(uAspect, 1.0));
+        float R = uRadius;
+        if (uScope > 0.0) {
+          float ca = smoothstep(R * 0.45, R, r) * 0.006 * uScope;
+          c.r = texture2D(tDiffuse, vUv + d * ca).r;
+          c.b = texture2D(tDiffuse, vUv - d * ca).b;
+        }
+        float aperture = smoothstep(R, R - 0.01, r) * (0.35 + 0.65 * smoothstep(R, R * 0.6, r));
+        c.rgb *= mix(1.0, aperture, uScope);
+        float vig = smoothstep(0.85, 0.2, length(d * vec2(1.1, 1.25)));
+        c.rgb *= mix(vec3(0.55, 0.45, 0.4), vec3(1.0), vig);
+        c.rgb *= uTint; // colour temperature from the light switch panel
+        c.rgb += (hash(vUv * 1000.0 + fract(uTime * 7.0)) - 0.5) * 0.022;
+        gl_FragColor = vec4(c.rgb * uFade, 1.0);
+      }`,
+  });
+  composer.addPass(finish);
+
+  // ---------- telescope ----------
+  // Brass refractor on a wooden tripod, aimed out of the window toward campus
+  const scopeMount = new THREE.Vector3(0.72, 1.22, -2.42);
+  const scopeDir = new THREE.Vector3(winCx, winCy + 0.1, ROOM.back).sub(scopeMount).normalize();
+  const brassMat = mat({ color: "#b58a48", metalness: 0.9, roughness: 0.28 });
+  const blackMat = mat({ color: "#121214", roughness: 0.45, metalness: 0.3 });
+  const tripodWood = mat({ color: "#5a3a22", roughness: 0.55 });
+  const telescopeParts: THREE.Mesh[] = [];
+  const scopePart = (geo: THREE.BufferGeometry, material: THREE.Material, parent: THREE.Object3D) => {
+    const m = new THREE.Mesh(track(geo), material);
+    m.castShadow = true;
+    m.receiveShadow = true;
+    parent.add(m);
+    telescopeParts.push(m);
+    return m;
+  };
+  const tube = new THREE.Group();
+  tube.position.copy(scopeMount);
+  tube.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), scopeDir);
+  scene.add(tube);
+  scopePart(new THREE.CylinderGeometry(0.043, 0.036, 0.78, 32), brassMat, tube).position.y = 0.1;
+  scopePart(new THREE.CylinderGeometry(0.05, 0.05, 0.16, 32, 1, true), blackMat, tube).position.y = 0.44; // dew shield
+  for (const y of [-0.2, 0.1, 0.36]) scopePart(new THREE.TorusGeometry(0.041, 0.006, 8, 32), brassMat, tube).position.y = y;
+  tube.children.slice(-3).forEach((m) => (m.rotation.x = Math.PI / 2));
+  const lensMat = mat({ color: "#0c1624", roughness: 0.05, metalness: 0.2, emissive: "#1c2c48", emissiveIntensity: 0.4 });
+  const lens = scopePart(new THREE.CircleGeometry(0.044, 32), lensMat, tube);
+  lens.position.y = 0.47;
+  lens.rotation.x = -Math.PI / 2;
+  scopePart(new THREE.CylinderGeometry(0.02, 0.024, 0.09, 20), blackMat, tube).position.y = -0.33; // focuser
+  scopePart(new THREE.CylinderGeometry(0.013, 0.013, 0.06, 16), blackMat, tube).position.y = -0.4; // eyepiece
+  const finder = scopePart(new THREE.CylinderGeometry(0.012, 0.012, 0.22, 16), blackMat, tube);
+  finder.position.set(0.055, 0.02, 0.03);
+  scopePart(new THREE.BoxGeometry(0.06, 0.06, 0.09), blackMat, tube).position.set(0, 0, -0.05); // mount saddle
+  // tripod
+  const head = scopeMount.clone().add(new THREE.Vector3(0, -0.07, 0));
+  scopePart(new THREE.CylinderGeometry(0.035, 0.04, 0.06, 20), brassMat, scene).position.copy(head);
+  const up = new THREE.Vector3(0, 1, 0);
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * Math.PI * 2 + 0.4;
+    const foot = new THREE.Vector3(head.x + Math.cos(a) * 0.36, 0, head.z + Math.sin(a) * 0.36);
+    const len = head.distanceTo(foot);
+    const leg = scopePart(new THREE.CylinderGeometry(0.014, 0.011, len, 10), tripodWood, scene);
+    leg.position.copy(head).lerp(foot, 0.5);
+    leg.quaternion.setFromUnitVectors(up, foot.clone().sub(head).normalize());
+    const tip = scopePart(new THREE.SphereGeometry(0.014, 10, 8), brassMat, scene);
+    tip.position.copy(foot).setY(0.012);
+  }
+
+  // ---------- interaction ----------
+
+  let view: RoomView = "doorway";
+  const pointerTarget = new THREE.Vector2();
+  const pointer = new THREE.Vector2();
+  const onPointerMove = (e: PointerEvent) => {
+    const r = renderer.domElement.getBoundingClientRect();
+    pointerTarget.set(((e.clientX - r.left) / r.width) * 2 - 1, ((e.clientY - r.top) / r.height) * 2 - 1);
+  };
+  const onPointerLeave = () => pointerTarget.set(0, 0);
+
+  // ---------- lamp switch ----------
+  // Clicking the lamp (or calling toggleLamp) fades it like a real bulb: fast on, a short filament glow off.
+  let lampOn = true;
+  let lampLevel = 1;
+  const lampParts: THREE.Object3D[] = [lampBase, lampStem, shade, bulbGlow];
+  const BULB_ON = new THREE.Color(3, 2, 1.1);
+  const BULB_OFF = new THREE.Color(0.16, 0.13, 0.1);
+  const SHADE_ON = new THREE.Color("#e8cfa6");
+  const SHADE_OFF = new THREE.Color("#6d6152");
+  const applyLamp = (k: number) => {
+    const c = Math.min(1, k);
+    bedLamp.intensity = 2.6 * k;
+    shadeMat.emissiveIntensity = 1.6 * k;
+    shadeMat.color.copy(SHADE_OFF).lerp(SHADE_ON, c);
+    bulbGlowMat.color.copy(BULB_OFF).lerp(BULB_ON, c);
+  };
+
+  // ---------- lighting settings (the light switch panel) ----------
+  const lighting: LightingSettings = { ...LIGHTING_PRESETS["Late night"], ...options.initial?.lighting };
+  let lampBrightness = lighting.lamp > 0 ? lighting.lamp : 1; // remembered while the lamp is switched off
+  lampOn = lighting.lamp > 0;
+  lampLevel = lampOn ? lampBrightness : 0;
+  applyLamp(lampLevel);
+  // current (animated) values chase the settings so every change fades smoothly; a remembered
+  // setup starts in place rather than fading in
+  const live = { ceiling: lighting.ceiling, fairy: lighting.fairy, candle: lighting.candle ? 1 : 0, warmth: lighting.warmth };
+  const startFairy = lighting.fairyColor === "rainbow" ? "#ffb36b" : lighting.fairyColor;
+  const fairyTarget = new THREE.Color(startFairy);
+  const fairyNow = new THREE.Color(startFairy);
+  const emitLighting = () => options.onLightingChange?.({ ...lighting });
+  const setLighting = (next: Partial<LightingSettings>) => {
+    // an audible click when the overhead light goes on or off
+    if (next.ceiling !== undefined && (next.ceiling > 0.01) !== (lighting.ceiling > 0.01)) audio.click("switch");
+    Object.assign(lighting, next);
+    if (next.lamp !== undefined) {
+      if (next.lamp > 0) lampBrightness = next.lamp;
+      const on = next.lamp > 0;
+      if (on !== lampOn) {
+        lampOn = on;
+        options.onLampChange?.(lampOn);
+      }
+    }
+    if (next.fairyColor && next.fairyColor !== "rainbow") fairyTarget.set(next.fairyColor);
+    emitLighting();
+  };
+  const toggleLamp = () => {
+    audio.click("lamp");
+    lampOn = !lampOn;
+    lighting.lamp = lampOn ? lampBrightness : 0;
+    options.onLampChange?.(lampOn);
+    emitLighting();
+    return lampOn;
+  };
+
+  // ---------- sound ----------
+  const audio = createAudio();
+  let muted = options.initial?.muted ?? false;
+  audio.setMuted(muted);
+  audio.setWeather(weather);
+  // browsers only allow sound after the visitor interacts with the page
+  const unlockAudio = () => audio.unlock();
+  window.addEventListener("pointerdown", unlockAudio);
+  window.addEventListener("keydown", unlockAudio);
+  let radioOn = false;
+  const toggleRadio = () => {
+    audio.unlock();
+    audio.click("radio");
+    radioOn = !radioOn;
+    audio.setRadio(radioOn);
+    options.onRadioChange?.(radioOn);
+    return radioOn;
+  };
+
+  // ---------- time of day and weather ----------
+  let timeMode: TimeMode = options.initial?.timeMode ?? "auto";
+  const MODE_SECONDS: Record<Exclude<TimeMode, "auto">, number> = { day: 14 * 3600 + 10 * 60, sunset: 19 * 3600 + 22 * 60, night: 2 * 3600 + 47 * 60 };
+  const localSeconds = () => {
+    const d = new Date();
+    return d.getHours() * 3600 + d.getMinutes() * 60 + d.getSeconds();
+  };
+  const smoothstep = (a: number, b: number, x: number) => {
+    const k = Math.min(1, Math.max(0, (x - a) / (b - a)));
+    return k * k * (3 - 2 * k);
+  };
+  // daylight from the hour: sunrise around 6–7, sunset around 7–8 pm, with a warm band at each
+  const skyAt = (seconds: number) => {
+    const hr = (seconds / 3600) % 24;
+    const day = smoothstep(5.8, 7.4, hr) * (1 - smoothstep(18.4, 20.2, hr));
+    const dusk = Math.max(Math.exp(-(((hr - 6.7) / 0.55) ** 2)), Math.exp(-(((hr - 19.3) / 0.6) ** 2)));
+    return { day, dusk };
+  };
+  interface Env { hemi: number; sky: string; ground: string; win: number; winColor: string; sun: number; sunColor: string; exposure: number }
+  const ENV: Record<Weather, { night: Env; day: Env; dusk: Env }> = {
+    rain: {
+      night: { hemi: 0.55, sky: "#2a3047", ground: "#1c1109", win: 1.8, winColor: "#4a78b8", sun: 0.3, sunColor: "#4c6a9a", exposure: 1.25 },
+      day: { hemi: 2.4, sky: "#a8b3c0", ground: "#4a3e32", win: 30, winColor: "#d0dcea", sun: 0.9, sunColor: "#c6d2e0", exposure: 1.1 },
+      dusk: { hemi: 1.1, sky: "#6a5a76", ground: "#2a1a12", win: 11, winColor: "#d88a78", sun: 1.0, sunColor: "#d88a6a", exposure: 1.18 },
+    },
+    snow: {
+      night: { hemi: 0.6, sky: "#34405a", ground: "#1c1611", win: 2.6, winColor: "#7f98c8", sun: 0.35, sunColor: "#6a82b0", exposure: 1.25 },
+      day: { hemi: 2.8, sky: "#dfe6ef", ground: "#5a5048", win: 36, winColor: "#eef3ff", sun: 1.1, sunColor: "#e6ecf6", exposure: 1.05 },
+      dusk: { hemi: 1.15, sky: "#7a6a88", ground: "#2a1c14", win: 12, winColor: "#e0a090", sun: 1.1, sunColor: "#e0a080", exposure: 1.15 },
+    },
+    clear: {
+      night: { hemi: 0.5, sky: "#1e2a48", ground: "#140e0a", win: 1.4, winColor: "#5a7ad0", sun: 0.45, sunColor: "#7b95d6", exposure: 1.25 },
+      day: { hemi: 2.6, sky: "#bcd3f2", ground: "#5a4632", win: 32, winColor: "#fff1dc", sun: 4.5, sunColor: "#fff0d6", exposure: 1.02 },
+      dusk: { hemi: 1.2, sky: "#7a6a98", ground: "#2a160c", win: 13, winColor: "#ff9a60", sun: 2.6, sunColor: "#ff8a48", exposure: 1.12 },
+    },
+  };
+  const envTarget = { hemi: 0.55, sky: new THREE.Color(), ground: new THREE.Color(), win: 1.8, winColor: new THREE.Color(), sun: 0.3, sunColor: new THREE.Color(), exposure: 1.25 };
+  const envNow = { hemi: 0.55, sky: new THREE.Color("#2a3047"), ground: new THREE.Color("#1c1109"), win: 1.8, winColor: new THREE.Color("#4a78b8"), sun: 0.3, sunColor: new THREE.Color("#4c6a9a"), exposure: 1.25 };
+  let skyState = { day: 0, dusk: 0 };
+  let conditionsKey = "";
+  const applyConditions = (seconds: number, snap = false) => {
+    skyState = skyAt(seconds);
+    const { day, dusk } = skyState;
+    // only repaint textures when something visible changes (time is quantised to ~2% steps)
+    const key = `${weather}|${Math.round(day * 50)}|${Math.round(dusk * 50)}`;
+    if (key !== conditionsKey) {
+      conditionsKey = key;
+      const fog = campus.setConditions({ day, dusk, weather });
+      (scene.fog as THREE.FogExp2).color.copy(fog.fogColor);
+      (scene.fog as THREE.FogExp2).density = fog.fogDensity;
+      paintBackdrop(day, dusk, weather);
+    }
+    const e = ENV[weather];
+    const mix = (k: "hemi" | "win" | "sun" | "exposure") => THREE.MathUtils.lerp(THREE.MathUtils.lerp(e.night[k], e.day[k], day), e.dusk[k], dusk);
+    const mixC = (k: "sky" | "ground" | "winColor" | "sunColor", out: THREE.Color) =>
+      out.set(e.night[k]).lerp(new THREE.Color(e.day[k]), day).lerp(new THREE.Color(e.dusk[k]), dusk);
+    envTarget.hemi = mix("hemi");
+    envTarget.win = mix("win");
+    envTarget.sun = mix("sun");
+    envTarget.exposure = mix("exposure");
+    mixC("sky", envTarget.sky);
+    mixC("ground", envTarget.ground);
+    mixC("winColor", envTarget.winColor);
+    mixC("sunColor", envTarget.sunColor);
+    if (snap) {
+      Object.assign(envNow, { hemi: envTarget.hemi, win: envTarget.win, sun: envTarget.sun, exposure: envTarget.exposure });
+      envNow.sky.copy(envTarget.sky);
+      envNow.ground.copy(envTarget.ground);
+      envNow.winColor.copy(envTarget.winColor);
+      envNow.sunColor.copy(envTarget.sunColor);
+    }
+    // glass and near rain
+    const rainy = weather === "rain";
+    dropsMat.opacity = rainy ? 0.45 : weather === "snow" ? 0.12 : 0;
+    streakMat.opacity = rainy ? 0.55 : 0;
+    rain.visible = weather !== "clear";
+    rainMat.color.set(weather === "snow" ? "#f2f6ff" : "#8fb2d6");
+    rainMat.opacity = weather === "snow" ? 0.55 : 0.16 + day * 0.06;
+  };
+  const clockSeconds = (t: number) => (timeMode === "auto" ? localSeconds() : MODE_SECONDS[timeMode] + t - modeStartedAt);
+  let modeStartedAt = 0;
+  const emitConditions = () => options.onConditionsChange?.({ weather, timeMode });
+  const setWeather = (w: Weather) => {
+    if (w === weather) return;
+    weather = w;
+    for (let i = 0; i < RAIN; i++) resetDrop(i);
+    audio.setWeather(w);
+    applyConditions(wallClock.secondsAt(clock.elapsedTime));
+    emitConditions();
+  };
+  const setTimeMode = (m: TimeMode) => {
+    timeMode = m;
+    modeStartedAt = clock.elapsedTime;
+    const secs = clockSeconds(clock.elapsedTime);
+    wallClock.sync(clock.elapsedTime, secs);
+    applyConditions(secs);
+    emitConditions();
+  };
+
+  // ---------- clicking things in the room ----------
+  const raycaster = new THREE.Raycaster();
+  const ndc = new THREE.Vector2();
+  const pickTarget = (e: PointerEvent): "lamp" | "telescope" | "cat" | "switch" | "radio" | null => {
+    if (view === "telescope") return null;
+    const r = renderer.domElement.getBoundingClientRect();
+    ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    raycaster.setFromCamera(ndc, camera);
+    const hit = raycaster.intersectObjects([...lampParts, ...telescopeParts, ...cat.parts, ...switchParts, ...radio.parts], false)[0];
+    if (!hit) return null;
+    if (radio.parts.includes(hit.object)) return "radio";
+    if (lampParts.includes(hit.object)) return "lamp";
+    if (switchParts.includes(hit.object)) return "switch";
+    return (cat.parts as THREE.Object3D[]).includes(hit.object) ? "cat" : "telescope";
+  };
+  // a press that drags (orbiting, aiming the telescope) shouldn't count as a click
+  let downAt: { x: number; y: number } | null = null;
+  let dragFrom: { x: number; y: number } | null = null;
+  const onPointerDown = (e: PointerEvent) => {
+    downAt = { x: e.clientX, y: e.clientY };
+    dragFrom = { x: e.clientX, y: e.clientY };
+  };
+  const onPointerUp = (e: PointerEvent) => {
+    if (downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < 6) {
+      const hit = pickTarget(e);
+      if (hit === "lamp") toggleLamp();
+      else if (hit === "cat") cat.stir();
+      else if (hit === "switch") {
+        audio.click("switch");
+        options.onLightSwitch?.();
+      } else if (hit === "radio") toggleRadio();
+      else if (hit === "telescope") setView("telescope");
+    }
+    downAt = dragFrom = null;
+  };
+  const onHover = (e: PointerEvent) => {
+    if (view === "telescope") {
+      renderer.domElement.style.cursor = e.buttons ? "grabbing" : "grab";
+      if (e.buttons && dragFrom && scopeActive && !zoom) {
+        // drag the view: the scene follows the pointer, scaled to the current magnification
+        const h = renderer.domElement.clientHeight;
+        const fovRad = THREE.MathUtils.degToRad(scope.fov);
+        scope.yawT -= ((e.clientX - dragFrom.x) / h) * fovRad;
+        scope.pitchT += ((e.clientY - dragFrom.y) / h) * fovRad;
+        scope.yawT = THREE.MathUtils.clamp(scope.yawT, -0.45, 0.75);
+        scope.pitchT = THREE.MathUtils.clamp(scope.pitchT, -0.2, 0.3);
+        dragFrom = { x: e.clientX, y: e.clientY };
+      }
+      return;
+    }
+    if (e.buttons) return;
+    renderer.domElement.style.cursor = pickTarget(e) ? "pointer" : "";
+  };
+  const onWheel = (e: WheelEvent) => {
+    if (view !== "telescope" || !scopeActive) return;
+    e.preventDefault();
+    if (zoom) return;
+    scope.fovT = THREE.MathUtils.clamp(scope.fovT * Math.exp(e.deltaY * 0.0012), 2.5, 18);
+  };
+  renderer.domElement.addEventListener("pointerdown", onPointerDown);
+  renderer.domElement.addEventListener("pointerup", onPointerUp);
+  renderer.domElement.addEventListener("pointermove", onHover);
+  renderer.domElement.addEventListener("pointermove", onPointerMove);
+  renderer.domElement.addEventListener("pointerleave", onPointerLeave);
+  renderer.domElement.addEventListener("wheel", onWheel, { passive: false });
+
+  // ---------- fades ----------
+  let fadeTarget = 1;
+  let fadeSpeed = 1 / 1.8;
+  let onFaded: (() => void) | null = null;
+  const fadeTo = (target: number, seconds: number, done?: () => void) => {
+    fadeTarget = target;
+    fadeSpeed = 1 / Math.max(0.01, seconds);
+    onFaded = done ?? null;
+  };
+
+  // ---------- views and the telescope ----------
+  // Looking through the telescope: glide to the eyepiece, fade, then view campus through a
+  // narrow-field camera placed just outside the glass (so rain on the window doesn't block it).
+  // end the glide just above and behind the eyepiece, looking along the tube and out of the window,
+  // so the zoom that follows reads as one continuous move out into the night
+  const eyePose = {
+    pos: scopeMount.clone().addScaledVector(scopeDir, -0.8).add(new THREE.Vector3(0, 0.17, 0)),
+    target: scopeMount.clone().addScaledVector(scopeDir, 6),
+    fov: 42,
+  };
+  const scopePos = new THREE.Vector3(winCx, winCy, ROOM.back - 0.35);
+  const aimAt = (p: THREE.Vector3) => {
+    const d = p.clone().sub(scopePos).normalize();
+    return { yaw: Math.atan2(d.x, -d.z), pitch: Math.asin(d.y) };
+  };
+  const home = aimAt(campus.landmarks[0].position.clone().add(new THREE.Vector3(0, -4, 0)));
+  const scope = { yaw: home.yaw, yawT: home.yaw, pitch: home.pitch, pitchT: home.pitch, fov: 9, fovT: 9 };
+  // the zoom from "looking out of the window" to the school, played once on the way in
+  const outward = aimAt(scopePos.clone().addScaledVector(scopeDir, 100));
+  let zoom: { t: number; dur: number } | null = null;
+  const ZOOM_FROM_FOV = 58;
+  let scopeActive = false;
+  let currentLandmark: string | null = null;
+  const scopeLook = new THREE.Vector3();
+  const updateScope = (dt: number) => {
+    if (zoom) {
+      zoom.t = Math.min(1, zoom.t + dt / zoom.dur);
+      const x = zoom.t;
+      const e = x < 0.5 ? 4 * x ** 3 : 1 - (-2 * x + 2) ** 3 / 2;
+      // aim swings from straight out of the window onto the school while the field narrows
+      const ea = 1 - (1 - Math.min(1, x * 1.4)) ** 3;
+      scope.yaw = scope.yawT = THREE.MathUtils.lerp(outward.yaw, home.yaw, ea);
+      scope.pitch = scope.pitchT = THREE.MathUtils.lerp(outward.pitch, home.pitch, ea);
+      scope.fov = scope.fovT = THREE.MathUtils.lerp(ZOOM_FROM_FOV, 9, e);
+      finish.uniforms.uRadius.value = THREE.MathUtils.lerp(1.1, 0.46, e);
+      if (zoom.t >= 1) zoom = null;
+    }
+    const k = damp(8, dt);
+    scope.yaw += (scope.yawT - scope.yaw) * k;
+    scope.pitch += (scope.pitchT - scope.pitch) * k;
+    scope.fov += (scope.fovT - scope.fov) * damp(6, dt);
+    camera.position.copy(scopePos);
+    scopeLook.set(Math.sin(scope.yaw) * Math.cos(scope.pitch), Math.sin(scope.pitch), -Math.cos(scope.yaw) * Math.cos(scope.pitch));
+    camera.lookAt(scopeLook.clone().add(scopePos));
+    camera.fov = scope.fov;
+    camera.updateProjectionMatrix();
+    // name what's in the middle of the view
+    const limit = THREE.MathUtils.degToRad(scope.fov) * 0.45;
+    let best: (typeof campus.landmarks)[number] | null = null;
+    let bestAngle = limit;
+    for (const l of campus.landmarks) {
+      const a = scopeLook.angleTo(l.position.clone().sub(scopePos));
+      if (a < bestAngle) {
+        bestAngle = a;
+        best = l;
+      }
+    }
+    const name = best?.name ?? null;
+    if (name !== currentLandmark) {
+      currentLandmark = name;
+      options.onScopeTarget?.(best ? { name: best.name, detail: best.detail } : null);
+    }
+  };
+  const enterScope = () => {
+    scopeActive = true;
+    campus.group.visible = true;
+    nightBackdrop.visible = false;
+    camera.near = 3.2; // past the rain falling just outside the window
+    finish.uniforms.uScope.value = 1;
+    audio.setOutside(1);
+    zoom = { t: 0, dur: reducedMotion ? 0.01 : 2.6 };
+    updateScope(0);
+  };
+  const leaveScope = () => {
+    scopeActive = false;
+    zoom = null;
+    campus.group.visible = false;
+    nightBackdrop.visible = true;
+    finish.uniforms.uRadius.value = 0.46;
+    finish.uniforms.uScope.value = 0;
+    audio.setOutside(0);
+    camera.near = 0.05;
+    camera.position.copy(eyePose.pos);
+    controls.target.copy(eyePose.target);
+    camera.fov = eyePose.fov;
+    camera.updateProjectionMatrix();
+    camera.lookAt(controls.target);
+    currentLandmark = null;
+    options.onScopeTarget?.(null);
+  };
+
+  // camera tween between views
+  let tween: {
+    from: THREE.Vector3; to: THREE.Vector3; tFrom: THREE.Vector3; tTo: THREE.Vector3;
+    fovFrom: number; fovTo: number; t: number; dur: number; onDone?: () => void;
+  } | null = null;
+  const startTween = (to: THREE.Vector3, target: THREE.Vector3, fov: number, dur: number, onDone?: () => void) => {
+    tween = {
+      from: camera.position.clone(),
+      to: to.clone(),
+      tFrom: controls.target.clone(),
+      tTo: target.clone(),
+      fovFrom: camera.fov,
+      fovTo: fov,
+      t: 0,
+      dur: reducedMotion ? 0.01 : dur,
+      onDone,
+    };
+  };
+  let seq = 0; // guards fade/tween callbacks from a view the user has since left
+  const goTo = (next: RoomView, id: number) => {
+    if (next !== "doorway") {
+      doorway.visible = false;
+      renderer.shadowMap.needsUpdate = true;
+    }
+    if (next === "telescope") {
+      startTween(eyePose.pos, eyePose.target, eyePose.fov, 1.5, () =>
+        fadeTo(0, 0.22, () => {
+          if (id !== seq) return;
+          enterScope();
+          fadeTo(1, 0.3);
+        }),
+      );
+      return;
+    }
+    const v = VIEWS[next];
+    startTween(v.pos, v.target, v.fov, 2.2, () => {
+      if (id !== seq) return;
+      if (next === "explore") controls.enabled = true;
+      else {
+        doorway.visible = true;
+        renderer.shadowMap.needsUpdate = true;
+      }
+    });
+  };
+  const setView = (next: RoomView) => {
+    if (next === view) return;
+    const prev = view;
+    const id = ++seq;
+    view = next;
+    controls.enabled = false;
+    options.onViewChange?.(next);
+    if (prev === "telescope") {
+      tween = null;
+      fadeTo(0, 0.3, () => {
+        if (id !== seq) return;
+        leaveScope();
+        fadeTo(1, 0.5);
+        goTo(next, id);
+      });
+      return;
+    }
+    goTo(next, id);
+  };
+
+  let pixelRatio = Math.min(window.devicePixelRatio, 2);
+  const onResize = () => {
+    const w = container.clientWidth;
+    const h = container.clientHeight;
+    camera.aspect = w / h;
+    finish.uniforms.uAspect.value = w / h;
+    // keep the full scene in frame on narrow (portrait) screens
+    camera.zoom = camera.aspect < 1 ? Math.max(0.55, camera.aspect * 1.1) : 1;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w, h);
+    composer.setPixelRatio(pixelRatio);
+    composer.setSize(w, h);
+  };
+  const resizeObserver = new ResizeObserver(onResize);
+  resizeObserver.observe(container);
+  onResize();
+
+  // ---------- animation loop ----------
+
+  // frame-rate independent exponential smoothing
+  const damp = (lambda: number, dt: number) => 1 - Math.exp(-lambda * dt);
+
+  const clock = new THREE.Clock(false);
+  let lightning = 0;
+  let nextLightning = reducedMotion ? Infinity : rr(8, 16);
+  const clampMin = new THREE.Vector3(ROOM.left + 0.3, 0.3, ROOM.back + 0.4);
+  const clampMax = new THREE.Vector3(ROOM.right - 0.3, ROOM.height - 0.2, ROOM.front - 0.3);
+  const lookTarget = new THREE.Vector3();
+  const desired = new THREE.Vector3();
+  const bulbColor = new THREE.Color();
+  const tmpColor = new THREE.Color();
+  const rainbowColor = new THREE.Color();
+  let frame = 0;
+  let conditionsTick = 0;
+  let lastClockLabel = "";
+  const PHONE_X = phone.position.x;
+  let shadowTick = 0;
+  let slowFrames = 0;
+  let sampled = 0;
+
+  const flickerNoise = (t: number, s: number) =>
+    Math.sin(t * 9.1 + s) * 0.5 + Math.sin(t * 23.7 + s * 2.1) * 0.3 + Math.sin(t * 3.3 + s * 0.7) * 0.2;
+
+  const animate = () => {
+    frame = requestAnimationFrame(animate);
+    const rawDt = clock.getDelta();
+    const dt = Math.min(rawDt, 0.05);
+    const t = clock.elapsedTime;
+
+    // Adaptive resolution: if the device can't hold ~45fps, step the pixel ratio down once or twice
+    if (t > 2 && pixelRatio > 1) {
+      sampled++;
+      if (rawDt > 1 / 45) slowFrames++;
+      if (sampled === 90) {
+        if (slowFrames > 45) {
+          pixelRatio = Math.max(1, pixelRatio - 0.5);
+          onResize();
+        }
+        sampled = slowFrames = 0;
+      }
+    }
+
+    finish.uniforms.uTime.value = t;
+    const fade = finish.uniforms.uFade;
+    if (fade.value !== fadeTarget) {
+      const gap = fadeTarget - fade.value;
+      fade.value += Math.sign(gap) * Math.min(Math.abs(gap), fadeSpeed * dt);
+    } else if (onFaded) {
+      const done = onFaded;
+      onFaded = null;
+      done();
+    }
+    campus.update(t);
+
+    // rain
+    for (let i = 0; i < RAIN; i++) {
+      const o = i * 6;
+      const dy = rainSpeed[i] * dt;
+      rainPos[o + 1] -= dy;
+      rainPos[o + 4] -= dy;
+      if (weather === "snow") {
+        const sway = Math.sin(t * 0.8 + i * 1.7) * 0.12 * dt;
+        rainPos[o] += sway;
+        rainPos[o + 3] += sway;
+      }
+      if (rainPos[o + 4] < rainBox.y0) resetDrop(i, rainBox.y1);
+    }
+    rainGeo.attributes.position.needsUpdate = true;
+    streakTex.offset.y += dt * 0.12;
+
+    // dust drift
+    for (let i = 0; i < DUST; i++) {
+      const s = dustSeed[i];
+      dustPos[i * 3] += Math.sin(t * 0.3 + s) * 0.036 * dt;
+      dustPos[i * 3 + 1] += (Math.cos(t * 0.2 + s * 1.3) * 0.03 - 0.005) * dt;
+      if (dustPos[i * 3 + 1] < 0.8) dustPos[i * 3 + 1] = 2.2;
+    }
+    dustGeo.attributes.position.needsUpdate = true;
+
+    // screen flicker and phone notification pulse
+    laptopLight.intensity = 4.5 * (1 + Math.sin(t * 7.3) * 0.015 + Math.sin(t * 13.1) * 0.01);
+    // wall clock, and the time everywhere else follows it
+    wallClock.update(t);
+    const clockLabel = wallClock.label(t);
+    if (clockLabel.full !== lastClockLabel) {
+      lastClockLabel = clockLabel.full;
+      options.onClockChange?.(clockLabel.full);
+    }
+
+    // phone: buzzes now and then with a notification; he glances down at it
+    const ph = phoneUi.update(t, clockLabel.hm, reducedMotion);
+    if (ph.started) person.lookAtPhone(t);
+    phoneScreenMat.color.setScalar(PHONE_IDLE + ph.brightness * 0.95);
+    phoneLight.intensity = 0.12 + ph.brightness * 0.55;
+    phone.position.x = PHONE_X + ph.jitter;
+    phone.rotation.y = 0.35 + ph.jitter * 6;
+
+    steam.update(t, camera);
+    cat.update(t, reducedMotion);
+
+    // candle flame
+    const cf = reducedMotion ? 0 : flickerNoise(t, 0);
+    candleLight.intensity = (0.9 + cf * 0.18) * live.candle;
+    flame.scale.set(1 - cf * 0.06, 2.3 + cf * 0.25, 1 - cf * 0.06);
+    flame.position.x = Math.sin(t * 2.1) * 0.0015;
+
+    // fairy lights breathe slowly, out of phase
+    // lighting settings fade in
+    const lk = damp(5, dt);
+    live.ceiling += (lighting.ceiling - live.ceiling) * lk;
+    live.fairy += (lighting.fairy - live.fairy) * lk;
+    live.candle += ((lighting.candle ? 1 : 0) - live.candle) * damp(8, dt);
+    live.warmth += (lighting.warmth - live.warmth) * lk;
+    fairyNow.lerp(fairyTarget, lk);
+    const rainbow = lighting.fairyColor === "rainbow";
+    // HDR bulb colour: the chosen hue pushed past 1.0 so it blooms
+    const bulbBase = bulbColor.copy(fairyNow).multiplyScalar(2.4 / Math.max(0.35, Math.max(fairyNow.r, fairyNow.g, fairyNow.b)));
+    let n = 0;
+    for (const { mesh, phase } of fairyBulbs) {
+      for (let i = 0; i < phase.length; i++, n++) {
+        const k = (reducedMotion ? 1 : 0.82 + 0.18 * Math.sin(t * 0.8 + phase[i])) * live.fairy;
+        if (rainbow) rainbowColor.setHSL((n / 37 + t * 0.06) % 1, 0.9, 0.55).multiplyScalar(2.6 * k);
+        mesh.setColorAt(i, rainbow ? rainbowColor : tmpColor.copy(bulbBase).multiplyScalar(k));
+      }
+      mesh.instanceColor!.needsUpdate = true;
+    }
+    fairyLights.forEach((l, i) => {
+      l.intensity = (0.8 + (reducedMotion ? 0 : Math.sin(t * 0.8 + i * 1.7) * 0.06)) * live.fairy;
+      if (rainbow) l.color.setHSL((i / fairyLights.length + t * 0.06) % 1, 0.8, 0.6);
+      else l.color.copy(fairyNow);
+    });
+    // ceiling light
+    ceilingLight.intensity = live.ceiling * 9;
+    domeMat.emissiveIntensity = live.ceiling * 2.2;
+    rocker.rotation.x = THREE.MathUtils.lerp(0.22, -0.22, Math.min(1, live.ceiling * 3));
+    // candle
+    candle.visible = live.candle > 0.02;
+    flameMat.opacity = 0.95 * live.candle;
+    // colour temperature: warm pushes red and pulls blue, cool the reverse
+    finish.uniforms.uTint.value.set(1 + live.warmth * 0.07, 1 + live.warmth * 0.01, 1 - live.warmth * 0.12);
+
+    // subtle breathing
+    person.update(t, reducedMotion);
+
+    const lampTarget = lampOn ? lampBrightness : 0;
+    if (lampLevel !== lampTarget) {
+      lampLevel += (lampTarget - lampLevel) * damp(lampTarget > lampLevel ? 18 : 9, dt);
+      if (Math.abs(lampTarget - lampLevel) < 0.002) lampLevel = lampTarget;
+      applyLamp(lampLevel);
+    }
+    // the figure moves, so refresh shadow maps ~10 times a second rather than baking them once
+    if (!reducedMotion && ++shadowTick % 6 === 0) renderer.shadowMap.needsUpdate = true;
+
+    // time of day: follow the clock (re-evaluated a few times a minute) and ease the room toward it
+    if (++conditionsTick % 240 === 0) applyConditions(wallClock.secondsAt(t));
+    const ek = damp(1.5, dt);
+    envNow.hemi += (envTarget.hemi - envNow.hemi) * ek;
+    envNow.win += (envTarget.win - envNow.win) * ek;
+    envNow.sun += (envTarget.sun - envNow.sun) * ek;
+    envNow.exposure += (envTarget.exposure - envNow.exposure) * ek;
+    envNow.sky.lerp(envTarget.sky, ek);
+    envNow.ground.lerp(envTarget.ground, ek);
+    envNow.winColor.lerp(envTarget.winColor, ek);
+    envNow.sunColor.lerp(envTarget.sunColor, ek);
+    hemi.intensity = envNow.hemi;
+    hemi.color.copy(envNow.sky);
+    hemi.groundColor.copy(envNow.ground);
+    windowLight.color.copy(envNow.winColor);
+    daylightFill.color.copy(envNow.winColor);
+    daylightFill.intensity = envNow.win * 0.28;
+    moon.color.copy(envNow.sunColor);
+    renderer.toneMappingExposure = envNow.exposure;
+
+    // distant lightning (and thunder a moment later), only in the rain and mostly at night
+    if (t > nextLightning) {
+      if (weather === "rain" && skyState.day < 0.7) {
+        lightning = 1;
+        audio.thunder(rr(0.8, 2.6));
+      }
+      nextLightning = t + rr(12, 24);
+    }
+    let strobe = 0;
+    if (lightning > 0) {
+      lightning = Math.max(0, lightning - dt * 2.2);
+      strobe = lightning * (0.6 + 0.4 * Math.sin(lightning * 40));
+    }
+    campus.sky.color.setScalar(1 + strobe * 1.6);
+    windowLight.intensity = envNow.win + strobe * 10;
+    moon.intensity = envNow.sun + strobe * 2;
+
+    radio.update(dt, radioOn, audio.radioPulse());
+
+    // camera
+    pointer.lerp(pointerTarget, damp(3, dt));
+    if (tween) {
+      tween.t = Math.min(1, tween.t + dt / tween.dur);
+      const x = tween.t;
+      const e = x < 0.5 ? 4 * x ** 3 : 1 - (-2 * x + 2) ** 3 / 2;
+      camera.position.lerpVectors(tween.from, tween.to, e);
+      controls.target.lerpVectors(tween.tFrom, tween.tTo, e);
+      camera.fov = THREE.MathUtils.lerp(tween.fovFrom, tween.fovTo, e);
+      camera.updateProjectionMatrix();
+      camera.lookAt(controls.target);
+      if (tween.t >= 1) {
+        const done = tween.onDone;
+        tween = null;
+        done?.();
+      }
+    } else if (view === "telescope") {
+      if (scopeActive) updateScope(dt);
+    } else if (view === "doorway") {
+      // leaning in the doorway: cursor parallax plus a slow idle drift
+      const m = reducedMotion ? 0 : 1;
+      desired.copy(VIEWS.doorway.pos);
+      desired.x += (pointer.x * 0.2 + Math.sin(t * 0.21) * 0.04) * m;
+      desired.y += (-pointer.y * 0.1 + Math.sin(t * 0.17) * 0.02) * m;
+      camera.position.lerp(desired, damp(2.5, dt));
+      lookTarget.copy(VIEWS.doorway.target);
+      lookTarget.x += pointer.x * 0.28 * m;
+      lookTarget.y += -pointer.y * 0.12 * m;
+      controls.target.lerp(lookTarget, damp(2.5, dt));
+      camera.lookAt(controls.target);
+    } else {
+      controls.update(dt);
+      camera.position.clamp(clampMin, clampMax);
+    }
+
+    composer.render(dt);
+  };
+
+  // open already matching the visitor's time and the remembered weather, with no fade
+  wallClock.sync(0, clockSeconds(0));
+  applyConditions(clockSeconds(0), true);
+  hemi.intensity = envNow.hemi;
+  windowLight.intensity = envNow.win;
+  moon.intensity = envNow.sun;
+  renderer.toneMappingExposure = envNow.exposure;
+
+  // Compile every shader before the first frame so the scene opens without a hitch
+  let disposed = false;
+  renderer
+    .compileAsync(scene, camera)
+    .finally(() => {
+      campus.group.visible = false;
+    })
+    .catch(() => undefined)
+    .then(() => {
+      if (disposed) return;
+      clock.start();
+      animate();
+    });
+
+  return {
+    setView,
+    toggleLamp,
+    setLighting,
+    getLighting: () => ({ ...lighting }),
+    setWeather,
+    setTimeMode,
+    setMuted: (m: boolean) => {
+      muted = m;
+      audio.setMuted(m); // the engine itself starts on the visitor's first click or key press
+    },
+    toggleRadio,
+    dispose: () => {
+      disposed = true;
+      cancelAnimationFrame(frame);
+      resizeObserver.disconnect();
+      renderer.domElement.removeEventListener("pointermove", onPointerMove);
+      renderer.domElement.removeEventListener("pointerleave", onPointerLeave);
+      renderer.domElement.removeEventListener("pointerdown", onPointerDown);
+      renderer.domElement.removeEventListener("pointerup", onPointerUp);
+      renderer.domElement.removeEventListener("pointermove", onHover);
+      renderer.domElement.removeEventListener("wheel", onWheel);
+      window.removeEventListener("pointerdown", unlockAudio);
+      window.removeEventListener("keydown", unlockAudio);
+      audio.dispose();
+      controls.dispose();
+      composer.dispose();
+      rt.dispose();
+      disposables.forEach((d) => d.dispose());
+      scene.traverse((o) => {
+        if (o instanceof THREE.InstancedMesh) o.dispose();
+      });
+      renderer.dispose();
+      renderer.domElement.remove();
+    },
+  };
+}

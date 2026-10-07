@@ -2,6 +2,7 @@ import profileImg from "@/assets/profile.jpg";
 import ssLogoNew from "@/assets/ss-logo-new.png";
 import MotionSection from "./MotionSection";
 import { motion } from "framer-motion";
+import { aboutParagraphs } from "@/data/portfolio";
 
 const About = () => {
   return (
@@ -13,19 +14,19 @@ const About = () => {
 
         <div className="grid md:grid-cols-3 gap-12 items-start">
           <div className="md:col-span-2 space-y-4 text-muted-foreground leading-relaxed">
-            <p>
-              I'm a first-year student in the dual-degree{" "}
-              <span className="text-foreground font-medium">Engineering Science + Ivey HBA</span>{" "}
-              program at Western University — one of Canada's most selective combined engineering and business programs. I thrive at the intersection of technology, business, and creative problem-solving.
-            </p>
-            <p>
-              At 15, I co-founded a streetwear brand that scaled to{" "}
-              <span className="text-foreground font-medium">10K+ followers</span>.
-              I led as Student Activity Council President at Chinguacousy S.S., organized cultural events as Tamil Student Association President, and managed federal election operations as a Deputy Returning Officer.
-            </p>
-            <p>
-              Today, I build fully automated AI systems — from intelligent receptionists to complete websites and brand identities — helping businesses scale smarter. I'm driven by the belief that great technology should feel effortless.
-            </p>
+            {aboutParagraphs.map((runs, i) => (
+              <p key={i}>
+                {runs.map((r, j) =>
+                  r.strong ? (
+                    <span key={j} className="text-foreground font-medium">
+                      {r.text}
+                    </span>
+                  ) : (
+                    r.text
+                  ),
+                )}
+              </p>
+            ))}
           </div>
 
           <motion.div

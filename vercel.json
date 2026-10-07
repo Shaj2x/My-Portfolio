@@ -6,11 +6,6 @@
   "outputDirectory": "dist",
   "redirects": [
     {
-      "source": "/",
-      "destination": "/digital-dash.html",
-      "permanent": false
-    },
-    {
       "source": "/digital-dash",
       "destination": "/digital-dash.html",
       "permanent": false
@@ -61,6 +56,12 @@
           "value": "strict-origin-when-cross-origin"
         }
       ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
