@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion, type Transition } from "framer-motion";
-import { Link } from "react-router-dom";
-import { ArrowLeft, ArrowUpRight, Binoculars, Camera, Check, Gamepad2, LayoutGrid, Lightbulb, LightbulbOff, Radio, SlidersHorizontal, Volume2, VolumeX, X } from "lucide-react";
+import { ArrowUpRight, Binoculars, Camera, Check, Gamepad2, LayoutGrid, Lightbulb, LightbulbOff, Radio, SlidersHorizontal, Volume2, VolumeX, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { RADIO_STATION } from "@/components/room/createAudio";
 import { playlistEmbed } from "@/components/room/playlist";
@@ -330,9 +329,11 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
           animate={chromeIn ? { opacity: 1, transform: "translateY(0px)" } : undefined}
           transition={{ duration: 0.5, ease: EASE_OUT }}
         >
-          <Link to="/" className={chip}>
-            <ArrowLeft className="h-4 w-4" /> Home
-          </Link>
+          {/* the room is the home page, so the corner carries the name instead of a way back */}
+          <p className="liquid-glass on-glass rounded-full px-4 py-2 text-sm leading-tight">
+            <span className="font-semibold text-white">Shajith Sasikumar</span>
+            <span className="ml-2 text-white/55">BESc + Ivey HBA</span>
+          </p>
           {!away && found.length === PORTFOLIO_IDS.length && (
             <p className="rounded-full bg-black/40 px-4 py-1.5 text-xs text-amber-100/85 backdrop-blur-md" aria-live="polite">
               You found the whole portfolio
