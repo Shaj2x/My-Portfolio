@@ -2,6 +2,10 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RectAreaLightUniformsLib } from "three/examples/jsm/lights/RectAreaLightUniformsLib.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
+import { OutlinePass } from "three/examples/jsm/postprocessing/OutlinePass.js";
+import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import { createAudio, RADIO_STATION } from "./createAudio";
 import { createCampus } from "./createCampus";
 import { createFurniture, paintTexture } from "./createFurniture";
@@ -1149,15 +1153,61 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   };
   let hoverLabel: string | null = null;
 
-  // ---------- hover: a warm glow on whatever can be clicked, and small things lift a little ----------
-  // One light, moved to the hovered thing and faded in, so it costs the same however many things
-  // there are. Things you'd pick up (plushies, bottles, binoculars, the controller) rise on a
-  // slightly bouncy spring and settle back when the pointer leaves.
-  const hoverGlow = new THREE.PointLight("#ffd9a8", 0, 0.5, 2);
-  scene.add(hoverGlow);
-  let glowTarget = 0;
-  const glowAt = new THREE.Vector3();
-  const box = new THREE.Box3();
+  // ---------- hover: an outline traced around whatever can be clicked; small things also lift ----------
+  // The outline is drawn in screen space around the object's silhouette: a crisp warm line with a
+  // faint halo, which draws itself in over ~180 ms and then breathes very slowly while you stay.
+  // The scene only goes through the composer while an outline is showing, so idle frames cost
+  // nothing extra. Things you'd pick up (plushies, bottles, binoculars, the controller) also rise
+  // on a slightly bouncy spring and settle back.
+  const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 }));
+  composer.addPass(new RenderPass(scene, camera));
+  const outline = new OutlinePass(new THREE.Vector2(container.clientWidth, container.clientHeight), scene, camera);
+  outline.visibleEdgeColor.set("#fff0d4");
+  outline.hiddenEdgeColor.set("#3d3226");
+  outline.edgeThickness = 1;
+  outline.edgeGlow = 0.35;
+  outline.edgeStrength = 0;
+  composer.addPass(outline);
+  composer.addPass(new OutputPass());
+  let outlineLevel = 0;
+  let outlineTarget = 0;
+  let outlineSince = 0;
+  const outlineTargetsFor = (hit: Pick | null): THREE.Object3D[] => {
+    if (!hit || !lastHitObject) return [];
+    const o = lastHitObject;
+    switch (hit.kind) {
+      case "plushie":
+        return [hit.target.group];
+      case "perfume":
+        return [hit.target];
+      case "binoculars":
+        return binos.parts;
+      case "lamp":
+        return furniture.lamp.parts;
+      case "desk":
+        return dk.parts;
+      case "sunset":
+        return sun.parts;
+      case "ceiling":
+        return ceilingParts;
+      case "blind":
+        return blindParts;
+      case "drawer":
+        return [...inter.drawer.parts, inter.drawer.paper];
+      case "keyboard":
+        return [inter.keyboard];
+      case "radio":
+        return [inter.speaker];
+      case "switch":
+        return [inter.lightSwitch];
+      case "console":
+        return [isIn(o, inter.controller) ? inter.controller : isIn(o, inter.monitor) ? inter.monitor : inter.ps5];
+      case "portfolio": {
+        const spot = [...inter.spots, ...roomSpots].find((r) => isIn(o, r.root));
+        return spot ? [spot.root] : [o];
+      }
+    }
+  };
   const lifts = new Map<THREE.Object3D, { base: number; off: number; vel: number; target: number }>();
   let lifted: THREE.Object3D | null = null;
   const liftRootFor = (hit: Pick | null): THREE.Object3D | null => {
@@ -1179,19 +1229,16 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       }
       lifted = root;
     }
-    if (hit && lastHitObject) {
-      // centre the glow on the plushie's own meshes when one is hovered, else on the hovered mesh
-      box.makeEmpty();
-      (root ?? lastHitObject).traverse((o) => {
-        if ((o as THREE.Mesh).isMesh) box.expandByObject(o);
-      });
-      if (box.isEmpty()) box.setFromObject(lastHitObject);
-      box.getCenter(glowAt);
-      // sit the glow just in front of the thing, toward the camera, so it lights the visible face
-      glowAt.lerp(camera.position, 0.12);
-      hoverGlow.position.copy(glowAt);
-      glowTarget = 1;
-    } else glowTarget = 0;
+    const targets = outlineTargetsFor(hit);
+    const same = targets.length === outline.selectedObjects.length && targets.every((t, i) => t === outline.selectedObjects[i]);
+    if (targets.length) {
+      if (!same) {
+        outline.selectedObjects = targets;
+        outlineLevel = 0; // a new object draws its outline in afresh
+        outlineSince = clock.elapsedTime;
+      }
+      outlineTarget = 1;
+    } else outlineTarget = 0;
   };
   const onMove = (e: PointerEvent) => {
     if (mode === "binoculars") {
@@ -1239,6 +1286,8 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     const w = container.clientWidth;
     const h = container.clientHeight;
     renderer.setSize(w, h);
+    composer.setPixelRatio(renderer.getPixelRatio());
+    composer.setSize(w, h);
     camera.aspect = w / h;
     maskMat.uniforms.uAspect.value = w / h;
     // keep the room's width in frame on narrow screens
@@ -1420,8 +1469,15 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     mist.visible = mistAlive;
     // the radio reports its kick drum; an outside player gets a steady 90 bpm beat instead
     // hover glow and lifts
-    if (mode !== "room" && glowTarget) setHover(null);
-    hoverGlow.intensity += (glowTarget * 0.35 - hoverGlow.intensity) * (1 - Math.exp(-12 * dt));
+    if (mode !== "room" && outlineTarget) setHover(null);
+    // draw in fast (~180 ms to settle), fade out a little quicker; then a slow, faint breath
+    outlineLevel = reducedMotion ? outlineTarget : outlineLevel + (outlineTarget - outlineLevel) * (1 - Math.exp(-(outlineTarget ? 16 : 22) * dt));
+    if (outlineLevel < 0.01 && !outlineTarget) {
+      outlineLevel = 0;
+      outline.selectedObjects = [];
+    }
+    const breath = reducedMotion ? 1 : 1 + 0.12 * Math.sin((time - outlineSince) * 2.2);
+    outline.edgeStrength = 3.2 * outlineLevel * breath;
     for (const [obj, l] of lifts) {
       if (reducedMotion) l.off = l.target;
       else {
@@ -1481,7 +1537,8 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       sky.visible = p.x > left && p.x < right && p.z > back && p.z < front && p.y < height;
     }
 
-    renderer.render(scene, camera);
+    if (outline.selectedObjects.length) composer.render(dt);
+    else renderer.render(scene, camera);
     if (!firstFrameSent) {
       firstFrameSent = true;
       options.onFirstFrame?.();
@@ -1522,6 +1579,8 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       for (const d of disposables) d.dispose();
       for (const t of sunsetDiscs.values()) t.dispose();
       env.dispose();
+      composer.dispose();
+      outline.dispose();
       window.removeEventListener("pointerdown", unlockAudio);
       window.removeEventListener("keydown", unlockAudio);
       audio.dispose();

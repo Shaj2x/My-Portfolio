@@ -4,6 +4,8 @@ export default {
   darkMode: ["class"],
   content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
   prefix: "",
+  // hover: styles only where a real pointer can hover, so taps on touch screens leave nothing stuck
+  future: { hoverOnlyWhenSupported: true },
   theme: {
     container: {
       center: true,

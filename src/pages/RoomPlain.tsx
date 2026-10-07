@@ -42,25 +42,37 @@ type RoomView = Exclude<PlainRoomView, "binoculars" | "console">;
 
 // motion: critically damped springs (no overshoot) for UI that appears; it starts from wherever it
 // is, so a panel closed mid-opening reverses smoothly instead of jumping
-const SPRING: Transition = { type: "spring", bounce: 0, duration: 0.42 };
+const SPRING: Transition = { type: "spring", bounce: 0, duration: 0.3 };
+// strong ease-out (matches --ease-out in index.css): things arriving decelerate hard into place
+const EASE_OUT = [0.23, 1, 0.32, 1] as const;
 const usePresets = () => {
   const reduce = useReducedMotion() ?? false;
-  // pop-ups materialise out of the dock: glass arriving (scale, blur and opacity together), not a plain fade
+  // pop-ups rise out of the dock: transform and opacity only (full transform strings stay on the GPU)
   const pop = reduce
     ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: 0.15 } }
     : {
-        initial: { opacity: 0, y: 14, scale: 0.94, filter: "blur(8px)" },
-        animate: { opacity: 1, y: 0, scale: 1, filter: "blur(0px)" },
-        exit: { opacity: 0, y: 10, scale: 0.96, filter: "blur(6px)" },
+        initial: { opacity: 0, transform: "translateY(12px) scale(0.96)" },
+        animate: { opacity: 1, transform: "translateY(0px) scale(1)" },
+        exit: { opacity: 0, transform: "translateY(8px) scale(0.97)", transition: { duration: 0.16, ease: EASE_OUT } },
         transition: SPRING,
       };
   // the section sheet comes in from the right and leaves the same way
   const sheet = reduce
     ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: 0.15 } }
-    : { initial: { opacity: 0, x: 56 }, animate: { opacity: 1, x: 0 }, exit: { opacity: 0, x: 56 }, transition: SPRING };
+    : {
+        initial: { opacity: 0, transform: "translateX(48px)" },
+        animate: { opacity: 1, transform: "translateX(0px)" },
+        exit: { opacity: 0, transform: "translateX(48px)", transition: { duration: 0.2, ease: EASE_OUT } },
+        transition: SPRING,
+      };
   const fade = reduce
     ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 } }
-    : { initial: { opacity: 0, y: -4, scale: 0.97 }, animate: { opacity: 1, y: 0, scale: 1 }, exit: { opacity: 0, scale: 0.97 }, transition: { ...SPRING, duration: 0.25 } };
+    : {
+        initial: { opacity: 0, transform: "translateY(-4px) scale(0.97)" },
+        animate: { opacity: 1, transform: "translateY(0px) scale(1)" },
+        exit: { opacity: 0, transform: "translateY(0px) scale(0.97)" },
+        transition: { duration: 0.2, ease: EASE_OUT },
+      };
   return { reduce, pop, sheet, fade };
 };
 
@@ -125,9 +137,9 @@ const DockButton = ({
     type="button"
     onClick={onClick}
     aria-pressed={open || on}
-    whileTap={{ scale: 0.9 }}
+    whileTap={{ scale: 0.94 }}
     whileHover={{ y: -2 }}
-    transition={{ type: "spring", bounce: 0.3, duration: 0.3 }}
+    transition={{ type: "spring", bounce: 0.15, duration: 0.25 }}
     className={`${className} group on-glass relative flex min-w-[52px] shrink-0 flex-col items-center gap-1 rounded-[16px] px-2 py-2 text-[10px] font-medium sm:min-w-[64px] sm:px-3 sm:text-[11px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-200 ${
       accent ? "text-amber-100" : open || on ? "text-amber-100" : "text-white/80 hover:text-white"
     }`}
@@ -300,6 +312,8 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
     };
   }, [roomShown]);
 
+  // the chrome (Home, dock) waits for the title to clear, then arrives: top first, dock a beat later
+  const chromeIn = roomShown && !intro;
   const inBinoculars = view === "binoculars";
   const inConsole = view === "console";
   const away = inBinoculars || inConsole;
@@ -310,7 +324,12 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
       {error && <p className="absolute inset-0 grid place-items-center text-white/70">This browser can't show the 3D room.</p>}
 
       <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-4 p-4">
-        <div className="flex flex-col items-start gap-2">
+        <motion.div
+          className="flex flex-col items-start gap-2"
+          initial={reduce ? { opacity: 0 } : { opacity: 0, transform: "translateY(-10px)" }}
+          animate={chromeIn ? { opacity: 1, transform: "translateY(0px)" } : undefined}
+          transition={{ duration: 0.5, ease: EASE_OUT }}
+        >
           <Link to="/" className={chip}>
             <ArrowLeft className="h-4 w-4" /> Home
           </Link>
@@ -319,8 +338,13 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
               You found the whole portfolio
             </p>
           )}
-        </div>
-        <div className="flex flex-col items-end gap-2">
+        </motion.div>
+        <motion.div
+          className="flex flex-col items-end gap-2"
+          initial={reduce ? { opacity: 0 } : { opacity: 0, transform: "translateY(-10px)" }}
+          animate={chromeIn ? { opacity: 1, transform: "translateY(0px)" } : undefined}
+          transition={{ duration: 0.5, ease: EASE_OUT, delay: 0.05 }}
+        >
           <button type="button" className={chip} aria-pressed={!muted} aria-label={muted ? "Unmute (M)" : "Mute (M)"} onClick={() => setMuted((m) => !m)}>
             {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
           </button>
@@ -333,7 +357,7 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
               </span>
             </button>
           )}
-        </div>
+        </motion.div>
         {inBinoculars && (
           <div className="min-w-0 text-right" aria-live="polite">
             <p className="text-xs uppercase tracking-[0.2em] text-amber-200/70">Western University, London ON</p>
@@ -366,31 +390,52 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
         </motion.div>
       )}</AnimatePresence>
       {!roomShown && <div className="absolute inset-0 z-30 bg-black" aria-hidden="true" />}
-      {/* the opening: the room fades up from black while the title writes itself in */}
+      {/* the opening: the room surfaces from black while the name rises out of a mask, word by word */}
       <AnimatePresence>
         {intro && roomShown && (
-          <motion.div key="intro" className="pointer-events-none absolute inset-0 z-30 flex flex-col items-center justify-center text-center" exit={{ opacity: 0, transition: { duration: 0.8 } }}>
-            <motion.div className="absolute inset-0 bg-black" initial={{ opacity: 1 }} animate={{ opacity: 0 }} transition={{ duration: reduce ? 0.3 : 2.2, ease: [0.22, 1, 0.36, 1] }} />
-            <h1 className="relative text-4xl font-semibold tracking-[-0.02em] text-white sm:text-6xl" aria-label="Shajith's room" style={{ textShadow: "0 4px 30px rgba(0,0,0,0.6)" }}>
-              {"Shajith's room".split("").map((ch, i) => (
-                <motion.span
-                  key={i}
-                  className="inline-block"
-                  initial={reduce ? { opacity: 0 } : { opacity: 0, y: 18, filter: "blur(8px)" }}
-                  animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                  transition={{ ...SPRING, delay: 0.5 + i * 0.045 }}
-                  aria-hidden="true"
-                >
-                  {ch === " " ? "\u00a0" : ch}
-                </motion.span>
+          <motion.div
+            key="intro"
+            className="pointer-events-none absolute inset-0 z-30 flex flex-col items-center justify-center text-center"
+            exit={reduce ? { opacity: 0, transition: { duration: 0.3 } } : { opacity: 0, transform: "translateY(-10px)", transition: { duration: 0.6, ease: EASE_OUT } }}
+          >
+            <motion.div className="absolute inset-0 bg-black" initial={{ opacity: 1 }} animate={{ opacity: 0 }} transition={{ duration: reduce ? 0.3 : 1.8, ease: EASE_OUT, delay: reduce ? 0 : 0.15 }} />
+            {/* a soft pool of shade keeps the type legible without a heavy text shadow */}
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_45%_at_center,rgba(0,0,0,0.6),rgba(0,0,0,0.15)_70%,transparent)]" />
+            <motion.p
+              className="relative mb-4 text-[11px] font-semibold uppercase tracking-[0.42em] text-amber-100/90 [text-shadow:0_1px_8px_rgba(0,0,0,0.7)] sm:text-xs"
+              initial={reduce ? { opacity: 0 } : { opacity: 0, transform: "translateY(6px)" }}
+              animate={{ opacity: 1, transform: "translateY(0px)" }}
+              transition={{ duration: 0.7, ease: EASE_OUT, delay: 0.25 }}
+            >
+              Welcome in
+            </motion.p>
+            <h1 className="relative flex gap-[0.24em] text-5xl font-semibold leading-none tracking-[-0.045em] text-white sm:text-7xl" aria-label="Shajith's room">
+              {["Shajith's", "room"].map((word, i) => (
+                <span key={word} className="inline-block overflow-hidden pb-[0.14em]" aria-hidden="true">
+                  <motion.span
+                    className="inline-block"
+                    initial={reduce ? { opacity: 0 } : { transform: "translateY(110%)" }}
+                    animate={reduce ? { opacity: 1 } : { transform: "translateY(0%)" }}
+                    transition={{ duration: reduce ? 0.3 : 1, ease: EASE_OUT, delay: 0.4 + i * 0.09 }}
+                  >
+                    {word}
+                  </motion.span>
+                </span>
               ))}
             </h1>
+            {/* a hairline draws out from the centre */}
+            <motion.span
+              className="relative mt-4 block h-px w-40 bg-gradient-to-r from-transparent via-amber-100/70 to-transparent sm:w-56"
+              initial={reduce ? { opacity: 0 } : { clipPath: "inset(0 50% 0 50%)" }}
+              animate={reduce ? { opacity: 1 } : { clipPath: "inset(0 0% 0 0%)" }}
+              transition={{ duration: 0.9, ease: EASE_OUT, delay: 0.85 }}
+              aria-hidden="true"
+            />
             <motion.p
-              className="relative mt-3 text-sm font-medium text-white/90 sm:text-base"
-              style={{ textShadow: "0 2px 12px rgba(0,0,0,0.85), 0 1px 2px rgba(0,0,0,0.9)" }}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ ...SPRING, delay: 1.4 }}
+              className="relative mt-4 text-sm text-white/85 [text-shadow:0_1px_8px_rgba(0,0,0,0.7)] sm:text-base"
+              initial={reduce ? { opacity: 0 } : { opacity: 0, transform: "translateY(6px)" }}
+              animate={{ opacity: 1, transform: "translateY(0px)" }}
+              transition={{ duration: 0.7, ease: EASE_OUT, delay: 1.05 }}
             >
               Everything here means something. Click around.
             </motion.p>
@@ -404,10 +449,10 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
           <div className="pointer-events-none absolute left-4 right-4 top-[4.5rem] z-20 flex justify-start">
             <motion.div
               key={toast.key}
-              initial={reduce ? { opacity: 0 } : { opacity: 0, y: -16, scale: 0.9, filter: "blur(6px)" }}
-              animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
-              exit={{ opacity: 0, y: -10, scale: 0.96 }}
-              transition={{ type: "spring", bounce: 0.35, duration: 0.5 }}
+              initial={reduce ? { opacity: 0 } : { opacity: 0, transform: "translateY(-14px) scale(0.95)" }}
+              animate={{ opacity: 1, transform: "translateY(0px) scale(1)" }}
+              exit={reduce ? { opacity: 0 } : { opacity: 0, transform: "translateY(-14px) scale(0.97)", transition: { duration: 0.2, ease: EASE_OUT } }}
+              transition={{ type: "spring", bounce: 0.15, duration: 0.4 }}
               className="liquid-glass on-glass flex items-center gap-3 rounded-full py-2 pl-2 pr-5"
               role="status"
             >
@@ -681,9 +726,9 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
         ) : (
           <>
             <motion.nav
-              initial={reduce ? { opacity: 0 } : { opacity: 0, y: 24, scale: 0.96 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              transition={{ ...SPRING, delay: 0.35 }}
+              initial={reduce ? { opacity: 0 } : { opacity: 0, transform: "translateY(20px) scale(0.97)" }}
+              animate={chromeIn ? { opacity: 1, transform: "translateY(0px) scale(1)" } : undefined}
+              transition={{ type: "spring", bounce: 0, duration: 0.6, delay: 0.12 }}
               onPointerMove={trackSpot}
               className="liquid-glass glass-spot pointer-events-auto flex max-w-full items-stretch gap-1 overflow-x-auto rounded-[24px] p-1.5 [scrollbar-width:none]"
               aria-label="Room controls"
@@ -711,7 +756,14 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
                 <Camera className="h-5 w-5" />
               </DockButton>
             </motion.nav>
-            <p className="on-glass hidden text-center text-xs text-white/55 sm:block">Drag to look around · click things in the room · L lamp · B binoculars · M sound</p>
+            <motion.p
+              className="on-glass hidden text-center text-xs text-white/55 sm:block"
+              initial={{ opacity: 0 }}
+              animate={chromeIn ? { opacity: 1 } : undefined}
+              transition={{ duration: 0.5, ease: EASE_OUT, delay: 0.3 }}
+            >
+              Drag to look around · click things in the room · L lamp · B binoculars · M sound
+            </motion.p>
           </>
         )}
       </div>
