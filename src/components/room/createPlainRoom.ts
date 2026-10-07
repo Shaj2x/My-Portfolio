@@ -903,7 +903,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   const raycaster = new THREE.Raycaster();
   const ndc = new THREE.Vector2();
   type Pick =
-    | { kind: "lamp" | "binoculars" | "ceiling" | "sunset" | "desk" | "switch" | "radio" | "console" | "blind" | "drawer" | "keyboard" }
+    | { kind: "lamp" | "binoculars" | "ceiling" | "sunset" | "desk" | "switch" | "radio" | "console" | "blind" | "drawer" | "keyboard" | "candle" }
     | { kind: "plushie"; target: (typeof inter.plushies)[number] }
     | { kind: "perfume"; target: THREE.Group }
     | { kind: "portfolio"; id: PortfolioId };
@@ -924,6 +924,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     blind: "Blind · roll it up or down",
     drawer: "Dresser drawer · open it",
     keyboard: "Keyboard · leave me a note",
+    candle: "Candle · blow it out or light it",
     perfume: "The fragrances · spray one",
   };
   // the mesh under the pointer at the last pick, for the hover glow and lift
@@ -957,6 +958,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     if (o === inter.drawer.paper) return drawerTarget > 0.5 ? { kind: "portfolio", id: "resume" } : { kind: "drawer" };
     if (inter.drawer.parts.includes(o)) return { kind: "drawer" };
     if (isIn(o, inter.keyboard)) return { kind: "keyboard" };
+    if (inter.candle.parts.includes(o)) return { kind: "candle" };
     const spot = [...inter.spots, ...roomSpots].find((r) => isIn(o, r.root));
     if (spot) return { kind: "portfolio", id: spot.id };
     const plush = inter.plushies.find((p) => isIn(o, p.group));
@@ -992,6 +994,9 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   // the dresser's top drawer slides out with an ease, and the resume is waiting inside
   let drawerTarget = 0;
   let drawerLevel = 0;
+  // the candle burns from the start; a click blows it out (quickly) or lights it (it catches more slowly)
+  let candleTarget = 1;
+  let candleLevel = 1;
   // plushies squash and spring back, each on its own clock
   const bounces = new Map<THREE.Group, number>();
 
@@ -1128,6 +1133,10 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       }
       else if (kind === "console") enterConsole();
       else if (kind === "keyboard") options.onKeyboard?.();
+      else if (kind === "candle") {
+        candleTarget = candleTarget > 0.5 ? 0 : 1;
+        audio.click("lamp");
+      }
       else if (kind === "drawer") {
         drawerTarget = drawerTarget > 0.5 ? 0 : 1;
         audio.play("blind");
@@ -1196,6 +1205,8 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
         return [...inter.drawer.parts, inter.drawer.paper];
       case "keyboard":
         return [inter.keyboard];
+      case "candle":
+        return inter.candle.parts;
       case "radio":
         return [inter.speaker];
       case "switch":
@@ -1379,6 +1390,11 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       // light from outside follows how much window is showing
       moon.intensity = 3 * (1 - blindLevel);
     }
+    // the candle: eases toward lit or out, and the flame flickers on a few unrelated waves
+    candleLevel += (candleTarget - candleLevel) * (reducedMotion ? 1 : 1 - Math.exp(-(candleTarget ? 3 : 9) * dt));
+    if (Math.abs(candleTarget - candleLevel) < 0.002) candleLevel = candleTarget;
+    const candleFlicker = reducedMotion ? 1 : 1 + 0.09 * Math.sin(time * 9.3) + 0.06 * Math.sin(time * 23.7 + 1.3) + 0.05 * Math.sin(time * 4.1 + 2.1);
+    inter.candle.setLit(candleLevel, candleFlicker, time);
     if (drawerLevel !== drawerTarget) {
       drawerLevel += (drawerTarget - drawerLevel) * (reducedMotion ? 1 : 1 - Math.exp(-7 * dt));
       if (Math.abs(drawerTarget - drawerLevel) < 0.002) drawerLevel = drawerTarget;

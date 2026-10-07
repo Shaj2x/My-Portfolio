@@ -51,6 +51,8 @@ export interface FurnitureHandle {
     drawer: { parts: THREE.Object3D[]; paper: THREE.Mesh; setOpen: (k: number) => void };
     /** 0 = the PlayStation "who's using this controller" screen, 1 = signed in to the home screen */
     setConsole: (k: number) => void;
+    /** the pillar candle on the dresser: its meshes, and how lit it is (0 out, 1 burning) with a flicker (≈0.8–1.2) */
+    candle: { parts: THREE.Object3D[]; setLit: (k: number, flicker: number, time: number) => void };
   };
   /** the sunset lamp on the desk: where its lens is, the point on the wall it projects onto, its meshes, and its lens glow (0–1) */
   sunset: { lens: THREE.Vector3; target: THREE.Vector3; parts: THREE.Object3D[]; setGlow: (k: number) => void };
@@ -122,6 +124,7 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
   let drawer!: FurnitureHandle["interact"]["drawer"];
   let keyboard!: THREE.Group;
   let speaker!: THREE.Mesh;
+  let candle!: FurnitureHandle["interact"]["candle"];
   let controller!: THREE.Group;
   let monitor!: THREE.Group;
   let ps5!: THREE.Group;
@@ -355,10 +358,68 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     const pf = LAYOUT.perfume.pos;
     bottles = decor.perfumeShelf(group, new THREE.Vector3(pf[0], top, pf[2]));
 
-    // LED pillar candle: a soft-edged ivory block with a dipped top, then the everyday clutter
+    // the pillar candle: a soft ivory block with a melted pool in its top, a wick and a flame that
+    // flickers, and a little warm light of its own. Click it to blow it out or light it again.
     const cd = LAYOUT.candle.pos;
-    rounded(0.075, 0.1, 0.075, 0.012, std("#f1e7d2", 0.85), cd[0], top + 0.05, cd[2]);
-    cyl(0.026, 0.03, 0.006, std("#e2d4bb", 0.9), cd[0], top + 0.098, cd[2], group, 20);
+    const cg = anchor(cd[0], top, cd[2]);
+    // the wax glows faintly from within while it burns
+    const wax = new THREE.MeshStandardMaterial({ color: "#f1e7d2", roughness: 0.7, emissive: "#ff9a4a", emissiveIntensity: 0 });
+    const candleBody = place(new THREE.Mesh(new RoundedBoxGeometry(0.075, 0.1, 0.075, 6, 0.014), wax), 0, 0.05, 0, cg);
+    const pool = place(new THREE.Mesh(new THREE.CylinderGeometry(0.027, 0.024, 0.006, 40), new THREE.MeshStandardMaterial({ color: "#e9dcc2", roughness: 0.35, emissive: "#ffb066", emissiveIntensity: 0 })), 0, 0.0975, 0, cg, false);
+    const wick = place(new THREE.Mesh(new THREE.CylinderGeometry(0.0011, 0.0013, 0.012, 8), std("#1c1712", 0.9)), 0, 0.104, 0, cg, false);
+    wick.rotation.z = 0.12;
+    // the flame: a bright teardrop core inside a softer orange envelope, and a halo sprite
+    const flame = new THREE.Group();
+    flame.position.set(0.0006, 0.11, 0);
+    cg.add(flame);
+    const tear = new THREE.LatheGeometry(
+      Array.from({ length: 14 }, (_, i) => {
+        const t = i / 13; // 0 at the base, 1 at the tip
+        return new THREE.Vector2(Math.sin(Math.PI * Math.pow(t, 0.7)) * (1 - t * 0.55) * 0.5, t);
+      }),
+      20,
+    );
+    const outerMat = new THREE.MeshBasicMaterial({ color: new THREE.Color("#ff8a2a").multiplyScalar(1.4), transparent: true, opacity: 0.75, depthWrite: false, toneMapped: false, blending: THREE.AdditiveBlending });
+    const coreMat = new THREE.MeshBasicMaterial({ color: new THREE.Color("#fff3d6").multiplyScalar(1.6), transparent: true, depthWrite: false, toneMapped: false });
+    const outer = new THREE.Mesh(tear, outerMat);
+    outer.scale.set(0.013, 0.026, 0.013);
+    outer.position.y = -0.003;
+    const core = new THREE.Mesh(tear, coreMat);
+    core.scale.set(0.007, 0.016, 0.007);
+    const blue = new THREE.Mesh(new THREE.SphereGeometry(0.0035, 10, 8), new THREE.MeshBasicMaterial({ color: "#5b8cff", transparent: true, opacity: 0.55, depthWrite: false, toneMapped: false }));
+    blue.position.y = -0.001;
+    const haloTex = paintTexture(64, 64, (c, w, h) => {
+      const g = c.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
+      g.addColorStop(0, "rgba(255,190,110,0.9)");
+      g.addColorStop(0.35, "rgba(255,140,60,0.28)");
+      g.addColorStop(1, "rgba(255,120,40,0)");
+      c.fillStyle = g;
+      c.fillRect(0, 0, w, h);
+    });
+    const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: haloTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }));
+    halo.scale.setScalar(0.12);
+    halo.position.y = 0.008;
+    flame.add(outer, core, blue, halo);
+    for (const m of [outer, core, blue]) m.renderOrder = 2;
+    // a small warm light, always in the scene (so toggling never recompiles shaders), dimmed to 0 when out
+    const light = new THREE.PointLight("#ff9a45", 0, 1.6, 2);
+    light.position.set(0, 0.14, 0);
+    cg.add(light);
+    candle = {
+      parts: [candleBody, pool, wick],
+      setLit: (k, flicker, time) => {
+        flame.visible = k > 0.02;
+        // the flame grows from the wick as it catches and shrinks as it goes out, and sways a little
+        const f = k * (0.92 + 0.08 * flicker);
+        flame.scale.set(Math.max(f, 0.001), Math.max(k * (0.9 + 0.18 * (flicker - 1) + 0.1), 0.001), Math.max(f, 0.001));
+        flame.rotation.z = Math.sin(time * 2.3) * 0.05 + Math.sin(time * 7.1) * 0.02;
+        flame.rotation.x = Math.sin(time * 1.7 + 1) * 0.04;
+        halo.material.opacity = k * (0.55 + 0.25 * flicker);
+        light.intensity = 0.35 * k * flicker;
+        wax.emissiveIntensity = 0.1 * k * flicker;
+        (pool.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.45 * k * flicker;
+      },
+    };
     const { strap, wallet } = decor.clutter(group, new THREE.Vector3(x + 0.02, top, -1.3));
     spots.push({ id: "leadership", root: strap }, { id: "services", root: wallet });
   }
@@ -718,27 +779,55 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     const ct = LAYOUT.controller.pos;
     const cg = anchor(ct[0], deskTop, ct[2], facing + 0.25);
     controller = cg;
-    const dsWhite = std("#f3f3f1", 0.42);
-    const dsBlack = std("#17171a", 0.5);
+    // glossy moulded plastic: a clear coat over a soft base, like the real thing
+    const dsWhite = new THREE.MeshPhysicalMaterial({ color: "#f4f4f2", roughness: 0.38, clearcoat: 0.6, clearcoatRoughness: 0.25 });
+    const dsBlack = new THREE.MeshPhysicalMaterial({ color: "#16161a", roughness: 0.42, clearcoat: 0.45, clearcoatRoughness: 0.3 });
     const dsGrey = std("#3a3b40", 0.45);
-    // black core and its belly
-    rounded(0.112, 0.026, 0.062, 0.012, dsBlack, 0, 0.019, 0.004, cg);
-    // white wings sweeping back into the grips
+    // one continuous white shell: the DualSense outline seen from above (front edge, shoulders, the
+    // two grips and the curve between them) traced as a smooth spline and extruded with a deep,
+    // rounded bevel, so there are no seams or boxy corners anywhere
+    const half: [number, number][] = [
+      [0, 0.033], [0.032, 0.036], [0.056, 0.034], [0.07, 0.022], [0.074, 0.0], [0.071, -0.027], [0.065, -0.05],
+      [0.052, -0.062], [0.039, -0.058], [0.031, -0.041], [0.024, -0.023], [0.011, -0.015], [0, -0.014],
+    ];
+    const outlinePts = [...half, ...half.slice(1, -1).reverse().map(([x, y]) => [-x, y] as [number, number])].map(([x, y]) => new THREE.Vector2(x, y));
+    const shellShape = new THREE.Shape();
+    shellShape.moveTo(outlinePts[0].x, outlinePts[0].y);
+    shellShape.splineThru([...outlinePts.slice(1), outlinePts[0]]);
+    const shellGeo = new THREE.ExtrudeGeometry(shellShape, { depth: 0.019, bevelEnabled: true, bevelThickness: 0.007, bevelSize: 0.007, bevelSegments: 8, curveSegments: 96 });
+    shellGeo.computeVertexNormals();
+    const shell = new THREE.Mesh(shellGeo, dsWhite);
+    // the shape lies in x/y; tip it flat so the extrusion becomes its height (shape y runs to -z)
+    shell.rotation.x = -Math.PI / 2;
+    place(shell, 0, 0.009, 0, cg);
+    // the black centre plate between the wings, where the sticks sit
+    const plateShape = new THREE.Shape();
+    {
+      const w = 0.03, f = 0.028, b = -0.012, r = 0.01;
+      plateShape.moveTo(-w + r, b);
+      plateShape.lineTo(w - r, b);
+      plateShape.quadraticCurveTo(w, b, w, b + r);
+      plateShape.lineTo(w, f - r);
+      plateShape.quadraticCurveTo(w, f, w - r, f);
+      plateShape.lineTo(-w + r, f);
+      plateShape.quadraticCurveTo(-w, f, -w, f - r);
+      plateShape.lineTo(-w, b + r);
+      plateShape.quadraticCurveTo(-w, b, -w + r, b);
+    }
+    const plate = new THREE.Mesh(new THREE.ExtrudeGeometry(plateShape, { depth: 0.001, bevelEnabled: true, bevelThickness: 0.0015, bevelSize: 0.0015, bevelSegments: 4, curveSegments: 24 }), dsBlack);
+    plate.rotation.x = -Math.PI / 2;
+    place(plate, 0, 0.0345, 0, cg, false);
     for (const sgn of [-1, 1]) {
-      const wing = rounded(0.05, 0.03, 0.066, 0.014, dsWhite, sgn * 0.046, 0.02, 0.0, cg);
-      wing.rotation.y = sgn * 0.12;
-      const grip = place(new THREE.Mesh(new THREE.CapsuleGeometry(0.019, 0.042, 8, 16), dsWhite), sgn * 0.058, 0.016, 0.043, cg);
-      grip.rotation.set(Math.PI / 2 - 0.25, 0, -sgn * 0.42);
       // bumpers and triggers along the front edge
-      const bumper = rounded(0.034, 0.008, 0.012, 0.004, dsWhite, sgn * 0.044, 0.03, -0.036, cg);
-      bumper.rotation.y = sgn * 0.12;
-      const trigger = rounded(0.026, 0.012, 0.016, 0.005, dsBlack, sgn * 0.044, 0.02, -0.042, cg);
+      const bumper = rounded(0.03, 0.007, 0.01, 0.0034, dsWhite, sgn * 0.046, 0.03, -0.041, cg);
+      bumper.rotation.y = sgn * 0.1;
+      const trigger = rounded(0.024, 0.012, 0.014, 0.0055, dsBlack, sgn * 0.046, 0.019, -0.045, cg);
       trigger.rotation.x = 0.35;
       // thumbsticks: a post and a dished cap
       const sx = sgn * 0.024;
-      cyl(0.0045, 0.0045, 0.008, dsBlack, sx, 0.035, 0.02, cg, 12);
-      cyl(0.0095, 0.0095, 0.004, dsGrey, sx, 0.041, 0.02, cg, 20);
-      const rim = place(new THREE.Mesh(new THREE.TorusGeometry(0.0085, 0.0016, 6, 20), dsBlack), sx, 0.043, 0.02, cg, false);
+      cyl(0.0045, 0.0045, 0.008, dsBlack, sx, 0.039, 0.02, cg, 16);
+      cyl(0.0095, 0.0095, 0.004, dsGrey, sx, 0.0445, 0.02, cg, 28);
+      const rim = place(new THREE.Mesh(new THREE.TorusGeometry(0.0085, 0.0016, 8, 28), dsBlack), sx, 0.0465, 0.02, cg, false);
       rim.rotation.x = Math.PI / 2;
     }
     // D-pad on the left wing, face buttons on the right
@@ -749,11 +838,11 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     const faceMat = std("#c9cdd4", 0.3);
     for (const [dx, dz] of [[0, -0.008], [0, 0.008], [-0.008, 0], [0.008, 0]]) cyl(0.0035, 0.0035, 0.003, faceMat, 0.046 + dx, 0.0365, -0.006 + dz, cg, 14);
     // touchpad, its blue light bar, the PS and mute buttons
-    rounded(0.05, 0.006, 0.032, 0.004, dsWhite, 0, 0.034, -0.016, cg);
+    rounded(0.05, 0.005, 0.032, 0.0024, dsWhite, 0, 0.0375, -0.012, cg, false);
     const bar = new THREE.MeshBasicMaterial({ color: new THREE.Color("#3a6bff").multiplyScalar(1.6), toneMapped: false });
-    for (const sgn of [-1, 1]) block(0.0016, 0.0025, 0.03, bar, sgn * 0.026, 0.0345, -0.016, cg, false);
-    cyl(0.0042, 0.0042, 0.003, dsGrey, 0, 0.0335, 0.012, cg, 16);
-    block(0.008, 0.002, 0.003, std("#f2a65a", 0.4), 0, 0.0333, 0.019, cg, false);
+    for (const sgn of [-1, 1]) block(0.0016, 0.0025, 0.03, bar, sgn * 0.0262, 0.0375, -0.012, cg, false);
+    cyl(0.0042, 0.0042, 0.003, dsGrey, 0, 0.0375, 0.012, cg, 20);
+    rounded(0.008, 0.002, 0.003, 0.0009, std("#f2a65a", 0.4), 0, 0.0368, 0.019, cg, false);
 
     const mg = LAYOUT.mug.pos;
     const mugMat = std("#161616", 0.35);
@@ -1011,5 +1100,5 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     block(0.008, 0.035, 0.016, std("#f6f5f2", 0.4), sw[0] + 0.012, sw[1], sw[2], group, false);
   }
 
-  return { group, lamp, binoculars, sunset, deskLamp, screens, interact: { plushies, bottles, speaker, controller, monitor, ps5, lightSwitch, setConsole, spots, drawer, keyboard } };
+  return { group, lamp, binoculars, sunset, deskLamp, screens, interact: { plushies, bottles, speaker, controller, monitor, ps5, lightSwitch, setConsole, spots, drawer, keyboard, candle } };
 }
