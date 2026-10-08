@@ -5,9 +5,9 @@ import ssCoin from "@/assets/ss-coin.png";
  * Super Shajith: a side-scrolling platformer through Shajith's life, in the classic run-and-jump
  * format (original pixel art, drawn in code; no borrowed sprites).
  *
- *   1-1 Brampton        high school: dodge Pop Quizzes, collect A+ grades, graduate
- *   1-2 LoveYouReally   the streetwear brand: stomp the Haters, collect followers
- *   1-3 Western         first year: get past the Midterms to University College
+ *   1-1 The Grind       high school: dodge Pop Quizzes, collect A+ grades, graduate
+ *   1-2 The Hustle      the streetwear brand: stomp the Haters, collect followers
+ *   1-3 Next Level      first year: get past the Midterms to University College
  *
  * Coins are the black-and-white SS logo. ? blocks give coins or a fragrance to spray on:
  *   Breeze       (blue)   grow big: one free hit, and bricks break
@@ -152,8 +152,8 @@ const LEVELS: Level[] = [
     },
     {
       name: "1-1",
-      place: "Brampton",
-      years: "Chinguacousy S.S. · 2021–2025",
+      place: "The Grind",
+      years: "High school · 2021–2025",
       intro: "High school. Collect A+ grades, and watch out for pop quizzes.",
       outro: ["Graduated with a 96.3% average", "Student Activity Council President", "Tamil Student Association President"],
       coinName: "Grades",
@@ -208,7 +208,7 @@ const LEVELS: Level[] = [
     },
     {
       name: "1-2",
-      place: "LoveYouReally",
+      place: "The Hustle",
       years: "The streetwear brand · 2023–2025",
       intro: "Started a clothing brand at 15. Collect followers and stomp the haters.",
       outro: ["Co-founded LoveYouReally Apparel", "Grew it to 10K+ followers", "Design, customers and fulfillment, at 15"],
@@ -265,9 +265,9 @@ const LEVELS: Level[] = [
     },
     {
       name: "1-3",
-      place: "Western",
-      years: "Western University · 2025–",
-      intro: "First year in London, Ontario. Earn your credits, survive the midterms.",
+      place: "Next Level",
+      years: "University · 2025–",
+      intro: "First year of university. Earn your credits, survive the midterms.",
       outro: ["Engineering Science + Ivey HBA", "One of Canada's most selective dual degrees", "The adventure continues…"],
       coinName: "Credits",
       coinValue: 1,
@@ -1083,7 +1083,7 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
         text("SUPER", VIEW_W / 2, 62, 14, "#fcd99a");
         text("SHAJITH", VIEW_W / 2, 92, 30, "#ffffff");
         text("A platformer through my life", VIEW_W / 2, 116, 9, "rgba(255,255,255,0.75)");
-        text("Brampton → LoveYouReally → Western", VIEW_W / 2, 132, 8, "rgba(255,255,255,0.55)");
+        text("The Grind → The Hustle → Next Level", VIEW_W / 2, 132, 8, "rgba(255,255,255,0.55)");
         if (blink) text("Press jump to start", VIEW_W / 2, 176, 10, "#fcd99a");
       } else if (s.phase === "intro") {
         text(`WORLD ${L.name}`, VIEW_W / 2, 70, 10, "#fcd99a");
