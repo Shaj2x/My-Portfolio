@@ -504,7 +504,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     const leafMat = new THREE.MeshStandardMaterial({ map: sixPanel, bumpMap: sixPanel, bumpScale: 2, roughness: 0.5 });
     for (const s of [-1, 1]) {
       const cx = (CLOSET.doorX0 + CLOSET.doorX1) / 2 + s * (leafW / 2 + 0.002);
-      roomSpots.push({ id: "experience", root: slab(leafW - 0.006, CLOSET.doorH, 0.035, leafMat, cx, CLOSET.doorH / 2, closetZ + 0.03, frontWall) });
+      slab(leafW - 0.006, CLOSET.doorH, 0.035, leafMat, cx, CLOSET.doorH / 2, closetZ + 0.03, frontWall);
       // lever beside the centre seam, its bar pointing toward the leaf's hinge
       lever(cx - s * (leafW / 2 - 0.07), 1.0, closetZ + 0.0125, s);
       hinges(cx + s * (leafW / 2 - 0.004), closetZ + 0.012, CLOSET.doorH);
