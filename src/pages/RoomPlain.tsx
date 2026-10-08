@@ -371,7 +371,7 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
       <div ref={containerRef} className="absolute inset-0" />
       {error && <p className="absolute inset-0 grid place-items-center text-white/70">This browser can't show the 3D room.</p>}
 
-      <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-4 p-4">
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-[6] flex items-start justify-between gap-4 p-4">
         <motion.div
           className="flex flex-col items-start gap-2"
           initial={reduce ? { opacity: 0 } : { opacity: 0, transform: "translateY(-10px)" }}
@@ -379,7 +379,7 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
           transition={{ duration: 0.5, ease: EASE_OUT }}
         >
           {/* the room is the home page, so the corner carries the name instead of a way back */}
-          <p className="liquid-glass on-glass rounded-full px-4 py-2 text-sm leading-tight">
+          <p className={`liquid-glass on-glass rounded-full px-4 py-2 text-sm leading-tight ${inBinoculars ? "hidden sm:block" : ""}`}>
             <span className="font-semibold text-white">Shajith Sasikumar</span>
             <span className="ml-2 text-white/55">BESc + Ivey HBA</span>
           </p>
@@ -423,7 +423,7 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
 
       <AnimatePresence>{playlist && playerOpen && (
         // kept mounted while open so the music carries on when the lights panel or binoculars are used
-        <motion.div key="player" {...pop} style={{ transformOrigin: "top left" }} className="pointer-events-auto absolute left-4 top-20 w-[min(360px,calc(100%-32px))] liquid-glass-panel overflow-hidden rounded-[24px]">
+        <motion.div key="player" {...pop} style={{ transformOrigin: "top left" }} className={`pointer-events-auto absolute left-4 top-20 z-10 w-[min(360px,calc(100%-32px))] liquid-glass-panel overflow-hidden rounded-[24px] ${away ? "invisible" : ""}`}>
           <div className="flex items-center justify-between px-4 py-2.5">
             <p className="text-xs uppercase tracking-[0.18em] text-amber-200/70">Desk speaker · {playlist.service}</p>
             <button type="button" aria-label="Close the player" className="rounded-full p-1.5 text-white/60 hover:bg-white/10 hover:text-white" onClick={() => setPlayerOpen(false)}>
@@ -435,7 +435,7 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
               Open my playlist on {playlist.service}
             </a>
           ) : (
-            <iframe title={`My playlist on ${playlist.service}`} src={playlist.embed} className="block h-[352px] w-full border-0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" />
+            <iframe title={`My playlist on ${playlist.service}`} src={playlist.embed} className="block h-[152px] w-full border-0 sm:h-[352px]" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" />
           )}
         </motion.div>
       )}</AnimatePresence>
@@ -583,6 +583,18 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
           </motion.p>
         </div>
       )}</AnimatePresence>
+      {/* tapping anywhere outside an open menu or panel closes it (there's no Esc key on a phone) */}
+      {(menu || panelOpen || soundOpen) && !away && (
+        <div
+          className="pointer-events-auto absolute inset-0 z-[5]"
+          aria-hidden="true"
+          onPointerDown={() => {
+            setMenu(null);
+            setPanelOpen(false);
+            setSoundOpen(false);
+          }}
+        />
+      )}
       {/* sound: everything on or off, then effects and ambience on their own, and what's outside */}
       <AnimatePresence>{soundOpen && (
         <motion.div key="sound" {...pop} onPointerMove={trackSpot} style={{ transformOrigin: "top right" }} className="pointer-events-auto absolute right-4 top-[4.25rem] z-20 w-[min(300px,calc(100%-32px))] liquid-glass-panel glass-spot rounded-[24px] p-5">
@@ -834,13 +846,16 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
       )}</AnimatePresence>
 
       {/* the dock */}
-      <div className={`pointer-events-none absolute inset-x-0 bottom-0 flex flex-col items-center gap-2 px-4 pb-[calc(16px+env(safe-area-inset-bottom,0px))] ${inConsole ? "hidden" : ""}`}>
+      <div className={`pointer-events-none absolute inset-x-0 bottom-0 z-[6] flex flex-col items-center gap-2 px-4 pb-[calc(16px+env(safe-area-inset-bottom,0px))] ${inConsole ? "hidden" : ""}`}>
         {inBinoculars ? (
           <>
             <button type="button" className={chip} onClick={() => roomRef.current?.setView(lastRoomView.current)}>
-              Back to the room (Esc)
+              Back to the room<span className="hidden [@media(pointer:fine)]:inline"> (Esc)</span>
             </button>
-            <p className="text-xs text-white/50">Drag to look around · scroll to zoom</p>
+            <p className="text-xs text-white/50">
+              Drag to look around · <span className="[@media(pointer:coarse)]:hidden">scroll</span>
+              <span className="hidden [@media(pointer:coarse)]:inline">pinch</span> to zoom
+            </p>
           </>
         ) : (
           <>

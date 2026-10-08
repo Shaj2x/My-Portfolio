@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { BarChart3, ExternalLink, Gamepad2, Sparkles, Trophy, type LucideIcon } from "lucide-react";
+import { BarChart3, ExternalLink, Gamepad2, Sparkles, Trophy, X, type LucideIcon } from "lucide-react";
 import PongGame from "@/components/PongGame";
 import SnakeGame from "@/components/SnakeGame";
 import { customDescriptions, demoLinks, profile } from "@/data/portfolio";
@@ -24,8 +24,8 @@ interface Game {
 }
 
 const GAMES: Game[] = [
-  { id: "pong", title: "Pong", blurb: "First to 5 against the CPU. Move with W/S, the arrow keys, or the D-pad.", icon: Gamepad2, art: ["#d4202c", "#2a0507"] },
-  { id: "snake", title: "Snake", blurb: "Eat the SS logo to grow. Steer with WASD, the arrow keys, or the D-pad.", icon: Gamepad2, art: ["#1f9d55", "#03200f"] },
+  { id: "pong", title: "Pong", blurb: "First to 5 against the CPU. Move with W/S, the arrow keys, the D-pad, or drag on the board.", icon: Gamepad2, art: ["#d4202c", "#2a0507"] },
+  { id: "snake", title: "Snake", blurb: "Eat the SS logo to grow. Steer with WASD, the arrow keys, the D-pad, or a swipe.", icon: Gamepad2, art: ["#1f9d55", "#03200f"] },
   { id: "slots", title: "Raptors Slot Machine", blurb: "A Toronto Raptors slot machine. Opens in a new tab.", icon: Trophy, art: ["#ce1141", "#1a0207"], site: demoLinks["Raptors-Slot-Machine"] },
   { id: "blackjack", title: "Raptors BlackJack", blurb: "Blackjack at a Raptors table. Opens in a new tab.", icon: Trophy, art: ["#a1a1a4", "#1c0b0d"], site: demoLinks["Raptors-BlackJack"] },
   { id: "statstack", title: "StatStack", blurb: "Opens in a new tab.", icon: BarChart3, art: ["#2f6fd6", "#06122b"], site: demoLinks["StatStack"] },
@@ -203,7 +203,11 @@ export const RoomConsole = ({ open, onExit }: RoomConsoleProps) => {
           <div className="flex items-center gap-3 text-sm text-white/85">
             <span className="hidden sm:inline">{profile.name.split(" ")[0]}</span>
             <span className="grid h-8 w-8 place-items-center rounded-full bg-gradient-to-br from-[#d4202c] to-[#5a0a0f] text-xs font-bold">SS</span>
-            <span className="font-mono tabular-nums">{clock}</span>
+            <span className="hidden font-mono tabular-nums sm:inline">{clock}</span>
+            {/* always a way out, for touch screens with no Esc key or controller */}
+            <button type="button" onClick={onExit} aria-label="Back to the room" className="ml-1 inline-flex items-center gap-1.5 rounded-full bg-white/12 px-3 py-1.5 text-sm font-medium text-white hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">
+              <X className="h-4 w-4" /> <span className="hidden sm:inline">Back to the room</span><span className="sm:hidden">Exit</span>
+            </button>
           </div>
         </header>
 
@@ -264,15 +268,24 @@ export const RoomConsole = ({ open, onExit }: RoomConsoleProps) => {
 
         <footer className="relative z-10 flex flex-wrap items-center justify-end gap-x-5 gap-y-1 border-t border-white/10 bg-black/30 px-5 py-2 text-xs text-white/70 sm:px-10">
           {playing ? (
-            <Hint glyph="circle">Back (Esc)</Hint>
+            <button type="button" onClick={() => act("back")} className="rounded-full px-2 py-1 hover:bg-white/10">
+              <Hint glyph="circle">Back to games</Hint>
+            </button>
           ) : (
             <>
-              <Hint glyph="dpad">Move</Hint>
-              <Hint glyph="cross">Play (Enter)</Hint>
-              <Hint glyph="circle">Back to the room (Esc)</Hint>
+              <span className="hidden [@media(pointer:fine)]:inline-flex">
+                <Hint glyph="dpad">Move</Hint>
+              </span>
+              <span className="hidden [@media(pointer:fine)]:inline-flex">
+                <Hint glyph="cross">Play (Enter)</Hint>
+              </span>
+              <span className="[@media(pointer:coarse)]:hidden">
+                <Hint glyph="circle">Back to the room (Esc)</Hint>
+              </span>
+              <span className="text-white/55 [@media(pointer:fine)]:hidden">Tap a game, then Play</span>
             </>
           )}
-          <span className="inline-flex items-center gap-1.5 text-white/45">
+          <span className="hidden items-center gap-1.5 text-white/45 sm:inline-flex">
             <Gamepad2 className="h-3.5 w-3.5" /> Works with a PS5 controller
           </span>
         </footer>
