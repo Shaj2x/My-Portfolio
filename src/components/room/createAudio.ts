@@ -8,6 +8,8 @@
  */
 
 export type Weather = "rain" | "snow" | "clear";
+/** what the audio can play outside: the room's weather, plus a thunderstorm */
+export type Outside = Weather | "storm";
 
 /** What the radio on the shelf is "tuned" to. Edit this to say what you actually listen to. */
 export const RADIO_STATION = {
@@ -20,13 +22,17 @@ const midiHz = (m: number) => 440 * 2 ** ((m - 69) / 12);
 export interface RoomAudio {
   unlock: () => void;
   setMuted: (muted: boolean) => void;
-  setWeather: (w: Weather) => void;
+  /** separate levels (0..1) for the small sound effects and for the ambience (weather and room tone) */
+  setMix: (mix: { effects: number; ambience: number }) => void;
+  setWeather: (w: Outside) => void;
   /** 0..1 how loud the outside is (the telescope puts you "at" the window) */
   setOutside: (amount: number) => void;
   click: (kind: "lamp" | "switch" | "radio") => void;
   /** small sounds for things in the room: a plushie's squeak, a perfume spritz, the PS5 waking, the blind rolling */
   play: (kind: "squeak" | "spritz" | "chime" | "blind") => void;
   thunder: (delay: number) => void;
+  /** called as lightning strikes in a thunderstorm, just before its thunder arrives */
+  onLightning?: () => void;
   setRadio: (on: boolean) => void;
   /** 0..1 envelope of the radio's kick drum, for making the dial pulse */
   radioPulse: () => number;
@@ -47,7 +53,10 @@ export function createAudio(): RoomAudio {
   let brown: AudioBuffer;
   let crackle: AudioBuffer;
   let muted = false;
-  let weather: Weather = "rain";
+  let effectsLevel = 1;
+  let ambienceLevel = 1;
+  let thunderTimer: number | undefined;
+  let weather: Outside = "rain";
   let radioOn = false;
   let pulse = 0;
   let pulseAt = 0;
@@ -139,15 +148,16 @@ export function createAudio(): RoomAudio {
       g.gain.setValueAtTime(g.gain.value, now);
       g.gain.linearRampToValueAtTime(v, now + fade);
     };
-    set(rainGain, weather === "rain" ? 0.55 : 0);
-    set(windGain, weather === "snow" ? 0.35 : weather === "clear" ? 0.06 : 0.08);
+    const wet = weather === "rain" || weather === "storm";
+    set(rainGain, weather === "storm" ? 0.7 : wet ? 0.55 : 0);
+    set(windGain, weather === "snow" ? 0.35 : weather === "storm" ? 0.16 : weather === "clear" ? 0.1 : 0.08);
     set(roomToneGain, 0.12);
   };
 
   // individual drops ticking on the glass
   const scheduleDrops = () => {
     if (!ctx) return;
-    if (weather === "rain") {
+    if (weather === "rain" || weather === "storm") {
       const at = ctx.currentTime + 0.01;
       burst(at, 0.03 + Math.random() * 0.03, "bandpass", 2500 + Math.random() * 4000, 0.04 + Math.random() * 0.06, ambience, 3);
     }
@@ -249,9 +259,9 @@ export function createAudio(): RoomAudio {
     // the outside is heard through a window: muffled unless you're at the telescope
     outsideFilter = filter("lowpass", 1800);
     outsideFilter.connect(master);
-    ambience = gain(1);
+    ambience = gain(ambienceLevel);
     ambience.connect(outsideFilter);
-    sfx = gain(0.9);
+    sfx = gain(0.9 * effectsLevel);
     sfx.connect(master);
 
     // rain: a body of pink noise plus a brighter patter layer
@@ -284,7 +294,8 @@ export function createAudio(): RoomAudio {
     const tone60 = filter("lowpass", 160);
     loop(brown, tone60);
     tone60.connect(gain(0.15)).connect(roomToneGain);
-    roomToneGain.connect(master);
+    // part of the ambience, so its slider (and "off") covers it too
+    roomToneGain.connect(ambience);
 
     // radio: warm, band-limited "small speaker" chain with vinyl crackle
     music = gain(0);
@@ -313,7 +324,39 @@ export function createAudio(): RoomAudio {
 
     applyWeather(3);
     scheduleDrops();
+    scheduleThunder();
     if (radioOn) startRadio();
+  };
+
+  // a thunderstorm rolls thunder in every so often, near and far
+  const scheduleThunder = () => {
+    window.clearTimeout(thunderTimer);
+    if (!ctx || weather !== "storm") return;
+    thunderTimer = window.setTimeout(() => {
+      // the flash first; the sound follows by however far away it struck
+      api.onLightning?.();
+      thunder(0.4 + Math.random() * 2.2);
+      scheduleThunder();
+    }, 9000 + Math.random() * 22000);
+  };
+  const thunder = (delay: number) => {
+    if (!ctx || (weather !== "rain" && weather !== "storm")) return;
+    const at = ctx.currentTime + delay;
+    const s = ctx.createBufferSource();
+    s.buffer = brown;
+    s.playbackRate.value = 0.6 + Math.random() * 0.3;
+    const f = filter("lowpass", 260);
+    f.frequency.setValueAtTime(320, at);
+    f.frequency.exponentialRampToValueAtTime(70, at + 5);
+    const g = gain(0);
+    const peak = 0.9 + Math.random() * 0.5;
+    g.gain.setValueAtTime(0, at);
+    g.gain.linearRampToValueAtTime(peak, at + 0.25);
+    g.gain.linearRampToValueAtTime(peak * 0.55, at + 1.2);
+    g.gain.linearRampToValueAtTime(peak * 0.7, at + 1.8); // a second roll
+    g.gain.exponentialRampToValueAtTime(0.001, at + 6);
+    s.connect(f).connect(g).connect(ambience);
+    s.start(at, Math.random() * 2, 6.5);
   };
 
   const startRadio = () => {
@@ -348,7 +391,7 @@ export function createAudio(): RoomAudio {
     window.clearInterval(scheduler);
   };
 
-  return {
+  const api: RoomAudio = {
     unlock,
     setMuted: (m) => {
       muted = m;
@@ -358,9 +401,21 @@ export function createAudio(): RoomAudio {
       master.gain.setValueAtTime(master.gain.value, now);
       master.gain.linearRampToValueAtTime(m ? 0 : 0.9, now + 0.3);
     },
+    setMix: ({ effects, ambience: amb }) => {
+      effectsLevel = effects;
+      ambienceLevel = amb;
+      if (!ctx) return;
+      const now = ctx.currentTime;
+      for (const [g, v] of [[sfx, 0.9 * effects], [ambience, amb]] as const) {
+        g.gain.cancelScheduledValues(now);
+        g.gain.setValueAtTime(g.gain.value, now);
+        g.gain.linearRampToValueAtTime(v, now + 0.25);
+      }
+    },
     setWeather: (w) => {
       weather = w;
       applyWeather();
+      scheduleThunder();
     },
     setOutside: (amount) => {
       if (!ctx) return;
@@ -405,25 +460,7 @@ export function createAudio(): RoomAudio {
         burst(at, 0.6, "lowpass", 300, 0.06, sfx);
       }
     },
-    thunder: (delay) => {
-      if (!ctx || weather !== "rain") return;
-      const at = ctx.currentTime + delay;
-      const s = ctx.createBufferSource();
-      s.buffer = brown;
-      s.playbackRate.value = 0.6 + Math.random() * 0.3;
-      const f = filter("lowpass", 260);
-      f.frequency.setValueAtTime(320, at);
-      f.frequency.exponentialRampToValueAtTime(70, at + 5);
-      const g = gain(0);
-      const peak = 0.9 + Math.random() * 0.5;
-      g.gain.setValueAtTime(0, at);
-      g.gain.linearRampToValueAtTime(peak, at + 0.25);
-      g.gain.linearRampToValueAtTime(peak * 0.55, at + 1.2);
-      g.gain.linearRampToValueAtTime(peak * 0.7, at + 1.8); // a second roll
-      g.gain.exponentialRampToValueAtTime(0.001, at + 6);
-      s.connect(f).connect(g).connect(ambience);
-      s.start(at, Math.random() * 2, 6.5);
-    },
+    thunder,
     setRadio: (on) => {
       radioOn = on;
       if (on) startRadio();
@@ -437,6 +474,7 @@ export function createAudio(): RoomAudio {
     },
     dispose: () => {
       window.clearTimeout(dropTimer);
+      window.clearTimeout(thunderTimer);
       window.clearInterval(scheduler);
       sources.forEach((s) => {
         try {
@@ -449,4 +487,5 @@ export function createAudio(): RoomAudio {
       ctx = null;
     },
   };
+  return api;
 }

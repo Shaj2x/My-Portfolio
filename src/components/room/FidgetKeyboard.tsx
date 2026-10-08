@@ -34,12 +34,12 @@ const SOUND_PROFILES = {
 } as const;
 type SoundProfile = keyof typeof SOUND_PROFILES;
 
-const useKeySound = (muted: boolean, profile: SoundProfile) => {
+const useKeySound = (muted: boolean, profile: SoundProfile, volume: number) => {
   const ctx = useRef<AudioContext | null>(null);
   const burst = useRef<AudioBuffer | null>(null);
   return useCallback(
     (weight: number, release = false) => {
-      if (muted) return;
+      if (muted || volume <= 0) return;
       const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       if (!AC) return;
       const c = (ctx.current ??= new AC());
@@ -55,7 +55,7 @@ const useKeySound = (muted: boolean, profile: SoundProfile) => {
       const t = c.currentTime + 0.002;
       // every key is a little different; big keys (space, shift) sit lower
       const tune = (0.94 + Math.random() * 0.12) * (1 - Math.min(weight - 1, 3) * 0.07);
-      const level = p.level * (release ? 0.28 : 1) * (0.85 + Math.random() * 0.3);
+      const level = p.level * volume * (release ? 0.28 : 1) * (0.85 + Math.random() * 0.3);
       const out = c.createGain();
       out.gain.value = level;
       out.connect(c.destination);
@@ -94,7 +94,7 @@ const useKeySound = (muted: boolean, profile: SoundProfile) => {
         th.stop(t + 0.04);
       }
     },
-    [muted, profile],
+    [muted, profile, volume],
   );
 };
 
@@ -106,9 +106,11 @@ const when = (iso: string) => {
 export interface FidgetKeyboardProps {
   onClose: () => void;
   muted?: boolean;
+  /** 0..1, the room's sound-effects level */
+  volume?: number;
 }
 
-export const FidgetKeyboard = ({ onClose, muted = false }: FidgetKeyboardProps) => {
+export const FidgetKeyboard = ({ onClose, muted = false, volume = 1 }: FidgetKeyboardProps) => {
   const [down, setDown] = useState<Set<string>>(() => new Set());
   const [message, setMessage] = useState("");
   const [name, setName] = useState("");
@@ -125,7 +127,7 @@ export const FidgetKeyboard = ({ onClose, muted = false }: FidgetKeyboardProps) 
       return "Creamy";
     }
   });
-  const keySound = useKeySound(muted, profile);
+  const keySound = useKeySound(muted, profile, volume);
   const pickProfile = (p: SoundProfile) => {
     setProfile(p);
     try {
