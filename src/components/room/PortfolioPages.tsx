@@ -8,6 +8,7 @@ import {
   experience,
   GITHUB_USERNAME,
   inProgressRepos,
+  displayNames,
   profile,
   roles,
   services,
@@ -61,6 +62,8 @@ interface Repo {
   description: string | null;
   html_url: string;
   language: string | null;
+  /** the "website" set on the repo, used as a demo link when there isn't one here */
+  homepage?: string | null;
 }
 
 /** live from GitHub where the network allows it; otherwise the projects the portfolio links to */
@@ -93,25 +96,30 @@ const ProjectsPage = () => {
   return (
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2">
-        {repos.map((r) => (
-          <Card key={r.name}>
-            <div className="flex items-start justify-between gap-2">
-              <p className="min-w-0 break-words font-semibold text-white">{r.name.replace(/-+/g, " ")}</p>
-              {inProgressRepos.includes(r.name) && <span className="shrink-0 rounded-full bg-amber-300/15 px-2 py-0.5 text-[10px] font-medium text-amber-200">In progress</span>}
-            </div>
-            {r.description && <p className="mt-1.5 text-sm text-white/70">{r.description}</p>}
-            <div className="mt-3 flex flex-wrap gap-3 text-sm">
-              {demoLinks[r.name] && (
-                <a className="inline-flex items-center gap-1 text-[#7fb2ff] hover:text-white" href={demoLinks[r.name]} target="_blank" rel="noopener noreferrer">
-                  <Gamepad2 className="h-4 w-4" /> Live demo
+        {repos.map((r) => {
+          // what's written here wins over GitHub's (often empty) description and website
+          const description = customDescriptions[r.name] ?? r.description;
+          const demo = demoLinks[r.name] ?? (r.homepage || null);
+          return (
+            <Card key={r.name}>
+              <div className="flex items-start justify-between gap-2">
+                <p className="min-w-0 break-words font-semibold text-white">{displayNames[r.name] ?? r.name.replace(/-+/g, " ")}</p>
+                {inProgressRepos.includes(r.name) && <span className="shrink-0 rounded-full bg-amber-300/15 px-2 py-0.5 text-[10px] font-medium text-amber-200">In progress</span>}
+              </div>
+              {description && <p className="mt-1.5 text-sm text-white/70">{description}</p>}
+              <div className="mt-3 flex flex-wrap gap-3 text-sm">
+                {demo && (
+                  <a className="inline-flex items-center gap-1 text-[#7fb2ff] hover:text-white" href={demo} target="_blank" rel="noopener noreferrer">
+                    <Gamepad2 className="h-4 w-4" /> Live demo
+                  </a>
+                )}
+                <a className="inline-flex items-center gap-1 text-white/60 hover:text-white" href={r.html_url} target="_blank" rel="noopener noreferrer">
+                  <Github className="h-4 w-4" /> Code
                 </a>
-              )}
-              <a className="inline-flex items-center gap-1 text-white/60 hover:text-white" href={r.html_url} target="_blank" rel="noopener noreferrer">
-                <Github className="h-4 w-4" /> Code
-              </a>
-            </div>
-          </Card>
-        ))}
+              </div>
+            </Card>
+          );
+        })}
       </div>
       <LinkButton href={profile.github}>
         <Github className="h-4 w-4" /> Everything on GitHub
