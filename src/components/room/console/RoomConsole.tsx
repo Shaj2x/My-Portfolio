@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { BarChart3, ExternalLink, Gamepad2, Sparkles, Trophy, X, type LucideIcon } from "lucide-react";
+import { BarChart3, Crown, ExternalLink, Gamepad2, Sparkles, Trophy, X, type LucideIcon } from "lucide-react";
 import PongGame from "@/components/PongGame";
 import SnakeGame from "@/components/SnakeGame";
+import SuperShajith from "./SuperShajith";
 import { customDescriptions, demoLinks, profile } from "@/data/portfolio";
 
 /*
@@ -12,7 +13,7 @@ import { customDescriptions, demoLinks, profile } from "@/data/portfolio";
  */
 
 interface Game {
-  id: "pong" | "snake" | "slots" | "blackjack" | "mercatus" | "statstack";
+  id: "super" | "pong" | "snake" | "slots" | "blackjack" | "mercatus" | "statstack";
   title: string;
   /** one line under the title on the home screen */
   blurb: string;
@@ -24,6 +25,7 @@ interface Game {
 }
 
 const GAMES: Game[] = [
+  { id: "super", title: "Super Shajith", blurb: "A platformer through my life: Brampton, the brand, then Western. Run with ← →, jump with Space, stomp the pop quizzes. On a phone, use the buttons.", icon: Crown, art: ["#e8a33a", "#2a1306"] },
   { id: "pong", title: "Pong", blurb: "First to 5 against the CPU. Move with W/S, the arrow keys, the D-pad, or drag on the board.", icon: Gamepad2, art: ["#d4202c", "#2a0507"] },
   { id: "snake", title: "Snake", blurb: "Eat the SS logo to grow. Steer with WASD, the arrow keys, the D-pad, or a swipe.", icon: Gamepad2, art: ["#1f9d55", "#03200f"] },
   { id: "slots", title: "Raptors Slot Machine", blurb: "A Toronto Raptors slot machine. Opens in a new tab.", icon: Trophy, art: ["#ce1141", "#1a0207"], site: demoLinks["Raptors-Slot-Machine"] },
@@ -59,6 +61,8 @@ export interface RoomConsoleProps {
   onExit: () => void;
   /** a game was started (or opened in its own tab) */
   onPlay?: (game: string) => void;
+  /** a game was beaten (Super Shajith's last world cleared) */
+  onWin?: (game: string) => void;
 }
 
 const useClock = () => {
@@ -70,7 +74,7 @@ const useClock = () => {
   return now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 };
 
-export const RoomConsole = ({ open, onExit, onPlay }: RoomConsoleProps) => {
+export const RoomConsole = ({ open, onExit, onPlay, onWin }: RoomConsoleProps) => {
   const [index, setIndex] = useState(0);
   const [playing, setPlaying] = useState<Game | null>(null);
   const clock = useClock();
@@ -167,7 +171,10 @@ export const RoomConsole = ({ open, onExit, onPlay }: RoomConsoleProps) => {
           key("ArrowRight", dir.right);
           key("ArrowUp", dir.up);
           key("ArrowDown", dir.down);
-          if (b(0) && !prev.cross) (document.querySelector("[data-console-page] button") as HTMLButtonElement | null)?.click();
+          if (playingRef.current?.id === "super") {
+            key(" ", b(0));
+            key("Shift", b(2));
+          } else if (b(0) && !prev.cross) (document.querySelector("[data-console-page] button") as HTMLButtonElement | null)?.click();
           prev.cross = b(0);
         } else {
           for (const k of ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"]) key(k, false);
@@ -227,7 +234,7 @@ export const RoomConsole = ({ open, onExit, onPlay }: RoomConsoleProps) => {
             </div>
             <div data-console-page className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
               {/* game boards shrink to fit the screen, keeping their shape */}
-              <div className="mx-auto max-w-4xl pb-6 [&_canvas]:h-auto [&_canvas]:max-h-[52vh] [&_canvas]:w-auto [&_canvas]:max-w-full">{playing.id === "pong" ? <PongGame /> : <SnakeGame />}</div>
+              <div className="mx-auto max-w-4xl pb-6 [&_canvas]:h-auto [&_canvas]:max-h-[52vh] [&_canvas]:w-auto [&_canvas]:max-w-full">{playing.id === "super" ? <SuperShajith onWin={() => onWin?.(playing.id)} /> : playing.id === "pong" ? <PongGame /> : <SnakeGame />}</div>
             </div>
           </div>
         ) : (

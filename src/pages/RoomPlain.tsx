@@ -662,6 +662,7 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
           award("player-one");
           if (markGamePlayed(game) >= ALL_GAMES.length) award("game-night");
         }}
+        onWin={() => award("to-be-continued")}
       />
       {keyboardOpen && !away && <FidgetKeyboard muted={muted} volume={sound.effects} onClose={() => setKeyboardOpen(false)} />}
       <AnimatePresence>{section && !away && (
