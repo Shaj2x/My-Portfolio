@@ -220,17 +220,6 @@ export const PortfolioPage = ({ id }: { id: PortfolioId }) => {
       );
     case "projects":
       return <ProjectsPage />;
-    case "experience":
-      return (
-        <div className="space-y-6">
-          <Section title="Education">
-            <Timeline items={education} />
-          </Section>
-          <Section title="Work">
-            <Timeline items={experience} />
-          </Section>
-        </div>
-      );
     case "resume":
       return <ResumePage />;
     case "leadership":
