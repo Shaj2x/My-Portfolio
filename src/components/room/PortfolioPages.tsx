@@ -10,11 +10,16 @@ import {
   inProgressRepos,
   displayNames,
   profile,
+  projectPreviews,
   roles,
   services,
   skillCategories,
 } from "@/data/portfolio";
 import type { PortfolioId } from "./portfolioSpots";
+import type { MonitorProject } from "./createPlainRoom";
+
+/** shows a project on the monitor in the room, or clears it */
+type OnPreview = (project: MonitorProject | null) => void;
 
 /* The sections of the portfolio, as they appear when found around the room. */
 
@@ -25,8 +30,8 @@ const Section = ({ title, children }: { title: string; children: ReactNode }) =>
   </section>
 );
 
-const Card = ({ children }: { children: ReactNode }) => (
-  <div className="sheen rounded-xl border border-white/10 bg-white/[0.04] p-4 transition-[transform,border-color,background-color,box-shadow] duration-200 ease-out hover:border-white/20 hover:bg-white/[0.07] hover:shadow-[0_10px_30px_rgba(0,0,0,0.25)] motion-safe:hover:-translate-y-0.5">{children}</div>
+const Card = ({ children, onPreview }: { children: ReactNode; onPreview?: () => void }) => (
+  <div onPointerEnter={onPreview} onFocusCapture={onPreview} className="sheen rounded-xl border border-white/10 bg-white/[0.04] p-4 transition-[transform,border-color,background-color,box-shadow] duration-200 ease-out hover:border-white/20 hover:bg-white/[0.07] hover:shadow-[0_10px_30px_rgba(0,0,0,0.25)] motion-safe:hover:-translate-y-0.5">{children}</div>
 );
 
 export const LinkButton = ({ href, children }: { href: string; children: ReactNode }) => (
@@ -67,7 +72,7 @@ interface Repo {
 }
 
 /** live from GitHub where the network allows it; otherwise the projects the portfolio links to */
-const ProjectsPage = () => {
+const ProjectsPage = ({ onPreview }: { onPreview?: OnPreview }) => {
   const fallback = useMemo<Repo[]>(
     () =>
       [...Object.keys(demoLinks), ...inProgressRepos].map((name) => ({
@@ -93,15 +98,30 @@ const ProjectsPage = () => {
       live = false;
     };
   }, []);
+  const asMonitor = (r: Repo): MonitorProject => ({
+    name: r.name,
+    title: displayNames[r.name] ?? r.name.replace(/-+/g, " "),
+    description: customDescriptions[r.name] ?? r.description,
+    image: projectPreviews[r.name],
+    status: inProgressRepos.includes(r.name) ? "In progress" : demoLinks[r.name] ? "Live demo" : "Project",
+  });
+  // the monitor opens on the first project with a screenshot, and clears when the panel closes
+  const first = repos.find((r) => projectPreviews[r.name]) ?? repos[0];
+  useEffect(() => {
+    if (first) onPreview?.(asMonitor(first));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [first?.name]);
+  useEffect(() => () => onPreview?.(null), [onPreview]);
   return (
     <div className="space-y-4">
+      {onPreview && <p className="text-xs text-white/45">Point at a project to put it on the monitor.</p>}
       <div className="grid gap-3 sm:grid-cols-2">
         {repos.map((r) => {
           // what's written here wins over GitHub's (often empty) description and website
           const description = customDescriptions[r.name] ?? r.description;
           const demo = demoLinks[r.name] ?? (r.homepage || null);
           return (
-            <Card key={r.name}>
+            <Card key={r.name} onPreview={onPreview ? () => onPreview(asMonitor(r)) : undefined}>
               <div className="flex items-start justify-between gap-2">
                 <p className="min-w-0 break-words font-semibold text-white">{displayNames[r.name] ?? r.name.replace(/-+/g, " ")}</p>
                 {inProgressRepos.includes(r.name) && <span className="shrink-0 rounded-full bg-amber-300/15 px-2 py-0.5 text-[10px] font-medium text-amber-200">In progress</span>}
@@ -198,7 +218,7 @@ const ContactPage = () => {
   );
 };
 
-export const PortfolioPage = ({ id }: { id: PortfolioId }) => {
+export const PortfolioPage = ({ id, onPreview }: { id: PortfolioId; onPreview?: OnPreview }) => {
   switch (id) {
     case "about":
       return (
@@ -219,7 +239,7 @@ export const PortfolioPage = ({ id }: { id: PortfolioId }) => {
         </div>
       );
     case "projects":
-      return <ProjectsPage />;
+      return <ProjectsPage onPreview={onPreview} />;
     case "resume":
       return <ResumePage />;
     case "leadership":

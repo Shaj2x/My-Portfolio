@@ -34,6 +34,26 @@ export const OUTSIDE_SOUNDS: [SoundSettings["outside"], string][] = [
 ];
 const OUTSIDE_AUDIO: Record<SoundSettings["outside"], Outside> = { breeze: "clear", rain: "rain", storm: "storm", snow: "snow" };
 
+/** the sky through the window: the visitor's own clock, or a fixed time of day */
+export type SkyMode = "live" | "sunrise" | "day" | "sunset" | "night";
+export const SKY_MODES: [SkyMode, string][] = [
+  ["live", "Live (your time)"],
+  ["sunrise", "Sunrise"],
+  ["day", "Day"],
+  ["sunset", "Sunset"],
+  ["night", "Night"],
+];
+
+/** a project as the monitor shows it */
+export interface MonitorProject {
+  name: string;
+  title: string;
+  description?: string | null;
+  /** a screenshot, if there is one */
+  image?: string;
+  status?: string;
+}
+
 export type PlainRoomView = "photo" | "window" | "dollhouse" | "desk" | "door" | "binoculars" | "console";
 type CameraView = Exclude<PlainRoomView, "binoculars" | "console">;
 
@@ -140,6 +160,8 @@ export interface PlainRoomOptions {
   muted?: boolean;
   /** the starting sound mix */
   sound?: SoundSettings;
+  /** the sky outside: the visitor's own clock, or a fixed time */
+  sky?: SkyMode;
 }
 
 export interface PlainRoomHandle {
@@ -157,6 +179,12 @@ export interface PlainRoomHandle {
   setSound: (sound: SoundSettings) => void;
   /** make the speaker pulse as if playing, for music the room can't hear itself (an embedded playlist) */
   setSpeakerPlaying: (on: boolean) => void;
+  /** put a project on the curved monitor (its screenshot, or a title card when there isn't one), or null to clear it */
+  showProject: (project: MonitorProject | null) => void;
+  /** frame the monitor on the left of the screen while the Projects panel is open; false goes back */
+  focusMonitor: (on: boolean) => void;
+  /** what time it is outside: follow the visitor's clock, or pick one */
+  setSky: (mode: SkyMode) => void;
   dispose: () => void;
 }
 
@@ -329,73 +357,162 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     slab(W, 0.1, 0.015, trim, 0, 0.05, back + 0.0075, backWall);
   }
 
-  // the night sky outside, painted once: deep blue overhead, a city glow low down, stars, the moon,
-  // and a dark line of trees and rooftops. Seen only through the window, so hidden from outside the room.
-  const sky = new THREE.Mesh(
-    new THREE.PlaneGeometry(9, 5),
-    new THREE.MeshBasicMaterial({
-      map: paintTexture(1536, 860, (c, w, h) => {
-        const g = c.createLinearGradient(0, 0, 0, h);
-        g.addColorStop(0, "#050a1c");
-        g.addColorStop(0.45, "#102047");
-        g.addColorStop(0.75, "#2d3b6b");
-        g.addColorStop(0.9, "#6a5a78");
-        g.addColorStop(1, "#b07a62");
-        c.fillStyle = g;
-        c.fillRect(0, 0, w, h);
-        for (let i = 0; i < 700; i++) {
-          const y = Math.random() ** 1.6 * h * 0.7;
-          c.fillStyle = `rgba(255,255,255,${0.25 + Math.random() * 0.75 * (1 - y / h)})`;
-          const r = Math.random() < 0.06 ? 1.6 : 0.8;
-          c.beginPath();
-          c.arc(Math.random() * w, y, r, 0, Math.PI * 2);
-          c.fill();
-        }
-        // the moon with a soft halo, up and to the left of centre
-        const mx = w * 0.42;
-        const my = h * 0.24;
-        const halo = c.createRadialGradient(mx, my, 10, mx, my, 120);
-        halo.addColorStop(0, "rgba(220,230,255,0.45)");
-        halo.addColorStop(1, "rgba(220,230,255,0)");
-        c.fillStyle = halo;
-        c.fillRect(mx - 130, my - 130, 260, 260);
-        c.fillStyle = "#f3f1e6";
+  // the sky outside, painted three times (night, sunrise/sunset, day) and cross-faded to match the
+  // visitor's clock. Night: deep blue, a city glow, stars, the moon and lit windows. Golden hour:
+  // a warm gradient with the sun low over the roofs. Day: soft blue with clouds. Seen only through
+  // the window, so hidden from outside the room.
+  const paintNight = (c: CanvasRenderingContext2D, w: number, h: number) => {
+    const g = c.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, "#050a1c");
+    g.addColorStop(0.45, "#102047");
+    g.addColorStop(0.75, "#2d3b6b");
+    g.addColorStop(0.9, "#6a5a78");
+    g.addColorStop(1, "#b07a62");
+    c.fillStyle = g;
+    c.fillRect(0, 0, w, h);
+    for (let i = 0; i < 700; i++) {
+      const y = Math.random() ** 1.6 * h * 0.7;
+      c.fillStyle = `rgba(255,255,255,${0.25 + Math.random() * 0.75 * (1 - y / h)})`;
+      const r = Math.random() < 0.06 ? 1.6 : 0.8;
+      c.beginPath();
+      c.arc(Math.random() * w, y, r, 0, Math.PI * 2);
+      c.fill();
+    }
+    // the moon with a soft halo, up and to the left of centre
+    const mx = w * 0.42;
+    const my = h * 0.24;
+    const halo = c.createRadialGradient(mx, my, 10, mx, my, 120);
+    halo.addColorStop(0, "rgba(220,230,255,0.45)");
+    halo.addColorStop(1, "rgba(220,230,255,0)");
+    c.fillStyle = halo;
+    c.fillRect(mx - 130, my - 130, 260, 260);
+    c.fillStyle = "#f3f1e6";
+    c.beginPath();
+    c.arc(mx, my, 26, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = "rgba(170,165,150,0.35)";
+    for (const [dx, dy, r] of [[-8, -6, 6], [7, 5, 5], [2, -12, 3], [-4, 10, 4]]) {
+      c.beginPath();
+      c.arc(mx + dx, my + dy, r, 0, Math.PI * 2);
+      c.fill();
+    }
+    // rooftops with a few lit windows, then trees in front
+    let x = 0;
+    while (x < w) {
+      const bw = 60 + Math.random() * 140;
+      const bh = h * (0.06 + Math.random() * 0.12);
+      c.fillStyle = "#0b0d16";
+      c.fillRect(x, h - bh - h * 0.08, bw, bh + h * 0.08);
+      for (let k = 0; k < bw * bh * 0.0012; k++) {
+        c.fillStyle = Math.random() > 0.3 ? "rgba(255,200,120,0.85)" : "rgba(180,210,255,0.7)";
+        c.fillRect(x + 6 + Math.random() * (bw - 16), h - bh - h * 0.06 + Math.random() * bh * 0.8, 6, 8);
+      }
+      x += bw + Math.random() * 30;
+    }
+    c.fillStyle = "#05070c";
+    for (let i = 0; i < 70; i++) {
+      const tx = Math.random() * w;
+      const tr = 30 + Math.random() * 60;
+      c.beginPath();
+      c.arc(tx, h - h * 0.04 - Math.random() * 30, tr, 0, Math.PI * 2);
+      c.fill();
+    }
+    c.fillRect(0, h - h * 0.05, w, h * 0.05);
+  };
+  /** rooftops and trees along the bottom, in one colour, optionally with lit windows */
+  const skyline = (c: CanvasRenderingContext2D, w: number, h: number, roof: string, trees: string, windows: number) => {
+    let x = 0;
+    while (x < w) {
+      const bw = 60 + Math.random() * 140;
+      const bh = h * (0.06 + Math.random() * 0.12);
+      c.fillStyle = roof;
+      c.fillRect(x, h - bh - h * 0.08, bw, bh + h * 0.08);
+      for (let k = 0; k < bw * bh * 0.0012 * windows; k++) {
+        c.fillStyle = "rgba(255,200,120,0.75)";
+        c.fillRect(x + 6 + Math.random() * (bw - 16), h - bh - h * 0.06 + Math.random() * bh * 0.8, 6, 8);
+      }
+      x += bw + Math.random() * 30;
+    }
+    c.fillStyle = trees;
+    for (let i = 0; i < 70; i++) {
+      c.beginPath();
+      c.arc(Math.random() * w, h - h * 0.04 - Math.random() * 30, 30 + Math.random() * 60, 0, Math.PI * 2);
+      c.fill();
+    }
+    c.fillRect(0, h - h * 0.05, w, h * 0.05);
+  };
+  const paintGolden = (c: CanvasRenderingContext2D, w: number, h: number) => {
+    const g = c.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, "#29306a");
+    g.addColorStop(0.35, "#6a4a8c");
+    g.addColorStop(0.6, "#d0648a");
+    g.addColorStop(0.8, "#f59a56");
+    g.addColorStop(1, "#ffd48a");
+    c.fillStyle = g;
+    c.fillRect(0, 0, w, h);
+    // the sun low over the roofs, with a wide glow
+    const sx = w * 0.62;
+    const sy = h * 0.8;
+    const glow = c.createRadialGradient(sx, sy, 10, sx, sy, w * 0.35);
+    glow.addColorStop(0, "rgba(255,228,170,0.9)");
+    glow.addColorStop(0.2, "rgba(255,180,110,0.35)");
+    glow.addColorStop(1, "rgba(255,150,90,0)");
+    c.fillStyle = glow;
+    c.fillRect(0, 0, w, h);
+    c.fillStyle = "#fff1cf";
+    c.beginPath();
+    c.arc(sx, sy, 34, 0, Math.PI * 2);
+    c.fill();
+    // long thin clouds catching the light
+    for (let i = 0; i < 14; i++) {
+      c.fillStyle = `rgba(255,${150 + Math.random() * 60},${120 + Math.random() * 40},${0.18 + Math.random() * 0.22})`;
+      c.beginPath();
+      c.ellipse(Math.random() * w, h * (0.2 + Math.random() * 0.45), 120 + Math.random() * 220, 6 + Math.random() * 10, 0, 0, Math.PI * 2);
+      c.fill();
+    }
+    skyline(c, w, h, "#1d1626", "#120d18", 0.25);
+  };
+  const paintDay = (c: CanvasRenderingContext2D, w: number, h: number) => {
+    const g = c.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, "#3d78c9");
+    g.addColorStop(0.55, "#77a9e0");
+    g.addColorStop(1, "#cfe3f2");
+    c.fillStyle = g;
+    c.fillRect(0, 0, w, h);
+    // puffy clouds: clusters of soft white circles with a shaded base
+    for (let i = 0; i < 9; i++) {
+      const cx = Math.random() * w;
+      const cy = h * (0.15 + Math.random() * 0.45);
+      const size = 40 + Math.random() * 50;
+      for (let k = 0; k < 9; k++) {
+        const r = size * (0.5 + Math.random() * 0.6);
+        const px = cx + (Math.random() - 0.5) * size * 3;
+        const py = cy + (Math.random() - 0.5) * size * 0.7;
+        const cg = c.createRadialGradient(px, py - r * 0.3, r * 0.1, px, py, r);
+        cg.addColorStop(0, "rgba(255,255,255,0.95)");
+        cg.addColorStop(0.7, "rgba(240,244,250,0.75)");
+        cg.addColorStop(1, "rgba(220,230,242,0)");
+        c.fillStyle = cg;
         c.beginPath();
-        c.arc(mx, my, 26, 0, Math.PI * 2);
+        c.arc(px, py, r, 0, Math.PI * 2);
         c.fill();
-        c.fillStyle = "rgba(170,165,150,0.35)";
-        for (const [dx, dy, r] of [[-8, -6, 6], [7, 5, 5], [2, -12, 3], [-4, 10, 4]]) {
-          c.beginPath();
-          c.arc(mx + dx, my + dy, r, 0, Math.PI * 2);
-          c.fill();
-        }
-        // rooftops with a few lit windows, then trees in front
-        let x = 0;
-        while (x < w) {
-          const bw = 60 + Math.random() * 140;
-          const bh = h * (0.06 + Math.random() * 0.12);
-          c.fillStyle = "#0b0d16";
-          c.fillRect(x, h - bh - h * 0.08, bw, bh + h * 0.08);
-          for (let k = 0; k < bw * bh * 0.0012; k++) {
-            c.fillStyle = Math.random() > 0.3 ? "rgba(255,200,120,0.85)" : "rgba(180,210,255,0.7)";
-            c.fillRect(x + 6 + Math.random() * (bw - 16), h - bh - h * 0.06 + Math.random() * bh * 0.8, 6, 8);
-          }
-          x += bw + Math.random() * 30;
-        }
-        c.fillStyle = "#05070c";
-        for (let i = 0; i < 70; i++) {
-          const tx = Math.random() * w;
-          const tr = 30 + Math.random() * 60;
-          c.beginPath();
-          c.arc(tx, h - h * 0.04 - Math.random() * 30, tr, 0, Math.PI * 2);
-          c.fill();
-        }
-        c.fillRect(0, h - h * 0.05, w, h * 0.05);
-      }),
-      toneMapped: false,
-      fog: false,
-    }),
-  );
+      }
+    }
+    skyline(c, w, h, "#7d8796", "#3d5236", 0);
+  };
+  const skyLayer = (paint: (c: CanvasRenderingContext2D, w: number, h: number) => void, z: number, transparent: boolean) => {
+    const m = new THREE.Mesh(
+      new THREE.PlaneGeometry(9, 5),
+      new THREE.MeshBasicMaterial({ map: paintTexture(1536, 860, paint), toneMapped: false, fog: false, transparent, opacity: transparent ? 0 : 1, depthWrite: !transparent }),
+    );
+    m.position.z = z;
+    return m;
+  };
+  const sky = new THREE.Group();
+  const skyNight = skyLayer(paintNight, 0, false);
+  const skyGolden = skyLayer(paintGolden, 0.01, true);
+  const skyDay = skyLayer(paintDay, 0.02, true);
+  sky.add(skyNight, skyGolden, skyDay);
   sky.position.set((WINDOW.x0 + WINDOW.x1) / 2, 1.9, back - t - 3);
   scene.add(sky);
 
@@ -556,6 +673,44 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   moon.position.set((WINDOW.x0 + WINDOW.x1) / 2 + 0.3, 2.6, back - 1.2);
   moon.target.position.set(-0.6, 0.4, -0.4);
   scene.add(moon, moon.target);
+
+  // ---------- time of day ----------
+  // The window follows the visitor's own clock: sunrise around 6–8, daylight, golden hour around
+  // 18–20, then night. `day` (0 night … 1 noon) and `dusk` (how much sunrise/sunset colour) drive
+  // the sky layers, the light coming through the window (cool moonlight, warm low sun, bright
+  // daylight), a daylight fill in the room, the floor lamp dimming a little by day, and the campus
+  // seen through the binoculars.
+  const smooth = (a: number, b: number, x: number) => THREE.MathUtils.smoothstep(x, a, b);
+  const bump = (x: number, c: number, w: number) => Math.exp(-(((x - c) / w) ** 2));
+  const skyAt = (hour: number) => {
+    const day = smooth(6.2, 8.2, hour) * (1 - smooth(18.2, 20.2, hour));
+    const dusk = Math.min(1, Math.max(bump(hour, 6.9, 0.9), bump(hour, 19.3, 0.95)));
+    return { day, dusk };
+  };
+  const PRESET_HOURS: Record<Exclude<SkyMode, "live">, number> = { sunrise: 6.9, day: 13, sunset: 19.3, night: 23 };
+  let skyMode: SkyMode = options.sky ?? "live";
+  const clockHour = () => {
+    const d = new Date();
+    return d.getHours() + d.getMinutes() / 60;
+  };
+  const skyTarget = skyAt(skyMode === "live" ? clockHour() : PRESET_HOURS[skyMode]);
+  const skyNow = { ...skyTarget };
+  const NIGHT_LIGHT = new THREE.Color("#9fb4ff");
+  const SUNSET_LIGHT = new THREE.Color("#ffa05a");
+  const DAY_LIGHT = new THREE.Color("#fff3dc");
+  const DAY_SKY = new THREE.Color("#dfe9f5");
+  const LAMP_SKY = new THREE.Color("#fff1dc");
+  /** the light through the window at full strength, before the blind */
+  const windowLight = () => 3 + 9 * skyNow.day + 4 * skyNow.dusk * (1 - skyNow.day);
+  let campusDay = -1;
+  const refreshCampus = () => {
+    // repainting the campus is a little costly, so only when the light has really changed
+    if (Math.abs(campusDay - skyNow.day) < 0.08 && campusDay >= 0) return;
+    campusDay = skyNow.day;
+    const fog = campus.setConditions({ day: skyNow.day, dusk: skyNow.dusk, weather: "clear" });
+    outsideFog.color.copy(fog.fogColor);
+    outsideFog.density = fog.fogDensity;
+  };
   // light bouncing off the pale walls and ceiling: a soft, shadowless fill from above the room
   const bounce = new THREE.PointLight("#ffe2c0", 1.4, 0, 1.2);
   // kept well below the ceiling so it doesn't paint a hot spot onto it
@@ -670,7 +825,8 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   const warmWhite = new THREE.Color("#ffe2c0");
   const bounceColor = new THREE.Color();
   const applyLamp = () => {
-    const k = lampLevel;
+    // by day the floor lamp is turned down a little; the daylight does the work
+    const k = lampLevel * (1 - 0.45 * skyNow.day);
     for (const l of [downLight, upLight, glowLight]) l.color.copy(lampColor);
     downLight.intensity = 7 * k;
     upLight.intensity = 6 * k;
@@ -678,7 +834,8 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     // the walls bounce less light, and the room falls back on the screens and the moon
     bounce.intensity = 0.25 + 1.15 * k;
     bounce.color.copy(bounceColor.copy(warmWhite).lerp(lampColor, 0.6));
-    hemi.intensity = 0.25 + 0.65 * Math.min(k, 1.2) + 0.35 * ceilingLevel;
+    hemi.intensity = 0.25 + 0.65 * Math.min(k, 1.2) + 0.35 * ceilingLevel + 0.85 * skyNow.day + 0.25 * skyNow.dusk;
+    hemi.color.copy(LAMP_SKY).lerp(DAY_SKY, skyNow.day * 0.6);
     furniture.lamp.setGlow(k, lampColor);
   };
   applyLamp();
@@ -769,9 +926,8 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   const campus = createCampus(track, rand);
   campus.group.visible = false;
   scene.add(campus.group);
-  // a clear night, matching the sky painted outside the window
-  const campusFog = campus.setConditions({ day: 0, dusk: 0, weather: "clear" });
-  const outsideFog = new THREE.FogExp2(campusFog.fogColor, campusFog.fogDensity);
+  // the campus matches the sky outside the window; repainted for the time of day on the way in
+  const outsideFog = new THREE.FogExp2("#000000", 0.001);
 
   // The mask: two overlapping round fields with darkened rims, drawn over the frame
   const maskMat = new THREE.ShaderMaterial({
@@ -884,6 +1040,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
 
   const startBinoculars = () => {
     mode = "binoculars";
+    refreshCampus();
     campus.group.visible = true;
     sky.visible = false;
     scene.fog = outsideFog;
@@ -959,6 +1116,93 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   controls.addEventListener("start", () => {
     if (mode === "room") tween = null;
   });
+
+  // ---------- projects on the monitor ----------
+  // While Projects is open the camera turns to the curved monitor (on the left of the screen, beside
+  // the panel) and the monitor shows whichever project the visitor is looking at: a screenshot of
+  // its demo, or a title card painted here when there isn't one. Changing project dips the screen
+  // out and back in, like switching inputs.
+  const projectTex = new Map<string, THREE.Texture>();
+  const loader = new THREE.TextureLoader();
+  const titleCard = (p: MonitorProject) =>
+    paintTexture(1024, 600, (c, w, h) => {
+      const g = c.createLinearGradient(0, 0, w, h);
+      g.addColorStop(0, "#14182a");
+      g.addColorStop(1, "#06070d");
+      c.fillStyle = g;
+      c.fillRect(0, 0, w, h);
+      const glow = c.createRadialGradient(w * 0.8, h * 0.15, 10, w * 0.8, h * 0.15, w * 0.6);
+      glow.addColorStop(0, "rgba(252,217,154,0.22)");
+      glow.addColorStop(1, "rgba(252,217,154,0)");
+      c.fillStyle = glow;
+      c.fillRect(0, 0, w, h);
+      c.fillStyle = "rgba(252,217,154,0.8)";
+      c.font = "600 22px system-ui, sans-serif";
+      c.fillText((p.status ?? "Project").toUpperCase(), 72, 150);
+      c.fillStyle = "#ffffff";
+      c.font = "700 72px system-ui, sans-serif";
+      c.fillText(p.title, 72, 236, w - 144);
+      c.fillStyle = "rgba(255,255,255,0.72)";
+      c.font = "28px system-ui, sans-serif";
+      // wrap the description to the card
+      const words = (p.description ?? "").split(/\s+/).filter(Boolean);
+      let line = "";
+      let y = 300;
+      for (const word of words) {
+        const next = line ? `${line} ${word}` : word;
+        if (c.measureText(next).width > w - 144 && line) {
+          c.fillText(line, 72, y);
+          line = word;
+          y += 40;
+          if (y > h - 80) break;
+        } else line = next;
+      }
+      if (line && y <= h - 80) c.fillText(line, 72, y);
+      c.fillStyle = "rgba(255,255,255,0.35)";
+      c.font = "22px ui-monospace, monospace";
+      c.fillText(`github.com/Shaj2x/${p.name}`, 72, h - 56);
+    });
+  const textureFor = (p: MonitorProject) => {
+    const cached = projectTex.get(p.name);
+    if (cached) return cached;
+    const card = titleCard(p);
+    projectTex.set(p.name, card);
+    if (p.image) {
+      // the card stands in until the screenshot arrives (and stays if it can't load)
+      loader.load(p.image, (tex) => {
+        tex.colorSpace = THREE.SRGBColorSpace;
+        tex.anisotropy = 4;
+        projectTex.set(p.name, tex);
+        if (projectShown === card || projectNext === card) projectNext = tex;
+      });
+    }
+    return card;
+  };
+  let projectShown: THREE.Texture | null = null;
+  let projectNext: THREE.Texture | null = null;
+  let projectWanted = false;
+  let projectLevel = 0;
+  const showProject = (p: MonitorProject | null) => {
+    projectWanted = !!p;
+    projectNext = p ? textureFor(p) : null;
+  };
+  let beforeFocus: { pos: THREE.Vector3; target: THREE.Vector3 } | null = null;
+  const focusMonitor = (on: boolean) => {
+    if (mode !== "room") return;
+    const wide = container.clientWidth > 900;
+    if (on && wide && !beforeFocus) {
+      beforeFocus = { pos: camera.position.clone(), target: controls.target.clone() };
+      const s = furniture.screens[0];
+      const right = new THREE.Vector3().crossVectors(s.normal.clone().negate(), new THREE.Vector3(0, 1, 0)).normalize();
+      // the monitor sits in the left part of the frame, clear of the panel on the right
+      const pos = s.center.clone().addScaledVector(s.normal, 1.2).add(new THREE.Vector3(0, 0.14, 0)).addScaledVector(right, 0.12);
+      const target = s.center.clone().addScaledVector(right, 0.46).add(new THREE.Vector3(0, -0.03, 0));
+      moveTo(pos, target);
+    } else if (!on && beforeFocus) {
+      moveTo(beforeFocus.pos, beforeFocus.target);
+      beforeFocus = null;
+    }
+  };
 
   // ---------- pointer: click the lamp or the binoculars; drag to aim through the binoculars ----------
   const raycaster = new THREE.Raycaster();
@@ -1418,6 +1662,25 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     }
   };
 
+  let skyApplied = false;
+  const NIGHT_EXPOSURE = 1.1;
+  const applySky = () => {
+    skyApplied = true;
+    const { day, dusk } = skyNow;
+    (skyGolden.material as THREE.MeshBasicMaterial).opacity = Math.min(1, day + dusk);
+    (skyDay.material as THREE.MeshBasicMaterial).opacity = day * (1 - dusk * 0.85);
+    skyNight.visible = day + dusk < 0.999;
+    moon.color.copy(NIGHT_LIGHT).lerp(SUNSET_LIGHT, Math.min(1, dusk + day)).lerp(DAY_LIGHT, day * (1 - dusk * 0.7));
+    if (!lightning) moon.intensity = windowLight() * (1 - blindLevel);
+    renderer.toneMappingExposure = NIGHT_EXPOSURE - 0.08 * day;
+    applyLamp();
+  };
+  const setSky = (mode: SkyMode) => {
+    skyMode = mode;
+    campusDay = -1;
+    Object.assign(skyTarget, skyAt(mode === "live" ? clockHour() : PRESET_HOURS[mode]));
+  };
+
   let firstFrameSent = false;
   const clock = new THREE.Clock();
   const toCamera = new THREE.Vector3();
@@ -1484,14 +1747,34 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       setBlind(blindLevel);
       shadowsDirty = true;
       // light from outside follows how much window is showing
-      moon.intensity = 3 * (1 - blindLevel);
+      moon.intensity = windowLight() * (1 - blindLevel);
+    }
+    // time of day: re-read the clock now and then, and ease toward it
+    if (skyMode === "live" && frameNo % 1800 === 0) Object.assign(skyTarget, skyAt(clockHour()));
+    if (Math.abs(skyNow.day - skyTarget.day) + Math.abs(skyNow.dusk - skyTarget.dusk) > 0.002 || !skyApplied) {
+      const e = reducedMotion || !skyApplied ? 1 : 1 - Math.exp(-2.5 * dt);
+      skyNow.day += (skyTarget.day - skyNow.day) * e;
+      skyNow.dusk += (skyTarget.dusk - skyNow.dusk) * e;
+      applySky();
+    }
+    // the monitor's project layer: dip out, swap the picture, come back in
+    {
+      const swapping = projectNext && projectNext !== projectShown;
+      const target = projectWanted && !swapping ? 1 : 0;
+      if (projectLevel !== target || swapping) {
+        projectLevel += (target - projectLevel) * (reducedMotion ? 1 : 1 - Math.exp(-(target ? 9 : 16) * dt));
+        if (Math.abs(target - projectLevel) < 0.01) projectLevel = target;
+        if (swapping && projectLevel === 0) projectShown = projectNext;
+        if (!projectWanted && projectLevel === 0) projectShown = null;
+        inter.setMonitorImage(projectShown, projectLevel);
+      }
     }
     // lightning: two quick flickers through the window, then gone
     if (lightning > 0) {
       lightning = Math.max(0, lightning - dt * 2.2);
       const strobe = reducedMotion ? 0.4 : lightning > 0.75 ? 1 : lightning > 0.62 ? 0.15 : lightning > 0.45 ? 0.8 : lightning * 0.6;
-      moon.intensity = 3 * (1 - blindLevel) + strobe * 30 * (1 - blindLevel * 0.8);
-      if (lightning === 0) moon.intensity = 3 * (1 - blindLevel);
+      moon.intensity = windowLight() * (1 - blindLevel) + strobe * 30 * (1 - blindLevel * 0.8);
+      if (lightning === 0) moon.intensity = windowLight() * (1 - blindLevel);
     }
     // the candle: eases toward lit or out, and the flame flickers on a few unrelated waves
     candleLevel += (candleTarget - candleLevel) * (reducedMotion ? 1 : 1 - Math.exp(-(candleTarget ? 3 : 9) * dt));
@@ -1538,7 +1821,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       dustMat.opacity = 0.45 * Math.min(1, lampLevel);
     }
     // the shooting star, only while the sky is in view
-    if (!reducedMotion && sky.visible) {
+    if (!reducedMotion && sky.visible && skyNow.day + skyNow.dusk < 0.3) {
       if (starRun.t >= 1) {
         starRun.next -= dt;
         star.visible = false;
@@ -1693,6 +1976,9 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     toggleRadio,
     setMuted: (m) => audio.setMuted(m),
     setSound: applySound,
+    showProject,
+    focusMonitor,
+    setSky,
     setSpeakerPlaying: (on) => (speakerPlaying = on),
     setLamp,
     dispose: () => {

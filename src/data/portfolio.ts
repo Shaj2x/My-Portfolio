@@ -157,6 +157,16 @@ export const demoLinks: Record<string, string> = {
   "My-Portfolio": "https://shajithsasikumar.com",
 };
 
+/** screenshots of the live demos, shown on the monitor in the room (public/projects) */
+export const projectPreviews: Record<string, string> = {
+  "Raptors-Slot-Machine": "/projects/Raptors-Slot-Machine.jpg",
+  "Raptors-BlackJack": "/projects/Raptors-BlackJack.jpg",
+  "StatStack": "/projects/StatStack.jpg",
+  "Mercatus": "/projects/Mercatus.jpg",
+  "Anthropogenic-Sound-Device-Simulator---ES1050-Project": "/projects/Anthropogenic-Sound-Device-Simulator---ES1050-Project.jpg",
+  "digitaldash": "/projects/digitaldash.jpg",
+};
+
 export const inProgressRepos = ["MarkWise", "HarmonAI", "schematica-circuits", "devassist"];
 
 /** how a repo is titled on its card, where the repo name doesn't read well */
