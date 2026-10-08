@@ -57,6 +57,8 @@ export interface RoomConsoleProps {
   open: boolean;
   /** leave the console and go back to the room */
   onExit: () => void;
+  /** a game was started (or opened in its own tab) */
+  onPlay?: (game: string) => void;
 }
 
 const useClock = () => {
@@ -68,7 +70,7 @@ const useClock = () => {
   return now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 };
 
-export const RoomConsole = ({ open, onExit }: RoomConsoleProps) => {
+export const RoomConsole = ({ open, onExit, onPlay }: RoomConsoleProps) => {
   const [index, setIndex] = useState(0);
   const [playing, setPlaying] = useState<Game | null>(null);
   const clock = useClock();
@@ -80,10 +82,14 @@ export const RoomConsole = ({ open, onExit }: RoomConsoleProps) => {
     if (!open) setPlaying(null);
   }, [open]);
 
-  const launch = useCallback((g: Game) => {
-    if (g.site) window.open(g.site, "_blank", "noopener");
-    else setPlaying(g);
-  }, []);
+  const launch = useCallback(
+    (g: Game) => {
+      onPlay?.(g.id);
+      if (g.site) window.open(g.site, "_blank", "noopener");
+      else setPlaying(g);
+    },
+    [onPlay],
+  );
 
   const act = useCallback(
     (a: Action) => {
@@ -254,7 +260,7 @@ export const RoomConsole = ({ open, onExit }: RoomConsoleProps) => {
               </h2>
               <p className="max-w-2xl text-base text-white/80 sm:text-lg">{sel.blurb}</p>
               {sel.site ? (
-                <a href={sel.site} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-full bg-white px-8 py-2.5 text-base font-semibold text-black hover:bg-white/85 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
+                <a href={sel.site} target="_blank" rel="noopener noreferrer" onClick={() => onPlay?.(sel.id)} className="inline-flex items-center gap-2 rounded-full bg-white px-8 py-2.5 text-base font-semibold text-black hover:bg-white/85 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
                   Play <ExternalLink className="h-4 w-4" />
                 </a>
               ) : (

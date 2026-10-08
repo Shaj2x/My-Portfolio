@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion, type Transition } from "framer-motion";
-import { ArrowUpRight, Binoculars, Camera, Check, Gamepad2, LayoutGrid, Lightbulb, LightbulbOff, Radio, SlidersHorizontal, Volume2, VolumeX, X } from "lucide-react";
+import { ArrowUpRight, Binoculars, Camera, Check, Gamepad2, LayoutGrid, Lightbulb, LightbulbOff, Radio, SlidersHorizontal, Trophy, Volume2, VolumeX, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { RADIO_STATION } from "@/components/room/createAudio";
 import { playlistEmbed } from "@/components/room/playlist";
@@ -8,6 +8,7 @@ import { profile } from "@/data/portfolio";
 import { RoomConsole } from "@/components/room/console/RoomConsole";
 import { PortfolioPage } from "@/components/room/PortfolioPages";
 import { FidgetKeyboard } from "@/components/room/FidgetKeyboard";
+import { ALL_GAMES, loadTrophies, markGamePlayed, saveTrophies, TIER_COLORS, TROPHIES, type TrophyId } from "@/components/room/trophies";
 import { PORTFOLIO_IDS, PORTFOLIO_SPOTS, type PortfolioId } from "@/components/room/portfolioSpots";
 
 // which hidden sections of the portfolio this visitor has found; kept in this browser only
@@ -217,6 +218,25 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
   const soundRef = useRef(sound);
   const [soundOpen, setSoundOpen] = useState(false);
   const [skyMode, setSkyMode] = useState<SkyMode>("live");
+  // trophies: earned ones are remembered; new ones pop up one at a time, top right, like a PS5
+  const [earned, setEarned] = useState<TrophyId[]>(loadTrophies);
+  const earnedRef = useRef(earned);
+  const [trophyQueue, setTrophyQueue] = useState<TrophyId[]>([]);
+  const award = useCallback((id: TrophyId) => {
+    if (earnedRef.current.includes(id)) return;
+    const next = [...earnedRef.current, id];
+    const newOnes: TrophyId[] = [id];
+    if (!next.includes("platinum") && TROPHIES.every((t) => t.id === "platinum" || next.includes(t.id))) {
+      next.push("platinum");
+      newOnes.push("platinum");
+    }
+    earnedRef.current = next;
+    setEarned(next);
+    saveTrophies(next);
+    setTrophyQueue((q) => [...q, ...newOnes]);
+  }, []);
+  const awardRef = useRef(award);
+  awardRef.current = award;
   const [playerOpen, setPlayerOpen] = useState(false);
 
   useEffect(() => {
@@ -228,7 +248,11 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
           setLamp(s);
           saveLamp(s);
         },
+        onCandle: (lit) => {
+          if (!lit) awardRef.current("make-a-wish");
+        },
         onViewChange: (v) => {
+          if (v === "binoculars") awardRef.current("rooftops");
           viewRef.current = v;
           if (v !== "binoculars" && v !== "console") lastRoomView.current = v;
           if (v !== "console") setConsoleReady(false);
@@ -240,6 +264,7 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
         onKeyboard: () => {
           setSection(null);
           setKeyboardOpen(true);
+          awardRef.current("guestbook");
         },
         onPortfolio: (id) => {
           if (id === "resume" && profile.resumePdf) openResume();
@@ -342,6 +367,19 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
       setMenu((cur) => (cur === m ? null : m));
     }
   };
+
+  useEffect(() => {
+    if (found.length >= 1) award("first-find");
+    if (found.length === PORTFOLIO_IDS.length) award("all-found");
+  }, [found, award]);
+  // each trophy pop-up shows for a few seconds, then the next one comes in
+  const trophyShown = trophyQueue[0];
+  useEffect(() => {
+    if (!trophyShown) return;
+    roomRef.current?.chime();
+    const id = window.setTimeout(() => setTrophyQueue((q) => q.slice(1)), 4200);
+    return () => window.clearTimeout(id);
+  }, [trophyShown, trophyQueue.length]);
 
   // the found card stays a few seconds; the opening title until it's read or the room is touched
   useEffect(() => {
@@ -493,6 +531,37 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
         )}
       </AnimatePresence>
 
+      {/* a trophy, PS5-style: slides in at the top right with its tier colour */}
+      <div className="pointer-events-none absolute right-4 top-[4.5rem] z-30 flex justify-end">
+        <AnimatePresence mode="wait">
+          {trophyShown && (() => {
+            const t = TROPHIES.find((x) => x.id === trophyShown)!;
+            return (
+              <motion.div
+                key={`${t.id}-${trophyQueue.length}`}
+                initial={reduce ? { opacity: 0 } : { opacity: 0, transform: "translateX(24px)" }}
+                animate={{ opacity: 1, transform: "translateX(0px)" }}
+                exit={reduce ? { opacity: 0 } : { opacity: 0, transform: "translateX(24px)", transition: { duration: 0.2 } }}
+                transition={{ type: "spring", bounce: 0.15, duration: 0.45 }}
+                className="flex w-[min(320px,calc(100vw-32px))] items-center gap-3 rounded-2xl border border-white/10 bg-[#101218]/90 p-3 pr-4 shadow-[0_18px_50px_rgba(0,0,0,0.45)] backdrop-blur-xl"
+                role="status"
+              >
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl" style={{ background: `radial-gradient(circle at 35% 30%, ${TIER_COLORS[t.tier]}, ${TIER_COLORS[t.tier]}55 70%)` }}>
+                  <Trophy className="h-5 w-5 text-[#101218]" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-[11px] text-white/60">You earned a trophy</span>
+                  <span className="block truncate font-semibold text-white">{t.title}</span>
+                  <span className="block truncate text-xs text-white/55">
+                    <span className="capitalize" style={{ color: TIER_COLORS[t.tier] }}>{t.tier}</span> · {t.detail}
+                  </span>
+                </span>
+              </motion.div>
+            );
+          })()}
+        </AnimatePresence>
+      </div>
+
       {/* a section just found: a glass card with a ring filling to the new count */}
       <AnimatePresence>
         {toast && (
@@ -553,7 +622,14 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
         </div>
       )}
 
-      <RoomConsole open={inConsole && consoleReady} onExit={() => roomRef.current?.setView(lastRoomView.current)} />
+      <RoomConsole
+        open={inConsole && consoleReady}
+        onExit={() => roomRef.current?.setView(lastRoomView.current)}
+        onPlay={(game) => {
+          award("player-one");
+          if (markGamePlayed(game) >= ALL_GAMES.length) award("game-night");
+        }}
+      />
       {keyboardOpen && !away && <FidgetKeyboard muted={muted} volume={sound.effects} onClose={() => setKeyboardOpen(false)} />}
       <AnimatePresence>{section && !away && (
         // a section of the portfolio, found in the room
@@ -665,6 +741,7 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
                 onClick={() => {
                   setSkyMode(id);
                   roomRef.current?.setSky(id);
+                  if (id !== "live") award("change-of-scene");
                 }}
               >
                 {name}
@@ -818,6 +895,30 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
               );
             })}
           </motion.div>
+          {/* the trophy shelf: what's been earned so far */}
+          <div className="mt-4 border-t border-white/10 pt-4">
+            <p className="mb-2 flex items-center justify-between text-xs uppercase tracking-[0.18em] text-amber-200/70">
+              <span>Trophies</span>
+              <span className="font-mono normal-case tracking-normal text-white/50">
+                {earned.length}/{TROPHIES.length}
+              </span>
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {TROPHIES.map((t) => {
+                const has = earned.includes(t.id);
+                return (
+                  <span
+                    key={t.id}
+                    title={`${t.title}: ${t.detail}`}
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs ${has ? "border-white/15 text-white/85" : "border-white/5 text-white/30"}`}
+                  >
+                    <Trophy className="h-3.5 w-3.5" style={{ color: has ? TIER_COLORS[t.tier] : undefined }} />
+                    {has ? t.title : "???"}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
         </motion.div>
       )}</AnimatePresence>
 
