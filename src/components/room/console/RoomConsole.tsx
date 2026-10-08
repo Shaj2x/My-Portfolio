@@ -211,7 +211,7 @@ export const RoomConsole = ({ open, onExit, onPlay }: RoomConsoleProps) => {
             <span className="grid h-8 w-8 place-items-center rounded-full bg-gradient-to-br from-[#d4202c] to-[#5a0a0f] text-xs font-bold">SS</span>
             <span className="hidden font-mono tabular-nums sm:inline">{clock}</span>
             {/* always a way out, for touch screens with no Esc key or controller */}
-            <button type="button" onClick={onExit} aria-label="Back to the room" className="ml-1 inline-flex items-center gap-1.5 rounded-full bg-white/12 px-3 py-1.5 text-sm font-medium text-white hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">
+            <button type="button" onClick={onExit} aria-label="Back to the room" className="ml-1 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-sm font-medium text-white hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white">
               <X className="h-4 w-4" /> <span className="hidden sm:inline">Back to the room</span><span className="sm:hidden">Exit</span>
             </button>
           </div>
