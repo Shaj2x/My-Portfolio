@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import ssCoin from "@/assets/ss-coin.png";
 
 /*
  * Super Shajith: a side-scrolling platformer through Shajith's life, in the classic run-and-jump
@@ -8,8 +9,11 @@ import { useEffect, useRef, useState } from "react";
  *   1-2 LoveYouReally   the streetwear brand: stomp the Haters, collect followers
  *   1-3 Western         first year: get past the Midterms to University College
  *
- * ? blocks give coins or a coffee (grow big: one free hit, and bricks break), stomp enemies from
- * above, don't fall in the gaps, and touch the flag. Keyboard, touch buttons, or a controller
+ * Coins are the black-and-white SS logo. ? blocks give coins or a fragrance to spray on:
+ *   Breeze       (blue)   grow big: one free hit, and bricks break
+ *   Oud Noir     (black)  big, and B/Shift sprays a cloud that knocks enemies out
+ *   Citrus Rush  (orange) nine seconds unstoppable: faster, higher, enemies fall at a touch
+ * Stomp enemies from above, don't fall in the gaps, and touch the flag. Keyboard, touch buttons, or a controller
  * (the console maps its D-pad to arrow keys and ✕ to Space).
  */
 
@@ -136,7 +140,7 @@ const LEVELS: Level[] = [
       b.enemy(88);
       b.tile(96, 8, "?");
       b.tile(100, 8, "?");
-      b.tile(100, 4, "M");
+      b.tile(100, 4, "O");
       b.tile(104, 8, "?");
       b.enemy(102);
       b.enemy(106);
@@ -165,7 +169,7 @@ const LEVELS: Level[] = [
       b.coins(8, 8, 3);
       b.tile(12, 8, "?");
       b.row(15, 8, 4, "B");
-      b.tile(16, 8, "M");
+      b.tile(16, 8, "N");
       b.enemy(20);
       b.enemy(26);
       b.ground(34, 60);
@@ -195,7 +199,7 @@ const LEVELS: Level[] = [
       b.enemy(113);
       b.ground(123, 169);
       b.row(119, 9, 3, "X");
-      b.tile(128, 8, "M");
+      b.tile(128, 8, "O");
       b.row(132, 8, 4, "?");
       b.enemy(134);
       b.enemy(138);
@@ -239,7 +243,7 @@ const LEVELS: Level[] = [
       b.coins(73, 5, 2);
       b.row(82, 8, 6, "B");
       b.tile(83, 8, "?");
-      b.tile(85, 8, "M");
+      b.tile(85, 8, "N");
       b.tile(87, 8, "?");
       b.row(84, 4, 3, "?");
       b.enemy(86);
@@ -272,7 +276,20 @@ const LEVELS: Level[] = [
   ),
 ];
 
-const SOLID = new Set(["#", "B", "?", "M", "U", "X", "[", "]", "{", "}"]);
+const SOLID = new Set(["#", "B", "?", "M", "N", "O", "U", "X", "[", "]", "{", "}"]);
+
+// ---------- fragrances ----------
+type Scent = "breeze" | "oud" | "citrus";
+const SCENT_OF: Record<string, Scent> = { M: "breeze", N: "oud", O: "citrus" };
+const SCENTS: Record<Scent, { name: string; hint: string; glass: string; liquid: string; cap: string; mist: string }> = {
+  breeze: { name: "BREEZE", hint: "+1 hit", glass: "#cfe6ff", liquid: "#7fb8ff", cap: "#f4f4f4", mist: "200,225,255" },
+  oud: { name: "OUD NOIR", hint: "B to spray", glass: "#2a2a30", liquid: "#141418", cap: "#e0b44a", mist: "230,200,140" },
+  citrus: { name: "CITRUS RUSH", hint: "unstoppable!", glass: "#ffc27a", liquid: "#ff8a1e", cap: "#5fbf4a", mist: "255,200,120" },
+};
+const STAR_TIME = 9;
+
+/** the SS logo, drawn as the coins */
+const coinImg = typeof Image !== "undefined" ? Object.assign(new Image(), { src: ssCoin }) : null;
 
 // ---------- game state ----------
 
@@ -292,9 +309,10 @@ interface Enemy extends Body {
 }
 interface Item extends Body {
   rise: number;
+  scent: Scent;
 }
 interface Fx {
-  kind: "coin" | "bit" | "score";
+  kind: "coin" | "bit" | "score" | "mist";
   x: number;
   y: number;
   vx: number;
@@ -309,7 +327,9 @@ interface State {
   phaseT: number;
   level: number;
   grid: string[][];
-  player: Body & { big: boolean; face: 1 | -1; hurt: number; walk: number; jumpHeld: boolean; coyote: number; buffer: number };
+  player: Body & { big: boolean; spray: boolean; star: number; face: 1 | -1; hurt: number; walk: number; jumpHeld: boolean; runHeld: boolean; sprayCool: number; coyote: number; buffer: number };
+  /** clouds of Oud Noir, sprayed forward; they knock out whatever they touch */
+  clouds: { x: number; y: number; vx: number; t: number }[];
   enemies: Enemy[];
   items: Item[];
   fx: Fx[];
@@ -325,13 +345,14 @@ const freshLevel = (s: State, index: number) => {
   const L = LEVELS[index];
   s.level = index;
   s.grid = L.grid.map((r) => r.slice());
-  s.player = { x: 2 * TILE, y: 10 * TILE, w: 12, h: 14, vx: 0, vy: 0, ground: false, big: s.player?.big ?? false, face: 1, hurt: 0, walk: 0, jumpHeld: false, coyote: 0, buffer: 0 };
+  s.player = { x: 2 * TILE, y: 10 * TILE, w: 12, h: 14, vx: 0, vy: 0, ground: false, big: s.player?.big ?? false, spray: s.player?.spray ?? false, star: 0, face: 1, hurt: 0, walk: 0, jumpHeld: false, runHeld: false, sprayCool: 0, coyote: 0, buffer: 0 };
   if (s.player.big) {
     s.player.h = 24;
     s.player.y -= 10;
   }
   s.enemies = L.enemies.map((e) => ({ x: e.x + 2, y: e.y + 2, w: 12, h: 14, vx: -28, vy: 0, ground: false, alive: true, squash: 0, flip: false }));
   s.items = [];
+  s.clouds = [];
   s.fx = [];
   s.bumps = [];
   s.cam = 0;
@@ -452,11 +473,11 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
     const bump = (s: State, tx: number, ty: number) => {
       const t = tileAt(s, tx, ty);
       const p = s.player;
-      if (t === "?" || t === "M") {
+      if (t === "?" || SCENT_OF[t]) {
         s.grid[ty][tx] = "U";
         s.bumps.push({ x: tx, y: ty, t: 0.15 });
         if (t === "?") getCoin(s, tx * TILE + 4, ty * TILE - 8, true);
-        else s.items.push({ x: tx * TILE + 2, y: ty * TILE, w: 12, h: 14, vx: 0, vy: 0, ground: false, rise: 0.6 });
+        else s.items.push({ x: tx * TILE + 3, y: ty * TILE, w: 10, h: 14, vx: 0, vy: 0, ground: false, rise: 0.6, scent: SCENT_OF[t] });
       } else if (t === "B") {
         if (p.big) {
           s.grid[ty][tx] = " ";
@@ -475,10 +496,26 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
       }
     };
 
+    const knockOut = (s: State, e: Enemy) => {
+      e.alive = false;
+      e.flip = true;
+      e.vy = -220;
+      addScore(s, 200, e.x, e.y - 6);
+    };
+    const mistPuff = (s: State, x: number, y: number, n: number, scent: Scent) => {
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * Math.PI * 2;
+        s.fx.push({ kind: "mist", x, y, vx: Math.cos(a) * (30 + Math.random() * 40), vy: Math.sin(a) * (20 + Math.random() * 30) - 20, t: 0.9, text: scent });
+      }
+    };
+
     const hurt = (s: State) => {
       const p = s.player;
-      if (p.hurt > 0 || s.phase !== "play") return;
-      if (p.big) {
+      if (p.hurt > 0 || p.star > 0 || s.phase !== "play") return;
+      if (p.spray) {
+        p.spray = false;
+        p.hurt = 1.6;
+      } else if (p.big) {
         p.big = false;
         p.y += 10;
         p.h = 14;
@@ -490,6 +527,8 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
       s.phaseT = 0;
       s.player.vy = -330;
       s.player.big = false;
+      s.player.spray = false;
+      s.player.star = 0;
     };
 
     // ---------- one fixed step ----------
@@ -566,7 +605,8 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
       }
 
       // running and jumping: snappy acceleration, more grip turning around, variable jump height
-      const max = input.run ? 165 : 105;
+      const star = p.star > 0;
+      const max = (input.run ? 165 : 105) * (star ? 1.25 : 1);
       const acc = p.ground ? 620 : 420;
       if (input.left && !input.right) {
         p.vx -= (p.vx > 0 ? acc * 1.8 : acc) * dt;
@@ -582,11 +622,22 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
       p.coyote = p.ground ? 0.09 : Math.max(0, p.coyote - dt);
       p.buffer = input.jump && !p.jumpHeld ? 0.12 : Math.max(0, p.buffer - dt);
       if (p.buffer > 0 && p.coyote > 0) {
-        p.vy = -(390 + Math.abs(p.vx) * 0.35);
+        p.vy = -(390 + Math.abs(p.vx) * 0.35) * (star ? 1.12 : 1);
         p.coyote = 0;
         p.buffer = 0;
       }
       p.jumpHeld = input.jump;
+      // Oud Noir: a press of B/Shift sprays a cloud forward
+      if (p.spray && input.run && !p.runHeld && p.sprayCool <= 0) {
+        s.clouds.push({ x: p.x + (p.face > 0 ? p.w : -6), y: p.y + 6, vx: p.face * 190 + p.vx * 0.5, t: 0.6 });
+        p.sprayCool = 0.32;
+      }
+      p.runHeld = input.run;
+      p.sprayCool = Math.max(0, p.sprayCool - dt);
+      if (p.star > 0) {
+        p.star -= dt;
+        if (Math.random() < 0.5) s.fx.push({ kind: "mist", x: p.x + Math.random() * p.w, y: p.y + Math.random() * p.h, vx: 0, vy: -20, t: 0.5, text: "citrus" });
+      }
       const rising = p.vy < 0;
       p.vy += (rising && input.jump ? 820 : 1600) * dt;
       p.vy = Math.min(p.vy, 430);
@@ -640,6 +691,10 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
         move(s, e, dt);
         if (e.vx === 0) e.vx = -before;
         if (e.y > VIEW_H + 32) e.alive = false;
+        if (p.star > 0 && overlap(p, e)) {
+          knockOut(s, e);
+          continue;
+        }
         if (p.hurt <= 0 && overlap(p, e)) {
           if (p.vy > 30 && p.y + p.h - e.y < 10) {
             e.squash = 0.45;
@@ -659,7 +714,18 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
           }
         }
 
-      // coffee: rises out of its block, then slides along
+      // spray clouds drift forward, slow, and fade; anything they touch is knocked out
+      for (const c of s.clouds) {
+        c.t -= dt;
+        c.x += c.vx * dt;
+        c.vx *= 1 - 2.2 * dt;
+        const box = { x: c.x - 6, y: c.y - 6, w: 14, h: 14 };
+        for (const e of s.enemies) if (e.alive && !e.squash && overlap(box as Body, e)) knockOut(s, e);
+        if (solidAt(s, c.x, c.y)) c.t = Math.min(c.t, 0.08);
+      }
+      s.clouds = s.clouds.filter((c) => c.t > 0);
+
+      // fragrances: rise out of the block, then slide along until caught
       for (const it of s.items) {
         if (it.rise > 0) {
           it.rise -= dt;
@@ -673,11 +739,18 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
         if (it.vx === 0) it.vx = -before;
         if (overlap(p, it)) {
           it.y = 9999;
-          addScore(s, 1000, p.x, p.y - 8);
-          if (!p.big) {
-            p.big = true;
-            p.y -= 10;
-            p.h = 24;
+          s.score += 1000;
+          const info = SCENTS[it.scent];
+          s.fx.push({ kind: "score", x: p.x - 10, y: p.y - 12, vx: 0, vy: -26, t: 1.6, text: `${info.name}: ${info.hint}` });
+          mistPuff(s, p.x + p.w / 2, p.y + p.h / 2, 14, it.scent);
+          if (it.scent === "citrus") p.star = STAR_TIME;
+          else {
+            if (!p.big) {
+              p.big = true;
+              p.y -= 10;
+              p.h = 24;
+            }
+            if (it.scent === "oud") p.spray = true;
           }
         }
       }
@@ -802,7 +875,7 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
         ctx.fillRect(x + 3, y + 8, 1, 7);
         ctx.fillRect(x + 12, y + 8, 1, 7);
         R(x, y, 16, 1, "rgba(255,255,255,0.25)");
-      } else if (c === "?" || c === "M") {
+      } else if (c === "?" || c === "M" || c === "N" || c === "O") {
         const pulse = 0.75 + 0.25 * Math.sin(time * 6);
         R(x, y, 16, 16, `rgba(240,${Math.round(170 * pulse + 40)},60,1)`);
         R(x, y, 16, 1, "#fff2c0");
@@ -834,25 +907,20 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
       } else if (c === "C") drawCoin(x + 3, y + 2, th, time);
     };
 
-    const drawCoin = (x: number, y: number, th: Theme, t: number) => {
+    /** a coin: the black-and-white SS logo, spinning (it narrows to its edge and back) */
+    const drawCoin = (x: number, y: number, _th: Theme, t: number) => {
       const squish = Math.abs(Math.cos(t * 4));
-      const w = Math.max(2, Math.round(10 * squish));
-      const cx = x + 5 - w / 2;
-      if (th.coin === "heart") {
-        ctx.fillStyle = "#ff5a8a";
-        ctx.beginPath();
-        ctx.arc(cx + w * 0.3, y + 4, w * 0.3, 0, Math.PI * 2);
-        ctx.arc(cx + w * 0.7, y + 4, w * 0.3, 0, Math.PI * 2);
-        ctx.lineTo(cx + w / 2, y + 12);
-        ctx.fill();
+      const w = Math.max(2, Math.round(11 * squish));
+      const cx = x + 5.5 - w / 2;
+      if (coinImg?.complete && coinImg.naturalWidth) {
+        ctx.imageSmoothingEnabled = true;
+        ctx.drawImage(coinImg, Math.round(cx), Math.round(y), w, 11);
+        ctx.imageSmoothingEnabled = false;
+        // its silver edge catching the light as it turns side-on
+        if (squish < 0.35) R(cx, y + 1, w, 9, "#d8d8de");
       } else {
-        R(cx, y, w, 12, th.coin === "credit" ? "#c9a8ff" : "#ffd23a");
-        R(cx + 1, y + 1, Math.max(1, w - 2), 10, th.coin === "credit" ? "#a77cf0" : "#f0b020");
-        if (squish > 0.6) {
-          ctx.fillStyle = "#fff8d0";
-          ctx.font = "bold 7px monospace";
-          ctx.fillText(th.coin === "grade" ? "A" : "C", cx + w / 2 - 2, y + 9);
-        }
+        R(cx, y, w, 11, "#141414");
+        R(cx, y, w, 1, "#e6e6ea");
       }
     };
 
@@ -882,10 +950,16 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
       R(-5, headH, 10, bodyH, "#d4202c");
       R(-5, headH, 10, 1, "#a8161f");
       if (big) R(-1, headH + 3, 3, 3, "#f4f0e6");
+      if (p.star > 0 && Math.floor(time * 16) % 2 === 0) R(-5, headH, 10, bodyH, "#ff8a1e");
       // arm swing
       const arm = Math.round(stride * 2);
       R(3 + (p.ground ? 0 : 1), headH + 1 + (p.ground ? arm : -2), 3, 4, "#d4202c");
       R(3 + (p.ground ? 0 : 1), headH + 5 + (p.ground ? arm : -2), 3, 1, "#b07a52");
+      // with Oud Noir he carries the bottle, ready to spray
+      if (p.spray) {
+        R(6 + (p.ground ? 0 : 1), headH + 2 + (p.ground ? arm : -2), 3, 4, "#141418");
+        R(6 + (p.ground ? 0 : 1), headH + 1 + (p.ground ? arm : -2), 3, 1, "#e0b44a");
+      }
       // legs
       const ly = headH + bodyH;
       const a = Math.round(stride * 2);
@@ -954,16 +1028,21 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
       ctx.restore();
     };
 
-    const drawCoffee = (it: Item, s: State) => {
+    /** a fragrance: a little glass bottle with its colour, cap and label, glinting */
+    const drawBottle = (it: Item, s: State) => {
       const x = Math.round(it.x - s.cam);
       const y = Math.round(it.y);
-      R(x + 1, y + 3, 10, 11, "#f4f0e6");
-      R(x + 1, y + 6, 10, 4, "#7a4a28");
-      R(x, y + 1, 12, 3, "#3a2a20");
-      R(x + 11, y + 6, 2, 5, "#f4f0e6");
-      ctx.fillStyle = "rgba(255,255,255,0.6)";
-      ctx.fillRect(x + 4, y - 2 - (Math.floor(time * 4) % 2), 1, 2);
-      ctx.fillRect(x + 7, y - 3 + (Math.floor(time * 4) % 2), 1, 2);
+      const c = SCENTS[it.scent];
+      // cap and atomiser
+      R(x + 3, y, 4, 3, c.cap);
+      R(x + 4, y + 3, 2, 1, "#9a9aa0");
+      // glass body with the juice inside
+      R(x, y + 4, 10, 10, c.glass);
+      R(x + 1, y + 7, 8, 6, c.liquid);
+      // label and a moving glint
+      R(x + 2, y + 8, 6, 3, it.scent === "oud" ? "#e0b44a" : "#ffffff");
+      const g = Math.floor(time * 3) % 6;
+      if (g < 3) R(x + 1 + g, y + 5, 1, 2, "rgba(255,255,255,0.85)");
     };
 
     const drawFlag = (s: State, th: Theme) => {
@@ -1040,12 +1119,29 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
           if (c !== " " && tx >= 0) drawTile(c, tx * TILE - s.cam, ty * TILE, th, tx, ty, s);
         }
       drawFlag(s, th);
-      for (const it of s.items) drawCoffee(it, s);
+      for (const it of s.items) drawBottle(it, s);
+      for (const c of s.clouds) {
+        const k = c.t / 0.6;
+        const x = c.x - s.cam;
+        for (let i = 0; i < 4; i++) {
+          ctx.fillStyle = `rgba(230,200,140,${0.5 * k})`;
+          ctx.beginPath();
+          ctx.arc(x + Math.sin(time * 9 + i) * 3, c.y + Math.cos(time * 7 + i * 2) * 3, 4 + (1 - k) * 6 - i, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
       for (const e of s.enemies) if (e.alive || e.flip) drawEnemy(e, s, th);
       if (s.phase !== "title") drawPlayer(s);
       for (const f of s.fx) {
         const x = f.x - s.cam;
         if (f.kind === "coin") drawCoin(x, f.y, th, time * 3);
+        else if (f.kind === "mist") {
+          const k = Math.max(0, f.t / 0.9);
+          ctx.fillStyle = `rgba(${SCENTS[(f.text as Scent) ?? "breeze"].mist},${0.55 * k})`;
+          ctx.beginPath();
+          ctx.arc(x, f.y, 2 + (1 - k) * 5, 0, Math.PI * 2);
+          ctx.fill();
+        }
         else if (f.kind === "bit") R(x, f.y, 5, 5, th.brick);
         else text(f.text ?? "", x, f.y, 7, "#fff");
       }
@@ -1067,7 +1163,10 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
         f.t -= dt;
         f.x += f.vx * dt;
         f.y += f.vy * dt;
-        if (f.kind !== "score") f.vy += 900 * dt;
+        if (f.kind === "mist") {
+          f.vx *= 1 - 3 * dt;
+          f.vy *= 1 - 3 * dt;
+        } else if (f.kind !== "score") f.vy += 900 * dt;
       }
       s.fx = s.fx.filter((f) => f.t > 0);
       for (const b of s.bumps) b.t -= dt;
@@ -1120,8 +1219,8 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
   return (
     <div className="text-center">
       <p className="mb-4 text-sm text-white/70">
-        <span className="[@media(pointer:coarse)]:hidden">Move with ← → or A/D, jump with Space, ↑ or W, run with Shift.</span>
-        <span className="hidden [@media(pointer:coarse)]:inline">Use the buttons below: move, run, and jump.</span>
+        <span className="[@media(pointer:coarse)]:hidden">Move with ← → or A/D, jump with Space, ↑ or W, run with Shift (and spray, once you've got Oud Noir).</span>
+        <span className="hidden [@media(pointer:coarse)]:inline">Use the buttons below: move, B to run (and spray), A to jump.</span>
       </p>
       <div className="relative inline-block overflow-hidden rounded-lg border border-white/10">
         <canvas ref={canvasRef} width={VIEW_W} height={VIEW_H} className="block max-w-full [image-rendering:pixelated]" style={{ aspectRatio: `${VIEW_W}/${VIEW_H}`, width: 720 }} />
