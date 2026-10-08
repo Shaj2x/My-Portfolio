@@ -180,8 +180,8 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
   // resolution: starts a little under the screen's on high-density displays (the difference is hard
   // to see in a soft, dim room) and then adapts to how fast this device actually draws; see the loop
-  const maxPixelRatio = Math.min(window.devicePixelRatio, 1.75);
-  let pixelRatio = Math.min(window.devicePixelRatio, 1.5);
+  const maxPixelRatio = Math.min(window.devicePixelRatio, 1.5);
+  let pixelRatio = Math.min(window.devicePixelRatio, 1.25);
   renderer.setPixelRatio(pixelRatio);
   renderer.setSize(container.clientWidth, container.clientHeight);
   renderer.shadowMap.enabled = true;
@@ -710,7 +710,9 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   applyExtras();
   applyLamp();
 
-  for (const s of furniture.screens) {
+  // only the big monitor casts its glow as a real area light: area lights are expensive for every
+  // pixel, and the laptop's small screen barely registers on the room
+  for (const s of furniture.screens.slice(0, 1)) {
     const area = new THREE.RectAreaLight(s.color, s.strength, s.w, s.h);
     area.position.copy(s.center);
     area.lookAt(s.center.clone().add(s.normal));
@@ -729,6 +731,21 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     l.shadow.needsUpdate = true;
   }
   let shadowsDirty = true;
+  // Every light costs work on every pixel even at zero brightness, so a light that is dark (a lamp
+  // switched off, the moon behind a closed blind, a blown-out candle) is taken out of the scene
+  // until it comes back on. The first switch of each kind compiles a shader variant once; after
+  // that it's free.
+  let dimmable: THREE.Light[] | null = null;
+  const cullDarkLights = () => {
+    if (!dimmable) {
+      dimmable = [];
+      scene.traverse((o) => {
+        const l = o as THREE.Light;
+        if (l.isLight && !(l as THREE.HemisphereLight).isHemisphereLight && !(l as THREE.RectAreaLight).isRectAreaLight) dimmable!.push(l);
+      });
+    }
+    for (const l of dimmable) l.visible = l.intensity > 0.001;
+  };
   const updateShadows = () => {
     for (const l of shadowLights) {
       const lit = l.intensity > 0.001;
@@ -1654,6 +1671,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     const behindConsole = mode === "console" && !tween && !fade;
     if (behindConsole && frameNo % 8 !== 0) return;
     adaptResolution(dt, behindConsole);
+    cullDarkLights();
     updateShadows();
     if (outline.selectedObjects.length) composer.render(dt);
     else renderer.render(scene, camera);
