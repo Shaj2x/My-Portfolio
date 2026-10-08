@@ -523,8 +523,8 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     block(d - 0.05, 0.03, 0.03, steel, x, 0.16, z - l / 2 + 0.025);
     block(d - 0.05, 0.03, 0.03, steel, x, 0.16, z + l / 2 - 0.025);
 
-    // desk mat
-    block(0.36, 0.003, 0.82, std("#1a1a1c", 0.9), x - 0.1, h + 0.0015, z, group, false);
+    // desk mat, centred under the keyboard and mouse
+    block(0.34, 0.003, 0.62, std("#1a1a1c", 0.9), LAYOUT.keyboard.pos[0] + 0.03, h + 0.0015, (LAYOUT.keyboard.pos[2] + LAYOUT.mouse.pos[2]) / 2 - 0.02, group, false);
   }
 
   // ---------- curved monitor, facing the chair ----------
@@ -532,8 +532,8 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     const { pos, w, h } = LAYOUT.monitor;
     const g = anchor(pos[0], deskTop, pos[2]);
     monitor = g;
-    const chair = LAYOUT.chair.pos;
-    g.lookAt(chair[0], deskTop, chair[2] + 0.15);
+    // square to the desk, facing the chair side (-x)
+    g.rotation.y = -Math.PI / 2;
     const R = 1.0;
     const bend = (geo: THREE.PlaneGeometry, dz: number) => {
       const p = geo.attributes.position;
@@ -669,12 +669,13 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     // white V stand with a neck
     const standMat = std("#e8e8ea", 0.35, 0.3);
     block(0.04, 0.3, 0.02, standMat, 0, 0.17, -0.07, g).rotation.x = -0.12;
+    // a compact V foot that stays tucked under the screen
     for (const s of [-1, 1]) {
-      const leg = block(0.03, 0.012, 0.3, standMat, s * 0.1, 0.006, 0.02, g);
-      leg.rotation.y = s * 0.55;
+      const leg = rounded(0.026, 0.01, 0.17, 0.004, standMat, s * 0.045, 0.005, -0.01, g);
+      leg.rotation.y = s * 0.42;
     }
     // blue LED under the stand
-    const led = new THREE.Mesh(new THREE.PlaneGeometry(0.26, 0.2), new THREE.MeshBasicMaterial({ color: new THREE.Color("#2a44ff").multiplyScalar(1.4), transparent: true, opacity: 0.55, toneMapped: false }));
+    const led = new THREE.Mesh(new THREE.PlaneGeometry(0.18, 0.13), new THREE.MeshBasicMaterial({ color: new THREE.Color("#2a44ff").multiplyScalar(1.4), transparent: true, opacity: 0.55, toneMapped: false }));
     led.rotation.x = -Math.PI / 2;
     led.position.set(0, 0.002, 0.0);
     g.add(led);
@@ -688,7 +689,7 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
   // ---------- laptop on its stand ----------
   {
     const [x, , z] = LAYOUT.laptop.pos;
-    const g = anchor(x, deskTop, z, -Math.PI / 2 + 0.15);
+    const g = anchor(x, deskTop, z, -Math.PI / 2);
     const alu = std("#c9cacc", 0.35, 0.7);
     // stand: two raked rails
     for (const s of [-1, 1]) block(0.02, 0.012, 0.26, alu, s * 0.13, 0.05, 0, g).rotation.x = 0.28;
@@ -777,7 +778,7 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     // touchpad edged by its light bar, a D-pad and face buttons, bumpers and triggers at the front.
     // Local axes: x across, +z toward the handles (and the chair), y up.
     const ct = LAYOUT.controller.pos;
-    const cg = anchor(ct[0], deskTop, ct[2], facing + 0.25);
+    const cg = anchor(ct[0], deskTop, ct[2], facing);
     controller = cg;
     // glossy moulded plastic: a clear coat over a soft base, like the real thing
     const dsWhite = new THREE.MeshPhysicalMaterial({ color: "#f4f4f2", roughness: 0.38, clearcoat: 0.6, clearcoatRoughness: 0.25 });
@@ -846,11 +847,11 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
 
     const mg = LAYOUT.mug.pos;
     const mugMat = std("#161616", 0.35);
-    block(0.11, 0.002, 0.11, std("#f2f1ee", 0.9), mg[0], deskTop + 0.001, mg[2], group, false).rotation.y = 0.3; // napkin coaster
+    block(0.11, 0.002, 0.11, std("#f2f1ee", 0.9), mg[0], deskTop + 0.001, mg[2], group, false); // napkin coaster
     cyl(0.04, 0.037, 0.1, mugMat, mg[0], deskTop + 0.052, mg[2], group, 28);
     const handle = new THREE.Mesh(new THREE.TorusGeometry(0.028, 0.007, 8, 20), mugMat);
-    place(handle, mg[0], deskTop + 0.052, mg[2] + 0.045);
-    handle.rotation.y = Math.PI / 2;
+    // handle turned toward the chair, ready to pick up
+    place(handle, mg[0] - 0.045, deskTop + 0.052, mg[2]);
 
     // the white gooseneck lamp: a round base with a clock in its face, a bendy neck and a ring head
     const dl = LAYOUT.deskLamp.pos;

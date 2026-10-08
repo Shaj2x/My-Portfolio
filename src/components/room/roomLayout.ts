@@ -77,16 +77,17 @@ export const LAYOUT = {
   floorLamp: { pos: [1.36, 0, -1.51] as Vec3, height: 1.62, shadeY: 1.48, shadeR: 0.15, shadeH: 0.22, shadeOffset: [-0.07, 0.07] as [number, number] },
   /** against the right wall, with about 0.75 m of open floor between its end and the window wall (photo F) */
   desk: { pos: [1.2, 0, ROOM.back + 0.75 + 0.6] as Vec3, l: 1.2, d: 0.6, h: 0.75 },
-  /** turned to face the chair; desk props are spaced so their footprints never overlap */
-  monitor: { pos: [1.3, 0, -0.05] as Vec3, w: 0.71, h: 0.42 },
-  laptop: { pos: [1.28, 0, -0.55] as Vec3 },
-  keyboard: { pos: [1.05, 0, -0.2] as Vec3 },
-  mouse: { pos: [1.08, 0, 0.12] as Vec3 },
-  controller: { pos: [1.0, 0, -0.62] as Vec3 },
-  mug: { pos: [1.06, 0, -0.8] as Vec3 },
+  /** square to the desk; everything is lined up and spaced so no footprints overlap (window end → room end:
+   *  desk lamp and mug, laptop with the controller in front, speaker, monitor over keyboard and mouse, sunset lamp) */
+  monitor: { pos: [1.32, 0, -0.12] as Vec3, w: 0.71, h: 0.42 },
+  laptop: { pos: [1.25, 0, -0.66] as Vec3 },
+  keyboard: { pos: [1.03, 0, -0.14] as Vec3 },
+  mouse: { pos: [1.05, 0, 0.13] as Vec3 },
+  controller: { pos: [0.99, 0, -0.62] as Vec3 },
+  mug: { pos: [1.0, 0, -0.83] as Vec3 },
   /** the gooseneck lamp, with the clock in its base */
   deskLamp: { pos: [1.42, 0, -0.84] as Vec3 },
-  speaker: { pos: [1.44, 0, -0.28] as Vec3 },
+  speaker: { pos: [1.44, 0, -0.52] as Vec3 },
   /** a sunset lamp (it looked like a small speaker in the photos); it throws its orange disc onto the wall above the bed */
   sunsetLamp: { pos: [1.42, 0, 0.24] as Vec3, target: [-1.49, 1.6, 0.3] as Vec3 },
   /** the PS5, standing under the front end of the desk */
