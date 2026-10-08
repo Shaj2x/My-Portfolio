@@ -10,6 +10,8 @@ import NotFound from "./pages/NotFound";
 // three.js is heavy, so the 3D room loads only when visited
 const Room = lazy(() => import("./pages/Room"));
 const RoomPlain = lazy(() => import("./pages/RoomPlain"));
+// the whole portfolio on one plain page, for anyone short on time; no three.js
+const QuickView = lazy(() => import("./pages/QuickView"));
 
 const queryClient = new QueryClient();
 
@@ -35,6 +37,14 @@ const App = () => (
               element={
                 <Suspense fallback={<div className="fixed inset-0 bg-[#030407]" />}>
                   <Room />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/quick"
+              element={
+                <Suspense fallback={<div className="fixed inset-0 bg-[#0d0e11]" />}>
+                  <QuickView />
                 </Suspense>
               }
             />

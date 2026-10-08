@@ -176,6 +176,7 @@ export const displayNames: Record<string, string> = {
   "devassist": "DevAssist",
   "Marq-Living-Platform": "Marq Living",
   "My-Portfolio": "This portfolio",
+  "Anthropogenic-Sound-Device-Simulator---ES1050-Project": "ES1050 Sound Device Simulator",
 };
 
 export const customDescriptions: Record<string, string> = {
@@ -189,7 +190,27 @@ export const customDescriptions: Record<string, string> = {
   "digitaldash":
     "A study dashboard for students: focus timers with study music, tasks, courses and grades, a calendar, study rooms with friends, and a year-long focus heatmap.",
   "My-Portfolio": "This site: a 3D recreation of my dorm room in three.js, where clicking things around the room opens my portfolio.",
+  "StatStack": "NBA Higher or Lower: guess whether the next player's stat is higher or lower, across real season data, and build a streak.",
+  "Raptors-Slot-Machine": "A Toronto Raptors slot machine with paylines, bets and a running balance.",
+  "Raptors-BlackJack": "Blackjack at a Raptors table, dealt by Scottie Barnes, with chips, bets and a win/loss record.",
+  "Anthropogenic-Sound-Device-Simulator---ES1050-Project":
+    "A coded simulation that captures anthropogenic sound inputs, timestamps them and logs them to a virtual microSD system, modelling how our device monitors environmental noise for ES1050 at Western.",
+  "HarmonAI": "A music quiz web app with advanced lyric analyzers to help track down songs you can't find.",
 };
+
+/** the projects shown first, in this order, on the quick view */
+export const featuredProjects = [
+  "schematica-circuits",
+  "devassist",
+  "Marq-Living-Platform",
+  "digitaldash",
+  "Mercatus",
+  "StatStack",
+  "Anthropogenic-Sound-Device-Simulator---ES1050-Project",
+  "Raptors-Slot-Machine",
+  "Raptors-BlackJack",
+  "HarmonAI",
+];
 
 export const profile = {
   name: "Shajith Sasikumar",

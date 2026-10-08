@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { AnimatePresence, motion, useReducedMotion, type Transition } from "framer-motion";
-import { ArrowUpRight, Binoculars, Camera, Check, Gamepad2, LayoutGrid, Lightbulb, LightbulbOff, Radio, SlidersHorizontal, Trophy, Volume2, VolumeX, X } from "lucide-react";
+import { ArrowUpRight, Binoculars, Camera, Check, Gamepad2, LayoutGrid, Lightbulb, LightbulbOff, Radio, ScrollText, SlidersHorizontal, Trophy, Volume2, VolumeX, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { RADIO_STATION } from "@/components/room/createAudio";
 import { playlistEmbed } from "@/components/room/playlist";
@@ -447,6 +448,12 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
             <span className="font-semibold text-white">Shajith Sasikumar</span>
             <span className="ml-2 text-white/55">BESc + Ivey HBA</span>
           </p>
+          {/* the whole portfolio on one page, for anyone in a hurry */}
+          {!away && (
+            <Link to="/quick" className={`${chip} !py-1.5 text-xs`}>
+              <ScrollText className="h-3.5 w-3.5 text-amber-200" /> Quick view
+            </Link>
+          )}
           {!away && found.length === PORTFOLIO_IDS.length && (
             <p className="rounded-full bg-black/40 px-4 py-1.5 text-xs text-amber-100/85 backdrop-blur-md" aria-live="polite">
               You found the whole portfolio
