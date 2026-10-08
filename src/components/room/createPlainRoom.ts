@@ -1593,6 +1593,27 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     e.preventDefault();
     if (!zoom) scope.fovT = THREE.MathUtils.clamp(scope.fovT * Math.exp(e.deltaY * 0.0012), 2.5, 18);
   };
+  // pinch to zoom the binoculars on touch screens (two fingers apart = closer)
+  let pinchFrom = 0;
+  const pinchGap = (e: TouchEvent) => Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+  const onTouchStart = (e: TouchEvent) => {
+    if (mode !== "binoculars" || e.touches.length !== 2) return;
+    pinchFrom = pinchGap(e);
+    dragFrom = null; // a pinch isn't a drag to aim
+  };
+  const onTouchMove = (e: TouchEvent) => {
+    if (mode !== "binoculars" || e.touches.length !== 2 || !pinchFrom) return;
+    e.preventDefault();
+    const gap = pinchGap(e);
+    if (!zoom) scope.fovT = THREE.MathUtils.clamp(scope.fovT * (pinchFrom / gap), 2.5, 18);
+    pinchFrom = gap;
+  };
+  const onTouchEnd = (e: TouchEvent) => {
+    if (e.touches.length < 2) pinchFrom = 0;
+  };
+  renderer.domElement.addEventListener("touchstart", onTouchStart, { passive: true });
+  renderer.domElement.addEventListener("touchmove", onTouchMove, { passive: false });
+  renderer.domElement.addEventListener("touchend", onTouchEnd);
   renderer.domElement.addEventListener("pointerdown", onDown);
   renderer.domElement.addEventListener("pointerup", onUp);
   renderer.domElement.addEventListener("pointermove", onMove);
@@ -1982,6 +2003,9 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     setSpeakerPlaying: (on) => (speakerPlaying = on),
     setLamp,
     dispose: () => {
+      renderer.domElement.removeEventListener("touchstart", onTouchStart);
+      renderer.domElement.removeEventListener("touchmove", onTouchMove);
+      renderer.domElement.removeEventListener("touchend", onTouchEnd);
       renderer.domElement.removeEventListener("pointerdown", onDown);
       renderer.domElement.removeEventListener("pointerup", onUp);
       renderer.domElement.removeEventListener("pointermove", onMove);
