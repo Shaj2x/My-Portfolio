@@ -158,8 +158,12 @@ const VIEWS: Record<CameraView, { pos: THREE.Vector3; target: THREE.Vector3 }> =
 };
 
 export function createPlainRoom(container: HTMLElement, options: PlainRoomOptions = {}): PlainRoomHandle {
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+  // resolution: starts a little under the screen's on high-density displays (the difference is hard
+  // to see in a soft, dim room) and then adapts to how fast this device actually draws; see the loop
+  const maxPixelRatio = Math.min(window.devicePixelRatio, 1.75);
+  let pixelRatio = Math.min(window.devicePixelRatio, 1.5);
+  renderer.setPixelRatio(pixelRatio);
   renderer.setSize(container.clientWidth, container.clientHeight);
   renderer.shadowMap.enabled = true;
   // soft variance shadows, blurred so the lamp's shadows fall off gently the way a shaded bulb's do
@@ -693,6 +697,27 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     area.lookAt(s.center.clone().add(s.normal));
     scene.add(area);
   }
+
+  // ---------- shadows, drawn only when something that casts one has moved ----------
+  // Almost nothing in the room moves, so re-rendering three soft shadow maps every frame was the
+  // biggest cost here. Each map is redrawn on demand instead: when a lamp comes on, or when the
+  // drawer, the blind, a plushie, a lifted object or the dollhouse cutaway changes. A lamp that is
+  // off keeps its old map and costs nothing.
+  const shadowLights = [downLight, sunsetLight, deskLight];
+  const shadowWasLit = new Map<THREE.Light, boolean>();
+  for (const l of shadowLights) {
+    l.shadow.autoUpdate = false;
+    l.shadow.needsUpdate = true;
+  }
+  let shadowsDirty = true;
+  const updateShadows = () => {
+    for (const l of shadowLights) {
+      const lit = l.intensity > 0.001;
+      if (lit && (shadowsDirty || !shadowWasLit.get(l))) l.shadow.needsUpdate = true;
+      shadowWasLit.set(l, lit);
+    }
+    shadowsDirty = false;
+  };
 
   // ---------- Western's campus, seen only through the binoculars ----------
   const disposables: { dispose: () => void }[] = [];
@@ -1323,6 +1348,31 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   // brightness over the first 1.8 s: two stutters, then it holds
   const flicker = (t: number) => (t < 0.25 ? 0 : t < 0.35 ? 0.7 : t < 0.5 ? 0.1 : t < 0.62 ? 0.9 : t < 0.72 ? 0.35 : Math.min(1, 0.6 + (t - 0.72) * 0.6));
 
+  // adaptive resolution: if frames run long for a couple of seconds, draw fewer pixels; if there is
+  // plenty of headroom, step back up. Changes are small and at most every 2 s, so it's not noticeable.
+  let frameNo = 0;
+  let perfTime = 0;
+  let perfFrames = 0;
+  let perfSlow = 0;
+  const adaptResolution = (dt: number, paused: boolean) => {
+    if (paused || dt <= 0 || dt >= 0.1 || document.hidden) return;
+    perfTime += dt;
+    perfFrames++;
+    if (dt > 1 / 40) perfSlow++;
+    if (perfTime < 2) return;
+    const avg = perfTime / perfFrames;
+    const slowShare = perfSlow / perfFrames;
+    perfTime = perfFrames = perfSlow = 0;
+    let next = pixelRatio;
+    if (avg > 1 / 45 || slowShare > 0.25) next = Math.max(Math.min(1, window.devicePixelRatio), pixelRatio - 0.25);
+    else if (avg < 1 / 57 && slowShare < 0.05) next = Math.min(maxPixelRatio, pixelRatio + 0.125);
+    if (next !== pixelRatio) {
+      pixelRatio = next;
+      renderer.setPixelRatio(pixelRatio);
+      onResize();
+    }
+  };
+
   let firstFrameSent = false;
   const clock = new THREE.Clock();
   const toCamera = new THREE.Vector3();
@@ -1387,6 +1437,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       const dir = Math.sign(blindTarget - blindLevel);
       blindLevel += dir * Math.min(Math.abs(blindTarget - blindLevel), dt * (reducedMotion ? 99 : 0.9) * (0.35 + Math.min(1, Math.abs(blindTarget - blindLevel) * 6)));
       setBlind(blindLevel);
+      shadowsDirty = true;
       // light from outside follows how much window is showing
       moon.intensity = 3 * (1 - blindLevel);
     }
@@ -1399,6 +1450,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       drawerLevel += (drawerTarget - drawerLevel) * (reducedMotion ? 1 : 1 - Math.exp(-7 * dt));
       if (Math.abs(drawerTarget - drawerLevel) < 0.002) drawerLevel = drawerTarget;
       inter.drawer.setOpen(drawerLevel);
+      shadowsDirty = true;
     }
     // sparkles: fly, slow, fall, fade
     if (sparks.visible) {
@@ -1459,6 +1511,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
         const b = Math.sin(time * (1.1 + i * 0.17) + i * 1.7) * 0.012;
         p.group.scale.set(1 - b * 0.4, 1 + b, 1 - b * 0.4);
       });
+    if (bounces.size) shadowsDirty = true;
     for (const [g, age] of bounces) {
       const t2 = age + dt;
       // a quick squash, then a damped spring back to rest
@@ -1494,6 +1547,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     }
     const breath = reducedMotion ? 1 : 1 + 0.12 * Math.sin((time - outlineSince) * 2.2);
     outline.edgeStrength = 3.2 * outlineLevel * breath;
+    if (lifts.size) shadowsDirty = true;
     for (const [obj, l] of lifts) {
       if (reducedMotion) l.off = l.target;
       else {
@@ -1547,12 +1601,25 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       if (mode === "room") controls.update();
       else camera.lookAt(controls.target);
       // dollhouse cutaway: hide any wall the camera is behind, and the ceiling from above
-      for (const w of walls) w.group.visible = toCamera.subVectors(camera.position, w.point).dot(w.inward) > -0.05;
-      ceiling.visible = camera.position.y < height;
+      for (const w of walls) {
+        const show = toCamera.subVectors(camera.position, w.point).dot(w.inward) > -0.05;
+        if (show !== w.group.visible) shadowsDirty = true;
+        w.group.visible = show;
+      }
+      const ceilingShown = camera.position.y < height;
+      if (ceilingShown !== ceiling.visible) shadowsDirty = true;
+      ceiling.visible = ceilingShown;
       const p = camera.position;
       sky.visible = p.x > left && p.x < right && p.z > back && p.z < front && p.y < height;
     }
 
+    // behind the PlayStation screen the room is all but covered, so once the camera has arrived it
+    // redraws only a few times a second and leaves the device to the game
+    frameNo++;
+    const behindConsole = mode === "console" && !tween && !fade;
+    if (behindConsole && frameNo % 8 !== 0) return;
+    adaptResolution(dt, behindConsole);
+    updateShadows();
     if (outline.selectedObjects.length) composer.render(dt);
     else renderer.render(scene, camera);
     if (!firstFrameSent) {
