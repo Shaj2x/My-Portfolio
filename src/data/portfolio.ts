@@ -152,12 +152,33 @@ export const demoLinks: Record<string, string> = {
   "StatStack": "https://shaj2x.github.io/StatStack/",
   "Mercatus": "https://shaj2x.github.io/Mercatus/",
   "Anthropogenic-Sound-Device-Simulator---ES1050-Project": "https://shaj2x.github.io/Anthropogenic-Sound-Device-Simulator---ES1050-Project/",
+  "schematica-circuits": "https://shaj2x.github.io/schematica-circuits/",
+  "digitaldash": "https://usedigitaldash.vercel.app",
+  "My-Portfolio": "https://shajithsasikumar.com",
 };
 
-export const inProgressRepos = ["MarkWise", "HarmonAI"];
+export const inProgressRepos = ["MarkWise", "HarmonAI", "schematica-circuits", "devassist"];
+
+/** how a repo is titled on its card, where the repo name doesn't read well */
+export const displayNames: Record<string, string> = {
+  "schematica-circuits": "Schematica",
+  "digitaldash": "Digital Dash",
+  "devassist": "DevAssist",
+  "Marq-Living-Platform": "Marq Living",
+  "My-Portfolio": "This portfolio",
+};
 
 export const customDescriptions: Record<string, string> = {
   "Mercatus": "A strategy game that teaches stocks, crypto, and market timing through simulated trading decisions.",
+  "schematica-circuits":
+    "Turns a photo of a circuit schematic, hand-drawn or from a textbook, into an interactive simulation: a Rust solver compiled to WebAssembly with live plots, and an AI assistant that explains the solution step by step.",
+  "devassist":
+    "A multi-agent AI platform that takes a plain-English change request for a GitHub repo, plans it, writes the code and tests, and validates every patch in a locked-down Docker sandbox before a human approves it into a pull request.",
+  "Marq-Living-Platform":
+    "A resident app and building-operations platform for The Marq in London, Ontario: live shuttle tracking, amenity booking, laundry availability and front desk requests, with MQTT-connected sensors that automate lights, HVAC and EV charging.",
+  "digitaldash":
+    "A study dashboard for students: focus timers with study music, tasks, courses and grades, a calendar, study rooms with friends, and a year-long focus heatmap.",
+  "My-Portfolio": "This site: a 3D recreation of my dorm room in three.js, where clicking things around the room opens my portfolio.",
 };
 
 export const profile = {
