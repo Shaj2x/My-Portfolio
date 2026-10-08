@@ -1460,6 +1460,69 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     }
   };
 
+  // ---------- idle life ----------
+  // Small things that happen on their own while you look around: Babs hops a step along the sill
+  // now and then, the sill plants sway in the air from the window (more in rain or wind, not at
+  // all with the blind down), a message pops up on the laptop, and the PS5's light bar breathes
+  // while it's asleep.
+  const idle = furniture.interact.idle;
+  const babs = furniture.interact.plushies.find((p) => p.name === "Babs")?.group ?? null;
+  const babsHome = babs ? babs.position.clone() : new THREE.Vector3();
+  let babsHop: { t: number; from: number; to: number } | null = null;
+  let nextHop = 8 + Math.random() * 10;
+  let nextPing = 18 + Math.random() * 20;
+  let pingT = -1;
+  const updateIdle = (dt: number, time: number) => {
+    if (reducedMotion) return;
+    // Babs: a quick little parabola, a hair of tilt, never off her patch of sill
+    if (babs) {
+      nextHop -= dt;
+      if (!babsHop && nextHop <= 0 && !lifts.has(babs) && !bounces.has(babs)) {
+        const from = babs.position.x;
+        let to = from + (Math.random() < 0.5 ? -1 : 1) * 0.03;
+        if (Math.abs(to - babsHome.x) > 0.045) to = from - (to - from);
+        babsHop = { t: 0, from, to };
+        nextHop = 10 + Math.random() * 16;
+      }
+      if (babsHop) {
+        babsHop.t = Math.min(1, babsHop.t + dt / 0.42);
+        const k = babsHop.t;
+        babs.position.x = THREE.MathUtils.lerp(babsHop.from, babsHop.to, k);
+        babs.position.y = babsHome.y + Math.sin(k * Math.PI) * 0.028;
+        babs.rotation.z = Math.sin(k * Math.PI) * 0.12 * Math.sign(babsHop.from - babsHop.to);
+        if (k >= 1) {
+          babs.position.y = babsHome.y;
+          babs.rotation.z = 0;
+          babsHop = null;
+        }
+      }
+    }
+    // plants: a slow sway with a quicker flutter on top, stronger when it's wet or windy outside
+    const gust = weatherLook === "storm" ? 2.6 : weatherLook === "rain" || weatherLook === "snow" ? 1.6 : 1;
+    const air = 0.028 * gust * Math.max(0, 1 - blindLevel * 1.05);
+    idle.plants.forEach((p, i) => {
+      p.rotation.z = (Math.sin(time * 1.1 + i * 1.9) * 0.7 + Math.sin(time * 3.7 + i) * 0.3) * air;
+      p.rotation.x = Math.sin(time * 0.8 + i * 2.7) * air * 0.6;
+    });
+    // the laptop: a message slides in, sits for a few seconds, then slides away
+    nextPing -= dt;
+    if (pingT < 0 && nextPing <= 0) {
+      pingT = 0;
+      nextPing = 30 + Math.random() * 35;
+    }
+    if (pingT >= 0) {
+      pingT += dt;
+      const k = pingT < 0.3 ? pingT / 0.3 : pingT < 4 ? 1 : Math.max(0, 1 - (pingT - 4) / 0.4);
+      idle.setLaptopPing(1 - (1 - k) ** 3);
+      if (pingT > 4.4) {
+        pingT = -1;
+        idle.setLaptopPing(0);
+      }
+    }
+    // the PS5's light bar breathes slowly while it's asleep
+    idle.setPsBreath(0.45 + 0.55 * (0.5 + 0.5 * Math.sin(time * 1.25)));
+  };
+
   // gold sparkles that burst from whatever just gave up a piece of the portfolio, then drift down
   const SPARKS = 90;
   const sparkPos = new Float32Array(SPARKS * 3);
@@ -1673,7 +1736,8 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   let lifted: THREE.Object3D | null = null;
   const liftRootFor = (hit: Pick | null): THREE.Object3D | null => {
     if (!hit) return null;
-    if (hit.kind === "plushie") return hit.target.group;
+    // Babs mid-hop isn't picked up (the hop owns her height until she lands)
+    if (hit.kind === "plushie") return babsHop && hit.target.group === babs ? null : hit.target.group;
     if (hit.kind === "perfume") return hit.target;
     if (hit.kind === "binoculars") return binos.parts[0]?.parent ?? null;
     if (hit.kind === "console" && lastHitObject && isIn(lastHitObject, inter.controller)) return inter.controller;
@@ -1934,6 +1998,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       if (lightning === 0) moon.intensity = windowLight() * (1 - blindLevel);
     }
     updateWeather(dt, time);
+    updateIdle(dt, time);
     // the candle: eases toward lit or out, and the flame flickers on a few unrelated waves
     candleLevel += (candleTarget - candleLevel) * (reducedMotion ? 1 : 1 - Math.exp(-(candleTarget ? 3 : 9) * dt));
     if (Math.abs(candleTarget - candleLevel) < 0.002) candleLevel = candleTarget;

@@ -25,6 +25,13 @@ const loadFound = (): PortfolioId[] => {
 // the desk speaker plays this playlist when one is set in playlist.ts; otherwise the built-in lo-fi radio
 const playlist = playlistEmbed();
 
+declare global {
+  interface Window {
+    /** the loading screen in index.html: move its bar (0–100) and caption, or fade it out */
+    __boot?: { set: (progress: number, label?: string) => void; done: () => void };
+  }
+}
+
 /** the resume opens as the PDF itself, in a new tab; every other section opens in the sheet */
 const openResume = () => window.open(profile.resumePdf, "_blank", "noopener");
 
@@ -241,58 +248,75 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
 
   useEffect(() => {
     if (!containerRef.current) return;
-    try {
-      roomRef.current = createPlainRoom(containerRef.current, {
-        initialLamp: loadLamp(),
-        onLampChange: (s) => {
-          setLamp(s);
-          saveLamp(s);
-        },
-        onCandle: (lit) => {
-          if (!lit) awardRef.current("make-a-wish");
-        },
-        onViewChange: (v) => {
-          if (v === "binoculars") awardRef.current("rooftops");
-          viewRef.current = v;
-          if (v !== "binoculars" && v !== "console") lastRoomView.current = v;
-          if (v !== "console") setConsoleReady(false);
-          setView(v);
-        },
-        onScopeTarget: setTarget,
-        onConsoleReady: () => setConsoleReady(true),
-        onFirstFrame: () => setRoomShown(true),
-        onKeyboard: () => {
-          setSection(null);
-          setKeyboardOpen(true);
-          awardRef.current("guestbook");
-        },
-        onPortfolio: (id) => {
-          if (id === "resume" && profile.resumePdf) openResume();
-          else setSection(id);
-          setFound((f) => {
-            if (f.includes(id)) return f;
-            const next = [...f, id];
-            // a newly found section gets its moment
-            setToast({ id, n: next.length, key: Date.now() });
-            try {
-              localStorage.setItem(FOUND_KEY, JSON.stringify(next));
-            } catch {
-              // not remembered
-            }
-            return next;
-          });
-        },
-        onLightSwitch: () => setPanelOpen(true),
-        onRadioChange: setRadioOn,
-        onSpeaker: playlist ? () => setPlayerOpen((o) => !o) : undefined,
-        onHover: setHover,
-        muted: mutedRef.current,
-        sound: soundRef.current,
+    const container = containerRef.current;
+    // the loading screen (in index.html) says what's happening; building the room blocks the page
+    // for a moment, so wait two frames for the new label to paint before starting
+    window.__boot?.set(72, "Arranging the furniture…");
+    let cancelled = false;
+    let raf = requestAnimationFrame(() => {
+      raf = requestAnimationFrame(() => {
+        if (!cancelled) build();
       });
-    } catch (e) {
-      console.error("Failed to start the room:", e);
-      setError(true);
-    }
+    });
+    const build = () => {
+      try {
+        roomRef.current = createPlainRoom(container, {
+          initialLamp: loadLamp(),
+          onLampChange: (s) => {
+            setLamp(s);
+            saveLamp(s);
+          },
+          onCandle: (lit) => {
+            if (!lit) awardRef.current("make-a-wish");
+          },
+          onViewChange: (v) => {
+            if (v === "binoculars") awardRef.current("rooftops");
+            viewRef.current = v;
+            if (v !== "binoculars" && v !== "console") lastRoomView.current = v;
+            if (v !== "console") setConsoleReady(false);
+            setView(v);
+          },
+          onScopeTarget: setTarget,
+          onConsoleReady: () => setConsoleReady(true),
+          onFirstFrame: () => {
+            setRoomShown(true);
+            window.__boot?.done();
+          },
+          onKeyboard: () => {
+            setSection(null);
+            setKeyboardOpen(true);
+            awardRef.current("guestbook");
+          },
+          onPortfolio: (id) => {
+            if (id === "resume" && profile.resumePdf) openResume();
+            else setSection(id);
+            setFound((f) => {
+              if (f.includes(id)) return f;
+              const next = [...f, id];
+              // a newly found section gets its moment
+              setToast({ id, n: next.length, key: Date.now() });
+              try {
+                localStorage.setItem(FOUND_KEY, JSON.stringify(next));
+              } catch {
+                // not remembered
+              }
+              return next;
+            });
+          },
+          onLightSwitch: () => setPanelOpen(true),
+          onRadioChange: setRadioOn,
+          onSpeaker: playlist ? () => setPlayerOpen((o) => !o) : undefined,
+          onHover: setHover,
+          muted: mutedRef.current,
+          sound: soundRef.current,
+        });
+        window.__boot?.set(92, "Switching on the lamp…");
+      } catch (e) {
+        console.error("Failed to start the room:", e);
+        setError(true);
+        window.__boot?.done();
+      }
+    };
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       const key = e.key.toLowerCase();
@@ -317,6 +341,8 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
     window.addEventListener("keydown", onKey);
     return () => {
       window.removeEventListener("keydown", onKey);
+      cancelled = true;
+      cancelAnimationFrame(raf);
       roomRef.current?.dispose();
       roomRef.current = null;
     };

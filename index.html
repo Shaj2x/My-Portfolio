@@ -28,6 +28,67 @@
   </head>
 
   <body>
+    <!-- the loading screen: shown the moment the page opens, before any JavaScript arrives, and
+         faded out once the room has drawn its first frame -->
+    <style>
+      #boot { position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; background: #0d0e11; color: #fff; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; transition: opacity 0.5s cubic-bezier(0.23, 1, 0.32, 1); }
+      #boot.gone { opacity: 0; pointer-events: none; }
+      #boot .name { margin: 0; font-size: 13px; font-weight: 600; letter-spacing: 0.32em; text-transform: uppercase; color: rgba(253, 230, 190, 0.8); }
+      #boot .track { width: 180px; height: 2px; overflow: hidden; border-radius: 2px; background: rgba(255, 255, 255, 0.12); }
+      #boot .fill { height: 100%; width: 100%; transform-origin: left center; transform: scaleX(0); background: linear-gradient(90deg, #fcd99a, #ffb766); }
+      #boot .label { margin: 0; min-height: 1.2em; font-size: 12px; color: rgba(255, 255, 255, 0.55); }
+    </style>
+    <div id="boot" role="progressbar" aria-label="Loading the room" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <p class="name">Shajith Sasikumar</p>
+      <div class="track"><div class="fill" id="boot-fill"></div></div>
+      <p class="label" id="boot-label">Loading the room…</p>
+    </div>
+    <script>
+      (function () {
+        var el = document.getElementById("boot");
+        var fill = document.getElementById("boot-fill");
+        var label = document.getElementById("boot-label");
+        // only the room uses it; any other page (or a stuck load) never waits on it
+        var path = location.pathname.replace(/\/+$/, "") || "/";
+        if (path !== "/" && path !== "/room/plain") {
+          el.remove();
+          return;
+        }
+        var shown = 0;
+        var target = 12;
+        var finished = false;
+        // while the code downloads, creep toward 65% so the bar is always moving
+        var creep = setInterval(function () {
+          if (target < 65) target += (65 - target) * 0.08;
+        }, 250);
+        function tick() {
+          shown += (target - shown) * 0.08;
+          fill.style.transform = "scaleX(" + (shown / 100).toFixed(4) + ")";
+          el.setAttribute("aria-valuenow", String(Math.round(shown)));
+          if (!finished || shown < 99.5) requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+        function done() {
+          if (finished) return;
+          finished = true;
+          target = 100;
+          clearInterval(creep);
+          setTimeout(function () {
+            el.classList.add("gone");
+            setTimeout(function () { el.remove(); }, 600);
+          }, 350);
+        }
+        window.__boot = {
+          set: function (p, text) {
+            if (finished) return;
+            target = Math.max(target, p);
+            if (text) label.textContent = text;
+          },
+          done: done,
+        };
+        setTimeout(done, 30000);
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
