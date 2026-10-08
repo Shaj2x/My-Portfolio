@@ -4,6 +4,7 @@ import { ArrowUpRight, Binoculars, Camera, Check, Gamepad2, LayoutGrid, Lightbul
 import type { ReactNode } from "react";
 import { RADIO_STATION } from "@/components/room/createAudio";
 import { playlistEmbed } from "@/components/room/playlist";
+import { profile } from "@/data/portfolio";
 import { RoomConsole } from "@/components/room/console/RoomConsole";
 import { PortfolioPage } from "@/components/room/PortfolioPages";
 import { FidgetKeyboard } from "@/components/room/FidgetKeyboard";
@@ -22,6 +23,9 @@ const loadFound = (): PortfolioId[] => {
 
 // the desk speaker plays this playlist when one is set in playlist.ts; otherwise the built-in lo-fi radio
 const playlist = playlistEmbed();
+
+/** the resume opens as the PDF itself, in a new tab; every other section opens in the sheet */
+const openResume = () => window.open(profile.resumePdf, "_blank", "noopener");
 
 const SOUND_KEY = "portfolio-room-plain:sound";
 const loadSound = (): SoundSettings => {
@@ -234,7 +238,8 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
           setKeyboardOpen(true);
         },
         onPortfolio: (id) => {
-          setSection(id);
+          if (id === "resume" && profile.resumePdf) openResume();
+          else setSection(id);
           setFound((f) => {
             if (f.includes(id)) return f;
             const next = [...f, id];
@@ -760,7 +765,8 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
                   whileHover={reduce ? undefined : { y: -2, transition: { type: "spring", bounce: 0.35, duration: 0.3 } }}
                   onClick={() => {
                     setMenu(null);
-                    setSection(id);
+                    if (id === "resume" && profile.resumePdf) openResume();
+                    else setSection(id);
                   }}
                   className="sheen group flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-colors hover:border-amber-200/40 hover:bg-white/[0.09]"
                 >
