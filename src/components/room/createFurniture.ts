@@ -288,18 +288,19 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     const body = std(COLORS.dresser, 0.62);
     const front = std("#d8b283", 0.6);
     const pull = std(COLORS.pull, 0.8);
-    // the lower unit is closed
-    block(w, unitH - 0.004, d, body, x, unitH / 2, z);
-    block(w - 0.03, unitH - 0.04, 0.012, front, x, unitH / 2, z + d / 2 + 0.002);
-    block(0.11, 0.022, 0.006, pull, x, unitH - 0.075, z + d / 2 + 0.009, group, false);
+    // the lower unit is closed. Edges are eased (rounded a few mm) like real laminate furniture,
+    // so the dresser reads soft up close instead of razor-cut.
+    rounded(w, unitH - 0.004, d, 0.005, body, x, unitH / 2, z);
+    rounded(w - 0.03, unitH - 0.04, 0.012, 0.004, front, x, unitH / 2, z + d / 2 + 0.002);
+    rounded(0.11, 0.022, 0.008, 0.0035, pull, x, unitH - 0.075, z + d / 2 + 0.009, group, false);
     // the upper unit is a hollow carcass with a drawer that slides out, the resume lying in it
     {
       const y0 = unitH;
       const t = 0.015;
-      block(w, t, d, body, x, y0 + unitH - 0.004 - t / 2, z); // top
+      rounded(w + 0.004, t, d + 0.004, 0.006, body, x, y0 + unitH - 0.004 - t / 2, z); // top, a hair proud of the sides
       block(w, t, d, body, x, y0 + t / 2, z); // bottom
-      block(t, unitH - 0.004, d, body, x - w / 2 + t / 2, y0 + unitH / 2, z); // sides
-      block(t, unitH - 0.004, d, body, x + w / 2 - t / 2, y0 + unitH / 2, z);
+      rounded(t, unitH - 0.004, d, 0.005, body, x - w / 2 + t / 2, y0 + unitH / 2, z); // sides
+      rounded(t, unitH - 0.004, d, 0.005, body, x + w / 2 - t / 2, y0 + unitH / 2, z);
       block(w, unitH - 0.004, t, body, x, y0 + unitH / 2, z - d / 2 + t / 2); // back
       const dg = new THREE.Group();
       dg.position.set(x, y0, z);
@@ -310,8 +311,8 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
       const dh = unitH - 0.05 - floorY;
       const inner = std("#c99d6c", 0.7);
       const parts: THREE.Object3D[] = [
-        block(w - 0.03, unitH - 0.04, 0.012, front, 0, unitH / 2, d / 2 + 0.002, dg),
-        block(0.11, 0.022, 0.006, pull, 0, unitH - 0.075, d / 2 + 0.009, dg, false),
+        rounded(w - 0.03, unitH - 0.04, 0.012, 0.004, front, 0, unitH / 2, d / 2 + 0.002, dg),
+        rounded(0.11, 0.022, 0.008, 0.0035, pull, 0, unitH - 0.075, d / 2 + 0.009, dg, false),
         block(dw, 0.01, dd, inner, 0, floorY, 0.0, dg),
         block(0.01, dh, dd, inner, -dw / 2, floorY + dh / 2, 0, dg),
         block(0.01, dh, dd, inner, dw / 2, floorY + dh / 2, 0, dg),

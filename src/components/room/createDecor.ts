@@ -739,63 +739,78 @@ export function createDecor({ env, rand }: DecorContext) {
 
   // ---------- dresser clutter ----------
 
-  /** keys, watch, lanyard, wallet, lighter, chain tray and AirPods, spread across the front of the dresser */
+  /** keys, watch, lanyard, wallet, lighter, chain tray and AirPods, spread across the front of the dresser.
+   *  Everything is built from soft, well-subdivided shapes (no sharp box edges), since they're seen up close. */
   const clutter = (parent: THREE.Object3D, at: THREE.Vector3) => {
     const y = at.y;
-    // a little chrome tray piled with a chain
-    const tray = add(parent, new THREE.CylinderGeometry(0.05, 0.046, 0.012, 32), metal("#cfd3d8", 0.18), at.x - 0.02, y + 0.006, at.z - 0.03);
-    tray.scale.z = 0.7;
-    const link = new THREE.TorusGeometry(0.006, 0.0018, 6, 12);
+    // a rounded box with enough segments that its edges read as moulded, not cut
+    const soft = (w: number, h: number, d: number, r: number) => new RoundedBoxGeometry(w, h, d, 6, Math.min(r, w / 2 - 0.0002, h / 2 - 0.0002, d / 2 - 0.0002));
+    // a little chrome dish with a rolled lip, piled with a chain
+    const dish = new THREE.Group();
+    dish.position.set(at.x - 0.02, y, at.z - 0.03);
+    dish.scale.z = 0.7;
+    parent.add(dish);
+    add(dish, new THREE.CylinderGeometry(0.048, 0.044, 0.01, 64), metal("#cfd3d8", 0.18), 0, 0.005, 0);
+    const lip = add(dish, new THREE.TorusGeometry(0.048, 0.003, 12, 64), metal("#d8dbe0", 0.15), 0, 0.01, 0, false);
+    lip.rotation.x = Math.PI / 2;
+    const link = new THREE.TorusGeometry(0.006, 0.0018, 10, 20);
     const links = new THREE.InstancedMesh(link, metal("#b9bdc3", 0.25), 40);
     const o = new THREE.Object3D();
     for (let i = 0; i < 40; i++) {
       const a = i * 0.55;
       const r = 0.01 + i * 0.0008;
-      o.position.set(at.x - 0.02 + Math.cos(a) * r, y + 0.014 + rand() * 0.006, at.z - 0.03 + Math.sin(a) * r * 0.7);
+      o.position.set(at.x - 0.02 + Math.cos(a) * r, y + 0.013 + rand() * 0.005, at.z - 0.03 + Math.sin(a) * r * 0.7);
       o.rotation.set(rand() * 3, rand() * 3, rand() * 3);
       o.updateMatrix();
       links.setMatrixAt(i, o.matrix);
     }
     parent.add(links);
-    // Casio-style digital watch: a steel link band and a black face
+    // Casio-style digital watch: a rounded steel band, a soft case and a black face under a bezel
     const watch = new THREE.Group();
     watch.position.set(at.x + 0.06, y, at.z + 0.01);
     watch.rotation.y = 0.35;
     parent.add(watch);
-    add(watch, new THREE.BoxGeometry(0.15, 0.004, 0.018), metal("#c4c8cd", 0.3), 0, 0.002, 0, false);
-    add(watch, rbox(0.034, 0.011, 0.03, 0.004), metal("#b9bdc2", 0.3), 0, 0.007, 0, false);
-    add(watch, new THREE.PlaneGeometry(0.022, 0.016), matte("#1b2420", 0.3), 0, 0.0131, 0, false).rotation.x = -Math.PI / 2;
-    // purple lanyard strap with embossed lettering
+    add(watch, soft(0.15, 0.004, 0.018, 0.0019), metal("#c4c8cd", 0.3), 0, 0.002, 0, false);
+    add(watch, soft(0.034, 0.011, 0.03, 0.005), metal("#b9bdc2", 0.3), 0, 0.0065, 0, false);
+    add(watch, soft(0.025, 0.002, 0.019, 0.0009), matte("#1b2420", 0.3), 0, 0.0122, 0, false);
+    // purple lanyard strap with embossed lettering, its edges rolled
     const strapTex = paintTexture(512, 64, (c, w, h) => {
       c.fillStyle = "#6e4c9e";
       c.fillRect(0, 0, w, h);
       c.fillStyle = "rgba(40,20,70,0.35)";
       for (let i = 0; i < 9; i++) c.fillRect(70 + i * 40, 18, 28, 28);
     });
-    const strap = add(parent, new THREE.BoxGeometry(0.26, 0.004, 0.032), [matte("#6e4c9e"), matte("#6e4c9e"), new THREE.MeshStandardMaterial({ map: strapTex, roughness: 0.8 }), matte("#6e4c9e"), matte("#6e4c9e"), matte("#6e4c9e")], at.x + 0.02, y + 0.002, at.z + 0.045, false);
+    const strapPlain = matte("#6e4c9e");
+    const strap = add(parent, soft(0.26, 0.004, 0.032, 0.0019), [strapPlain, strapPlain, new THREE.MeshStandardMaterial({ map: strapTex, roughness: 0.8 }), strapPlain, strapPlain, strapPlain], at.x + 0.02, y + 0.002, at.z + 0.045, false);
     strap.rotation.y = 0.18;
     // carabiner with keys and a fob at the strap's end
-    const ring = add(parent, new THREE.TorusGeometry(0.018, 0.003, 8, 24), metal("#c9cdd2", 0.25), at.x + 0.16, y + 0.004, at.z + 0.02, false);
+    const ring = add(parent, new THREE.TorusGeometry(0.018, 0.003, 12, 48), metal("#c9cdd2", 0.25), at.x + 0.16, y + 0.004, at.z + 0.02, false);
     ring.rotation.x = Math.PI / 2;
     ring.scale.set(1.5, 1, 1);
     for (let i = 0; i < 3; i++) {
-      const key = add(parent, new THREE.BoxGeometry(0.035, 0.003, 0.011), metal(i === 1 ? "#c9a24a" : "#bfc3c8", 0.3), at.x + 0.18 + i * 0.008, y + 0.003 + i * 0.002, at.z + 0.03 + i * 0.008, false);
+      // each key: a rounded blade and a round bow
+      const key = new THREE.Group();
+      key.position.set(at.x + 0.18 + i * 0.008, y + 0.002 + i * 0.002, at.z + 0.03 + i * 0.008);
       key.rotation.y = -0.6 + i * 0.4;
+      parent.add(key);
+      const keyMat = metal(i === 1 ? "#c9a24a" : "#bfc3c8", 0.3);
+      add(key, soft(0.026, 0.0026, 0.008, 0.0012), keyMat, 0.006, 0, 0, false);
+      add(key, new THREE.CylinderGeometry(0.0075, 0.0075, 0.0026, 28), keyMat, -0.012, 0, 0, false);
     }
-    add(parent, new THREE.CylinderGeometry(0.012, 0.012, 0.008, 18), matte("#121212", 0.5), at.x + 0.15, y + 0.004, at.z + 0.06, false);
+    add(parent, soft(0.026, 0.009, 0.026, 0.0044), matte("#121212", 0.45), at.x + 0.15, y + 0.0045, at.z + 0.06, false);
     // black card wallet with a green card peeking out
     const wallet = new THREE.Group();
     wallet.position.set(at.x - 0.12, y, at.z + 0.06);
     wallet.rotation.y = -0.25;
     parent.add(wallet);
-    add(wallet, rbox(0.085, 0.012, 0.06, 0.004), matte("#111111", 0.6), 0, 0.006, 0, false);
-    add(wallet, new THREE.BoxGeometry(0.03, 0.002, 0.054), matte("#00704a", 0.5), 0.045, 0.006, 0, false);
-    add(wallet, new THREE.BoxGeometry(0.03, 0.0022, 0.02), matte("#f4f4f2", 0.5), 0.045, 0.0062, -0.012, false);
+    add(wallet, soft(0.085, 0.012, 0.06, 0.005), matte("#111111", 0.6), 0, 0.006, 0, false);
+    add(wallet, soft(0.03, 0.002, 0.054, 0.0009), matte("#00704a", 0.5), 0.045, 0.006, 0, false);
+    add(wallet, soft(0.03, 0.0022, 0.02, 0.0009), matte("#f4f4f2", 0.5), 0.045, 0.0062, -0.012, false);
     // teal lighter
-    const lighter = add(parent, rbox(0.07, 0.014, 0.022, 0.008), matte("#1f9fc4", 0.3), at.x + 0.11, y + 0.007, at.z + 0.07, false);
+    const lighter = add(parent, soft(0.07, 0.014, 0.022, 0.0068), matte("#1f9fc4", 0.3), at.x + 0.11, y + 0.007, at.z + 0.07, false);
     lighter.rotation.y = 0.5;
-    // AirPods case
-    add(parent, rbox(0.05, 0.022, 0.044, 0.012), matte("#f1f1ef", 0.35), at.x + 0.23, y + 0.011, at.z - 0.02, false);
+    // AirPods case: a smooth white pebble
+    add(parent, soft(0.05, 0.022, 0.044, 0.0105), matte("#f1f1ef", 0.35), at.x + 0.23, y + 0.011, at.z - 0.02, false);
     return { strap, wallet };
   };
 
