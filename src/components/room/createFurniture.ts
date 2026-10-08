@@ -51,6 +51,8 @@ export interface FurnitureHandle {
     drawer: { parts: THREE.Object3D[]; paper: THREE.Mesh; setOpen: (k: number) => void };
     /** 0 = the PlayStation "who's using this controller" screen, 1 = signed in to the home screen */
     setConsole: (k: number) => void;
+    /** small signs of life: the sill plants (pivoting at the soil), a notification on the laptop (0 hidden … 1 shown), and the PS5's light bar breathing (0.5 … 1) */
+    idle: { plants: THREE.Object3D[]; setLaptopPing: (k: number) => void; setPsBreath: (b: number) => void };
     /** a project shown full-screen on the monitor over everything else: its image, and how visible (0–1) */
     setMonitorImage: (tex: THREE.Texture | null, k: number) => void;
     /** the pillar candle on the dresser: its meshes, and how lit it is (0 out, 1 burning) with a flicker (≈0.8–1.2) */
@@ -132,6 +134,11 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
   let ps5!: THREE.Group;
   let lightSwitch!: THREE.Mesh;
   let setConsole: (k: number) => void = () => {};
+  const plants: THREE.Object3D[] = [];
+  let setLaptopPing: (k: number) => void = () => {};
+  let psBreath = 1;
+  let setPsBreath: (b: number) => void = () => {};
+  let consoleK = 0;
   let setMonitorImage: (tex: THREE.Texture | null, k: number) => void = () => {};
   const psBars: THREE.MeshBasicMaterial[] = [];
 
@@ -672,10 +679,18 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     };
     const BAR_IDLE = new THREE.Color("#3a6bff").multiplyScalar(1.8);
     const BAR_ON = new THREE.Color("#ffffff").multiplyScalar(1.6);
+    const applyBars = () => {
+      for (const m of psBars) m.color.copy(BAR_IDLE).multiplyScalar(psBreath).lerp(BAR_ON, consoleK);
+    };
     setConsole = (k) => {
+      consoleK = k;
       homeMat.opacity = k;
       homeScreen.visible = k > 0.001;
-      for (const m of psBars) m.color.copy(BAR_IDLE).lerp(BAR_ON, k);
+      applyBars();
+    };
+    setPsBreath = (b) => {
+      psBreath = b;
+      applyBars();
     };
     screen.position.y = screenY;
     g.add(screen);
@@ -745,6 +760,33 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     const lcd = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.19), new THREE.MeshBasicMaterial({ map: page, toneMapped: false }));
     lcd.position.set(0, 0.112, 0.001);
     hinge.add(lcd);
+    // now and then a notification slides in at the top right of the laptop screen
+    const pingTex = paintTexture(256, 72, (c, w, h) => {
+      c.fillStyle = "rgba(48,50,58,0.96)";
+      c.beginPath();
+      c.roundRect(2, 2, w - 4, h - 4, 14);
+      c.fill();
+      c.fillStyle = "#3ac06a";
+      c.beginPath();
+      c.roundRect(14, 16, 40, 40, 9);
+      c.fill();
+      c.fillStyle = "#ffffff";
+      c.font = "600 20px system-ui, sans-serif";
+      c.fillText("Messages", 66, 32);
+      c.fillStyle = "rgba(255,255,255,0.7)";
+      c.font = "17px system-ui, sans-serif";
+      c.fillText("you up? lol", 66, 54);
+    });
+    const pingMat = new THREE.MeshBasicMaterial({ map: pingTex, toneMapped: false, transparent: true, opacity: 0 });
+    const ping = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 0.028), pingMat);
+    ping.visible = false;
+    hinge.add(ping);
+    setLaptopPing = (k) => {
+      ping.visible = k > 0.01;
+      pingMat.opacity = k;
+      // slides in from the right edge as it appears
+      ping.position.set(0.09 + (1 - k) * 0.03, 0.18, 0.0015);
+    };
     g.updateMatrixWorld(true);
     screens.push({
       center: new THREE.Vector3(0, 0.112, 0.02).applyMatrix4(hinge.matrixWorld),
@@ -1054,7 +1096,7 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     for (const item of LAYOUT.sill) {
       const x = item.x;
       const at = new THREE.Vector3(x, y, z);
-      if (item.kind === "plant") decor.plant(group, at);
+      if (item.kind === "plant") plants.push(decor.plant(group, at));
       else if (item.kind === "cow" || item.kind === "spiderHam" || item.kind === "cat" || item.kind === "bird") {
         // each plushie lives in its own group with its base at the origin, so it can squash and bounce
         const pg = new THREE.Group();
@@ -1118,5 +1160,5 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     block(0.008, 0.035, 0.016, std("#f6f5f2", 0.4), sw[0] + 0.012, sw[1], sw[2], group, false);
   }
 
-  return { group, lamp, binoculars, sunset, deskLamp, screens, interact: { plushies, bottles, speaker, controller, monitor, ps5, lightSwitch, setConsole, setMonitorImage, spots, drawer, keyboard, candle } };
+  return { group, lamp, binoculars, sunset, deskLamp, screens, interact: { plushies, bottles, speaker, controller, monitor, ps5, lightSwitch, setConsole, idle: { plants, setLaptopPing, setPsBreath: (b) => setPsBreath(b) }, setMonitorImage, spots, drawer, keyboard, candle } };
 }

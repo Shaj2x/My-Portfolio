@@ -439,7 +439,13 @@ export function createDecor({ env, rand }: DecorContext) {
       leaves.setColorAt(i, col.set(rand() > 0.4 ? "#5e9a3c" : "#7cbc4c").multiplyScalar(between(0.8, 1.1)));
     }
     leaves.castShadow = false;
-    parent.add(leaves);
+    // the leaves hang from a pivot at the soil, so the whole plant can sway in a breeze
+    const sway = new THREE.Group();
+    sway.position.set(at.x, at.y + 0.06, at.z);
+    leaves.position.set(-at.x, -at.y - 0.06, -at.z);
+    sway.add(leaves);
+    parent.add(sway);
+    return sway;
   };
 
   /** Spider-Ham: a red pig in a Spider-Man suit, sitting with his legs out, a loop on his head */
