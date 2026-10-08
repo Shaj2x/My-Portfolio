@@ -158,6 +158,8 @@ export interface PlainRoomOptions {
   onHover?: (label: string | null) => void;
   /** start muted */
   muted?: boolean;
+  /** the candle was lit (true) or blown out (false) */
+  onCandle?: (lit: boolean) => void;
   /** the starting sound mix */
   sound?: SoundSettings;
   /** the sky outside: the visitor's own clock, or a fixed time */
@@ -179,6 +181,8 @@ export interface PlainRoomHandle {
   setSound: (sound: SoundSettings) => void;
   /** make the speaker pulse as if playing, for music the room can't hear itself (an embedded playlist) */
   setSpeakerPlaying: (on: boolean) => void;
+  /** a soft two-note chime, for celebrations in the page (e.g. a trophy) */
+  chime: () => void;
   /** put a project on the curved monitor (its screenshot, or a title card when there isn't one), or null to clear it */
   showProject: (project: MonitorProject | null) => void;
   /** frame the monitor on the left of the screen while the Projects panel is open; false goes back */
@@ -703,11 +707,14 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   /** the light through the window at full strength, before the blind */
   const windowLight = () => 3 + 9 * skyNow.day + 4 * skyNow.dusk * (1 - skyNow.day);
   let campusDay = -1;
+  /** what's falling outside, set from the Sound panel's "Outside" choice so what you see matches what you hear */
+  let weatherLook: "clear" | "rain" | "storm" | "snow" = "clear";
   const refreshCampus = () => {
     // repainting the campus is a little costly, so only when the light has really changed
     if (Math.abs(campusDay - skyNow.day) < 0.08 && campusDay >= 0) return;
     campusDay = skyNow.day;
-    const fog = campus.setConditions({ day: skyNow.day, dusk: skyNow.dusk, weather: "clear" });
+    const weather = weatherLook === "storm" ? "rain" : weatherLook;
+    const fog = campus.setConditions({ day: skyNow.day, dusk: skyNow.dusk, weather });
     outsideFog.color.copy(fog.fogColor);
     outsideFog.density = fog.fogDensity;
   };
@@ -1279,6 +1286,11 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   const applySound = (s: SoundSettings) => {
     audio.setMix({ effects: s.effects, ambience: s.ambience });
     audio.setWeather(OUTSIDE_AUDIO[s.outside]);
+    const look = s.outside === "breeze" ? "clear" : s.outside;
+    if (look !== weatherLook) {
+      weatherLook = look;
+      campusDay = -1; // repaint the campus wet or snowy next time the binoculars come up
+    }
   };
   applySound(options.sound ?? DEFAULT_SOUND);
   // lightning lights up the room through the window for a moment
@@ -1324,6 +1336,129 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     c.fillStyle = g;
     c.fillRect(0, 0, w, h);
   });
+
+  // ---------- glow ----------
+  // A soft bloom around the room's bright spots (the lamp shade, the desk lamp's ring, the sunset
+  // lamp's lens, the ceiling dome and the monitor), done as additive halo sprites that fade with
+  // each light rather than a full-screen blur pass, so it costs next to nothing. Each halo is
+  // nudged toward the camera so the fixture it surrounds doesn't cut it in half.
+  const glows: { sprite: THREE.Sprite; at: THREE.Vector3; level: () => number; color: () => THREE.Color; strength: number }[] = [];
+  const glow = (at: THREE.Vector3, size: [number, number], strength: number, level: () => number, color: () => THREE.Color) => {
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: dotTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, opacity: 0 }));
+    sprite.scale.set(size[0], size[1], 1);
+    sprite.renderOrder = 3;
+    scene.add(sprite);
+    glows.push({ sprite, at: at.clone(), level, color, strength });
+  };
+  const SUNSET_GLOW = new THREE.Color("#ff8a3d");
+  const SCREEN_GLOW = new THREE.Color("#4a8ef0");
+  glow(furniture.lamp.bulb, [0.75, 0.6], 0.32, () => lampLevel * (1 - 0.45 * skyNow.day), () => lampColor);
+  glow(dk.head, [0.4, 0.4], 0.5, () => deskLevel, () => deskColor);
+  glow(sun.lens, [0.22, 0.22], 0.7, () => sunsetLevel, () => SUNSET_GLOW);
+  glow(new THREE.Vector3(cl[0], height - 0.06, cl[2]), [0.9, 0.5], 0.3, () => ceilingLevel, () => ceilingColor);
+  glow(furniture.screens[0].center, [1.15, 0.8], 0.09, () => 1, () => SCREEN_GLOW);
+  const toCam = new THREE.Vector3();
+  const updateGlows = () => {
+    for (const g of glows) {
+      const k = g.level();
+      g.sprite.visible = k > 0.01 && mode !== "binoculars";
+      if (!g.sprite.visible) continue;
+      toCam.subVectors(camera.position, g.at).normalize();
+      g.sprite.position.copy(g.at).addScaledVector(toCam, 0.12);
+      g.sprite.material.color.copy(g.color());
+      g.sprite.material.opacity = Math.min(1, g.strength * k);
+    }
+  };
+
+  // ---------- weather you can see ----------
+  // Rain, a thunderstorm or snow (picked under Sound → Outside) show through the window too: the sky
+  // goes overcast, rain falls past the glass in streaks, or snow drifts down, and lightning lights
+  // the clouds. The campus through the binoculars gets wet streets or snow to match.
+  const weatherNow = { rain: 0, snow: 0, cloud: 0 };
+  const overcastMat = new THREE.MeshBasicMaterial({ color: "#151a26", transparent: true, opacity: 0, toneMapped: false, fog: false, depthWrite: false });
+  const overcast = new THREE.Mesh(new THREE.PlaneGeometry(9, 5), overcastMat);
+  overcast.position.z = 0.03;
+  overcast.visible = false;
+  sky.add(overcast);
+  const rainTex = paintTexture(256, 512, (c, w, h) => {
+    c.clearRect(0, 0, w, h);
+    for (let i = 0; i < 260; i++) {
+      const x = Math.random() * w;
+      const y = Math.random() * h;
+      const len = 14 + Math.random() * 46;
+      const g = c.createLinearGradient(x, y, x, y + len);
+      g.addColorStop(0, "rgba(210,222,245,0)");
+      g.addColorStop(1, `rgba(210,222,245,${0.25 + Math.random() * 0.4})`);
+      c.strokeStyle = g;
+      c.lineWidth = 0.8 + Math.random() * 0.9;
+      c.beginPath();
+      c.moveTo(x, y);
+      c.lineTo(x + len * 0.06, y + len);
+      c.stroke();
+    }
+  });
+  rainTex.wrapS = rainTex.wrapT = THREE.RepeatWrapping;
+  rainTex.repeat.set(2, 1.2);
+  const winW = WINDOW.x1 - WINDOW.x0;
+  const winH = WINDOW.y1 - WINDOW.y0;
+  const rainMat = new THREE.MeshBasicMaterial({ map: rainTex, transparent: true, opacity: 0, depthWrite: false, toneMapped: false, fog: false });
+  const rain = new THREE.Mesh(new THREE.PlaneGeometry(winW * 1.6, winH * 1.6), rainMat);
+  rain.position.set((WINDOW.x0 + WINDOW.x1) / 2, (WINDOW.y0 + WINDOW.y1) / 2, back - t - 0.35);
+  rain.visible = false;
+  scene.add(rain);
+  const SNOW = 260;
+  const snowPos = new Float32Array(SNOW * 3);
+  const snowSeed = new Float32Array(SNOW);
+  const snowBox = { x0: WINDOW.x0 - 0.6, x1: WINDOW.x1 + 0.6, y0: WINDOW.y0 - 0.6, y1: WINDOW.y1 + 0.8, z0: back - t - 2.4, z1: back - t - 0.15 };
+  for (let i = 0; i < SNOW; i++) {
+    snowSeed[i] = Math.random();
+    snowPos.set([THREE.MathUtils.lerp(snowBox.x0, snowBox.x1, Math.random()), THREE.MathUtils.lerp(snowBox.y0, snowBox.y1, Math.random()), THREE.MathUtils.lerp(snowBox.z0, snowBox.z1, Math.random())], i * 3);
+  }
+  const snowGeo = new THREE.BufferGeometry();
+  snowGeo.setAttribute("position", new THREE.BufferAttribute(snowPos, 3));
+  const snowMat = new THREE.PointsMaterial({ map: dotTex, size: 0.03, transparent: true, opacity: 0, depthWrite: false, color: "#f4f7ff", fog: false });
+  const snow = new THREE.Points(snowGeo, snowMat);
+  snow.frustumCulled = false;
+  snow.visible = false;
+  scene.add(snow);
+  const OVERCAST_NIGHT = new THREE.Color("#151a26");
+  const OVERCAST_DAY = new THREE.Color("#8d97a4");
+  const FLASH = new THREE.Color("#dfe6ff");
+  const updateWeather = (dt: number, time: number) => {
+    const target = {
+      rain: weatherLook === "rain" || weatherLook === "storm" ? 1 : 0,
+      snow: weatherLook === "snow" ? 1 : 0,
+      cloud: weatherLook === "storm" ? 0.78 : weatherLook === "rain" ? 0.62 : weatherLook === "snow" ? 0.45 : 0,
+    };
+    const e = reducedMotion ? 1 : 1 - Math.exp(-1.5 * dt);
+    weatherNow.rain += (target.rain - weatherNow.rain) * e;
+    weatherNow.snow += (target.snow - weatherNow.snow) * e;
+    weatherNow.cloud += (target.cloud - weatherNow.cloud) * e;
+    const outside = sky.visible;
+    overcast.visible = outside && weatherNow.cloud > 0.01;
+    if (overcast.visible) {
+      overcastMat.opacity = weatherNow.cloud;
+      overcastMat.color.copy(OVERCAST_NIGHT).lerp(OVERCAST_DAY, skyNow.day);
+      if (lightning > 0.4) overcastMat.color.lerp(FLASH, (lightning - 0.4) * 1.4);
+    }
+    rain.visible = outside && weatherNow.rain > 0.01;
+    if (rain.visible) {
+      rainMat.opacity = 0.6 * weatherNow.rain;
+      rainTex.offset.y += dt * (weatherLook === "storm" ? 2.6 : 1.9);
+      rainTex.offset.x -= dt * (weatherLook === "storm" ? 0.12 : 0.04);
+    }
+    snow.visible = outside && weatherNow.snow > 0.01;
+    if (snow.visible) {
+      snowMat.opacity = 0.9 * weatherNow.snow;
+      for (let i = 0; i < SNOW; i++) {
+        const k = i * 3;
+        snowPos[k + 1] -= dt * (0.22 + snowSeed[i] * 0.25);
+        snowPos[k] += Math.sin(time * (0.6 + snowSeed[i]) + snowSeed[i] * 9) * dt * 0.08;
+        if (snowPos[k + 1] < snowBox.y0) snowPos[k + 1] = snowBox.y1;
+      }
+      snowGeo.attributes.position.needsUpdate = true;
+    }
+  };
 
   // gold sparkles that burst from whatever just gave up a piece of the portfolio, then drift down
   const SPARKS = 90;
@@ -1450,6 +1585,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       else if (kind === "candle") {
         candleTarget = candleTarget > 0.5 ? 0 : 1;
         audio.click("lamp");
+        options.onCandle?.(candleTarget > 0.5);
       }
       else if (kind === "drawer") {
         drawerTarget = drawerTarget > 0.5 ? 0 : 1;
@@ -1797,6 +1933,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       moon.intensity = windowLight() * (1 - blindLevel) + strobe * 30 * (1 - blindLevel * 0.8);
       if (lightning === 0) moon.intensity = windowLight() * (1 - blindLevel);
     }
+    updateWeather(dt, time);
     // the candle: eases toward lit or out, and the flame flickers on a few unrelated waves
     candleLevel += (candleTarget - candleLevel) * (reducedMotion ? 1 : 1 - Math.exp(-(candleTarget ? 3 : 9) * dt));
     if (Math.abs(candleTarget - candleLevel) < 0.002) candleLevel = candleTarget;
@@ -1977,6 +2114,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     adaptResolution(dt, behindConsole);
     cullDarkLights();
     updateShadows();
+    updateGlows();
     if (outline.selectedObjects.length) composer.render(dt);
     else renderer.render(scene, camera);
     if (!firstFrameSent) {
@@ -1997,6 +2135,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     toggleRadio,
     setMuted: (m) => audio.setMuted(m),
     setSound: applySound,
+    chime: () => audio.play("chime"),
     showProject,
     focusMonitor,
     setSky,
