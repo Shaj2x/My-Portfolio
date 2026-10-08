@@ -22,6 +22,17 @@ const loadFound = (): PortfolioId[] => {
 
 // the desk speaker plays this playlist when one is set in playlist.ts; otherwise the built-in lo-fi radio
 const playlist = playlistEmbed();
+
+const SOUND_KEY = "portfolio-room-plain:sound";
+const loadSound = (): SoundSettings => {
+  try {
+    const v = JSON.parse(localStorage.getItem(SOUND_KEY) ?? "null");
+    if (v && typeof v === "object") return { ...DEFAULT_SOUND, ...v };
+  } catch {
+    // fall through
+  }
+  return DEFAULT_SOUND;
+};
 import {
   createPlainRoom,
   CEILING_TONES,
@@ -29,6 +40,9 @@ import {
   LAMP_COLORS,
   LAMP_DEFAULT,
   SUNSET_STYLES,
+  DEFAULT_SOUND,
+  OUTSIDE_SOUNDS,
+  type SoundSettings,
   type LampSettings,
   type PlainRoomHandle,
   type PlainRoomView,
@@ -192,6 +206,9 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
     }
   });
   const mutedRef = useRef(muted);
+  const [sound, setSound] = useState<SoundSettings>(loadSound);
+  const soundRef = useRef(sound);
+  const [soundOpen, setSoundOpen] = useState(false);
   const [playerOpen, setPlayerOpen] = useState(false);
 
   useEffect(() => {
@@ -236,6 +253,7 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
         onSpeaker: playlist ? () => setPlayerOpen((o) => !o) : undefined,
         onHover: setHover,
         muted: mutedRef.current,
+        sound: soundRef.current,
       });
     } catch (e) {
       console.error("Failed to start the room:", e);
@@ -257,6 +275,7 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
         if (viewRef.current === "binoculars") roomRef.current?.setView(lastRoomView.current);
         else {
           setPanelOpen(false);
+          setSoundOpen(false);
           setMenu(null);
         }
       }
@@ -278,6 +297,21 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
       // not remembered
     }
   }, [muted]);
+
+  useEffect(() => {
+    soundRef.current = sound;
+    roomRef.current?.setSound(sound);
+    try {
+      localStorage.setItem(SOUND_KEY, JSON.stringify(sound));
+    } catch {
+      // not remembered
+    }
+  }, [sound]);
+  const changeSound = (patch: Partial<SoundSettings>) => {
+    setSound((s) => ({ ...s, ...patch }));
+    // touching a sound setting means you want to hear it
+    setMuted(false);
+  };
 
   useEffect(() => {
     roomRef.current?.setSpeakerPlaying(playerOpen);
@@ -346,7 +380,7 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
           animate={chromeIn ? { opacity: 1, transform: "translateY(0px)" } : undefined}
           transition={{ duration: 0.5, ease: EASE_OUT, delay: 0.05 }}
         >
-          <button type="button" className={chip} aria-pressed={!muted} aria-label={muted ? "Unmute (M)" : "Mute (M)"} onClick={() => setMuted((m) => !m)}>
+          <button type="button" className={chip} aria-expanded={soundOpen} aria-label={`Sound settings${muted ? " (muted)" : ""}`} onClick={() => setSoundOpen((o) => !o)}>
             {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
           </button>
           {radioOn && !away && (
@@ -505,7 +539,7 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
       )}
 
       <RoomConsole open={inConsole && consoleReady} onExit={() => roomRef.current?.setView(lastRoomView.current)} />
-      {keyboardOpen && !away && <FidgetKeyboard muted={muted} onClose={() => setKeyboardOpen(false)} />}
+      {keyboardOpen && !away && <FidgetKeyboard muted={muted} volume={sound.effects} onClose={() => setKeyboardOpen(false)} />}
       <AnimatePresence>{section && !away && (
         // a section of the portfolio, found in the room
         <motion.div key="section" {...sheet} className="pointer-events-auto absolute inset-y-0 right-0 z-10 flex w-full max-w-xl flex-col liquid-glass-panel rounded-l-[28px]" role="dialog" aria-label={PORTFOLIO_SPOTS[section].title}>
@@ -534,6 +568,57 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
           </motion.p>
         </div>
       )}</AnimatePresence>
+      {/* sound: everything on or off, then effects and ambience on their own, and what's outside */}
+      <AnimatePresence>{soundOpen && (
+        <motion.div key="sound" {...pop} onPointerMove={trackSpot} style={{ transformOrigin: "top right" }} className="pointer-events-auto absolute right-4 top-[4.25rem] z-20 w-[min(300px,calc(100%-32px))] liquid-glass-panel glass-spot rounded-[24px] p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-base font-semibold">Sound</h2>
+            <button type="button" aria-label="Close sound settings" className="rounded-full p-1.5 text-white/60 hover:bg-white/10 hover:text-white" onClick={() => setSoundOpen(false)}>
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <label className="mb-4 flex items-center justify-between text-sm text-white/80">
+            <span>
+              All sound <span className="text-xs text-white/40">(M)</span>
+            </span>
+            <input type="checkbox" className="h-4 w-4 accent-amber-300" checked={!muted} onChange={(e) => setMuted(!e.target.checked)} />
+          </label>
+          <div className={`grid gap-4 transition-opacity duration-200 ${muted ? "opacity-45" : ""}`}>
+            {(
+              [
+                ["effects", "Sound effects", "Clicks, squeaks, spritzes and the keyboard"],
+                ["ambience", "Ambience", "What you hear outside, and the room's hush"],
+              ] as const
+            ).map(([key, name, hint]) => (
+              <label key={key} className="grid gap-1.5 text-sm text-white/80" htmlFor={`sound-${key}`}>
+                <span className="flex justify-between">
+                  {name} <span className="font-mono text-xs text-white/50 tabular-nums">{sound[key] === 0 ? "Off" : `${Math.round(sound[key] * 100)}%`}</span>
+                </span>
+                <input id={`sound-${key}`} type="range" min={0} max={100} value={Math.round(sound[key] * 100)} className="accent-amber-300" onChange={(e) => changeSound({ [key]: Number(e.target.value) / 100 })} />
+                <span className="text-xs text-white/45">{hint}</span>
+              </label>
+            ))}
+            <div>
+              <p className="mb-2 text-sm text-white/80">Outside</p>
+              <div className="flex flex-wrap gap-2">
+                {OUTSIDE_SOUNDS.map(([id, name]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    aria-pressed={sound.outside === id}
+                    className="rounded-full border border-white/10 px-3 py-1 text-xs text-white/75 hover:border-white/30 hover:text-white aria-pressed:border-amber-200/60 aria-pressed:text-amber-100"
+                    onClick={() => changeSound({ outside: id, ambience: sound.ambience || 0.6 })}
+                  >
+                    {name}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {playlist && <p className="text-xs text-white/45">Music plays from the speaker on the desk, with its own volume.</p>}
+          </div>
+        </motion.div>
+      )}</AnimatePresence>
+
       <AnimatePresence>{panelOpen && !away && (
         <motion.div key="lights" {...pop} onPointerMove={trackSpot} style={{ transformOrigin: "bottom right" }} className="pointer-events-auto absolute bottom-32 right-4 z-10 max-h-[calc(100%-12rem)] w-[min(320px,calc(100%-32px))] overflow-y-auto overscroll-contain liquid-glass-panel glass-spot rounded-[24px] p-5">
           <div className="mb-4 flex items-center justify-between">
@@ -763,7 +848,7 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
               animate={chromeIn ? { opacity: 1 } : undefined}
               transition={{ duration: 0.5, ease: EASE_OUT, delay: 0.3 }}
             >
-              Drag to look around · click things in the room · L lamp · B binoculars · M sound
+              Drag to look around · click things in the room · L lamp · B binoculars · M mute
             </motion.p>
           </>
         )}

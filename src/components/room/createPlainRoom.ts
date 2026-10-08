@@ -6,7 +6,7 @@ import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { OutlinePass } from "three/examples/jsm/postprocessing/OutlinePass.js";
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
-import { createAudio, RADIO_STATION } from "./createAudio";
+import { createAudio, RADIO_STATION, type Outside } from "./createAudio";
 import { createCampus } from "./createCampus";
 import { createFurniture, paintTexture } from "./createFurniture";
 import { PORTFOLIO_SPOTS, type PortfolioId } from "./portfolioSpots";
@@ -18,6 +18,21 @@ import { CLOSET, COLORS, DOOR, HERO, LAYOUT, ROOM, WINDOW } from "./roomLayout";
  * dollhouse view. The floor lamp can be switched, dimmed and recoloured, and the binoculars on
  * the window sill look out at Western's campus.
  */
+
+/** what you hear: levels (0..1) for the small sound effects and the ambience, and what's outside */
+export interface SoundSettings {
+  effects: number;
+  ambience: number;
+  outside: "breeze" | "rain" | "storm" | "snow";
+}
+export const DEFAULT_SOUND: SoundSettings = { effects: 1, ambience: 1, outside: "breeze" };
+export const OUTSIDE_SOUNDS: [SoundSettings["outside"], string][] = [
+  ["breeze", "Night breeze"],
+  ["rain", "Rain"],
+  ["storm", "Thunderstorm"],
+  ["snow", "Snowy wind"],
+];
+const OUTSIDE_AUDIO: Record<SoundSettings["outside"], Outside> = { breeze: "clear", rain: "rain", storm: "storm", snow: "snow" };
 
 export type PlainRoomView = "photo" | "window" | "dollhouse" | "desk" | "door" | "binoculars" | "console";
 type CameraView = Exclude<PlainRoomView, "binoculars" | "console">;
@@ -123,6 +138,8 @@ export interface PlainRoomOptions {
   onHover?: (label: string | null) => void;
   /** start muted */
   muted?: boolean;
+  /** the starting sound mix */
+  sound?: SoundSettings;
 }
 
 export interface PlainRoomHandle {
@@ -136,6 +153,8 @@ export interface PlainRoomHandle {
   /** play or stop the lo-fi radio on the speaker; returns the new state */
   toggleRadio: () => boolean;
   setMuted: (muted: boolean) => void;
+  /** change the sound effects and ambience levels, and what's heard outside */
+  setSound: (sound: SoundSettings) => void;
   /** make the speaker pulse as if playing, for music the room can't hear itself (an embedded playlist) */
   setSpeakerPlaying: (on: boolean) => void;
   dispose: () => void;
@@ -996,7 +1015,16 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   // ---------- sound, the radio, and the small reactions ----------
   const audio = createAudio();
   audio.setMuted(options.muted ?? false);
-  audio.setWeather("clear");
+  const applySound = (s: SoundSettings) => {
+    audio.setMix({ effects: s.effects, ambience: s.ambience });
+    audio.setWeather(OUTSIDE_AUDIO[s.outside]);
+  };
+  applySound(options.sound ?? DEFAULT_SOUND);
+  // lightning lights up the room through the window for a moment
+  let lightning = 0;
+  audio.onLightning = () => {
+    lightning = 1;
+  };
   const unlockAudio = () => audio.unlock();
   window.addEventListener("pointerdown", unlockAudio);
   window.addEventListener("keydown", unlockAudio);
@@ -1441,6 +1469,13 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       // light from outside follows how much window is showing
       moon.intensity = 3 * (1 - blindLevel);
     }
+    // lightning: two quick flickers through the window, then gone
+    if (lightning > 0) {
+      lightning = Math.max(0, lightning - dt * 2.2);
+      const strobe = reducedMotion ? 0.4 : lightning > 0.75 ? 1 : lightning > 0.62 ? 0.15 : lightning > 0.45 ? 0.8 : lightning * 0.6;
+      moon.intensity = 3 * (1 - blindLevel) + strobe * 30 * (1 - blindLevel * 0.8);
+      if (lightning === 0) moon.intensity = 3 * (1 - blindLevel);
+    }
     // the candle: eases toward lit or out, and the flame flickers on a few unrelated waves
     candleLevel += (candleTarget - candleLevel) * (reducedMotion ? 1 : 1 - Math.exp(-(candleTarget ? 3 : 9) * dt));
     if (Math.abs(candleTarget - candleLevel) < 0.002) candleLevel = candleTarget;
@@ -1639,6 +1674,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     toggleLight,
     toggleRadio,
     setMuted: (m) => audio.setMuted(m),
+    setSound: applySound,
     setSpeakerPlaying: (on) => (speakerPlaying = on),
     setLamp,
     dispose: () => {
