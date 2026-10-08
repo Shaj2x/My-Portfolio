@@ -167,7 +167,7 @@ export const profile = {
   github: "https://github.com/Shaj2x",
   linkedin: "https://www.linkedin.com/in/shajith-sasikumar-5080a5344/",
   /** a PDF of the resume, if there is one to download; leave empty to show only the on-screen resume */
-  resumePdf: "",
+  resumePdf: "/Shajith_Sasikumar_Resume.pdf",
 };
 
 /** the About Me paragraphs; `strong` runs are emphasised */
