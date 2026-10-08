@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion, type Transition } from "framer-motion";
 import { ArrowUpRight, Binoculars, Camera, Check, Gamepad2, LayoutGrid, Lightbulb, LightbulbOff, Radio, SlidersHorizontal, Volume2, VolumeX, X } from "lucide-react";
 import type { ReactNode } from "react";
@@ -46,8 +46,11 @@ import {
   SUNSET_STYLES,
   DEFAULT_SOUND,
   OUTSIDE_SOUNDS,
+  SKY_MODES,
+  type SkyMode,
   type SoundSettings,
   type LampSettings,
+  type MonitorProject,
   type PlainRoomHandle,
   type PlainRoomView,
 } from "@/components/room/createPlainRoom";
@@ -213,6 +216,7 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
   const [sound, setSound] = useState<SoundSettings>(loadSound);
   const soundRef = useRef(sound);
   const [soundOpen, setSoundOpen] = useState(false);
+  const [skyMode, setSkyMode] = useState<SkyMode>("live");
   const [playerOpen, setPlayerOpen] = useState(false);
 
   useEffect(() => {
@@ -321,6 +325,12 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
   useEffect(() => {
     roomRef.current?.setSpeakerPlaying(playerOpen);
   }, [playerOpen]);
+
+  // Projects turns the camera to the monitor, which shows the project being looked at
+  const previewOnMonitor = useCallback((p: MonitorProject | null) => roomRef.current?.showProject(p), []);
+  useEffect(() => {
+    roomRef.current?.focusMonitor(section === "projects");
+  }, [section]);
 
   const { reduce, pop, sheet, fade } = usePresets();
   const toggleMenu = (m: "portfolio" | "views" | "lights") => {
@@ -561,7 +571,7 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-5">
             <div key={section} className="stagger-in">
-              <PortfolioPage id={section} />
+              <PortfolioPage id={section} onPreview={previewOnMonitor} />
             </div>
           </div>
         </motion.div>
@@ -631,6 +641,23 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
             <button type="button" aria-label="Close light settings" className="rounded-full p-1.5 text-white/60 hover:bg-white/10 hover:text-white" onClick={() => setPanelOpen(false)}>
               <X className="h-4 w-4" />
             </button>
+          </div>
+          <p className="mb-2 text-xs uppercase tracking-[0.18em] text-amber-200/70">Sky</p>
+          <div className="mb-5 flex flex-wrap gap-2">
+            {SKY_MODES.map(([id, name]) => (
+              <button
+                key={id}
+                type="button"
+                aria-pressed={skyMode === id}
+                className="rounded-full border border-white/10 px-3 py-1 text-xs text-white/75 hover:border-white/30 hover:text-white aria-pressed:border-amber-200/60 aria-pressed:text-amber-100"
+                onClick={() => {
+                  setSkyMode(id);
+                  roomRef.current?.setSky(id);
+                }}
+              >
+                {name}
+              </button>
+            ))}
           </div>
           <p className="mb-3 text-xs uppercase tracking-[0.18em] text-amber-200/70">Floor lamp</p>
           <label className="mb-4 flex items-center justify-between text-sm text-white/80">

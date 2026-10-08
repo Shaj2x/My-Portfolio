@@ -51,6 +51,8 @@ export interface FurnitureHandle {
     drawer: { parts: THREE.Object3D[]; paper: THREE.Mesh; setOpen: (k: number) => void };
     /** 0 = the PlayStation "who's using this controller" screen, 1 = signed in to the home screen */
     setConsole: (k: number) => void;
+    /** a project shown full-screen on the monitor over everything else: its image, and how visible (0–1) */
+    setMonitorImage: (tex: THREE.Texture | null, k: number) => void;
     /** the pillar candle on the dresser: its meshes, and how lit it is (0 out, 1 burning) with a flicker (≈0.8–1.2) */
     candle: { parts: THREE.Object3D[]; setLit: (k: number, flicker: number, time: number) => void };
   };
@@ -130,6 +132,7 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
   let ps5!: THREE.Group;
   let lightSwitch!: THREE.Mesh;
   let setConsole: (k: number) => void = () => {};
+  let setMonitorImage: (tex: THREE.Texture | null, k: number) => void = () => {};
   const psBars: THREE.MeshBasicMaterial[] = [];
 
   // ---------- bed ----------
@@ -653,6 +656,20 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     const homeScreen = new THREE.Mesh(bend(new THREE.PlaneGeometry(w, h, 32, 1), 0.0006), homeMat);
     homeScreen.position.y = screenY;
     g.add(homeScreen);
+    // a third layer, in front of both, for a project's screenshot while Projects is open
+    const projMat = new THREE.MeshBasicMaterial({ toneMapped: false, transparent: true, opacity: 0, depthWrite: false });
+    const projScreen = new THREE.Mesh(bend(new THREE.PlaneGeometry(w, h, 32, 1), 0.0012), projMat);
+    projScreen.position.y = screenY;
+    projScreen.visible = false;
+    g.add(projScreen);
+    setMonitorImage = (tex, k) => {
+      if (projMat.map !== tex) {
+        projMat.map = tex;
+        projMat.needsUpdate = true;
+      }
+      projMat.opacity = k;
+      projScreen.visible = !!tex && k > 0.001;
+    };
     const BAR_IDLE = new THREE.Color("#3a6bff").multiplyScalar(1.8);
     const BAR_ON = new THREE.Color("#ffffff").multiplyScalar(1.6);
     setConsole = (k) => {
@@ -1101,5 +1118,5 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     block(0.008, 0.035, 0.016, std("#f6f5f2", 0.4), sw[0] + 0.012, sw[1], sw[2], group, false);
   }
 
-  return { group, lamp, binoculars, sunset, deskLamp, screens, interact: { plushies, bottles, speaker, controller, monitor, ps5, lightSwitch, setConsole, spots, drawer, keyboard, candle } };
+  return { group, lamp, binoculars, sunset, deskLamp, screens, interact: { plushies, bottles, speaker, controller, monitor, ps5, lightSwitch, setConsole, setMonitorImage, spots, drawer, keyboard, candle } };
 }
