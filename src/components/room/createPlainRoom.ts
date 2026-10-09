@@ -2,10 +2,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RectAreaLightUniformsLib } from "three/examples/jsm/lights/RectAreaLightUniformsLib.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
-import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
-import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { OutlinePass } from "three/examples/jsm/postprocessing/OutlinePass.js";
-import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import { createAudio, RADIO_STATION, type Outside } from "./createAudio";
 import { createCampus } from "./createCampus";
 import { createFurniture, paintTexture } from "./createFurniture";
@@ -1701,19 +1698,18 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   // ---------- hover: an outline traced around whatever can be clicked; small things also lift ----------
   // The outline is drawn in screen space around the object's silhouette: a crisp warm line with a
   // faint halo, which draws itself in over ~180 ms and then breathes very slowly while you stay.
-  // The scene only goes through the composer while an outline is showing, so idle frames cost
+  // The room is always drawn the same way, straight to the screen, and the outline is laid over the
+  // top of it. (It used to send the whole scene through a post-processing chain while an outline
+  // showed, which tone-mapped the window, the screens and the lamp glow a second time, so they all
+  // brightened the moment anything was hovered.) Frames with nothing hovered cost
   // nothing extra. Things you'd pick up (plushies, bottles, binoculars, the controller) also rise
   // on a slightly bouncy spring and settle back.
-  const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 }));
-  composer.addPass(new RenderPass(scene, camera));
   const outline = new OutlinePass(new THREE.Vector2(container.clientWidth, container.clientHeight), scene, camera);
   outline.visibleEdgeColor.set("#fff0d4");
   outline.hiddenEdgeColor.set("#3d3226");
   outline.edgeThickness = 1;
   outline.edgeGlow = 0.35;
   outline.edgeStrength = 0;
-  composer.addPass(outline);
-  composer.addPass(new OutputPass());
   let outlineLevel = 0;
   let outlineTarget = 0;
   let outlineSince = 0;
@@ -1855,8 +1851,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     const w = container.clientWidth;
     const h = container.clientHeight;
     renderer.setSize(w, h);
-    composer.setPixelRatio(renderer.getPixelRatio());
-    composer.setSize(w, h);
+    outline.setSize(w * renderer.getPixelRatio(), h * renderer.getPixelRatio());
     camera.aspect = w / h;
     maskMat.uniforms.uAspect.value = w / h;
     // keep the room's width in frame on narrow screens
@@ -2203,8 +2198,9 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     updateShadows();
     updateGlows();
     steam.update(time, camera);
-    if (outline.selectedObjects.length) composer.render(dt);
-    else renderer.render(scene, camera);
+    renderer.render(scene, camera);
+    // the outline blends its glowing edge straight onto the frame just drawn (null = the screen)
+    if (outline.selectedObjects.length) outline.render(renderer, null as unknown as THREE.WebGLRenderTarget, null as unknown as THREE.WebGLRenderTarget, dt, false);
     if (!firstFrameSent) {
       firstFrameSent = true;
       options.onFirstFrame?.();
@@ -2253,7 +2249,6 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       for (const d of disposables) d.dispose();
       for (const t of sunsetDiscs.values()) t.dispose();
       env.dispose();
-      composer.dispose();
       outline.dispose();
       window.removeEventListener("pointerdown", unlockAudio);
       window.removeEventListener("keydown", unlockAudio);
