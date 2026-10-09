@@ -10,7 +10,7 @@ export const PORTFOLIO_SPOTS: Record<PortfolioId, { object: string; title: strin
   resume: { object: "The resume in the drawer", title: "Resume" },
   leadership: { object: "The Western lanyard", title: "Leadership" },
   skills: { object: "The mouse", title: "Skills" },
-  services: { object: "The wallet", title: "Services" },
+  services: { object: "The desk chair", title: "What I Build" },
   contact: { object: "The door", title: "Contact" },
 };
 

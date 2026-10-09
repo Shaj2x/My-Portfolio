@@ -1,5 +1,5 @@
 /** Portfolio content shared by the portfolio page and the console in the 3D room. */
-import { Bot, Cpu, Crown, Globe, Palette, PhoneCall, Users, Vote, Workflow } from "lucide-react";
+import { Bot, Box, Crown, Globe, LayoutDashboard, Rocket, Users, Vote, type LucideIcon } from "lucide-react";
 
 export interface TimelineItem {
   title: string;
@@ -111,36 +111,52 @@ export const skillCategories = [
   },
 ];
 
-export const services = [
-  {
-    icon: Bot,
-    title: "AI Receptionist Systems",
-    description: "Fully automated AI receptionists that handle calls, book appointments, answer FAQs, and route inquiries — 24/7 with zero downtime.",
-  },
-  {
-    icon: Workflow,
-    title: "End-to-End Automation",
-    description: "Custom AI pipelines that automate repetitive workflows: lead capture, email follow-ups, CRM updates, and data processing.",
-  },
+export interface Service {
+  icon: LucideIcon;
+  title: string;
+  description: string;
+  /** the main things in this category, shown on the card */
+  tags: string[];
+  /** more of what's in it, shown when "See everything I build" is open */
+  more: string[];
+}
+
+/** What I build: the five things the site leads with, in the room (the desk chair) and the quick view */
+export const services: Service[] = [
   {
     icon: Globe,
-    title: "Full Website Development",
-    description: "High-converting, responsive websites built from scratch — landing pages, e-commerce stores, dashboards, and SaaS platforms.",
+    title: "Web Development",
+    description: "Fast, mobile-friendly websites that look sharp and turn visitors into customers.",
+    tags: ["Business sites", "Landing pages", "Portfolios", "Redesigns"],
+    more: ["Online stores", "Restaurant menus and ordering", "Event and launch pages", "Hosting, domain and contact forms set up"],
   },
   {
-    icon: Palette,
-    title: "Brand Identity & Logo Design",
-    description: "Complete visual identities including logos, color systems, typography, and brand guidelines that make businesses stand out.",
+    icon: Bot,
+    title: "AI Automation Services",
+    description: "AI that answers, books and follows up for you, so the busywork runs itself.",
+    tags: ["AI receptionist", "Website chatbots", "Workflow automation", "Custom AI tools"],
+    more: ["Appointment booking and reminders", "Lead capture and follow-up emails", "Assistants trained on your own info", "Connecting the tools you already use"],
   },
   {
-    icon: PhoneCall,
-    title: "AI Voice Agents",
-    description: "Intelligent voice bots for inbound and outbound calling — qualifying leads, scheduling meetings, and providing customer support.",
+    icon: LayoutDashboard,
+    title: "Custom Web Apps",
+    description: "Software built around how you work, with accounts, data and dashboards.",
+    tags: ["Booking systems", "Dashboards", "Client portals", "MVPs"],
+    more: ["Inventory and order tracking", "Internal tools for teams", "Logins and databases", "A working first version of your idea, fast"],
   },
   {
-    icon: Cpu,
-    title: "Custom AI Solutions",
-    description: "Bespoke AI tools tailored to your business: chatbots, content generators, data analyzers, and smart recommendation engines.",
+    icon: Box,
+    title: "Interactive & 3D Experiences",
+    description: "Sites people want to explore, like the 3D room this portfolio lives in.",
+    tags: ["3D websites", "Browser games", "Educational apps"],
+    more: ["3D product viewers", "Quiz and trivia apps", "Animated, scroll-driven pages", "Learning through play"],
+  },
+  {
+    icon: Rocket,
+    title: "Launch & Growth",
+    description: "Everything after launch: found on Google, quick to load, accessible and kept up to date.",
+    tags: ["SEO", "Analytics", "Accessibility audits", "Maintenance"],
+    more: ["Speed and performance tuning", "Link previews for social sharing", "WCAG accessibility fixes", "Monthly updates and support"],
   },
 ];
 
