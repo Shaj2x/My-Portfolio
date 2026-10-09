@@ -942,10 +942,10 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   };
   // coffee in the desk mug, still steaming
 
-  // denser and whiter than the dark room needs, so it reads against the light wall behind the desk
-  const steam = createSteam(track, 0.62, new THREE.Color("#f4f1ec"));
+  // kept faint: a hint of warmth off the cup rather than a plume
+  const steam = createSteam(track, 0.28, new THREE.Color("#f4f1ec"));
   steam.group.position.copy(furniture.mugTop);
-  steam.group.scale.setScalar(0.85);
+  steam.group.scale.set(0.7, 0.6, 0.7);
   scene.add(steam.group);
 
   let seed = 7;
