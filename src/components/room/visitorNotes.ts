@@ -14,6 +14,8 @@ export interface VisitorNote {
 
 export const NOTE_LIMIT = 280;
 export const NAME_LIMIT = 40;
+/** notes are kept forever; this is how many of the newest the desk shows */
+const SHOWN = 200;
 
 const LOCAL_KEY = "portfolio-room-plain:notes";
 const hasDatabase = () => {
@@ -33,8 +35,9 @@ export async function listNotes(): Promise<{ notes: VisitorNote[]; shared: boole
   if (hasDatabase()) {
     // loaded only when there's a database to talk to; the client throws without one
     const { supabase } = await import("@/integrations/supabase/client");
-    const { data, error } = await supabase.from("visitor_notes").select("id, name, message, created_at").order("created_at", { ascending: false }).limit(30);
+    const { data, error } = await supabase.from("visitor_notes").select("id, name, message, created_at").order("created_at", { ascending: false }).limit(SHOWN);
     if (!error && data) return { notes: data, shared: true };
+    console.warn("Visitor notes: couldn't read the database, showing this browser's notes.", error?.message);
   }
   return { notes: readLocal(), shared: false };
 }
@@ -49,6 +52,7 @@ export async function addNote(name: string, message: string): Promise<{ note: Vi
     const { supabase } = await import("@/integrations/supabase/client");
     const { data, error } = await supabase.from("visitor_notes").insert(clean).select("id, name, message, created_at").single();
     if (!error && data) return { note: data, shared: true };
+    console.warn("Visitor notes: couldn't save to the database, keeping the note in this browser.", error?.message);
   }
   const note: VisitorNote = { id: `local-${Date.now()}`, ...clean, created_at: new Date().toISOString() };
   try {
