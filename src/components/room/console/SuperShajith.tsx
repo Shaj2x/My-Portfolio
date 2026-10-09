@@ -16,7 +16,7 @@ import ssCoin from "@/assets/ss-coin.png";
  * Stomp enemies from above, don't fall in the gaps, and touch the flag. Keyboard, touch buttons, or a controller
  * (the console maps its D-pad to arrow keys and ✕ to Space).
  *
- * Hold down to crouch: squeeze through the low tunnels and duck the paper planes. Press down in
+ * Hold down to crouch: crawl through the hollows at the foot of the giant trees and duck the paper planes. Press down in
  * the air to ground pound: a slam that flattens what's under you, knocks out enemies nearby,
  * opens ? blocks from above, smashes bricks when big, and turns a spring into a super launch.
  * Worlds 2-1 to 2-3 build on all of it: tunnels, planes, springs and longer gaps.
@@ -108,9 +108,9 @@ function build(len: number, theme: Theme, spec: (b: Builder) => void, meta: Omit
     },
     spring: (x, y = 11) => set(x, y, "S"),
     tunnel: (x, n) => {
-      // a tall wall with a low gap at the bottom: the only way through is crouching
+      // a giant tree: its trunk runs up out of sight, with a low hollow at its base; crouch to get through
       for (let i = 0; i < n; i++) {
-        for (let y = 3; y <= 10; y++) set(x + i, y, "W");
+        for (let y = 0; y <= 10; y++) set(x + i, y, "W");
         set(x + i, 11, "_");
       }
     },
@@ -1337,18 +1337,33 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
         ctx.fillText("?", x + 5, y + 12);
         R(x + 1, y + 1, 1, 1, "#7a3a08");
         R(x + 14, y + 1, 1, 1, "#7a3a08");
-      } else if (c === "W") {
-        // a tunnel wall: dark lockers, too tall to jump
-        R(x, y, 16, 16, th.groundDark);
-        R(x + 1, y + 1, 14, 14, "rgba(255,255,255,0.06)");
-        R(x + 7, y + 1, 1, 14, "rgba(0,0,0,0.35)");
-        R(x + 3, y + 6, 2, 1, "rgba(255,255,255,0.3)");
-        R(x + 10, y + 6, 2, 1, "rgba(255,255,255,0.3)");
-      } else if (c === "_") {
-        // the low beam under the wall, with the dark crawl space beneath it; the striped edge says "crouch"
-        R(x, y + BEAM, 16, 16 - BEAM, "rgba(0,0,0,0.45)");
-        R(x, y, 16, BEAM, th.groundDark);
-        for (let i = 0; i < 4; i++) R(x + i * 4 + (tx % 2) * 2, y + BEAM - 2, 2, 2, "#ffd23a");
+      } else if (c === "W" || c === "_") {
+        // a giant tree's trunk: bark with grooves and knots, lit on one side, and a hollow at the base
+        const isW = (dx: number) => {
+          const n = tileAt(s, tx + dx, ty);
+          return n === "W" || n === "_";
+        };
+        const left = !isW(-1);
+        const right = !isW(1);
+        const bark = th.stars ? "#4a3626" : "#6b4a2e";
+        const groove = th.stars ? "#33251a" : "#4a3220";
+        const h = c === "_" ? BEAM : 16;
+        if (c === "_") {
+          // inside the hollow: dark, with the arch of the opening at each end
+          R(x, y + BEAM, 16, 16 - BEAM, "rgba(20,12,6,0.82)");
+          if (left) R(x, y + BEAM, 3, 3, bark);
+          if (right) R(x + 13, y + BEAM, 3, 3, bark);
+        }
+        R(x, y, 16, h, bark);
+        // vertical grooves in the bark, wandering a little from tile to tile
+        for (let i = 0; i < 3; i++) R(x + 2 + i * 5 + ((tx + ty + i) % 2), y, 1, h, groove);
+        if (c === "W" && (tx * 7 + ty * 3) % 11 === 0) {
+          // a knot
+          R(x + 6, y + 6, 4, 4, groove);
+          R(x + 7, y + 7, 2, 2, bark);
+        }
+        if (left) R(x, y, 2, h, "rgba(255,240,200,0.14)");
+        if (right) R(x + 13, y, 3, h, "rgba(0,0,0,0.28)");
       } else if (c === "U") {
         R(x, y, 16, 16, "#8a6a4a");
         R(x + 1, y + 1, 14, 14, "#9c7a56");
@@ -1578,29 +1593,50 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
       if (g < 3) R(x + 1 + g, y + 5, 1, 2, "rgba(255,255,255,0.85)");
     };
 
-    /** a hazard sign on each tunnel's mouth: "duck", with an arrow pointing at the gap */
+    /** each big tree's canopy, roots, and a wooden signpost by its hollow with an arrow pointing down: crouch */
     const drawTunnelSigns = (s: State) => {
       const row = s.grid[11];
-      for (let tx = Math.max(1, Math.floor(s.cam / TILE) - 1); tx <= Math.floor((s.cam + VIEW_W) / TILE) + 1 && tx < row.length; tx++) {
+      const th = LEVELS[s.level].theme;
+      for (let tx = Math.max(1, Math.floor(s.cam / TILE) - 10); tx <= Math.floor((s.cam + VIEW_W) / TILE) + 1 && tx < row.length; tx++) {
         if (row[tx] !== "_" || row[tx - 1] === "_") continue;
-        const x = tx * TILE - s.cam;
-        const y = 8 * TILE + 4;
-        R(x - 2, y, 22, 24, "#ffd23a");
-        R(x - 1, y + 1, 20, 22, "#1c1c1c");
-        R(x, y + 2, 18, 20, "#ffd23a");
-        ctx.fillStyle = "#1c1c1c";
-        ctx.font = "bold 6px monospace";
-        ctx.textAlign = "center";
-        ctx.fillText("DUCK", x + 9, y + 9);
-        ctx.textAlign = "left";
-        // a bobbing arrow down at the gap
-        const bob = Math.floor(time * 3) % 2;
-        R(x + 8, y + 11 + bob, 2, 5, "#1c1c1c");
+        let end = tx;
+        while (row[end + 1] === "_") end++;
+        const x0 = tx * TILE - s.cam;
+        const x1 = (end + 1) * TILE - s.cam;
+        const ground = 12 * TILE;
+        // leaves at the top of the screen, spilling past the trunk
+        const leaf = th.stars ? ["#1f4a30", "#2c6440"] : ["#3f8f3a", "#5fbf4a"];
+        for (let i = -1; i <= (x1 - x0) / 20 + 1; i++) {
+          const cx = x0 + i * 20 + 4;
+          const cy = 14 + ((i * 7 + tx) % 3) * 6;
+          for (const [dx, dy, r, col] of [[0, 0, 20, leaf[0]], [-4, -4, 12, leaf[1]]] as const) {
+            ctx.fillStyle = col;
+            ctx.beginPath();
+            ctx.arc(cx + dx, cy + dy, r, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+        // roots flaring out at the foot of the trunk
+        const bark = th.stars ? "#4a3626" : "#6b4a2e";
+        R(x0 - 6, ground - 3, 6, 3, bark);
+        R(x0 - 3, ground - 6, 3, 3, bark);
+        R(x1, ground - 3, 6, 3, bark);
+        R(x1, ground - 6, 3, 3, bark);
+        // the signpost
+        const x = x0 - 24;
+        R(x + 6, ground - 14, 2, 14, "#6a4424");
+        R(x, ground - 24, 14, 11, "#8a5a30");
+        R(x, ground - 24, 14, 1, "#b07a46");
+        R(x, ground - 14, 14, 1, "#5a3a1c");
+        const bob = Math.floor(time * 2.5) % 2;
+        R(x + 6, ground - 22 + bob, 2, 4, "#f4e6c8");
+        ctx.fillStyle = "#f4e6c8";
         ctx.beginPath();
-        ctx.moveTo(x + 5, y + 15 + bob);
-        ctx.lineTo(x + 13, y + 15 + bob);
-        ctx.lineTo(x + 9, y + 20 + bob);
+        ctx.moveTo(x + 3, ground - 18 + bob);
+        ctx.lineTo(x + 11, ground - 18 + bob);
+        ctx.lineTo(x + 7, ground - 15 + bob);
         ctx.fill();
+        tx = end;
       }
     };
 
