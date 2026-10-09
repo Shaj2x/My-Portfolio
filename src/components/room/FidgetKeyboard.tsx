@@ -116,6 +116,8 @@ export const FidgetKeyboard = ({ onClose, muted = false, volume = 1 }: FidgetKey
   const [name, setName] = useState("");
   const [notes, setNotes] = useState<VisitorNote[]>([]);
   const [shared, setShared] = useState(true);
+  // the notes come from the database, so until they arrive the desk says it's loading, not that it's empty
+  const [loadingNotes, setLoadingNotes] = useState(true);
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [caps, setCaps] = useState(false);
   const area = useRef<HTMLTextAreaElement>(null);
@@ -138,10 +140,12 @@ export const FidgetKeyboard = ({ onClose, muted = false, volume = 1 }: FidgetKey
   };
 
   useEffect(() => {
-    listNotes().then((r) => {
-      setNotes(r.notes);
-      setShared(r.shared);
-    });
+    listNotes()
+      .then((r) => {
+        setNotes(r.notes);
+        setShared(r.shared);
+      })
+      .finally(() => setLoadingNotes(false));
     area.current?.focus();
   }, []);
 
@@ -326,7 +330,9 @@ export const FidgetKeyboard = ({ onClose, muted = false, volume = 1 }: FidgetKey
             <h3 className="text-xs font-semibold uppercase tracking-[0.2em] text-white/55">Notes left on the desk</h3>
             {!shared && <p className="text-xs text-white/45">Preview: notes stay in this browser.</p>}
           </div>
-          {notes.length === 0 ? (
+          {loadingNotes && notes.length === 0 ? (
+            <p className="animate-pulse text-sm text-white/55">Loading notes…</p>
+          ) : notes.length === 0 ? (
             <p className="text-sm text-white/55">No notes yet. Be the first.</p>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
