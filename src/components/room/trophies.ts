@@ -13,7 +13,7 @@ export const TROPHIES: { id: TrophyId; title: string; detail: string; tier: Trop
   { id: "make-a-wish", title: "Make a Wish", detail: "Blow out the candle", tier: "bronze" },
   { id: "change-of-scene", title: "Change of Scene", detail: "Change the sky outside", tier: "bronze" },
   { id: "game-night", title: "Game Night", detail: "Try every game on the PS5", tier: "silver" },
-  { id: "to-be-continued", title: "To Be Continued", detail: "Beat Super Shajith", tier: "gold" },
+  { id: "to-be-continued", title: "To Be Continued", detail: "Beat Super S", tier: "gold" },
   { id: "all-found", title: "Every Corner", detail: "Find the whole portfolio", tier: "gold" },
   { id: "platinum", title: "Roommate", detail: "Earn every other trophy", tier: "platinum" },
 ];
