@@ -15,6 +15,10 @@ import ssCoin from "@/assets/ss-coin.png";
  *   Citrus Rush  (orange) nine seconds unstoppable: faster, higher, enemies fall at a touch
  * Stomp enemies from above, don't fall in the gaps, and touch the flag. Keyboard, touch buttons, or a controller
  * (the console maps its D-pad to arrow keys and ✕ to Space).
+ *
+ * Extras: stomp combos (chain stomps without landing for more points, then extra lives), springs,
+ * three hidden gold SS coins per world, a checkpoint halfway, best times, and 100 coins for a life.
+ * Progress, gold coins and best times are saved on the device, so Continue picks up where you left off.
  */
 
 const TILE = 16;
@@ -29,9 +33,6 @@ type Spawn = { x: number; y: number };
 interface Level {
   name: string;
   place: string;
-  years: string;
-  intro: string;
-  outro: string[];
   coinName: string;
   /** how much one coin counts for in the HUD (followers go up in hundreds) */
   coinValue: number;
@@ -40,6 +41,10 @@ interface Level {
   grid: string[][];
   enemies: Spawn[];
   flagX: number;
+  /** the checkpoint's column: die after passing it and you come back here */
+  checkX: number;
+  /** where the hidden gold coins are, in order along the level */
+  golds: Spawn[];
 }
 interface Theme {
   sky: [string, string];
@@ -56,10 +61,12 @@ interface Theme {
 }
 
 /** builds a level grid from a few placement calls, so the layouts read like a description */
-function build(len: number, theme: Theme, spec: (b: Builder) => void, meta: Omit<Level, "grid" | "enemies" | "flagX" | "theme">): Level {
+function build(len: number, theme: Theme, spec: (b: Builder) => void, meta: Omit<Level, "grid" | "enemies" | "flagX" | "checkX" | "golds" | "theme">): Level {
   const grid = Array.from({ length: ROWS }, () => Array<string>(len).fill(" "));
   const enemies: Spawn[] = [];
+  const golds: Spawn[] = [];
   let flagX = len - 6;
+  let checkX = Math.floor(len / 2);
   const set = (x: number, y: number, c: string) => {
     if (x >= 0 && x < len && y >= 0 && y < ROWS) grid[y][x] = c;
   };
@@ -94,9 +101,18 @@ function build(len: number, theme: Theme, spec: (b: Builder) => void, meta: Omit
       flagX = x;
       set(x, 11, "X");
     },
+    spring: (x, y = 11) => set(x, y, "S"),
+    gold: (x, y) => {
+      set(x, y, "G");
+      golds.push({ x, y });
+    },
+    checkpoint: (x) => {
+      checkX = x;
+    },
   };
   spec(b);
-  return { ...meta, theme, grid, enemies, flagX };
+  golds.sort((a, c) => a.x - c.x);
+  return { ...meta, theme, grid, enemies, flagX, checkX, golds };
 }
 interface Builder {
   ground: (x0: number, x1: number, top?: number) => void;
@@ -107,6 +123,11 @@ interface Builder {
   coins: (x: number, y: number, n: number) => void;
   enemy: (x: number, y?: number) => void;
   flag: (x: number) => void;
+  /** a spring: land on it to bounce up high (hold jump for higher) */
+  spring: (x: number, y?: number) => void;
+  /** a hidden gold SS coin; three per world */
+  gold: (x: number, y: number) => void;
+  checkpoint: (x: number) => void;
 }
 
 const LEVELS: Level[] = [
@@ -149,13 +170,16 @@ const LEVELS: Level[] = [
       b.stairs(126, 4, true);
       b.stairs(134, 8);
       b.flag(150);
+      // extras: gold coins over the tall pipe, up a spring, and low over the last gap
+      b.gold(49, 4);
+      b.spring(92);
+      b.gold(92, 2);
+      b.gold(114, 10);
+      b.checkpoint(76);
     },
     {
       name: "1-1",
       place: "The Grind",
-      years: "High school · 2021–2025",
-      intro: "High school. Collect A+ grades, and watch out for pop quizzes.",
-      outro: ["Graduated with a 96.3% average", "Student Activity Council President", "Tamil Student Association President"],
       coinName: "Grades",
       coinValue: 1,
       enemyName: "Pop Quiz",
@@ -205,13 +229,15 @@ const LEVELS: Level[] = [
       b.enemy(138);
       b.stairs(144, 7);
       b.flag(160);
+      b.gold(32, 3);
+      b.spring(68);
+      b.gold(68, 2);
+      b.gold(106, 4);
+      b.checkpoint(82);
     },
     {
       name: "1-2",
       place: "The Hustle",
-      years: "The streetwear brand · 2023–2025",
-      intro: "Started a clothing brand at 15. Collect followers and stomp the haters.",
-      outro: ["Co-founded LoveYouReally Apparel", "Grew it to 10K+ followers", "Design, customers and fulfillment, at 15"],
       coinName: "Followers",
       coinValue: 250,
       enemyName: "Hater",
@@ -262,13 +288,15 @@ const LEVELS: Level[] = [
       b.enemy(140);
       b.stairs(150, 8);
       b.flag(168);
+      b.gold(37, 2);
+      b.spring(70);
+      b.gold(70, 2);
+      b.gold(159, 1);
+      b.checkpoint(80);
     },
     {
       name: "1-3",
       place: "Next Level",
-      years: "University · 2025–",
-      intro: "First year of university. Earn your credits, survive the midterms.",
-      outro: ["Engineering Science + Ivey HBA", "One of Canada's most selective dual degrees", "The adventure continues…"],
       coinName: "Credits",
       coinValue: 1,
       enemyName: "Midterm",
@@ -276,7 +304,56 @@ const LEVELS: Level[] = [
   ),
 ];
 
-const SOLID = new Set(["#", "B", "?", "M", "N", "O", "U", "X", "[", "]", "{", "}"]);
+const SOLID = new Set(["#", "B", "?", "M", "N", "O", "U", "X", "S", "[", "]", "{", "}"]);
+/** points for each stomp in a row without landing; past the end, each one is an extra life */
+const COMBO = [100, 200, 400, 800, 1000, 2000, 4000, 8000];
+
+// ---------- saved on this device ----------
+const SAVE_KEY = "super-shajith:save";
+interface Save {
+  /** where to continue: the world, and whether its checkpoint was reached */
+  level: number;
+  checkpoint: boolean;
+  lives: number;
+  score: number;
+  coins: number;
+  big: boolean;
+  spray: boolean;
+  /** gold coins found, per world; they stay found */
+  gold: boolean[][];
+  /** best clear time per world, in seconds */
+  best: (number | null)[];
+}
+const blankSave = (): Save => ({ level: 0, checkpoint: false, lives: 3, score: 0, coins: 0, big: false, spray: false, gold: LEVELS.map((L) => L.golds.map(() => false)), best: LEVELS.map(() => null) });
+const loadSave = (): Save => {
+  const save = blankSave();
+  try {
+    const v = JSON.parse(localStorage.getItem(SAVE_KEY) ?? "null");
+    if (v && typeof v === "object") {
+      if (Number.isInteger(v.level) && v.level >= 0 && v.level < LEVELS.length) save.level = v.level;
+      save.checkpoint = !!v.checkpoint;
+      if (Number.isFinite(v.lives) && v.lives > 0) save.lives = Math.min(99, v.lives);
+      if (Number.isFinite(v.score)) save.score = Math.max(0, v.score);
+      if (Number.isFinite(v.coins)) save.coins = Math.max(0, v.coins);
+      save.big = !!v.big;
+      save.spray = !!v.spray;
+      if (Array.isArray(v.gold)) save.gold = save.gold.map((row, i) => row.map((_, j) => !!v.gold[i]?.[j]));
+      if (Array.isArray(v.best)) save.best = save.best.map((_, i) => (Number.isFinite(v.best[i]) ? v.best[i] : null));
+    }
+  } catch {
+    // start fresh
+  }
+  return save;
+};
+const writeSave = (save: Save) => {
+  try {
+    localStorage.setItem(SAVE_KEY, JSON.stringify(save));
+  } catch {
+    // not kept
+  }
+};
+const goldCount = (save: Save) => save.gold.flat().filter(Boolean).length;
+const goldTotal = LEVELS.reduce((n, L) => n + L.golds.length, 0);
 
 // ---------- fragrances ----------
 type Scent = "breeze" | "oud" | "citrus";
@@ -327,7 +404,7 @@ interface State {
   phaseT: number;
   level: number;
   grid: string[][];
-  player: Body & { big: boolean; spray: boolean; star: number; face: 1 | -1; hurt: number; walk: number; jumpHeld: boolean; runHeld: boolean; sprayCool: number; coyote: number; buffer: number };
+  player: Body & { big: boolean; spray: boolean; star: number; face: 1 | -1; hurt: number; walk: number; jumpHeld: boolean; runHeld: boolean; sprayCool: number; coyote: number; buffer: number; combo: number };
   /** clouds of Oud Noir, sprayed forward; they knock out whatever they touch */
   clouds: { x: number; y: number; vx: number; t: number }[];
   enemies: Enemy[];
@@ -339,13 +416,32 @@ interface State {
   score: number;
   lives: number;
   flagSlide: number;
+  checkpoint: boolean;
+  /** seconds spent in this world (it keeps counting through lost lives) */
+  time: number;
+  save: Save;
+  /** the title menu: 0 continue, 1 new game */
+  menu: number;
+  menuHeld: boolean;
+  /** this clear beat the world's best time */
+  record: boolean;
 }
 
-const freshLevel = (s: State, index: number) => {
+/** sets up a world; `respawn` keeps the checkpoint and the clock from the life just lost */
+const freshLevel = (s: State, index: number, respawn = false) => {
   const L = LEVELS[index];
+  if (!respawn || index !== s.level) {
+    s.checkpoint = false;
+    s.time = 0;
+  }
   s.level = index;
   s.grid = L.grid.map((r) => r.slice());
-  s.player = { x: 2 * TILE, y: 10 * TILE, w: 12, h: 14, vx: 0, vy: 0, ground: false, big: s.player?.big ?? false, spray: s.player?.spray ?? false, star: 0, face: 1, hurt: 0, walk: 0, jumpHeld: false, runHeld: false, sprayCool: 0, coyote: 0, buffer: 0 };
+  // gold coins already found show as faint outlines
+  L.golds.forEach((g, i) => {
+    if (s.save.gold[index][i]) s.grid[g.y][g.x] = "g";
+  });
+  const startX = s.checkpoint ? L.checkX * TILE + 2 : 2 * TILE;
+  s.player = { x: startX, y: 10 * TILE, w: 12, h: 14, vx: 0, vy: 0, ground: false, big: s.player?.big ?? false, spray: s.player?.spray ?? false, star: 0, face: 1, hurt: 0, walk: 0, jumpHeld: true, runHeld: false, sprayCool: 0, coyote: 0, buffer: 0, combo: 0 };
   if (s.player.big) {
     s.player.h = 24;
     s.player.y -= 10;
@@ -355,12 +451,21 @@ const freshLevel = (s: State, index: number) => {
   s.clouds = [];
   s.fx = [];
   s.bumps = [];
-  s.cam = 0;
+  s.cam = Math.max(0, startX - VIEW_W * 0.3);
   s.flagSlide = 0;
+  s.record = false;
 };
 
+/** remembers where you are, so Continue comes back here */
+const saveProgress = (s: State) => {
+  Object.assign(s.save, { level: s.level, checkpoint: s.checkpoint, lives: s.lives, score: s.score, coins: s.coins, big: s.player.big, spray: s.player.spray });
+  writeSave(s.save);
+};
+const hasProgress = (save: Save) => save.level > 0 || save.checkpoint || save.score > 0;
+
 const newGame = (): State => {
-  const s = { phase: "title", phaseT: 0, level: 0, coins: 0, score: 0, lives: 3 } as State;
+  const save = loadSave();
+  const s = { phase: "title", phaseT: 0, level: 0, coins: 0, score: 0, lives: 3, save, menu: hasProgress(save) ? 0 : 1, menuHeld: false } as State;
   freshLevel(s, 0);
   return s;
 };
@@ -409,6 +514,7 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
         right: !!(k.ArrowRight || k.d || t.right),
         jump: !!(k.ArrowUp || k.w || k[" "] || k.z || t.jump || jumpTap.current),
         run: !!(k.Shift || k.x || t.run),
+        down: !!(k.ArrowDown || k.s),
       };
     };
 
@@ -464,10 +570,22 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
       s.score += n;
       s.fx.push({ kind: "score", x, y, vx: 0, vy: -40, t: 0.8, text: String(n) });
     };
+    const oneUp = (s: State, x: number, y: number) => {
+      s.lives = Math.min(99, s.lives + 1);
+      s.fx.push({ kind: "score", x, y, vx: 0, vy: -36, t: 1.1, text: "1-UP" });
+    };
     const getCoin = (s: State, x: number, y: number, popped: boolean) => {
       s.coins += 1;
       s.score += 50;
       if (popped) s.fx.push({ kind: "coin", x, y, vx: 0, vy: -230, t: 0.55 });
+      if (s.coins % 100 === 0) oneUp(s, x, y - 10);
+    };
+    /** a stomp (or a citrus knock-out): worth more each time in a row before you land */
+    const comboReward = (s: State, x: number, y: number) => {
+      const p = s.player;
+      if (p.combo < COMBO.length) addScore(s, COMBO[p.combo], x, y);
+      else oneUp(s, x, y);
+      p.combo += 1;
     };
 
     const bump = (s: State, tx: number, ty: number) => {
@@ -496,11 +614,12 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
       }
     };
 
-    const knockOut = (s: State, e: Enemy) => {
+    const knockOut = (s: State, e: Enemy, combo = false) => {
       e.alive = false;
       e.flip = true;
       e.vy = -220;
-      addScore(s, 200, e.x, e.y - 6);
+      if (combo) comboReward(s, e.x, e.y - 6);
+      else addScore(s, 200, e.x, e.y - 6);
     };
     const mistPuff = (s: State, x: number, y: number, n: number, scent: Scent) => {
       for (let i = 0; i < n; i++) {
@@ -536,25 +655,54 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
       s.phaseT += dt;
       const input = held();
       if (s.phase === "title" || s.phase === "clear" || s.phase === "over" || s.phase === "end") {
-        // jump to continue, after a short beat so a held key doesn't skip the card
-        if (s.phaseT > 0.8 && input.jump && !s.player.jumpHeld) {
-          if (s.phase === "title") {
+        // on the title, left/right (or down) picks Continue or New game
+        const side = input.left || input.right || input.down;
+        if (s.phase === "title" && hasProgress(s.save) && side && !s.menuHeld) s.menu = 1 - s.menu;
+        s.menuHeld = side;
+        // jump to go on, after a short beat so a held key doesn't skip the card
+        if (s.phaseT > 0.5 && input.jump && !s.player.jumpHeld) {
+          const start = () => {
             s.phase = "intro";
             s.phaseT = 0;
+          };
+          if (s.phase === "title") {
+            if (s.menu === 0 && hasProgress(s.save)) {
+              const v = s.save;
+              Object.assign(s, { lives: v.lives, score: v.score, coins: v.coins, checkpoint: v.checkpoint });
+              s.player.big = v.big;
+              s.player.spray = v.spray;
+              s.level = v.level;
+              freshLevel(s, v.level, true);
+            } else {
+              Object.assign(s, { lives: 3, score: 0, coins: 0 });
+              s.player.big = false;
+              s.player.spray = false;
+              freshLevel(s, 0);
+            }
+            saveProgress(s);
+            start();
           } else if (s.phase === "clear") {
             if (s.level + 1 < LEVELS.length) {
               freshLevel(s, s.level + 1);
-              s.phase = "intro";
-              s.phaseT = 0;
+              saveProgress(s);
+              start();
             } else {
               s.phase = "end";
               s.phaseT = 0;
+              // beaten: the next game starts from the top (gold coins and best times stay)
+              Object.assign(s.save, { level: 0, checkpoint: false, lives: 3, score: 0, coins: 0, big: false, spray: false });
+              writeSave(s.save);
               onWinRef.current?.();
             }
-          } else {
-            const fresh = newGame();
-            Object.assign(s, fresh);
-          }
+          } else if (s.phase === "over") {
+            // try the same world again, from its start, with fresh lives
+            Object.assign(s, { lives: 3, score: 0, coins: 0, checkpoint: false });
+            s.player.big = false;
+            s.player.spray = false;
+            freshLevel(s, s.level);
+            saveProgress(s);
+            start();
+          } else Object.assign(s, newGame());
         }
         s.player.jumpHeld = input.jump;
         return;
@@ -576,7 +724,9 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
             s.phaseT = 0;
           } else {
             s.player.big = false;
-            freshLevel(s, s.level);
+            s.player.spray = false;
+            freshLevel(s, s.level, true);
+            saveProgress(s);
             s.phase = "intro";
             s.phaseT = 0;
           }
@@ -600,9 +750,14 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
         if (s.flagSlide > 2.6) {
           s.phase = "clear";
           s.phaseT = 0;
+          const best = s.save.best[s.level];
+          s.record = best === null || s.time < best;
+          if (s.record) s.save.best[s.level] = Math.round(s.time * 10) / 10;
+          writeSave(s.save);
         }
         return;
       }
+      s.time += dt;
 
       // running and jumping: snappy acceleration, more grip turning around, variable jump height
       const star = p.star > 0;
@@ -643,6 +798,17 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
       p.vy = Math.min(p.vy, 430);
       const head = move(s, p, dt);
       if (head) bump(s, head.tx, head.ty);
+      // a spring underfoot launches you; hold jump to go higher
+      if (p.ground) {
+        const sx = Math.floor((p.x + p.w / 2) / TILE);
+        const sy = Math.floor((p.y + p.h + 1) / TILE);
+        if (tileAt(s, sx, sy) === "S") {
+          p.vy = input.jump ? -540 : -420;
+          p.ground = false;
+          p.coyote = 0;
+          s.bumps.push({ x: sx, y: sy, t: 0.2 });
+        }
+      }
       if (p.ground && Math.abs(p.vx) > 5) p.walk += dt * (6 + Math.abs(p.vx) * 0.06);
       if (p.hurt > 0) p.hurt -= dt;
       // the start of the level is a wall
@@ -658,7 +824,26 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
           if (tileAt(s, tx, ty) === "C") {
             s.grid[ty][tx] = " ";
             getCoin(s, tx * TILE, ty * TILE, false);
+          } else if (tileAt(s, tx, ty) === "G" || tileAt(s, tx, ty) === "g") {
+            // a gold coin: found for good the first time
+            const fresh = tileAt(s, tx, ty) === "G";
+            s.grid[ty][tx] = " ";
+            const i = L.golds.findIndex((g) => g.x === tx && g.y === ty);
+            if (fresh && i >= 0) {
+              s.save.gold[s.level][i] = true;
+              writeSave(s.save);
+            }
+            addScore(s, fresh ? 2000 : 200, tx * TILE, ty * TILE);
+            s.fx.push({ kind: "score", x: tx * TILE - 14, y: ty * TILE - 14, vx: 0, vy: -24, t: 1.3, text: fresh ? `GOLD SS ${s.save.gold[s.level].filter(Boolean).length}/${L.golds.length}` : "already found" });
+            for (let k = 0; k < 8; k++) s.fx.push({ kind: "mist", x: tx * TILE + 8, y: ty * TILE + 8, vx: Math.cos(k) * 60, vy: Math.sin(k) * 60, t: 0.6, text: "gold" });
           }
+
+      // the checkpoint
+      if (!s.checkpoint && p.x > L.checkX * TILE) {
+        s.checkpoint = true;
+        s.fx.push({ kind: "score", x: L.checkX * TILE - 20, y: 7 * TILE, vx: 0, vy: -20, t: 1.4, text: "CHECKPOINT" });
+        saveProgress(s);
+      }
 
       // the flag
       if (p.x + p.w > L.flagX * TILE - 2) {
@@ -687,20 +872,25 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
         }
         // asleep until they come close to the screen
         if (e.x > s.cam + VIEW_W + 32) continue;
+        // they turn around at the edge of a drop instead of walking off it
+        if (e.ground) {
+          const aheadX = e.vx > 0 ? e.x + e.w + 1 : e.x - 1;
+          if (!solidAt(s, aheadX, e.y + e.h + 2)) e.vx = -e.vx;
+        }
         const before = e.vx;
         e.vy = Math.min(e.vy + 1400 * dt, 430);
         move(s, e, dt);
         if (e.vx === 0) e.vx = -before;
         if (e.y > VIEW_H + 32) e.alive = false;
         if (p.star > 0 && overlap(p, e)) {
-          knockOut(s, e);
+          knockOut(s, e, true);
           continue;
         }
         if (p.hurt <= 0 && overlap(p, e)) {
           if (p.vy > 30 && p.y + p.h - e.y < 10) {
             e.squash = 0.45;
             p.vy = input.jump ? -380 : -240;
-            addScore(s, 100, e.x, e.y - 6);
+            comboReward(s, e.x, e.y - 6);
           } else hurt(s);
         }
       }
@@ -757,6 +947,7 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
       }
       s.items = s.items.filter((it) => it.y < VIEW_H + 32);
 
+      if (p.star <= 0 && p.ground) p.combo = 0;
       // the camera follows both ways, so you can walk back for something you missed; it only
       // moves once you leave the middle of the screen, so small steps don't make it wobble
       const want = Math.min(Math.max(s.cam, p.x - VIEW_W * 0.45), p.x - VIEW_W * 0.3);
@@ -860,7 +1051,7 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
 
     const drawTile = (c: string, x: number, y: number, th: Theme, tx: number, ty: number, s: State) => {
       const bump = s.bumps.find((b) => b.x === tx && b.y === ty);
-      if (bump) y -= Math.sin((1 - bump.t / 0.15) * Math.PI) * 5;
+      if (bump && c !== "S") y -= Math.sin((1 - bump.t / 0.15) * Math.PI) * 5;
       if (c === "#") {
         R(x, y, 16, 16, th.ground);
         if (tileAt(s, tx, ty - 1) !== "#") {
@@ -907,6 +1098,40 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
           if (left) R(x + 2, y, 3, 16, "#7fe08a");
         }
       } else if (c === "C") drawCoin(x + 3, y + 2, th, time);
+      else if (c === "G" || c === "g") drawGold(x, y, c === "g");
+      else if (c === "S") {
+        // a spring: red pad on a coil, squashed for a moment after a bounce
+        const squash = bump ? 5 : 0;
+        R(x + 1, y + 4 + squash, 14, 3, "#d4202c");
+        R(x + 1, y + 4 + squash, 14, 1, "#ff6a6a");
+        for (let i = 0; i < 3; i++) R(x + 3, y + 8 + squash + i * Math.max(1, 3 - squash / 2), 10, 1, "#cfd3da");
+        R(x + 1, y + 14, 14, 2, "#6a6f78");
+      }
+    };
+
+    /** a gold SS coin: bigger, ringed in gold, with a sparkle; faint once it's been found */
+    const drawGold = (x: number, y: number, found: boolean) => {
+      ctx.save();
+      ctx.globalAlpha = found ? 0.35 : 1;
+      const bob = Math.sin(time * 3 + x) * 1.5;
+      ctx.fillStyle = "#f2c14e";
+      ctx.beginPath();
+      ctx.arc(x + 8, y + 8 + bob, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#a8781a";
+      ctx.beginPath();
+      ctx.arc(x + 8, y + 8 + bob, 6.5, 0, Math.PI * 2);
+      ctx.fill();
+      if (coinImg?.complete && coinImg.naturalWidth) {
+        ctx.imageSmoothingEnabled = true;
+        ctx.drawImage(coinImg, x + 2, y + 2 + bob, 12, 12);
+        ctx.imageSmoothingEnabled = false;
+      }
+      if (!found && Math.floor(time * 4) % 4 === 0) {
+        R(x + 13, y + 1 + bob, 1, 3, "#fff");
+        R(x + 12, y + 2 + bob, 3, 1, "#fff");
+      }
+      ctx.restore();
     };
 
     /** a coin: the black-and-white SS logo, spinning (it narrows to its edge and back) */
@@ -1047,6 +1272,19 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
       if (g < 3) R(x + 1 + g, y + 5, 1, 2, "rgba(255,255,255,0.85)");
     };
 
+    /** the checkpoint: a short pole whose flag runs up (and turns gold) once you pass */
+    const drawCheckpoint = (s: State) => {
+      const L = LEVELS[s.level];
+      const x = L.checkX * TILE - s.cam + 7;
+      if (x < -20 || x > VIEW_W + 20) return;
+      const base = 12 * TILE;
+      R(x, base - 44, 2, 44, "#cfd3da");
+      R(x - 1, base - 46, 4, 3, "#f2c14e");
+      const fy = s.checkpoint ? base - 44 : base - 14;
+      R(x + 2, fy, 10, 7, s.checkpoint ? "#f2c14e" : "#8a8f98");
+      R(x + 2, fy, 10, 1, "rgba(255,255,255,0.5)");
+    };
+
     const drawFlag = (s: State, th: Theme) => {
       const L = LEVELS[s.level];
       const x = L.flagX * TILE - s.cam + 7;
@@ -1081,32 +1319,49 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
       ctx.fillRect(0, 0, VIEW_W, VIEW_H);
       const L = LEVELS[s.level];
       const blink = Math.floor(time * 2) % 2 === 0;
+      const golds = (i: number, y: number) => {
+        // the world's gold coins: filled once found
+        const row = s.save.gold[i];
+        row.forEach((got, j) => {
+          const x = VIEW_W / 2 - (row.length - 1) * 9 + j * 18;
+          ctx.fillStyle = got ? "#f2c14e" : "rgba(255,255,255,0.18)";
+          ctx.beginPath();
+          ctx.arc(x, y, 5, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      };
+      const secs = (t: number | null) => (t === null ? "--" : `${t.toFixed(1)}s`);
       if (s.phase === "title") {
-        text("SUPER", VIEW_W / 2, 62, 14, "#fcd99a");
-        text("SHAJITH", VIEW_W / 2, 92, 30, "#ffffff");
-        text("A platformer through my life", VIEW_W / 2, 116, 9, "rgba(255,255,255,0.75)");
-        text("The Grind → The Hustle → Next Level", VIEW_W / 2, 132, 8, "rgba(255,255,255,0.55)");
-        if (blink) text("Press jump to start", VIEW_W / 2, 176, 10, "#fcd99a");
+        text("SUPER", VIEW_W / 2, 58, 14, "#fcd99a");
+        text("SHAJITH", VIEW_W / 2, 88, 30, "#ffffff");
+        const found = goldCount(s.save);
+        if (found) text(`Gold SS coins ${found}/${goldTotal}`, VIEW_W / 2, 112, 8, "#f2c14e");
+        if (hasProgress(s.save)) {
+          const opts = [`Continue · World ${LEVELS[s.save.level].name}${s.save.checkpoint ? " ½" : ""}`, "New game"];
+          opts.forEach((o, i) => text(s.menu === i ? `▶ ${o}` : o, VIEW_W / 2, 146 + i * 18, 10, s.menu === i ? "#fcd99a" : "rgba(255,255,255,0.55)"));
+          text("◀ ▶ to choose, jump to start", VIEW_W / 2, 196, 7, "rgba(255,255,255,0.4)");
+        } else if (blink) text("Press jump to start", VIEW_W / 2, 160, 10, "#fcd99a");
       } else if (s.phase === "intro") {
         text(`WORLD ${L.name}`, VIEW_W / 2, 70, 10, "#fcd99a");
         text(L.place, VIEW_W / 2, 98, 22);
-        text(L.years, VIEW_W / 2, 118, 8, "rgba(255,255,255,0.65)");
-        text(L.intro, VIEW_W / 2, 150, 8, "rgba(255,255,255,0.85)");
-        text(`× ${s.lives}`, VIEW_W / 2, 180, 10);
+        golds(s.level, 124);
+        text(s.checkpoint ? `× ${s.lives}   ·   from the checkpoint` : `× ${s.lives}`, VIEW_W / 2, 160, 10);
       } else if (s.phase === "clear") {
-        text(`WORLD ${L.name} CLEAR`, VIEW_W / 2, 56, 10, "#fcd99a");
-        L.outro.forEach((line, i) => text(line, VIEW_W / 2, 90 + i * 22, i === 0 ? 13 : 9, i === 0 ? "#fff" : "rgba(255,255,255,0.8)"));
-        if (blink && s.phaseT > 0.8) text(s.level + 1 < LEVELS.length ? "Press jump for the next world" : "Press jump", VIEW_W / 2, 186, 9, "#fcd99a");
+        text(`WORLD ${L.name} CLEAR`, VIEW_W / 2, 50, 12, "#fcd99a");
+        text(`Time ${secs(s.time)}`, VIEW_W / 2, 84, 12, s.record ? "#fcd99a" : "#fff");
+        text(s.record ? "New best!" : `Best ${secs(s.save.best[s.level])}`, VIEW_W / 2, 100, 8, s.record ? "#fcd99a" : "rgba(255,255,255,0.6)");
+        golds(s.level, 124);
+        text(`Score ${String(s.score).padStart(6, "0")}`, VIEW_W / 2, 154, 10);
+        if (blink && s.phaseT > 0.5) text(s.level + 1 < LEVELS.length ? "Press jump for the next world" : "Press jump", VIEW_W / 2, 190, 9, "#fcd99a");
       } else if (s.phase === "over") {
         text("GAME OVER", VIEW_W / 2, 100, 20);
-        text("Every setback is a setup. Try again?", VIEW_W / 2, 124, 8, "rgba(255,255,255,0.75)");
-        if (blink && s.phaseT > 0.8) text("Press jump", VIEW_W / 2, 170, 10, "#fcd99a");
+        if (blink && s.phaseT > 0.5) text(`Press jump to retry World ${L.name}`, VIEW_W / 2, 150, 9, "#fcd99a");
       } else if (s.phase === "end") {
-        text("TO BE CONTINUED…", VIEW_W / 2, 70, 16, "#fcd99a");
-        text("Shajith Sasikumar", VIEW_W / 2, 104, 14);
-        text("BESc + Ivey HBA · Western University", VIEW_W / 2, 122, 8, "rgba(255,255,255,0.75)");
-        text(`Score ${s.score}`, VIEW_W / 2, 150, 10);
-        if (blink && s.phaseT > 0.8) text("Press jump to play again", VIEW_W / 2, 186, 9, "#fcd99a");
+        text("TO BE CONTINUED…", VIEW_W / 2, 64, 16, "#fcd99a");
+        text(`Score ${String(s.score).padStart(6, "0")}`, VIEW_W / 2, 100, 12);
+        text(`Gold SS coins ${goldCount(s.save)}/${goldTotal}`, VIEW_W / 2, 124, 9, "#f2c14e");
+        if (goldCount(s.save) < goldTotal) text("Some are still hidden out there…", VIEW_W / 2, 140, 8, "rgba(255,255,255,0.55)");
+        if (blink && s.phaseT > 0.5) text("Press jump", VIEW_W / 2, 186, 9, "#fcd99a");
       }
     };
 
@@ -1121,6 +1376,7 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
           if (c !== " " && tx >= 0) drawTile(c, tx * TILE - s.cam, ty * TILE, th, tx, ty, s);
         }
       drawFlag(s, th);
+      drawCheckpoint(s);
       for (const it of s.items) drawBottle(it, s);
       for (const c of s.clouds) {
         const k = c.t / 0.6;
@@ -1139,7 +1395,7 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
         if (f.kind === "coin") drawCoin(x, f.y, th, time * 3);
         else if (f.kind === "mist") {
           const k = Math.max(0, f.t / 0.9);
-          ctx.fillStyle = `rgba(${SCENTS[(f.text as Scent) ?? "breeze"].mist},${0.55 * k})`;
+          ctx.fillStyle = f.text === "gold" ? `rgba(255,214,110,${0.7 * k})` : `rgba(${SCENTS[(f.text as Scent) ?? "breeze"].mist},${0.55 * k})`;
           ctx.beginPath();
           ctx.arc(x, f.y, 2 + (1 - k) * 5, 0, Math.PI * 2);
           ctx.fill();
@@ -1156,6 +1412,13 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
         text(`WORLD ${L.name}`, 190, 14, 8, "#fff", "left");
         text(L.place, 190, 25, 8, "rgba(255,255,255,0.8)", "left");
         text(`× ${s.lives}`, VIEW_W - 10, 14, 8, "#fff", "right");
+        s.save.gold[s.level].forEach((got, j, row) => {
+          ctx.fillStyle = got ? "#f2c14e" : "rgba(255,255,255,0.25)";
+          ctx.beginPath();
+          ctx.arc(VIEW_W - 10 - (row.length - 1 - j) * 9 - 3, 22, 3, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        if (s.player.combo > 1) text(`COMBO ×${s.player.combo}`, VIEW_W / 2, 44, 8, "#fcd99a");
       }
       if (s.phase !== "play" && s.phase !== "dying") card(s);
     };
@@ -1221,7 +1484,7 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
   return (
     <div className="text-center">
       <p className="mb-4 text-sm text-white/70">
-        <span className="[@media(pointer:coarse)]:hidden">Move with ← → or A/D, jump with Space, ↑ or W, run with Shift (and spray, once you've got Oud Noir).</span>
+        <span className="[@media(pointer:coarse)]:hidden">Move with ← → or A/D, jump with Space, ↑ or W, run with Shift (and spray, once you've got Oud Noir). Progress saves on this device.</span>
         <span className="hidden [@media(pointer:coarse)]:inline">Use the buttons below: move, B to run (and spray), A to jump.</span>
       </p>
       <div className="relative inline-block overflow-hidden rounded-lg border border-white/10">
