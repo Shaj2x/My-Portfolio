@@ -11,10 +11,13 @@ import ssCoin from "@/assets/ss-coin.png";
  *
  * Coins are the black-and-white SS logo. ? blocks give coins or a fragrance to spray on:
  *   Breeze       (blue)   grow big: one free hit, and bricks break
- *   Oud Noir     (black)  big, and B/Shift sprays a cloud that knocks enemies out
+ *   Oud Noir     (black)  big, and B sprays a cloud that knocks enemies out
  *   Citrus Rush  (orange) nine seconds unstoppable: faster, higher, enemies fall at a touch
  * Stomp enemies from above, don't fall in the gaps, and touch the flag. Keyboard, touch buttons, or a controller
  * (the console maps its D-pad to arrow keys and ✕ to Space).
+ *
+ * Hold down to crouch: squeeze through the low tunnels and duck the paper planes.
+ * Worlds 2-1 to 2-3 build on all of it: tunnels, planes, springs and longer gaps.
  *
  * Extras: stomp combos (chain stomps without landing for more points, then extra lives), springs,
  * three hidden gold SS coins per world, a checkpoint halfway, best times, and 100 coins for a life.
@@ -29,7 +32,7 @@ const STEP = 1 / 120;
 
 // ---------- levels ----------
 
-type Spawn = { x: number; y: number };
+type Spawn = { x: number; y: number; fly?: boolean };
 interface Level {
   name: string;
   place: string;
@@ -55,9 +58,9 @@ interface Theme {
   far: string;
   near: string;
   stars: boolean;
-  enemy: "quiz" | "hater" | "midterm";
+  enemy: "quiz" | "hater" | "midterm" | "clock";
   coin: "grade" | "heart" | "credit";
-  landmark: "school" | "city" | "uc";
+  landmark: "school" | "city" | "uc" | "none";
 }
 
 /** builds a level grid from a few placement calls, so the layouts read like a description */
@@ -102,6 +105,14 @@ function build(len: number, theme: Theme, spec: (b: Builder) => void, meta: Omit
       set(x, 11, "X");
     },
     spring: (x, y = 11) => set(x, y, "S"),
+    tunnel: (x, n) => {
+      // a tall wall with a low gap at the bottom: the only way through is crouching
+      for (let i = 0; i < n; i++) {
+        for (let y = 3; y <= 10; y++) set(x + i, y, "W");
+        set(x + i, 11, "_");
+      }
+    },
+    plane: (x) => enemies.push({ x: x * TILE, y: 11 * TILE, fly: true }),
     gold: (x, y) => {
       set(x, y, "G");
       golds.push({ x, y });
@@ -125,6 +136,10 @@ interface Builder {
   flag: (x: number) => void;
   /** a spring: land on it to bounce up high (hold jump for higher) */
   spring: (x: number, y?: number) => void;
+  /** a crouch-only passage, n tiles long */
+  tunnel: (x: number, n: number) => void;
+  /** a paper plane flying in at head height: duck it, jump it or stomp it */
+  plane: (x: number) => void;
   /** a hidden gold SS coin; three per world */
   gold: (x: number, y: number) => void;
   checkpoint: (x: number) => void;
@@ -302,9 +317,149 @@ const LEVELS: Level[] = [
       enemyName: "Midterm",
     },
   ),
+  build(
+    180,
+    { sky: ["#0b1026", "#26305a"], ground: "#4a4458", groundTop: "#6b5fa0", groundDark: "#2e2a3a", brick: "#5a4f7a", far: "#1a2040", near: "#2a3358", stars: true, enemy: "clock", coin: "credit", landmark: "none" },
+    (b) => {
+      b.ground(0, 50);
+      b.tile(10, 8, "?");
+      b.row(14, 8, 4, "B");
+      b.tile(15, 8, "M");
+      b.enemy(20);
+      b.tunnel(26, 6);
+      b.coins(34, 8, 3);
+      b.plane(42);
+      b.enemy(45);
+      b.enemy(48);
+      b.ground(54, 90);
+      b.pipe(58, 2);
+      b.plane(66);
+      b.plane(70);
+      b.checkpoint(72);
+      b.tunnel(76, 8);
+      b.enemy(86);
+      b.gold(87, 5);
+      b.ground(94, 130);
+      b.row(98, 8, 5, "B");
+      b.tile(100, 8, "?");
+      b.tile(100, 4, "N");
+      b.enemy(104);
+      b.spring(108);
+      b.gold(108, 2);
+      b.enemy(115);
+      b.plane(121);
+      b.tunnel(123, 5);
+      b.gold(132, 10);
+      b.ground(134, 179);
+      b.coins(137, 8, 4);
+      b.enemy(140);
+      b.enemy(144);
+      b.stairs(150, 6);
+      b.flag(166);
+    },
+    { name: "2-1", place: "Crunch Time", coinName: "Credits", coinValue: 1, enemyName: "Deadline" },
+  ),
+  build(
+    190,
+    { sky: ["#5ec8ff", "#d6f3ff"], ground: "#e8f4ff", groundTop: "#ffffff", groundDark: "#b8d4ec", brick: "#f0a04a", far: "#bfe6ff", near: "#e6f6ff", stars: false, enemy: "hater", coin: "heart", landmark: "none" },
+    (b) => {
+      b.ground(0, 20);
+      b.coins(8, 8, 3);
+      b.tile(12, 8, "?");
+      b.ground(24, 34);
+      b.enemy(30);
+      b.row(37, 9, 3, "X");
+      b.ground(43, 55);
+      b.tile(46, 8, "O");
+      b.spring(50);
+      b.gold(50, 2);
+      b.plane(56);
+      b.row(58, 8, 3, "X");
+      b.row(63, 6, 3, "X");
+      b.coins(63, 4, 3);
+      b.row(68, 8, 3, "X");
+      b.ground(73, 95);
+      b.checkpoint(76);
+      b.enemy(82);
+      b.enemy(85);
+      b.tunnel(88, 4);
+      b.gold(97, 10);
+      b.ground(99, 110);
+      b.plane(108);
+      b.ground(113, 140);
+      b.row(116, 8, 4, "B");
+      b.tile(117, 8, "?");
+      b.tile(118, 8, "M");
+      b.enemy(122);
+      b.enemy(126);
+      b.enemy(130);
+      b.pipe(134, 3);
+      b.gold(142, 4);
+      b.ground(144, 189);
+      b.stairs(150, 5);
+      b.stairs(156, 5, true);
+      b.plane(168);
+      b.enemy(165);
+      b.flag(178);
+    },
+    { name: "2-2", place: "Sky High", coinName: "Followers", coinValue: 250, enemyName: "Hater" },
+  ),
+  build(
+    200,
+    { sky: ["#3a1030", "#ff7a4a"], ground: "#5a3a2a", groundTop: "#d4502c", groundDark: "#3a2418", brick: "#a8402a", far: "#7a2a3a", near: "#4a1a2a", stars: false, enemy: "midterm", coin: "grade", landmark: "none" },
+    (b) => {
+      b.ground(0, 45);
+      b.tile(8, 8, "?");
+      b.row(12, 8, 3, "B");
+      b.tile(13, 8, "N");
+      b.enemy(18);
+      b.enemy(21);
+      b.tunnel(25, 5);
+      b.plane(35);
+      b.plane(38);
+      b.pipe(40, 3);
+      b.ground(49, 80);
+      b.enemy(52);
+      b.enemy(55);
+      b.enemy(58);
+      b.row(60, 7, 6, "B");
+      b.tile(62, 7, "?");
+      b.tile(64, 7, "O");
+      b.gold(63, 3);
+      b.tunnel(68, 7);
+      b.plane(79);
+      b.ground(85, 120);
+      b.checkpoint(88);
+      b.spring(95);
+      b.gold(95, 1);
+      b.row(98, 8, 4, "B");
+      b.enemy(100);
+      b.enemy(103);
+      b.enemy(106);
+      b.pipe(110, 4);
+      b.plane(117);
+      b.gold(122, 10);
+      b.ground(125, 160);
+      b.tunnel(130, 6);
+      b.enemy(140);
+      b.enemy(143);
+      b.plane(150);
+      b.plane(154);
+      b.ground(164, 199);
+      b.tile(168, 8, "M");
+      b.enemy(172);
+      b.enemy(175);
+      b.stairs(178, 8);
+      b.flag(192);
+    },
+    { name: "2-3", place: "The Gauntlet", coinName: "Grades", coinValue: 1, enemyName: "Midterm" },
+  ),
 ];
 
-const SOLID = new Set(["#", "B", "?", "M", "N", "O", "U", "X", "S", "[", "]", "{", "}"]);
+const SOLID = new Set(["#", "B", "?", "M", "N", "O", "U", "X", "S", "W", "_", "[", "]", "{", "}"]);
+/** a tunnel's low beam is only solid in the top few pixels of its tile, leaving room to crawl under */
+const BEAM = 5;
+const CROUCH_H = 10;
 /** points for each stomp in a row without landing; past the end, each one is an extra life */
 const COMBO = [100, 200, 400, 800, 1000, 2000, 4000, 8000];
 
@@ -383,6 +538,8 @@ interface Enemy extends Body {
   alive: boolean;
   squash: number;
   flip: boolean;
+  /** a paper plane: flies straight at head height, no gravity */
+  fly: boolean;
 }
 interface Item extends Body {
   rise: number;
@@ -404,7 +561,7 @@ interface State {
   phaseT: number;
   level: number;
   grid: string[][];
-  player: Body & { big: boolean; spray: boolean; star: number; face: 1 | -1; hurt: number; walk: number; jumpHeld: boolean; runHeld: boolean; sprayCool: number; coyote: number; buffer: number; combo: number };
+  player: Body & { big: boolean; spray: boolean; star: number; face: 1 | -1; hurt: number; walk: number; jumpHeld: boolean; runHeld: boolean; sprayCool: number; coyote: number; buffer: number; combo: number; crouch: boolean; shootHeld: boolean };
   /** clouds of Oud Noir, sprayed forward; they knock out whatever they touch */
   clouds: { x: number; y: number; vx: number; t: number }[];
   enemies: Enemy[];
@@ -441,12 +598,16 @@ const freshLevel = (s: State, index: number, respawn = false) => {
     if (s.save.gold[index][i]) s.grid[g.y][g.x] = "g";
   });
   const startX = s.checkpoint ? L.checkX * TILE + 2 : 2 * TILE;
-  s.player = { x: startX, y: 10 * TILE, w: 12, h: 14, vx: 0, vy: 0, ground: false, big: s.player?.big ?? false, spray: s.player?.spray ?? false, star: 0, face: 1, hurt: 0, walk: 0, jumpHeld: true, runHeld: false, sprayCool: 0, coyote: 0, buffer: 0, combo: 0 };
+  s.player = { x: startX, y: 10 * TILE, w: 12, h: 14, vx: 0, vy: 0, ground: false, big: s.player?.big ?? false, spray: s.player?.spray ?? false, star: 0, face: 1, hurt: 0, walk: 0, jumpHeld: true, runHeld: false, sprayCool: 0, coyote: 0, buffer: 0, combo: 0, crouch: false, shootHeld: false };
   if (s.player.big) {
     s.player.h = 24;
     s.player.y -= 10;
   }
-  s.enemies = L.enemies.map((e) => ({ x: e.x + 2, y: e.y + 2, w: 12, h: 14, vx: -28, vy: 0, ground: false, alive: true, squash: 0, flip: false }));
+  s.enemies = L.enemies.map((e) =>
+    e.fly
+      ? { x: e.x, y: e.y - 2, w: 14, h: 6, vx: -58, vy: 0, ground: false, alive: true, squash: 0, flip: false, fly: true }
+      : { x: e.x + 2, y: e.y + 2, w: 12, h: 14, vx: -28, vy: 0, ground: false, alive: true, squash: 0, flip: false, fly: false },
+  );
   s.items = [];
   s.clouds = [];
   s.fx = [];
@@ -480,7 +641,7 @@ export interface SuperShajithProps {
 const SuperShajith = ({ onWin }: SuperShajithProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const keys = useRef<Record<string, boolean>>({});
-  const touch = useRef({ left: false, right: false, jump: false, run: false });
+  const touch = useRef({ left: false, right: false, down: false, jump: false, run: false });
   // a jump press is latched until the next game step reads it, so even the quickest tap counts
   const jumpTap = useRef(false);
   const onWinRef = useRef(onWin);
@@ -499,7 +660,7 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
 
     const down = (e: KeyboardEvent) => {
       const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-      if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", " ", "Shift", "a", "d", "w", "s", "z", "x"].includes(k)) e.preventDefault();
+      if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", " ", "Shift", "a", "d", "w", "s", "z", "x", "b"].includes(k)) e.preventDefault();
       keys.current[k] = e.type === "keydown";
       if (e.type === "keydown" && !e.repeat && ["ArrowUp", "w", " ", "z"].includes(k)) jumpTap.current = true;
     };
@@ -514,7 +675,9 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
         right: !!(k.ArrowRight || k.d || t.right),
         jump: !!(k.ArrowUp || k.w || k[" "] || k.z || t.jump || jumpTap.current),
         run: !!(k.Shift || k.x || t.run),
-        down: !!(k.ArrowDown || k.s),
+        down: !!(k.ArrowDown || k.s || t.down),
+        // B shoots (sprays, with Oud Noir); on a phone the B button runs and shoots
+        shoot: !!(k.b || t.run),
       };
     };
 
@@ -524,7 +687,11 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
       if (ty < 0 || ty >= ROWS || tx >= s.grid[0].length) return " ";
       return s.grid[ty][tx];
     };
-    const solidAt = (s: State, px: number, py: number) => SOLID.has(tileAt(s, Math.floor(px / TILE), Math.floor(py / TILE)));
+    const solidAt = (s: State, px: number, py: number) => {
+      const t = tileAt(s, Math.floor(px / TILE), Math.floor(py / TILE));
+      if (t === "_") return ((py % TILE) + TILE) % TILE < BEAM;
+      return SOLID.has(t);
+    };
 
     /** move a body, sliding along tiles; returns the tile it hit with its head, if any */
     const move = (s: State, b: Body, dt: number) => {
@@ -559,7 +726,8 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
           const mid = b.x + b.w / 2;
           const tx = hitL && hitR ? Math.floor(mid / TILE) : Math.floor((hitL ? lx : rx) / TILE);
           head = { tx, ty: Math.floor(b.y / TILE) };
-          b.y = Math.floor(b.y / TILE + 1) * TILE;
+          // under a tunnel beam the ceiling is the beam's underside, not the tile's
+          b.y = Math.floor(b.y / TILE) * TILE + (tileAt(s, tx, head.ty) === "_" ? BEAM : TILE);
           b.vy = 40;
         }
       }
@@ -636,8 +804,10 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
         p.hurt = 1.6;
       } else if (p.big) {
         p.big = false;
-        p.y += 10;
-        p.h = 14;
+        if (!p.crouch) {
+          p.y += 10;
+          p.h = 14;
+        }
         p.hurt = 1.6;
       } else die(s);
     };
@@ -761,7 +931,23 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
 
       // running and jumping: snappy acceleration, more grip turning around, variable jump height
       const star = p.star > 0;
-      const max = (input.run ? 165 : 105) * (star ? 1.25 : 1);
+      // crouching: hold down on the ground to duck; you stay down until there's room to stand
+      const standH = p.big ? 24 : 14;
+      const roomToStand = () => {
+        const top = p.y + p.h - standH;
+        for (let y = top; y < p.y; y += 4) if (solidAt(s, p.x + 1, y) || solidAt(s, p.x + p.w - 1, y)) return false;
+        return !solidAt(s, p.x + 1, top) && !solidAt(s, p.x + p.w - 1, top);
+      };
+      if (input.down && p.ground && !p.crouch) {
+        p.crouch = true;
+        p.y += p.h - CROUCH_H;
+        p.h = CROUCH_H;
+      } else if (p.crouch && !input.down && roomToStand()) {
+        p.crouch = false;
+        p.y -= standH - p.h;
+        p.h = standH;
+      }
+      const max = p.crouch ? 45 : (input.run ? 165 : 105) * (star ? 1.25 : 1);
       const acc = p.ground ? 620 : 420;
       if (input.left && !input.right) {
         p.vx -= (p.vx > 0 ? acc * 1.8 : acc) * dt;
@@ -776,17 +962,18 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
       p.vx = Math.max(-max, Math.min(max, p.vx));
       p.coyote = p.ground ? 0.09 : Math.max(0, p.coyote - dt);
       p.buffer = input.jump && !p.jumpHeld ? 0.12 : Math.max(0, p.buffer - dt);
-      if (p.buffer > 0 && p.coyote > 0) {
+      if (p.buffer > 0 && p.coyote > 0 && !p.crouch) {
         p.vy = -(390 + Math.abs(p.vx) * 0.35) * (star ? 1.12 : 1);
         p.coyote = 0;
         p.buffer = 0;
       }
       p.jumpHeld = input.jump;
-      // Oud Noir: a press of B/Shift sprays a cloud forward
-      if (p.spray && input.run && !p.runHeld && p.sprayCool <= 0) {
-        s.clouds.push({ x: p.x + (p.face > 0 ? p.w : -6), y: p.y + 6, vx: p.face * 190 + p.vx * 0.5, t: 0.6 });
+      // Oud Noir: a press of B sprays a cloud forward
+      if (p.spray && input.shoot && !p.shootHeld && p.sprayCool <= 0) {
+        s.clouds.push({ x: p.x + (p.face > 0 ? p.w : -6), y: p.y + Math.min(6, p.h - 4), vx: p.face * 190 + p.vx * 0.5, t: 0.6 });
         p.sprayCool = 0.32;
       }
+      p.shootHeld = input.shoot;
       p.runHeld = input.run;
       p.sprayCool = Math.max(0, p.sprayCool - dt);
       if (p.star > 0) {
@@ -872,6 +1059,24 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
         }
         // asleep until they come close to the screen
         if (e.x > s.cam + VIEW_W + 32) continue;
+        if (e.fly) {
+          // paper planes glide straight on, and crumple against anything solid
+          e.x += e.vx * dt;
+          if (solidAt(s, e.x, e.y + 3) || e.x < -32) {
+            e.alive = false;
+            for (const [vx, vy] of [[-40, -120], [30, -150]]) s.fx.push({ kind: "bit", x: e.x + 4, y: e.y, vx, vy, t: 0.8 });
+            continue;
+          }
+          if (p.star > 0 && overlap(p, e)) knockOut(s, e, true);
+          else if (p.hurt <= 0 && overlap(p, e)) {
+            if (p.vy > 30 && p.y + p.h - e.y < 8) {
+              e.squash = 0.3;
+              p.vy = input.jump ? -380 : -240;
+              comboReward(s, e.x, e.y - 6);
+            } else hurt(s);
+          }
+          continue;
+        }
         // they turn around at the edge of a drop instead of walking off it
         if (e.ground) {
           const aheadX = e.vx > 0 ? e.x + e.w + 1 : e.x - 1;
@@ -899,7 +1104,7 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
         for (let j = i + 1; j < s.enemies.length; j++) {
           const a = s.enemies[i];
           const b = s.enemies[j];
-          if (a.alive && b.alive && !a.squash && !b.squash && overlap(a, b)) {
+          if (a.alive && b.alive && !a.fly && !b.fly && !a.squash && !b.squash && overlap(a, b)) {
             a.vx = -Math.abs(a.vx) * Math.sign(b.x - a.x || 1);
             b.vx = Math.abs(b.vx) * Math.sign(b.x - a.x || 1);
           }
@@ -938,8 +1143,10 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
           else {
             if (!p.big) {
               p.big = true;
-              p.y -= 10;
-              p.h = 24;
+              if (!p.crouch) {
+                p.y -= 10;
+                p.h = 24;
+              }
             }
             if (it.scent === "oud") p.spray = true;
           }
@@ -1007,6 +1214,7 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
 
     const drawLandmark = (s: State, th: Theme) => {
       // one big landmark that drifts by once per level
+      if (th.landmark === "none") return;
       const L = LEVELS[s.level];
       const x = L.flagX * TILE * 0.35 - s.cam * 0.35 + 90;
       if (x < -160 || x > VIEW_W + 40) return;
@@ -1078,6 +1286,17 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
         ctx.fillText("?", x + 5, y + 12);
         R(x + 1, y + 1, 1, 1, "#7a3a08");
         R(x + 14, y + 1, 1, 1, "#7a3a08");
+      } else if (c === "W") {
+        // a tunnel wall: dark lockers, too tall to jump
+        R(x, y, 16, 16, th.groundDark);
+        R(x + 1, y + 1, 14, 14, "rgba(255,255,255,0.06)");
+        R(x + 7, y + 1, 1, 14, "rgba(0,0,0,0.35)");
+        R(x + 3, y + 6, 2, 1, "rgba(255,255,255,0.3)");
+        R(x + 10, y + 6, 2, 1, "rgba(255,255,255,0.3)");
+      } else if (c === "_") {
+        // the low beam under the wall; the striped edge says "crouch"
+        R(x, y, 16, BEAM, th.groundDark);
+        for (let i = 0; i < 4; i++) R(x + i * 4 + (tx % 2) * 2, y + BEAM - 2, 2, 2, "#ffd23a");
       } else if (c === "U") {
         R(x, y, 16, 16, "#8a6a4a");
         R(x + 1, y + 1, 14, 14, "#9c7a56");
@@ -1165,8 +1384,10 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
       const legH = big ? 6 : 2;
       const stride = p.ground ? Math.sin(p.walk) : 0.6;
       ctx.save();
+      // crouching squashes him down to the physics box, feet planted
+      const standH = big ? 24 : 14;
       ctx.translate(x + 6, y);
-      ctx.scale(f, 1);
+      ctx.scale(f, p.h / standH);
       // hair and face
       R(-4, 0, 9, 3, "#141414");
       R(-4, 3, 8, headH - 3, "#b07a52");
@@ -1200,6 +1421,25 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
     const drawEnemy = (e: Enemy, s: State, th: Theme) => {
       const x = Math.round(e.x - s.cam);
       const y = Math.round(e.y);
+      if (e.fly) {
+        // a paper plane, nose first
+        ctx.save();
+        if (e.flip) {
+          ctx.translate(x + 7, y + 3);
+          ctx.scale(1, -1);
+          ctx.translate(-x - 7, -y - 3);
+        }
+        ctx.fillStyle = "#f6f3ea";
+        ctx.beginPath();
+        ctx.moveTo(x, y + 3);
+        ctx.lineTo(x + 14, y);
+        ctx.lineTo(x + 10, y + 6);
+        ctx.fill();
+        R(x + 4, y + 3, 9, 1, "#cfcabd");
+        if (!e.squash) R(x + 15 + Math.floor(time * 10) % 3, y + 2, 2, 1, "rgba(255,255,255,0.6)");
+        ctx.restore();
+        return;
+      }
       const squash = e.squash > 0;
       const h = squash ? 5 : 14;
       const top = y + (14 - h);
@@ -1237,6 +1477,19 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
           R(x + 3, top + 9, 6, 1, "#141414");
           R(x + 1 + step, top + 13, 4, 2, "#3a3a40");
           R(x + 7 - step, top + 13, 4, 2, "#3a3a40");
+        }
+      } else if (th.enemy === "clock") {
+        // a deadline: a red alarm clock with bells, hands spinning
+        R(x + 1, top + 2, 10, h - 2, "#d4202c");
+        if (!squash) {
+          R(x, top, 3, 3, "#ffd23a");
+          R(x + 9, top, 3, 3, "#ffd23a");
+          R(x + 3, top + 4, 6, 6, "#f4f0e6");
+          const hand = Math.floor(time * 8) % 4;
+          R(x + 6, top + 5, 1, 3, "#141414");
+          R(x + 6 + (hand === 1 ? 1 : hand === 3 ? -2 : 0), top + 7, 2, 1, "#141414");
+          R(x + 2 + step, top + 13, 3, 2, "#3a0a0a");
+          R(x + 7 - step, top + 13, 3, 2, "#3a0a0a");
         }
       } else {
         // a midterm: a fat purple textbook with fangs
@@ -1301,7 +1554,7 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
       ctx.fill();
       ctx.fillStyle = "#fff";
       ctx.font = "bold 6px monospace";
-      ctx.fillText(th.landmark === "uc" ? "W" : th.landmark === "city" ? "LYR" : "C", x - 10, fy + 8);
+      ctx.fillText(th.landmark === "uc" ? "W" : th.landmark === "city" ? "LYR" : th.landmark === "none" ? "SS" : "C", x - 10, fy + 8);
     };
 
     const text = (t: string, x: number, y: number, size: number, color = "#fff", align: CanvasTextAlign = "center") => {
@@ -1484,8 +1737,8 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
   return (
     <div className="text-center">
       <p className="mb-4 text-sm text-white/70">
-        <span className="[@media(pointer:coarse)]:hidden">Move with ← → or A/D, jump with Space, ↑ or W, run with Shift (and spray, once you've got Oud Noir). Progress saves on this device.</span>
-        <span className="hidden [@media(pointer:coarse)]:inline">Use the buttons below: move, B to run (and spray), A to jump.</span>
+        <span className="[@media(pointer:coarse)]:hidden">Move with ← → or A/D, jump with Space, ↑ or W, crouch with ↓ or S, run with Shift, and shoot with B (once you've got Oud Noir). Progress saves on this device.</span>
+        <span className="hidden [@media(pointer:coarse)]:inline">Use the buttons below: move, ▼ to crouch, B to run and shoot, A to jump.</span>
       </p>
       <div className="relative inline-block overflow-hidden rounded-lg border border-white/10">
         <canvas ref={canvasRef} width={VIEW_W} height={VIEW_H} className="block max-w-full [image-rendering:pixelated]" style={{ aspectRatio: `${VIEW_W}/${VIEW_H}`, width: 720 }} />
@@ -1494,6 +1747,7 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
       <div className="mx-auto mt-4 hidden max-w-sm items-center justify-between gap-3 [@media(pointer:coarse)]:flex">
         <div className="flex gap-2">
           {pad("left", "◀", "h-14 w-14")}
+          {pad("down", "▼", "h-14 w-12")}
           {pad("right", "▶", "h-14 w-14")}
         </div>
         <div className="flex gap-2">
