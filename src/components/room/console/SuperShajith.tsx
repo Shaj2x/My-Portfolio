@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import ssCoin from "@/assets/ss-coin.png";
 
 /*
- * Super Shajith: a side-scrolling platformer through Shajith's life, in the classic run-and-jump
+ * Super S: a side-scrolling platformer through Shajith's life, in the classic run-and-jump
  * format (original pixel art, drawn in code; no borrowed sprites).
  *
  *   1-1 The Grind       high school: dodge Pop Quizzes, collect A+ grades, graduate
@@ -1840,7 +1840,7 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
       const secs = (t: number | null) => (t === null ? "--" : `${t.toFixed(1)}s`);
       if (s.phase === "title") {
         text("SUPER", VIEW_W / 2, 58, 14, "#fcd99a");
-        text("SHAJITH", VIEW_W / 2, 88, 30, "#ffffff");
+        text("S", VIEW_W / 2, 92, 40, "#ffffff");
         const found = goldCount(s.save);
         if (found) text(`Gold SS coins ${found}/${goldTotal}`, VIEW_W / 2, 112, 8, "#f2c14e");
         if (hasProgress(s.save)) {
