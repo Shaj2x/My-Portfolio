@@ -16,7 +16,9 @@ import ssCoin from "@/assets/ss-coin.png";
  * Stomp enemies from above, don't fall in the gaps, and touch the flag. Keyboard, touch buttons, or a controller
  * (the console maps its D-pad to arrow keys and ✕ to Space).
  *
- * Hold down to crouch: squeeze through the low tunnels and duck the paper planes.
+ * Hold down to crouch: squeeze through the low tunnels and duck the paper planes. Press down in
+ * the air to ground pound: a slam that flattens what's under you, knocks out enemies nearby,
+ * opens ? blocks from above, smashes bricks when big, and turns a spring into a super launch.
  * Worlds 2-1 to 2-3 build on all of it: tunnels, planes, springs and longer gaps.
  *
  * Extras: stomp combos (chain stomps without landing for more points, then extra lives), springs,
@@ -561,7 +563,7 @@ interface State {
   phaseT: number;
   level: number;
   grid: string[][];
-  player: Body & { big: boolean; spray: boolean; star: number; face: 1 | -1; hurt: number; walk: number; jumpHeld: boolean; runHeld: boolean; sprayCool: number; coyote: number; buffer: number; combo: number; crouch: boolean; shootHeld: boolean };
+  player: Body & { big: boolean; spray: boolean; star: number; face: 1 | -1; hurt: number; walk: number; jumpHeld: boolean; runHeld: boolean; sprayCool: number; coyote: number; buffer: number; combo: number; crouch: boolean; shootHeld: boolean; pound: boolean; poundHang: number; downHeld: boolean };
   /** clouds of Oud Noir, sprayed forward; they knock out whatever they touch */
   clouds: { x: number; y: number; vx: number; t: number }[];
   enemies: Enemy[];
@@ -573,6 +575,8 @@ interface State {
   score: number;
   lives: number;
   flagSlide: number;
+  /** a moment of screen shake after a ground pound */
+  shake: number;
   checkpoint: boolean;
   /** seconds spent in this world (it keeps counting through lost lives) */
   time: number;
@@ -598,7 +602,7 @@ const freshLevel = (s: State, index: number, respawn = false) => {
     if (s.save.gold[index][i]) s.grid[g.y][g.x] = "g";
   });
   const startX = s.checkpoint ? L.checkX * TILE + 2 : 2 * TILE;
-  s.player = { x: startX, y: 10 * TILE, w: 12, h: 14, vx: 0, vy: 0, ground: false, big: s.player?.big ?? false, spray: s.player?.spray ?? false, star: 0, face: 1, hurt: 0, walk: 0, jumpHeld: true, runHeld: false, sprayCool: 0, coyote: 0, buffer: 0, combo: 0, crouch: false, shootHeld: false };
+  s.player = { x: startX, y: 10 * TILE, w: 12, h: 14, vx: 0, vy: 0, ground: false, big: s.player?.big ?? false, spray: s.player?.spray ?? false, star: 0, face: 1, hurt: 0, walk: 0, jumpHeld: true, runHeld: false, sprayCool: 0, coyote: 0, buffer: 0, combo: 0, crouch: false, shootHeld: false, pound: false, poundHang: 0, downHeld: true };
   if (s.player.big) {
     s.player.h = 24;
     s.player.y -= 10;
@@ -614,6 +618,7 @@ const freshLevel = (s: State, index: number, respawn = false) => {
   s.bumps = [];
   s.cam = Math.max(0, startX - VIEW_W * 0.3);
   s.flagSlide = 0;
+  s.shake = 0;
   s.record = false;
 };
 
@@ -789,6 +794,33 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
       if (combo) comboReward(s, e.x, e.y - 6);
       else addScore(s, 200, e.x, e.y - 6);
     };
+    /** the slam at the end of a ground pound */
+    const landPound = (s: State) => {
+      const p = s.player;
+      const ty = Math.floor((p.y + p.h + 1) / TILE);
+      let broke = false;
+      for (const tx of new Set([Math.floor((p.x + 1) / TILE), Math.floor((p.x + p.w - 1) / TILE)])) {
+        const t = tileAt(s, tx, ty);
+        if (t === "?" || SCENT_OF[t]) bump(s, tx, ty);
+        else if (t === "B") {
+          bump(s, tx, ty);
+          if (p.big) broke = true;
+        }
+      }
+      // big enough to smash the bricks underfoot: keep on falling through
+      if (broke) {
+        p.ground = false;
+        return;
+      }
+      p.pound = false;
+      s.shake = 0.22;
+      const feet = p.y + p.h;
+      const cx = p.x + p.w / 2;
+      for (const [vx, vy] of [[-90, -140], [-50, -200], [50, -200], [90, -140]]) s.fx.push({ kind: "mist", x: cx, y: feet - 2, vx, vy, t: 0.5, text: "dust" });
+      // the shockwave knocks out walkers standing nearby on the same floor
+      for (const e of s.enemies)
+        if (e.alive && !e.fly && !e.squash && Math.abs(e.x + e.w / 2 - cx) < 48 && Math.abs(e.y + e.h - feet) < 6) knockOut(s, e, true);
+    };
     const mistPuff = (s: State, x: number, y: number, n: number, scent: Scent) => {
       for (let i = 0; i < n; i++) {
         const a = (i / n) * Math.PI * 2;
@@ -947,9 +979,18 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
         p.y -= standH - p.h;
         p.h = standH;
       }
+      // ground pound: press down in the air to stop for a beat, then slam straight down
+      if (input.down && !p.downHeld && !p.ground && !p.pound && !p.crouch) {
+        p.pound = true;
+        p.poundHang = 0.16;
+        p.vx = 0;
+        p.vy = 0;
+      }
+      p.downHeld = input.down;
       const max = p.crouch ? 45 : (input.run ? 165 : 105) * (star ? 1.25 : 1);
       const acc = p.ground ? 620 : 420;
-      if (input.left && !input.right) {
+      if (p.pound) p.vx = 0;
+      else if (input.left && !input.right) {
         p.vx -= (p.vx > 0 ? acc * 1.8 : acc) * dt;
         p.face = -1;
       } else if (input.right && !input.left) {
@@ -962,7 +1003,7 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
       p.vx = Math.max(-max, Math.min(max, p.vx));
       p.coyote = p.ground ? 0.09 : Math.max(0, p.coyote - dt);
       p.buffer = input.jump && !p.jumpHeld ? 0.12 : Math.max(0, p.buffer - dt);
-      if (p.buffer > 0 && p.coyote > 0 && !p.crouch) {
+      if (p.buffer > 0 && p.coyote > 0 && !p.crouch && !p.pound) {
         p.vy = -(390 + Math.abs(p.vx) * 0.35) * (star ? 1.12 : 1);
         p.coyote = 0;
         p.buffer = 0;
@@ -980,9 +1021,16 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
         p.star -= dt;
         if (Math.random() < 0.5) s.fx.push({ kind: "mist", x: p.x + Math.random() * p.w, y: p.y + Math.random() * p.h, vx: 0, vy: -20, t: 0.5, text: "citrus" });
       }
-      const rising = p.vy < 0;
-      p.vy += (rising && input.jump ? 820 : 1600) * dt;
-      p.vy = Math.min(p.vy, 430);
+      if (p.pound) {
+        if (p.poundHang > 0) {
+          p.poundHang -= dt;
+          p.vy = 0;
+        } else p.vy = 560;
+      } else {
+        const rising = p.vy < 0;
+        p.vy += (rising && input.jump ? 820 : 1600) * dt;
+        p.vy = Math.min(p.vy, 430);
+      }
       const head = move(s, p, dt);
       if (head) bump(s, head.tx, head.ty);
       // a spring underfoot launches you; hold jump to go higher
@@ -990,12 +1038,15 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
         const sx = Math.floor((p.x + p.w / 2) / TILE);
         const sy = Math.floor((p.y + p.h + 1) / TILE);
         if (tileAt(s, sx, sy) === "S") {
-          p.vy = input.jump ? -540 : -420;
+          // a ground pound onto a spring is the biggest launch there is
+          p.vy = p.pound ? -560 : input.jump ? -540 : -420;
           p.ground = false;
           p.coyote = 0;
+          p.pound = false;
           s.bumps.push({ x: sx, y: sy, t: 0.2 });
         }
       }
+      if (p.pound && p.ground) landPound(s);
       if (p.ground && Math.abs(p.vx) > 5) p.walk += dt * (6 + Math.abs(p.vx) * 0.06);
       if (p.hurt > 0) p.hurt -= dt;
       // the start of the level is a wall
@@ -1071,7 +1122,7 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
           else if (p.hurt <= 0 && overlap(p, e)) {
             if (p.vy > 30 && p.y + p.h - e.y < 8) {
               e.squash = 0.3;
-              p.vy = input.jump ? -380 : -240;
+              if (!p.pound) p.vy = input.jump ? -380 : -240;
               comboReward(s, e.x, e.y - 6);
             } else hurt(s);
           }
@@ -1094,7 +1145,7 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
         if (p.hurt <= 0 && overlap(p, e)) {
           if (p.vy > 30 && p.y + p.h - e.y < 10) {
             e.squash = 0.45;
-            p.vy = input.jump ? -380 : -240;
+            if (!p.pound) p.vy = input.jump ? -380 : -240;
             comboReward(s, e.x, e.y - 6);
           } else hurt(s);
         }
@@ -1294,7 +1345,8 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
         R(x + 3, y + 6, 2, 1, "rgba(255,255,255,0.3)");
         R(x + 10, y + 6, 2, 1, "rgba(255,255,255,0.3)");
       } else if (c === "_") {
-        // the low beam under the wall; the striped edge says "crouch"
+        // the low beam under the wall, with the dark crawl space beneath it; the striped edge says "crouch"
+        R(x, y + BEAM, 16, 16 - BEAM, "rgba(0,0,0,0.45)");
         R(x, y, 16, BEAM, th.groundDark);
         for (let i = 0; i < 4; i++) R(x + i * 4 + (tx % 2) * 2, y + BEAM - 2, 2, 2, "#ffd23a");
       } else if (c === "U") {
@@ -1383,6 +1435,7 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
       const bodyH = big ? 9 : 3;
       const legH = big ? 6 : 2;
       const stride = p.ground ? Math.sin(p.walk) : 0.6;
+      if (p.pound && p.poundHang <= 0) for (let i = 0; i < 3; i++) R(x + 1 + i * 4, y - 10 - ((i * 5 + Math.floor(time * 60)) % 6), 1, 6, "rgba(255,255,255,0.7)");
       ctx.save();
       // crouching squashes him down to the physics box, feet planted
       const standH = big ? 24 : 14;
@@ -1525,6 +1578,32 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
       if (g < 3) R(x + 1 + g, y + 5, 1, 2, "rgba(255,255,255,0.85)");
     };
 
+    /** a hazard sign on each tunnel's mouth: "duck", with an arrow pointing at the gap */
+    const drawTunnelSigns = (s: State) => {
+      const row = s.grid[11];
+      for (let tx = Math.max(1, Math.floor(s.cam / TILE) - 1); tx <= Math.floor((s.cam + VIEW_W) / TILE) + 1 && tx < row.length; tx++) {
+        if (row[tx] !== "_" || row[tx - 1] === "_") continue;
+        const x = tx * TILE - s.cam;
+        const y = 8 * TILE + 4;
+        R(x - 2, y, 22, 24, "#ffd23a");
+        R(x - 1, y + 1, 20, 22, "#1c1c1c");
+        R(x, y + 2, 18, 20, "#ffd23a");
+        ctx.fillStyle = "#1c1c1c";
+        ctx.font = "bold 6px monospace";
+        ctx.textAlign = "center";
+        ctx.fillText("DUCK", x + 9, y + 9);
+        ctx.textAlign = "left";
+        // a bobbing arrow down at the gap
+        const bob = Math.floor(time * 3) % 2;
+        R(x + 8, y + 11 + bob, 2, 5, "#1c1c1c");
+        ctx.beginPath();
+        ctx.moveTo(x + 5, y + 15 + bob);
+        ctx.lineTo(x + 13, y + 15 + bob);
+        ctx.lineTo(x + 9, y + 20 + bob);
+        ctx.fill();
+      }
+    };
+
     /** the checkpoint: a short pole whose flag runs up (and turns gold) once you pass */
     const drawCheckpoint = (s: State) => {
       const L = LEVELS[s.level];
@@ -1621,6 +1700,8 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
     const draw = (s: State) => {
       const L = LEVELS[s.level];
       const th = L.theme;
+      ctx.save();
+      if (s.shake > 0) ctx.translate(Math.round((Math.random() - 0.5) * 6 * (s.shake / 0.22)), Math.round((Math.random() - 0.5) * 4 * (s.shake / 0.22)));
       drawBackground(s);
       const c0 = Math.floor(s.cam / TILE);
       for (let ty = 0; ty < ROWS; ty++)
@@ -1630,6 +1711,7 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
         }
       drawFlag(s, th);
       drawCheckpoint(s);
+      drawTunnelSigns(s);
       for (const it of s.items) drawBottle(it, s);
       for (const c of s.clouds) {
         const k = c.t / 0.6;
@@ -1648,7 +1730,7 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
         if (f.kind === "coin") drawCoin(x, f.y, th, time * 3);
         else if (f.kind === "mist") {
           const k = Math.max(0, f.t / 0.9);
-          ctx.fillStyle = f.text === "gold" ? `rgba(255,214,110,${0.7 * k})` : `rgba(${SCENTS[(f.text as Scent) ?? "breeze"].mist},${0.55 * k})`;
+          ctx.fillStyle = f.text === "gold" ? `rgba(255,214,110,${0.7 * k})` : f.text === "dust" ? `rgba(220,210,190,${0.7 * k})` : `rgba(${SCENTS[(f.text as Scent) ?? "breeze"].mist},${0.55 * k})`;
           ctx.beginPath();
           ctx.arc(x, f.y, 2 + (1 - k) * 5, 0, Math.PI * 2);
           ctx.fill();
@@ -1656,6 +1738,7 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
         else if (f.kind === "bit") R(x, f.y, 5, 5, th.brick);
         else text(f.text ?? "", x, f.y, 7, "#fff");
       }
+      ctx.restore();
       // HUD
       if (s.phase !== "title") {
         text("SHAJITH", 10, 14, 8, "#fff", "left");
@@ -1689,6 +1772,7 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
       s.fx = s.fx.filter((f) => f.t > 0);
       for (const b of s.bumps) b.t -= dt;
       s.bumps = s.bumps.filter((b) => b.t > 0);
+      s.shake = Math.max(0, s.shake - dt);
     };
 
     const loop = (now: number) => {
@@ -1737,8 +1821,8 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
   return (
     <div className="text-center">
       <p className="mb-4 text-sm text-white/70">
-        <span className="[@media(pointer:coarse)]:hidden">Move with ← → or A/D, jump with Space, ↑ or W, crouch with ↓ or S, run with Shift, and shoot with B (once you've got Oud Noir). Progress saves on this device.</span>
-        <span className="hidden [@media(pointer:coarse)]:inline">Use the buttons below: move, ▼ to crouch, B to run and shoot, A to jump.</span>
+        <span className="[@media(pointer:coarse)]:hidden">Move with ← → or A/D, jump with Space, ↑ or W, crouch with ↓ or S (in the air, ↓ ground pounds), run with Shift, and shoot with B (once you've got Oud Noir). Progress saves on this device.</span>
+        <span className="hidden [@media(pointer:coarse)]:inline">Use the buttons below: move, ▼ to crouch (or ground pound in the air), B to run and shoot, A to jump.</span>
       </p>
       <div className="relative inline-block overflow-hidden rounded-lg border border-white/10">
         <canvas ref={canvasRef} width={VIEW_W} height={VIEW_H} className="block max-w-full [image-rendering:pixelated]" style={{ aspectRatio: `${VIEW_W}/${VIEW_H}`, width: 720 }} />
