@@ -25,7 +25,7 @@ interface Game {
 }
 
 const GAMES: Game[] = [
-  { id: "super", title: "Super S", blurb: "A platformer through the grind, the hustle and the next level. Collect SS coins, hunt the hidden gold ones, spray on one of six random fragrances for a power-up. Crouch through tunnels and ground pound across nine worlds. Progress saves on this device. Arrows, Space to jump, B to shoot, or the buttons on a phone.", icon: Crown, art: ["#e8a33a", "#2a1306"] },
+  { id: "super", title: "Super S", blurb: "A platformer through the grind, the hustle and the next level. Collect SS coins, hunt the hidden gold ones, spray on one of seven random fragrances for a power-up. Crouch through tunnels and ground pound across nine worlds. Progress saves on this device. Arrows, Space to jump, B to shoot, or the buttons on a phone.", icon: Crown, art: ["#e8a33a", "#2a1306"] },
   { id: "pong", title: "Pong", blurb: "First to 5 against the CPU. Move with W/S, the arrow keys, the D-pad, or drag on the board.", icon: Gamepad2, art: ["#d4202c", "#2a0507"] },
   { id: "snake", title: "Snake", blurb: "Eat the SS logo to grow. Steer with WASD, the arrow keys, the D-pad, or a swipe.", icon: Gamepad2, art: ["#1f9d55", "#03200f"] },
   { id: "slots", title: "Raptors Slot Machine", blurb: "A Toronto Raptors slot machine. Opens in a new tab.", icon: Trophy, art: ["#ce1141", "#1a0207"], site: demoLinks["Raptors-Slot-Machine"] },

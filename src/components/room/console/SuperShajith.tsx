@@ -15,6 +15,7 @@ import ssCoin from "@/assets/ss-coin.png";
  *   Aqua Mist    (teal)   big, and a second jump in mid-air
  *   Velvet Rose  (pink)   big, and coins nearby fly to you
  *   Midnight Smoke (violet) big, and hold jump while falling to glide
+ *   Titan        (deep red, rare) eight seconds as a giant: smash blocks and trees, flatten everything
  * Which fragrance a block holds is random, and now and then a plain ? block hides one too. Picking
  * one up plays a quick spritz: he sprays it on before carrying on.
  *   Citrus Rush  (orange) nine seconds unstoppable: faster, higher, enemies fall at a touch
@@ -658,14 +659,14 @@ const goldCount = (save: Save) => save.gold.flat().filter(Boolean).length;
 const goldTotal = LEVELS.reduce((n, L) => n + L.golds.length, 0);
 
 // ---------- fragrances ----------
-type Scent = "breeze" | "oud" | "citrus" | "aqua" | "rose" | "smoke";
+type Scent = "breeze" | "oud" | "citrus" | "aqua" | "rose" | "smoke" | "titan";
 /** the fragrances you carry (their power lasts until you're hit); Breeze just makes you big, Citrus is a timed rush */
 type Held = "oud" | "aqua" | "rose" | "smoke";
 const HELD: unknown[] = ["oud", "aqua", "rose", "smoke"];
 /** fragrance blocks in the level layouts; which fragrance comes out is decided when it's hit */
 const SCENT_OF: Record<string, true> = { M: true, N: true, O: true };
 /** how often each fragrance turns up */
-const SCENT_ODDS: [Scent, number][] = [["breeze", 2], ["oud", 1.4], ["citrus", 1], ["aqua", 1.4], ["rose", 1.4], ["smoke", 1.4]];
+const SCENT_ODDS: [Scent, number][] = [["breeze", 2], ["oud", 1.4], ["citrus", 1], ["aqua", 1.4], ["rose", 1.4], ["smoke", 1.4], ["titan", 0.8]];
 const randomScent = (): Scent => {
   let r = Math.random() * SCENT_ODDS.reduce((n, [, w]) => n + w, 0);
   for (const [scent, w] of SCENT_ODDS) if ((r -= w) <= 0) return scent;
@@ -674,12 +675,19 @@ const randomScent = (): Scent => {
 /** a plain ? block hides a fragrance this often */
 const SURPRISE = 0.12;
 const SPRITZ_TIME = 0.75;
+/** Titan: how long you stay giant, and how big you get */
+const GIANT_TIME = 8;
+const GIANT_W = 22;
+const GIANT_H = 44;
+/** what a giant breaks just by walking into it */
+const SMASHABLE = new Set(["B", "?", "M", "N", "O", "U", "W", "_"]);
 const SCENTS: Record<Scent, { name: string; hint: string; glass: string; liquid: string; cap: string; mist: string }> = {
   breeze: { name: "BREEZE", hint: "+1 hit", glass: "#cfe6ff", liquid: "#7fb8ff", cap: "#f4f4f4", mist: "200,225,255" },
   oud: { name: "OUD NOIR", hint: "B to spray", glass: "#2a2a30", liquid: "#141418", cap: "#e0b44a", mist: "230,200,140" },
   citrus: { name: "CITRUS RUSH", hint: "unstoppable!", glass: "#ffc27a", liquid: "#ff8a1e", cap: "#5fbf4a", mist: "255,200,120" },
   aqua: { name: "AQUA MIST", hint: "double jump", glass: "#bff3f0", liquid: "#2ec4b6", cap: "#e6f7f7", mist: "160,240,235" },
   rose: { name: "VELVET ROSE", hint: "coin magnet", glass: "#ffd0dc", liquid: "#e0426a", cap: "#c9a24a", mist: "255,170,190" },
+  titan: { name: "TITAN", hint: "giant size!", glass: "#c03030", liquid: "#6a0a0a", cap: "#e0c050", mist: "255,150,140" },
   smoke: { name: "MIDNIGHT SMOKE", hint: "hold jump to glide", glass: "#4a3a6a", liquid: "#2a1a44", cap: "#bfc3d0", mist: "190,170,230" },
 };
 const STAR_TIME = 9;
@@ -725,7 +733,7 @@ interface State {
   phaseT: number;
   level: number;
   grid: string[][];
-  player: Body & { big: boolean; held: Held | null; airJump: boolean; star: number; face: 1 | -1; hurt: number; walk: number; jumpHeld: boolean; runHeld: boolean; sprayCool: number; coyote: number; buffer: number; combo: number; crouch: boolean; shootHeld: boolean; pound: boolean; poundHang: number; downHeld: boolean };
+  player: Body & { big: boolean; held: Held | null; airJump: boolean; star: number; giant: number; face: 1 | -1; hurt: number; walk: number; jumpHeld: boolean; runHeld: boolean; sprayCool: number; coyote: number; buffer: number; combo: number; crouch: boolean; shootHeld: boolean; pound: boolean; poundHang: number; downHeld: boolean };
   /** the spritz after picking up a fragrance: the world pauses while he sprays it on */
   spritz: { t: number; scent: Scent } | null;
   /** coins pulled in by Velvet Rose, flying to him */
@@ -768,7 +776,7 @@ const freshLevel = (s: State, index: number, respawn = false) => {
     if (s.save.gold[index][i]) s.grid[g.y][g.x] = "g";
   });
   const startX = s.checkpoint ? L.checkX * TILE + 2 : 2 * TILE;
-  s.player = { x: startX, y: 10 * TILE, w: 12, h: 14, vx: 0, vy: 0, ground: false, big: s.player?.big ?? false, held: s.player?.held ?? null, airJump: false, star: 0, face: 1, hurt: 0, walk: 0, jumpHeld: true, runHeld: false, sprayCool: 0, coyote: 0, buffer: 0, combo: 0, crouch: false, shootHeld: false, pound: false, poundHang: 0, downHeld: true };
+  s.player = { x: startX, y: 10 * TILE, w: 12, h: 14, vx: 0, vy: 0, ground: false, big: s.player?.big ?? false, held: s.player?.held ?? null, airJump: false, star: 0, giant: 0, face: 1, hurt: 0, walk: 0, jumpHeld: true, runHeld: false, sprayCool: 0, coyote: 0, buffer: 0, combo: 0, crouch: false, shootHeld: false, pound: false, poundHang: 0, downHeld: true };
   if (s.player.big) {
     s.player.h = 24;
     s.player.y -= 10;
@@ -869,14 +877,24 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
     /** move a body, sliding along tiles; returns the tile it hit with its head, if any */
     const move = (s: State, b: Body, dt: number) => {
       let head: { tx: number; ty: number } | null = null;
+      // check down the whole side (and across the whole top or bottom) every 12px or less, so even a
+      // giant can't slip past a single tile
+      const side = (px: number) => {
+        for (let yy = b.y + 1; yy < b.y + b.h - 1; yy += 12) if (solidAt(s, px, yy)) return true;
+        return solidAt(s, px, b.y + b.h - 1);
+      };
+      const across = (py: number) => {
+        for (let xx = b.x + 1; xx < b.x + b.w - 1; xx += 12) if (solidAt(s, xx, py)) return true;
+        return solidAt(s, b.x + b.w - 1, py);
+      };
       b.x += b.vx * dt;
       if (b.vx > 0) {
-        if (solidAt(s, b.x + b.w, b.y + 1) || solidAt(s, b.x + b.w, b.y + b.h - 1) || (b.h > 16 && solidAt(s, b.x + b.w, b.y + b.h / 2))) {
+        if (side(b.x + b.w)) {
           b.x = Math.floor((b.x + b.w) / TILE) * TILE - b.w - 0.01;
           b.vx = 0;
         }
       } else if (b.vx < 0) {
-        if (solidAt(s, b.x, b.y + 1) || solidAt(s, b.x, b.y + b.h - 1) || (b.h > 16 && solidAt(s, b.x, b.y + b.h / 2))) {
+        if (side(b.x)) {
           b.x = Math.floor(b.x / TILE + 1) * TILE + 0.01;
           b.vx = 0;
         }
@@ -884,7 +902,7 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
       b.y += b.vy * dt;
       b.ground = false;
       if (b.vy >= 0) {
-        if (solidAt(s, b.x + 1, b.y + b.h) || solidAt(s, b.x + b.w - 1, b.y + b.h)) {
+        if (across(b.y + b.h)) {
           b.y = Math.floor((b.y + b.h) / TILE) * TILE - b.h;
           b.vy = 0;
           b.ground = true;
@@ -894,7 +912,7 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
         const rx = b.x + b.w - 2;
         const hitL = solidAt(s, lx, b.y);
         const hitR = solidAt(s, rx, b.y);
-        if (hitL || hitR) {
+        if (hitL || hitR || (b.w > 16 && across(b.y))) {
           // bump the tile nearest the middle of the head
           const mid = b.x + b.w / 2;
           const tx = hitL && hitR ? Math.floor(mid / TILE) : Math.floor((hitL ? lx : rx) / TILE);
@@ -963,6 +981,56 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
       if (combo) comboReward(s, e.x, e.y - 6);
       else addScore(s, 200, e.x, e.y - 6);
     };
+    /** Titan: grow into a giant, feet where they were */
+    const grow = (s: State) => {
+      const p = s.player;
+      if (p.crouch) p.crouch = false;
+      p.big = true;
+      p.giant = GIANT_TIME;
+      p.x -= (GIANT_W - p.w) / 2;
+      p.y -= GIANT_H - p.h;
+      p.w = GIANT_W;
+      p.h = GIANT_H;
+      s.shake = 0.3;
+      smash(s, 0);
+    };
+    const shrink = (s: State) => {
+      const p = s.player;
+      p.giant = 0;
+      p.x += (p.w - 12) / 2;
+      p.y += p.h - 24;
+      p.w = 12;
+      p.h = 24;
+      p.hurt = 1; // a moment to get your bearings
+    };
+    /** a giant breaks whatever breakable thing it walks or jumps into; a tree comes down whole */
+    const smash = (s: State, reach: number) => {
+      const p = s.player;
+      const x0 = Math.floor((p.x - 2 + Math.min(0, reach)) / TILE);
+      const x1 = Math.floor((p.x + p.w + 2 + Math.max(0, reach)) / TILE);
+      const y0 = Math.floor((p.y - 2) / TILE);
+      const y1 = Math.floor((p.y + p.h - 2) / TILE);
+      for (let ty = y0; ty <= y1; ty++)
+        for (let tx = x0; tx <= x1; tx++) {
+          const t = tileAt(s, tx, ty);
+          if (!SMASHABLE.has(t)) continue;
+          if (t === "W" || t === "_") {
+            for (let yy = 0; yy <= 11; yy++)
+              if (s.grid[yy][tx] === "W" || s.grid[yy][tx] === "_") {
+                s.grid[yy][tx] = " ";
+                if (yy % 3 === 0) s.fx.push({ kind: "bit", x: tx * TILE + 8, y: yy * TILE + 8, vx: (Math.random() - 0.5) * 160, vy: -120 - Math.random() * 120, t: 1.2 });
+              }
+            s.score += 100;
+            s.shake = Math.max(s.shake, 0.15);
+            continue;
+          }
+          s.grid[ty][tx] = " ";
+          s.score += 50;
+          if (t === "?" || SCENT_OF[t]) getCoin(s, tx * TILE + 4, ty * TILE - 8, true);
+          for (const [vx, vy] of [[-70, -240], [70, -240]]) s.fx.push({ kind: "bit", x: tx * TILE + 8, y: ty * TILE + 8, vx, vy, t: 1.1 });
+        }
+    };
+
     /** the slam at the end of a ground pound */
     const landPound = (s: State) => {
       const p = s.player;
@@ -999,7 +1067,7 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
 
     const hurt = (s: State) => {
       const p = s.player;
-      if (p.hurt > 0 || p.star > 0 || s.phase !== "play") return;
+      if (p.hurt > 0 || p.star > 0 || p.giant > 0 || s.phase !== "play") return;
       if (p.held) {
         p.held = null;
         p.hurt = 1.6;
@@ -1121,6 +1189,7 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
           s.fx.push({ kind: "score", x: p.x - 10, y: p.y - 12, vx: 0, vy: -26, t: 1.6, text: `${info.name}: ${info.hint}` });
           mistPuff(s, p.x + p.w / 2, p.y + p.h / 2, 16, sp.scent);
           s.spritz = null;
+          if (sp.scent === "titan") grow(s);
         }
         return;
       }
@@ -1156,7 +1225,7 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
         for (let y = top; y < p.y; y += 4) if (solidAt(s, p.x + 1, y) || solidAt(s, p.x + p.w - 1, y)) return false;
         return !solidAt(s, p.x + 1, top) && !solidAt(s, p.x + p.w - 1, top);
       };
-      if (input.down && p.ground && !p.crouch) {
+      if (input.down && p.ground && !p.crouch && p.giant <= 0) {
         p.crouch = true;
         p.y += p.h - CROUCH_H;
         p.h = CROUCH_H;
@@ -1210,6 +1279,11 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
       p.shootHeld = input.shoot;
       p.runHeld = input.run;
       p.sprayCool = Math.max(0, p.sprayCool - dt);
+      if (p.giant > 0) {
+        p.giant -= dt;
+        smash(s, p.vx * dt * 2);
+        if (p.giant <= 0) shrink(s);
+      }
       if (p.star > 0) {
         p.star -= dt;
         if (Math.random() < 0.5) s.fx.push({ kind: "mist", x: p.x + Math.random() * p.w, y: p.y + Math.random() * p.h, vx: 0, vy: -20, t: 0.5, text: "citrus" });
@@ -1229,8 +1303,11 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
         p.vy += (rising && input.jump ? 820 : 1600) * dt;
         p.vy = Math.min(p.vy, 430);
       }
+      const falling = p.vy;
       const head = move(s, p, dt);
       if (head) bump(s, head.tx, head.ty);
+      // a giant lands with a thud
+      if (p.giant > 0 && p.ground && falling > 260) s.shake = Math.max(s.shake, 0.18);
       // a spring underfoot launches you; hold jump to go higher
       if (p.ground) {
         const sx = Math.floor((p.x + p.w / 2) / TILE);
@@ -1316,7 +1393,7 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
             for (const [vx, vy] of [[-40, -120], [30, -150]]) s.fx.push({ kind: "bit", x: e.x + 4, y: e.y, vx, vy, t: 0.8 });
             continue;
           }
-          if (p.star > 0 && overlap(p, e)) knockOut(s, e, true);
+          if ((p.star > 0 || p.giant > 0) && overlap(p, e)) knockOut(s, e, true);
           else if (p.hurt <= 0 && overlap(p, e)) {
             if (p.vy > 30 && p.y + p.h - e.y < 8) {
               e.squash = 0.3;
@@ -1336,7 +1413,7 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
         move(s, e, dt);
         if (e.vx === 0) e.vx = -before;
         if (e.y > VIEW_H + 32) e.alive = false;
-        if (p.star > 0 && overlap(p, e)) {
+        if ((p.star > 0 || p.giant > 0) && overlap(p, e)) {
           knockOut(s, e, true);
           continue;
         }
@@ -1387,7 +1464,9 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
           s.score += 1000;
           s.spritz = { t: SPRITZ_TIME, scent: it.scent };
           if (it.scent === "citrus") p.star = STAR_TIME;
-          else {
+          else if (it.scent === "titan") {
+            // growing happens once the spritz is done
+          } else {
             if (!p.big) {
               p.big = true;
               if (!p.crouch) {
@@ -1674,8 +1753,10 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
       ctx.save();
       // crouching squashes him down to the physics box, feet planted
       const standH = big ? 24 : 14;
-      ctx.translate(x + 6, y);
-      ctx.scale(f, p.h / standH);
+      const wide = p.giant > 0 ? p.w / 12 : 1;
+      if (p.giant > 0 && p.giant < 1.5 && Math.floor(time * 12) % 2 === 0) ctx.globalAlpha = 0.6;
+      ctx.translate(x + p.w / 2, y);
+      ctx.scale(f * wide, p.h / standH);
       // hair and face
       R(-4, 0, 9, 3, "#141414");
       R(-4, 3, 8, headH - 3, "#b07a52");
