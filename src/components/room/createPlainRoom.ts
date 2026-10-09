@@ -895,21 +895,11 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     l.shadow.needsUpdate = true;
   }
   let shadowsDirty = true;
-  // Every light costs work on every pixel even at zero brightness, so a light that is dark (a lamp
-  // switched off, the moon behind a closed blind, a blown-out candle) is taken out of the scene
-  // until it comes back on. The first switch of each kind compiles a shader variant once; after
-  // that it's free.
-  let dimmable: THREE.Light[] | null = null;
-  const cullDarkLights = () => {
-    if (!dimmable) {
-      dimmable = [];
-      scene.traverse((o) => {
-        const l = o as THREE.Light;
-        if (l.isLight && !(l as THREE.HemisphereLight).isHemisphereLight && !(l as THREE.RectAreaLight).isRectAreaLight) dimmable!.push(l);
-      });
-    }
-    for (const l of dimmable) l.visible = l.intensity > 0.001;
-  };
+  // Lights stay in the scene even when they're dark (at zero brightness). Taking a dark light out
+  // changes how many lights the room has, and three.js then has to rebuild the shader of every
+  // material in the room, which froze the page for a moment each time a lamp was switched. With the
+  // count fixed, the shaders are built once, while the loading screen is up, and switching any
+  // light on or off afterwards is only a change of brightness.
   const updateShadows = () => {
     for (const l of shadowLights) {
       const lit = l.intensity > 0.001;
@@ -2177,7 +2167,6 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     const behindConsole = mode === "console" && !tween && !fade;
     if (behindConsole && frameNo % 8 !== 0) return;
     adaptResolution(dt, behindConsole);
-    cullDarkLights();
     updateShadows();
     updateGlows();
     if (outline.selectedObjects.length) composer.render(dt);
