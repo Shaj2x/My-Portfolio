@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
+import { ServicesShowcase } from "@/components/ServicesShowcase";
 import { Accessibility, ArrowUpRight, Bot, Building2, ChevronDown, CircuitBoard, DoorOpen, FileText, FolderGit2, Gamepad2, Github, Linkedin, Mail, MapPin, Music2, type LucideIcon } from "lucide-react";
 import {
   aboutParagraphs,
@@ -15,7 +16,6 @@ import {
   profile,
   projectPreviews,
   roles,
-  services,
   skillCategories,
 } from "@/data/portfolio";
 
@@ -132,6 +132,7 @@ const ProjectCard = ({ name, delay }: { name: string; delay: number }) => {
 };
 
 const NAV = [
+  ["services", "Services"],
   ["about", "About"],
   ["projects", "Projects"],
   ["experience", "Experience"],
@@ -280,6 +281,14 @@ const QuickView = () => {
           </div>
         </section>
 
+        {/* what I build: the site's main focus, right after the introduction */}
+        <section className="py-12">
+          <SectionTitle id="services" eyebrow="What I build" title="Websites, AI and apps that work for you" />
+          <Reveal>
+            <ServicesShowcase wide />
+          </Reveal>
+        </section>
+
         {/* projects */}
         <section className="py-12">
           <SectionTitle id="projects" eyebrow="Projects" title="Things I've built" />
@@ -327,22 +336,6 @@ const QuickView = () => {
                   <h3 className="mt-3 font-semibold text-white">{r.title}</h3>
                   <p className="text-sm text-white/50">{r.org}</p>
                   <p className="mt-2 text-sm leading-relaxed text-white/65">{r.description}</p>
-                </Glass>
-              </Reveal>
-            ))}
-          </div>
-        </section>
-
-        {/* services */}
-        <section className="py-12">
-          <SectionTitle id="services" eyebrow="Services" title="What I build for businesses" />
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {services.map((s, i) => (
-              <Reveal key={s.title} delay={(i % 3) * 0.06} className="h-full">
-                <Glass className="h-full p-5">
-                  <s.icon className="h-5 w-5 text-amber-200" />
-                  <h3 className="mt-3 font-semibold text-white">{s.title}</h3>
-                  <p className="mt-1.5 text-sm leading-relaxed text-white/60">{s.description}</p>
                 </Glass>
               </Reveal>
             ))}

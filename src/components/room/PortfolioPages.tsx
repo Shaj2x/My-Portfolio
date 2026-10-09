@@ -12,9 +12,9 @@ import {
   profile,
   projectPreviews,
   roles,
-  services,
   skillCategories,
 } from "@/data/portfolio";
+import { ServicesShowcase } from "@/components/ServicesShowcase";
 import type { PortfolioId } from "./portfolioSpots";
 import type { MonitorProject } from "./createPlainRoom";
 
@@ -263,14 +263,9 @@ export const PortfolioPage = ({ id, onPreview }: { id: PortfolioId; onPreview?: 
       );
     case "services":
       return (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {services.map((s) => (
-            <Card key={s.title}>
-              <s.icon className="mb-2 h-5 w-5 text-[#7fb2ff]" />
-              <p className="font-semibold text-white">{s.title}</p>
-              <p className="mt-1 text-sm text-white/70">{s.description}</p>
-            </Card>
-          ))}
+        <div>
+          <p className="mb-4 text-white/75">Websites, AI tools and apps for businesses and people with an idea. Here's what I build.</p>
+          <ServicesShowcase />
         </div>
       );
     case "contact":

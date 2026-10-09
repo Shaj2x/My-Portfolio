@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { AnimatePresence, motion, useReducedMotion, type Transition } from "framer-motion";
-import { ArrowUpRight, Binoculars, Camera, Check, Gamepad2, LayoutGrid, Lightbulb, LightbulbOff, Radio, ScrollText, SlidersHorizontal, Trophy, Volume2, VolumeX, X } from "lucide-react";
+import { ArrowUpRight, Binoculars, Briefcase, Camera, Check, Gamepad2, LayoutGrid, Lightbulb, LightbulbOff, Radio, ScrollText, SlidersHorizontal, Trophy, Volume2, VolumeX, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { RADIO_STATION } from "@/components/room/createAudio";
 import { playlistEmbed } from "@/components/room/playlist";
@@ -1025,6 +1025,20 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
             >
               <DockButton label="Portfolio" open={menu === "portfolio"} onClick={() => toggleMenu("portfolio")} accent badge={`${found.length}/${PORTFOLIO_IDS.length}`}>
                 <LayoutGrid className="h-5 w-5" />
+              </DockButton>
+              {/* what I build is the site's main focus, so it's one tap away (it's also the desk chair) */}
+              <DockButton
+                label="Services"
+                accent
+                open={section === "services"}
+                onClick={() => {
+                  setMenu(null);
+                  setPanelOpen(false);
+                  setSoundOpen(false);
+                  setSection("services");
+                }}
+              >
+                <Briefcase className="h-5 w-5" />
               </DockButton>
               <span className="mx-1 hidden w-px self-stretch bg-white/10 sm:block" aria-hidden="true" />
               <DockButton label="PlayStation" onClick={() => roomRef.current?.setView("console")}>

@@ -434,8 +434,8 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
         (pool.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.45 * k * flicker;
       },
     };
-    const { strap, wallet } = decor.clutter(group, new THREE.Vector3(x + 0.02, top, -1.3));
-    spots.push({ id: "leadership", root: strap }, { id: "services", root: wallet });
+    const { strap } = decor.clutter(group, new THREE.Vector3(x + 0.02, top, -1.3));
+    spots.push({ id: "leadership", root: strap });
   }
 
   // ---------- floor lamp ----------
@@ -1046,6 +1046,8 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     const back = rounded(0.44, 0.44, 0.03, 0.03, mesh, 0, 0.8, -0.21, g);
     back.rotation.x = -0.12;
     for (const s of [-1, 1]) block(0.02, 0.36, 0.02, frame, s * 0.2, 0.66, -0.2, g).rotation.x = -0.12;
+    // the chair is where the work happens, so it opens What I Build
+    spots.push({ id: "services", root: g });
   }
 
   // ---------- tapestry: "IF YOURE READING THIS ITS TOO LATE" ----------
