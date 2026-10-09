@@ -43,6 +43,9 @@ const Reveal = ({ children, delay = 0, className = "" }: { children: ReactNode; 
   );
 };
 
+/** when the accessibility statement below was last checked against the page */
+const ACCESSIBILITY_REVIEWED = "October 2026";
+
 const SectionTitle = ({ id, eyebrow, title }: { id: string; eyebrow: string; title: string }) => (
   <div id={id} className="mb-6 scroll-mt-24">
     <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-amber-200/75">{eyebrow}</p>
@@ -204,7 +207,7 @@ const QuickView = () => {
             </h1>
             <Reveal delay={0.3}>
               <p className="mt-5 max-w-xl text-lg leading-relaxed text-white/70">{profile.tagline}</p>
-              <p className="mt-3 inline-flex items-center gap-1.5 text-sm text-white/45">
+              <p className="mt-3 inline-flex items-center gap-1.5 text-sm text-white/55">
                 <MapPin className="h-4 w-4" /> London, Ontario · Western University
               </p>
               <div className="mt-7 flex flex-wrap gap-2.5">
@@ -304,7 +307,7 @@ const QuickView = () => {
                     <h3 className="font-semibold text-white">
                       {item.title} <span className="font-normal text-white/50">· {item.org}</span>
                     </h3>
-                    <p className="font-mono text-xs text-white/40">{item.date}</p>
+                    <p className="font-mono text-xs text-white/55">{item.date}</p>
                   </div>
                   <p className="mt-1.5 max-w-3xl text-sm leading-relaxed text-white/60">{item.description}</p>
                 </Reveal>
@@ -391,8 +394,39 @@ const QuickView = () => {
           </Reveal>
         </section>
 
-        <footer className="flex flex-col items-center justify-between gap-3 border-t border-white/5 py-8 text-sm text-white/40 sm:flex-row">
-          <p>© {new Date().getFullYear()} {profile.name}</p>
+        {/* accessibility statement */}
+        <section aria-labelledby="accessibility-title" className="border-t border-white/5 py-10">
+          <h2 id="accessibility-title" className="text-lg font-semibold text-white/85">
+            Accessibility statement
+          </h2>
+          <div className="mt-3 grid max-w-3xl gap-3 text-sm leading-relaxed text-white/60">
+            <p>
+              I want everyone to be able to use this site, including people who rely on a keyboard, a screen reader, magnification or reduced motion. I aim to meet the Web Content Accessibility Guidelines (WCAG) 2.1 at Level AA, and I keep working toward it as the site changes.
+            </p>
+            <p>
+              <span className="text-white/80">What's in place:</span> this quick view is the accessible version of the site and carries the same portfolio as the 3D room: projects, experience, skills, the resume and contact details. It uses real headings and landmarks, works with a keyboard, describes its images with alternative text, keeps text readable against its background, and turns its animations down when your device asks for reduced motion.
+            </p>
+            <p>
+              <span className="text-white/80">Known limitations:</span> the 3D room on the home page is a visual, pointer-driven experience and can't be fully used with a screen reader or keyboard alone. Its games and the room's sound are extras, and everything that matters there is also here. Some linked project demos are hosted elsewhere and may not meet the same standard.
+            </p>
+            <p>
+              <span className="text-white/80">Feedback:</span> if anything here gets in your way, or you'd like the content in another format, email{" "}
+              <a href={`mailto:${profile.email}`} className="text-amber-200/90 underline underline-offset-2 hover:text-amber-100">
+                {profile.email}
+              </a>
+              . I'll reply within five business days and do my best to fix it or get you what you need another way.
+            </p>
+            <p className="text-white/55">Last reviewed {ACCESSIBILITY_REVIEWED}.</p>
+          </div>
+        </section>
+
+        <footer className="flex flex-col items-center justify-between gap-3 border-t border-white/5 py-8 text-sm text-white/55 sm:flex-row">
+          <p>
+            © {new Date().getFullYear()} {profile.name} ·{" "}
+            <a href="#accessibility-title" className="hover:text-white">
+              Accessibility
+            </a>
+          </p>
           <Link to="/" className="inline-flex items-center gap-1.5 hover:text-white">
             <DoorOpen className="h-4 w-4" /> The 3D version is more fun. Step into the room
           </Link>
