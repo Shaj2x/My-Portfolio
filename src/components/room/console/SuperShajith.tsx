@@ -12,6 +12,11 @@ import ssCoin from "@/assets/ss-coin.png";
  * Coins are the black-and-white SS logo. ? blocks give coins or a fragrance to spray on:
  *   Breeze       (blue)   grow big: one free hit, and bricks break
  *   Oud Noir     (black)  big, and B sprays a cloud that knocks enemies out
+ *   Aqua Mist    (teal)   big, and a second jump in mid-air
+ *   Velvet Rose  (pink)   big, and coins nearby fly to you
+ *   Midnight Smoke (violet) big, and hold jump while falling to glide
+ * Which fragrance a block holds is random, and now and then a plain ? block hides one too. Picking
+ * one up plays a quick spritz: he sprays it on before carrying on.
  *   Citrus Rush  (orange) nine seconds unstoppable: faster, higher, enemies fall at a touch
  * Stomp enemies from above, don't fall in the gaps, and touch the flag. Keyboard, touch buttons, or a controller
  * (the console maps its D-pad to arrow keys and ✕ to Space).
@@ -614,13 +619,14 @@ interface Save {
   score: number;
   coins: number;
   big: boolean;
-  spray: boolean;
+  /** the fragrance being carried (it decides the power), if any */
+  held: Held | null;
   /** gold coins found, per world; they stay found */
   gold: boolean[][];
   /** best clear time per world, in seconds */
   best: (number | null)[];
 }
-const blankSave = (): Save => ({ level: 0, checkpoint: false, lives: 3, score: 0, coins: 0, big: false, spray: false, gold: LEVELS.map((L) => L.golds.map(() => false)), best: LEVELS.map(() => null) });
+const blankSave = (): Save => ({ level: 0, checkpoint: false, lives: 3, score: 0, coins: 0, big: false, held: null, gold: LEVELS.map((L) => L.golds.map(() => false)), best: LEVELS.map(() => null) });
 const loadSave = (): Save => {
   const save = blankSave();
   try {
@@ -632,7 +638,7 @@ const loadSave = (): Save => {
       if (Number.isFinite(v.score)) save.score = Math.max(0, v.score);
       if (Number.isFinite(v.coins)) save.coins = Math.max(0, v.coins);
       save.big = !!v.big;
-      save.spray = !!v.spray;
+      save.held = HELD.includes(v.held) ? v.held : v.spray ? "oud" : null;
       if (Array.isArray(v.gold)) save.gold = save.gold.map((row, i) => row.map((_, j) => !!v.gold[i]?.[j]));
       if (Array.isArray(v.best)) save.best = save.best.map((_, i) => (Number.isFinite(v.best[i]) ? v.best[i] : null));
     }
@@ -652,12 +658,29 @@ const goldCount = (save: Save) => save.gold.flat().filter(Boolean).length;
 const goldTotal = LEVELS.reduce((n, L) => n + L.golds.length, 0);
 
 // ---------- fragrances ----------
-type Scent = "breeze" | "oud" | "citrus";
-const SCENT_OF: Record<string, Scent> = { M: "breeze", N: "oud", O: "citrus" };
+type Scent = "breeze" | "oud" | "citrus" | "aqua" | "rose" | "smoke";
+/** the fragrances you carry (their power lasts until you're hit); Breeze just makes you big, Citrus is a timed rush */
+type Held = "oud" | "aqua" | "rose" | "smoke";
+const HELD: unknown[] = ["oud", "aqua", "rose", "smoke"];
+/** fragrance blocks in the level layouts; which fragrance comes out is decided when it's hit */
+const SCENT_OF: Record<string, true> = { M: true, N: true, O: true };
+/** how often each fragrance turns up */
+const SCENT_ODDS: [Scent, number][] = [["breeze", 2], ["oud", 1.4], ["citrus", 1], ["aqua", 1.4], ["rose", 1.4], ["smoke", 1.4]];
+const randomScent = (): Scent => {
+  let r = Math.random() * SCENT_ODDS.reduce((n, [, w]) => n + w, 0);
+  for (const [scent, w] of SCENT_ODDS) if ((r -= w) <= 0) return scent;
+  return "breeze";
+};
+/** a plain ? block hides a fragrance this often */
+const SURPRISE = 0.12;
+const SPRITZ_TIME = 0.75;
 const SCENTS: Record<Scent, { name: string; hint: string; glass: string; liquid: string; cap: string; mist: string }> = {
   breeze: { name: "BREEZE", hint: "+1 hit", glass: "#cfe6ff", liquid: "#7fb8ff", cap: "#f4f4f4", mist: "200,225,255" },
   oud: { name: "OUD NOIR", hint: "B to spray", glass: "#2a2a30", liquid: "#141418", cap: "#e0b44a", mist: "230,200,140" },
   citrus: { name: "CITRUS RUSH", hint: "unstoppable!", glass: "#ffc27a", liquid: "#ff8a1e", cap: "#5fbf4a", mist: "255,200,120" },
+  aqua: { name: "AQUA MIST", hint: "double jump", glass: "#bff3f0", liquid: "#2ec4b6", cap: "#e6f7f7", mist: "160,240,235" },
+  rose: { name: "VELVET ROSE", hint: "coin magnet", glass: "#ffd0dc", liquid: "#e0426a", cap: "#c9a24a", mist: "255,170,190" },
+  smoke: { name: "MIDNIGHT SMOKE", hint: "hold jump to glide", glass: "#4a3a6a", liquid: "#2a1a44", cap: "#bfc3d0", mist: "190,170,230" },
 };
 const STAR_TIME = 9;
 
@@ -702,7 +725,11 @@ interface State {
   phaseT: number;
   level: number;
   grid: string[][];
-  player: Body & { big: boolean; spray: boolean; star: number; face: 1 | -1; hurt: number; walk: number; jumpHeld: boolean; runHeld: boolean; sprayCool: number; coyote: number; buffer: number; combo: number; crouch: boolean; shootHeld: boolean; pound: boolean; poundHang: number; downHeld: boolean };
+  player: Body & { big: boolean; held: Held | null; airJump: boolean; star: number; face: 1 | -1; hurt: number; walk: number; jumpHeld: boolean; runHeld: boolean; sprayCool: number; coyote: number; buffer: number; combo: number; crouch: boolean; shootHeld: boolean; pound: boolean; poundHang: number; downHeld: boolean };
+  /** the spritz after picking up a fragrance: the world pauses while he sprays it on */
+  spritz: { t: number; scent: Scent } | null;
+  /** coins pulled in by Velvet Rose, flying to him */
+  pulled: { x: number; y: number }[];
   /** clouds of Oud Noir, sprayed forward; they knock out whatever they touch */
   clouds: { x: number; y: number; vx: number; t: number }[];
   enemies: Enemy[];
@@ -741,7 +768,7 @@ const freshLevel = (s: State, index: number, respawn = false) => {
     if (s.save.gold[index][i]) s.grid[g.y][g.x] = "g";
   });
   const startX = s.checkpoint ? L.checkX * TILE + 2 : 2 * TILE;
-  s.player = { x: startX, y: 10 * TILE, w: 12, h: 14, vx: 0, vy: 0, ground: false, big: s.player?.big ?? false, spray: s.player?.spray ?? false, star: 0, face: 1, hurt: 0, walk: 0, jumpHeld: true, runHeld: false, sprayCool: 0, coyote: 0, buffer: 0, combo: 0, crouch: false, shootHeld: false, pound: false, poundHang: 0, downHeld: true };
+  s.player = { x: startX, y: 10 * TILE, w: 12, h: 14, vx: 0, vy: 0, ground: false, big: s.player?.big ?? false, held: s.player?.held ?? null, airJump: false, star: 0, face: 1, hurt: 0, walk: 0, jumpHeld: true, runHeld: false, sprayCool: 0, coyote: 0, buffer: 0, combo: 0, crouch: false, shootHeld: false, pound: false, poundHang: 0, downHeld: true };
   if (s.player.big) {
     s.player.h = 24;
     s.player.y -= 10;
@@ -758,12 +785,14 @@ const freshLevel = (s: State, index: number, respawn = false) => {
   s.cam = Math.max(0, startX - VIEW_W * 0.3);
   s.flagSlide = 0;
   s.shake = 0;
+  s.spritz = null;
+  s.pulled = [];
   s.record = false;
 };
 
 /** remembers where you are, so Continue comes back here */
 const saveProgress = (s: State) => {
-  Object.assign(s.save, { level: s.level, checkpoint: s.checkpoint, lives: s.lives, score: s.score, coins: s.coins, big: s.player.big, spray: s.player.spray });
+  Object.assign(s.save, { level: s.level, checkpoint: s.checkpoint, lives: s.lives, score: s.score, coins: s.coins, big: s.player.big, held: s.player.held });
   writeSave(s.save);
 };
 const hasProgress = (save: Save) => save.level > 0 || save.checkpoint || save.score > 0;
@@ -906,8 +935,9 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
       if (t === "?" || SCENT_OF[t]) {
         s.grid[ty][tx] = "U";
         s.bumps.push({ x: tx, y: ty, t: 0.15 });
-        if (t === "?") getCoin(s, tx * TILE + 4, ty * TILE - 8, true);
-        else s.items.push({ x: tx * TILE + 3, y: ty * TILE, w: 10, h: 14, vx: 0, vy: 0, ground: false, rise: 0.6, scent: SCENT_OF[t] });
+        // fragrance blocks give a random fragrance, and a plain ? block sometimes surprises you with one
+        if (t === "?" && Math.random() > SURPRISE) getCoin(s, tx * TILE + 4, ty * TILE - 8, true);
+        else s.items.push({ x: tx * TILE + 3, y: ty * TILE, w: 10, h: 14, vx: 0, vy: 0, ground: false, rise: 0.6, scent: randomScent() });
       } else if (t === "B") {
         if (p.big) {
           s.grid[ty][tx] = " ";
@@ -970,8 +1000,8 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
     const hurt = (s: State) => {
       const p = s.player;
       if (p.hurt > 0 || p.star > 0 || s.phase !== "play") return;
-      if (p.spray) {
-        p.spray = false;
+      if (p.held) {
+        p.held = null;
         p.hurt = 1.6;
       } else if (p.big) {
         p.big = false;
@@ -987,7 +1017,7 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
       s.phaseT = 0;
       s.player.vy = -330;
       s.player.big = false;
-      s.player.spray = false;
+      s.player.held = null;
       s.player.star = 0;
     };
 
@@ -1011,13 +1041,13 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
               const v = s.save;
               Object.assign(s, { lives: v.lives, score: v.score, coins: v.coins, checkpoint: v.checkpoint });
               s.player.big = v.big;
-              s.player.spray = v.spray;
+              s.player.held = v.held;
               s.level = v.level;
               freshLevel(s, v.level, true);
             } else {
               Object.assign(s, { lives: 3, score: 0, coins: 0 });
               s.player.big = false;
-              s.player.spray = false;
+              s.player.held = null;
               freshLevel(s, 0);
             }
             saveProgress(s);
@@ -1031,7 +1061,7 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
               s.phase = "end";
               s.phaseT = 0;
               // beaten: the next game starts from the top (gold coins and best times stay)
-              Object.assign(s.save, { level: 0, checkpoint: false, lives: 3, score: 0, coins: 0, big: false, spray: false });
+              Object.assign(s.save, { level: 0, checkpoint: false, lives: 3, score: 0, coins: 0, big: false, held: null });
               writeSave(s.save);
               onWinRef.current?.();
             }
@@ -1039,7 +1069,7 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
             // try the same world again, from its start, with fresh lives
             Object.assign(s, { lives: 3, score: 0, coins: 0, checkpoint: false });
             s.player.big = false;
-            s.player.spray = false;
+            s.player.held = null;
             freshLevel(s, s.level);
             saveProgress(s);
             start();
@@ -1065,7 +1095,7 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
             s.phaseT = 0;
           } else {
             s.player.big = false;
-            s.player.spray = false;
+            s.player.held = null;
             freshLevel(s, s.level, true);
             saveProgress(s);
             s.phase = "intro";
@@ -1077,6 +1107,23 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
 
       const p = s.player;
       const L = LEVELS[s.level];
+      // spraying on a new fragrance: everything waits while the mist goes on
+      if (s.spritz) {
+        const sp = s.spritz;
+        sp.t -= dt;
+        // fine mist from the nozzle, drifting back over his neck and up
+        const nozzleX = p.x + p.w / 2 + p.face * 4;
+        const nozzleY = p.y - 3;
+        if (Math.random() < 0.35)
+          s.fx.push({ kind: "mist", x: nozzleX, y: nozzleY, vx: -p.face * (10 + Math.random() * 25), vy: -15 - Math.random() * 25, t: 0.6, text: sp.scent });
+        if (sp.t <= 0) {
+          const info = SCENTS[sp.scent];
+          s.fx.push({ kind: "score", x: p.x - 10, y: p.y - 12, vx: 0, vy: -26, t: 1.6, text: `${info.name}: ${info.hint}` });
+          mistPuff(s, p.x + p.w / 2, p.y + p.h / 2, 16, sp.scent);
+          s.spritz = null;
+        }
+        return;
+      }
       // the flag: slide down, then walk off to the end card
       if (s.flagSlide > 0) {
         s.flagSlide += dt;
@@ -1142,14 +1189,21 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
       p.vx = Math.max(-max, Math.min(max, p.vx));
       p.coyote = p.ground ? 0.09 : Math.max(0, p.coyote - dt);
       p.buffer = input.jump && !p.jumpHeld ? 0.12 : Math.max(0, p.buffer - dt);
+      if (p.ground) p.airJump = p.held === "aqua";
       if (p.buffer > 0 && p.coyote > 0 && !p.crouch && !p.pound) {
         p.vy = -(390 + Math.abs(p.vx) * 0.35) * (star ? 1.12 : 1);
         p.coyote = 0;
         p.buffer = 0;
+      } else if (input.jump && !p.jumpHeld && p.coyote <= 0 && !p.ground && p.airJump && !p.pound) {
+        // Aqua Mist: a second jump in mid-air, off a puff of mist
+        p.airJump = false;
+        p.vy = -350;
+        p.buffer = 0;
+        mistPuff(s, p.x + p.w / 2, p.y + p.h, 10, "aqua");
       }
       p.jumpHeld = input.jump;
       // Oud Noir: a press of B sprays a cloud forward
-      if (p.spray && input.shoot && !p.shootHeld && p.sprayCool <= 0) {
+      if (p.held === "oud" && input.shoot && !p.shootHeld && p.sprayCool <= 0) {
         s.clouds.push({ x: p.x + (p.face > 0 ? p.w : -6), y: p.y + Math.min(6, p.h - 4), vx: p.face * 190 + p.vx * 0.5, t: 0.6 });
         p.sprayCool = 0.32;
       }
@@ -1160,7 +1214,12 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
         p.star -= dt;
         if (Math.random() < 0.5) s.fx.push({ kind: "mist", x: p.x + Math.random() * p.w, y: p.y + Math.random() * p.h, vx: 0, vy: -20, t: 0.5, text: "citrus" });
       }
-      if (p.pound) {
+      // Midnight Smoke: hold jump while falling to drift down slowly
+      const gliding = p.held === "smoke" && input.jump && p.vy > 0 && !p.pound && !p.ground;
+      if (gliding) {
+        p.vy = Math.min(p.vy + 1600 * dt, 55);
+        if (Math.random() < 0.3) s.fx.push({ kind: "mist", x: p.x + p.w / 2 - p.face * 6, y: p.y + 6, vx: -p.face * 20, vy: 10, t: 0.6, text: "smoke" });
+      } else if (p.pound) {
         if (p.poundHang > 0) {
           p.poundHang -= dt;
           p.vy = 0;
@@ -1326,9 +1385,7 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
         if (overlap(p, it)) {
           it.y = 9999;
           s.score += 1000;
-          const info = SCENTS[it.scent];
-          s.fx.push({ kind: "score", x: p.x - 10, y: p.y - 12, vx: 0, vy: -26, t: 1.6, text: `${info.name}: ${info.hint}` });
-          mistPuff(s, p.x + p.w / 2, p.y + p.h / 2, 14, it.scent);
+          s.spritz = { t: SPRITZ_TIME, scent: it.scent };
           if (it.scent === "citrus") p.star = STAR_TIME;
           else {
             if (!p.big) {
@@ -1338,11 +1395,35 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
                 p.h = 24;
               }
             }
-            if (it.scent === "oud") p.spray = true;
+            if (it.scent !== "breeze") p.held = it.scent as Held;
           }
         }
       }
       s.items = s.items.filter((it) => it.y < VIEW_H + 32);
+
+      // Velvet Rose: coins within a few tiles lift out and fly to him
+      if (p.held === "rose") {
+        const cx = Math.floor((p.x + p.w / 2) / TILE);
+        for (let ty = 0; ty < ROWS; ty++)
+          for (let tx = cx - 6; tx <= cx + 6; tx++)
+            if (tileAt(s, tx, ty) === "C" && Math.hypot(tx * TILE + 8 - (p.x + p.w / 2), ty * TILE + 8 - (p.y + p.h / 2)) < 88) {
+              s.grid[ty][tx] = " ";
+              s.pulled.push({ x: tx * TILE + 2, y: ty * TILE + 2 });
+            }
+      }
+      for (const c of s.pulled) {
+        const dx = p.x + p.w / 2 - (c.x + 5);
+        const dy = p.y + p.h / 2 - (c.y + 5);
+        const d = Math.hypot(dx, dy);
+        if (d < 8) {
+          getCoin(s, c.x, c.y, false);
+          c.x = NaN;
+        } else {
+          c.x += (dx / d) * 300 * dt;
+          c.y += (dy / d) * 300 * dt;
+        }
+      }
+      s.pulled = s.pulled.filter((c) => !Number.isNaN(c.x));
 
       if (p.star <= 0 && p.ground) p.combo = 0;
       // the camera follows both ways, so you can walk back for something you missed; it only
@@ -1610,10 +1691,21 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
       const arm = Math.round(stride * 2);
       R(3 + (p.ground ? 0 : 1), headH + 1 + (p.ground ? arm : -2), 3, 4, "#d4202c");
       R(3 + (p.ground ? 0 : 1), headH + 5 + (p.ground ? arm : -2), 3, 1, "#b07a52");
-      // with Oud Noir he carries the bottle, ready to spray
-      if (p.spray) {
-        R(6 + (p.ground ? 0 : 1), headH + 2 + (p.ground ? arm : -2), 3, 4, "#141418");
-        R(6 + (p.ground ? 0 : 1), headH + 1 + (p.ground ? arm : -2), 3, 1, "#e0b44a");
+      if (s.spritz) {
+        // spraying it on: bottle raised to his neck, nozzle pointing in
+        const c = SCENTS[s.spritz.scent];
+        const press = Math.sin(time * 40) > 0 ? 0 : 1;
+        R(3, headH - 2, 3, 5, "#d4202c");
+        R(4, headH - 10, 6, 9, "#1c1c1c");
+        R(5, headH - 9, 4, 7, c.glass);
+        R(5, headH - 6, 4, 4, c.liquid);
+        R(6, headH - 13 + press, 2, 3, c.cap);
+        R(5, headH - 13 + press, 1, 1, "#9a9aa0");
+      } else if (p.held) {
+        // he carries his fragrance, ready to use
+        const c = SCENTS[p.held];
+        R(6 + (p.ground ? 0 : 1), headH + 2 + (p.ground ? arm : -2), 3, 4, p.held === "oud" ? "#141418" : c.liquid);
+        R(6 + (p.ground ? 0 : 1), headH + 1 + (p.ground ? arm : -2), 3, 1, c.cap);
       }
       // legs
       const ly = headH + bodyH;
@@ -1727,7 +1819,7 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
       R(x, y + 4, 10, 10, c.glass);
       R(x + 1, y + 7, 8, 6, c.liquid);
       // label and a moving glint
-      R(x + 2, y + 8, 6, 3, it.scent === "oud" ? "#e0b44a" : "#ffffff");
+      R(x + 2, y + 8, 6, 3, it.scent === "oud" || it.scent === "smoke" ? "#e0b44a" : "#ffffff");
       const g = Math.floor(time * 3) % 6;
       if (g < 3) R(x + 1 + g, y + 5, 1, 2, "rgba(255,255,255,0.85)");
     };
@@ -1888,6 +1980,7 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
       drawCheckpoint(s);
       drawTunnelSigns(s);
       for (const it of s.items) drawBottle(it, s);
+      for (const c of s.pulled) drawCoin(c.x - s.cam, c.y, th, time * 2);
       for (const c of s.clouds) {
         const k = c.t / 0.6;
         const x = c.x - s.cam;
