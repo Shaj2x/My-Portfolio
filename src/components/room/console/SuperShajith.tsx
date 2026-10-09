@@ -645,8 +645,9 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
       if (head) bump(s, head.tx, head.ty);
       if (p.ground && Math.abs(p.vx) > 5) p.walk += dt * (6 + Math.abs(p.vx) * 0.06);
       if (p.hurt > 0) p.hurt -= dt;
-      if (p.x < s.cam) {
-        p.x = s.cam;
+      // the start of the level is a wall
+      if (p.x < 0) {
+        p.x = 0;
         p.vx = Math.max(0, p.vx);
       }
       if (p.y > VIEW_H + 16) return die(s);
@@ -756,9 +757,10 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
       }
       s.items = s.items.filter((it) => it.y < VIEW_H + 32);
 
-      // the camera only scrolls forward, like the classics
-      const target = p.x - VIEW_W * 0.4;
-      s.cam = Math.max(s.cam, Math.min(target, s.grid[0].length * TILE - VIEW_W));
+      // the camera follows both ways, so you can walk back for something you missed; it only
+      // moves once you leave the middle of the screen, so small steps don't make it wobble
+      const want = Math.min(Math.max(s.cam, p.x - VIEW_W * 0.45), p.x - VIEW_W * 0.3);
+      s.cam = Math.max(0, Math.min(want, s.grid[0].length * TILE - VIEW_W));
     };
 
     const overlap = (a: Body, b: Body) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
