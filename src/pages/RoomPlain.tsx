@@ -368,6 +368,8 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
       // not remembered
     }
   }, [sound]);
+  // the level each slider had before it was switched off, so switching it back on returns there
+  const lastLevel = useRef({ effects: 1, ambience: 1 });
   const changeSound = (patch: Partial<SoundSettings>) => {
     setSound((s) => ({ ...s, ...patch }));
     // touching a sound setting means you want to hear it
@@ -727,13 +729,32 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
                 ["ambience", "Ambience", "What you hear outside, and the room's hush"],
               ] as const
             ).map(([key, name, hint]) => (
-              <label key={key} className="grid gap-1.5 text-sm text-white/80" htmlFor={`sound-${key}`}>
-                <span className="flex justify-between">
-                  {name} <span className="font-mono text-xs text-white/50 tabular-nums">{sound[key] === 0 ? "Off" : `${Math.round(sound[key] * 100)}%`}</span>
+              <div key={key} className="grid gap-1.5 text-sm text-white/80">
+                <span className="flex items-center justify-between gap-3">
+                  <label htmlFor={`sound-${key}`}>{name}</label>
+                  <span className="flex items-center gap-2.5">
+                    <span className="font-mono text-xs text-white/50 tabular-nums">{sound[key] === 0 ? "Off" : `${Math.round(sound[key] * 100)}%`}</span>
+                    {/* a plain on/off, so turning it off doesn't mean dragging the slider to zero */}
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={sound[key] > 0}
+                      aria-label={`${name} ${sound[key] > 0 ? "on" : "off"}`}
+                      onClick={() => {
+                        if (sound[key] > 0) {
+                          lastLevel.current[key] = sound[key];
+                          changeSound({ [key]: 0 });
+                        } else changeSound({ [key]: lastLevel.current[key] || 0.6 });
+                      }}
+                      className={`relative h-5 w-9 shrink-0 rounded-full transition-colors duration-150 ${sound[key] > 0 ? "bg-amber-300/80" : "bg-white/15"}`}
+                    >
+                      <span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform duration-150 ease-out ${sound[key] > 0 ? "translate-x-4" : ""}`} />
+                    </button>
+                  </span>
                 </span>
                 <input id={`sound-${key}`} type="range" min={0} max={100} value={Math.round(sound[key] * 100)} className="accent-amber-300" onChange={(e) => changeSound({ [key]: Number(e.target.value) / 100 })} />
                 <span className="text-xs text-white/45">{hint}</span>
-              </label>
+              </div>
             ))}
             <div>
               <p className="mb-2 text-sm text-white/80">Outside</p>
@@ -744,7 +765,7 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
                     type="button"
                     aria-pressed={sound.outside === id}
                     className="rounded-full border border-white/10 px-3 py-1 text-xs text-white/75 hover:border-white/30 hover:text-white aria-pressed:border-amber-200/60 aria-pressed:text-amber-100"
-                    onClick={() => changeSound({ outside: id, ambience: sound.ambience || 0.6 })}
+                    onClick={() => changeSound({ outside: id })}
                   >
                     {name}
                   </button>
