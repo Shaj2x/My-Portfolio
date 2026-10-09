@@ -1,7 +1,7 @@
 import { useEffect, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowUpRight, Bot, Building2, CircuitBoard, DoorOpen, FileText, FolderGit2, Gamepad2, Github, Linkedin, Mail, MapPin, Music2, type LucideIcon } from "lucide-react";
+import { Accessibility, ArrowUpRight, Bot, Building2, ChevronDown, CircuitBoard, DoorOpen, FileText, FolderGit2, Gamepad2, Github, Linkedin, Mail, MapPin, Music2, type LucideIcon } from "lucide-react";
 import {
   aboutParagraphs,
   customDescriptions,
@@ -394,42 +394,51 @@ const QuickView = () => {
           </Reveal>
         </section>
 
-        {/* accessibility statement */}
-        <section aria-labelledby="accessibility-title" className="border-t border-white/5 py-10">
-          <h2 id="accessibility-title" className="text-lg font-semibold text-white/85">
-            Accessibility statement
-          </h2>
-          <div className="mt-3 grid max-w-3xl gap-3 text-sm leading-relaxed text-white/60">
+        <footer className="border-t border-white/5 pb-10 pt-8 text-sm text-white/55">
+          <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
             <p>
-              I want everyone to be able to use this site, including people who rely on a keyboard, a screen reader, magnification or reduced motion. I aim to meet the Web Content Accessibility Guidelines (WCAG) 2.1 at Level AA, and I keep working toward it as the site changes.
+              © {new Date().getFullYear()} {profile.name}
             </p>
-            <p>
-              <span className="text-white/80">What's in place:</span> this quick view is the accessible version of the site and carries the same portfolio as the 3D room: projects, experience, skills, the resume and contact details. It uses real headings and landmarks, works with a keyboard, describes its images with alternative text, keeps text readable against its background, and turns its animations down when your device asks for reduced motion.
-            </p>
-            <p>
-              <span className="text-white/80">Known limitations:</span> the 3D room on the home page is a visual, pointer-driven experience and can't be fully used with a screen reader or keyboard alone. Its games and the room's sound are extras, and everything that matters there is also here. Some linked project demos are hosted elsewhere and may not meet the same standard.
-            </p>
-            <p>
-              <span className="text-white/80">Feedback:</span> if anything here gets in your way, or you'd like the content in another format, email{" "}
-              <a href={`mailto:${profile.email}`} className="text-amber-200/90 underline underline-offset-2 hover:text-amber-100">
-                {profile.email}
-              </a>
-              . I'll reply within five business days and do my best to fix it or get you what you need another way.
-            </p>
-            <p className="text-white/55">Last reviewed {ACCESSIBILITY_REVIEWED}.</p>
+            <Link to="/" className="inline-flex items-center gap-1.5 hover:text-white">
+              <DoorOpen className="h-4 w-4" /> The 3D version is more fun. Step into the room
+            </Link>
           </div>
-        </section>
 
-        <footer className="flex flex-col items-center justify-between gap-3 border-t border-white/5 py-8 text-sm text-white/55 sm:flex-row">
-          <p>
-            © {new Date().getFullYear()} {profile.name} ·{" "}
-            <a href="#accessibility-title" className="hover:text-white">
+          {/* the accessibility statement, folded away until it's wanted */}
+          <details id="accessibility" className="group mt-6">
+            <summary className="mx-auto flex w-fit cursor-pointer list-none items-center gap-1.5 rounded-full border border-white/10 px-3.5 py-1.5 text-xs text-white/60 transition-colors duration-150 hover:border-white/25 hover:text-white [&::-webkit-details-marker]:hidden">
+              <Accessibility className="h-3.5 w-3.5" aria-hidden="true" />
               Accessibility
-            </a>
-          </p>
-          <Link to="/" className="inline-flex items-center gap-1.5 hover:text-white">
-            <DoorOpen className="h-4 w-4" /> The 3D version is more fun. Step into the room
-          </Link>
+              <ChevronDown className="h-3.5 w-3.5 transition-transform duration-200 ease-out group-open:rotate-180" aria-hidden="true" />
+            </summary>
+            <Glass className="mx-auto mt-4 max-w-3xl p-5 text-left sm:p-6">
+              <dl className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
+                {(
+                  [
+                    ["Goal", <>Built to meet the Web Content Accessibility Guidelines (WCAG) 2.1 at Level AA.</>],
+                    ["In place", <>Works with a keyboard and screen readers, images have alt text, text meets AA contrast, and motion calms down when your device asks. This page carries everything the 3D room does.</>],
+                    ["Limits", <>The 3D room is visual and pointer-driven, so it isn't fully usable with a screen reader or keyboard alone. Linked project demos are hosted elsewhere.</>],
+                    [
+                      "Feedback",
+                      <>
+                        Hit a barrier, or need something in another format? Email{" "}
+                        <a href={`mailto:${profile.email}`} className="text-amber-200/90 underline-offset-2 hover:underline">
+                          {profile.email}
+                        </a>{" "}
+                        and I'll reply within five business days.
+                      </>,
+                    ],
+                  ] as const
+                ).map(([term, text]) => (
+                  <div key={term}>
+                    <dt className="text-[11px] font-semibold uppercase tracking-[0.24em] text-amber-200/75">{term}</dt>
+                    <dd className="mt-1.5 leading-relaxed text-white/65">{text}</dd>
+                  </div>
+                ))}
+              </dl>
+              <p className="mt-5 border-t border-white/5 pt-3 text-xs text-white/50">Last reviewed {ACCESSIBILITY_REVIEWED}</p>
+            </Glass>
+          </details>
         </footer>
       </main>
     </div>
