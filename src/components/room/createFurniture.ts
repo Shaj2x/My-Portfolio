@@ -31,6 +31,8 @@ export interface FurnitureHandle {
   binoculars: { position: THREE.Vector3; direction: THREE.Vector3; parts: THREE.Object3D[] };
   /** the ring desk lamp: its head, where it shines, its meshes, and its glow (0 off) in a colour */
   deskLamp: { head: THREE.Vector3; target: THREE.Vector3; parts: THREE.Object3D[]; setGlow: (k: number, color: THREE.Color) => void };
+  /** the middle of the coffee's surface in the desk mug, where the steam rises from */
+  mugTop: THREE.Vector3;
   /** things that react when clicked */
   interact: {
     /** plushies: each a group whose origin is its base, for squash-and-bounce */
@@ -69,6 +71,7 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
   const rnd = seeded(11);
   const between = (a: number, b: number) => a + rnd() * (b - a);
   const group = new THREE.Group();
+  const mugTop = new THREE.Vector3();
 
   const mats = new Map<string, THREE.MeshStandardMaterial>();
   const std = (color: string, roughness = 0.8, metalness = 0) => {
@@ -911,6 +914,14 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     const handle = new THREE.Mesh(new THREE.TorusGeometry(0.028, 0.007, 8, 20), mugMat);
     place(handle, mg[0], deskTop + 0.052, mg[2] + 0.045);
     handle.rotation.y = Math.PI / 2;
+    // coffee filled near the brim: a glossy dark surface with a ring of crema where it meets the mug
+    const coffee = new THREE.Mesh(new THREE.CircleGeometry(0.034, 28), std("#2a160a", 0.12));
+    coffee.rotation.x = -Math.PI / 2;
+    place(coffee, mg[0], deskTop + 0.1025, mg[2]);
+    const crema = new THREE.Mesh(new THREE.RingGeometry(0.03, 0.0345, 28), std("#7a4a26", 0.3));
+    crema.rotation.x = -Math.PI / 2;
+    place(crema, mg[0], deskTop + 0.1028, mg[2]);
+    mugTop.set(mg[0], deskTop + 0.103, mg[2]);
 
     // the white gooseneck lamp: a round base with a clock in its face, a bendy neck and a ring head
     const dl = LAYOUT.deskLamp.pos;
@@ -1160,5 +1171,5 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     block(0.008, 0.035, 0.016, std("#f6f5f2", 0.4), sw[0] + 0.012, sw[1], sw[2], group, false);
   }
 
-  return { group, lamp, binoculars, sunset, deskLamp, screens, interact: { plushies, bottles, speaker, controller, monitor, ps5, lightSwitch, setConsole, idle: { plants, setLaptopPing, setPsBreath: (b) => setPsBreath(b) }, setMonitorImage, spots, drawer, keyboard, candle } };
+  return { group, lamp, binoculars, sunset, deskLamp, screens, mugTop, interact: { plushies, bottles, speaker, controller, monitor, ps5, lightSwitch, setConsole, idle: { plants, setLaptopPing, setPsBreath: (b) => setPsBreath(b) }, setMonitorImage, spots, drawer, keyboard, candle } };
 }

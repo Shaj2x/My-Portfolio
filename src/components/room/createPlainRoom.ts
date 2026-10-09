@@ -9,6 +9,8 @@ import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import { createAudio, RADIO_STATION, type Outside } from "./createAudio";
 import { createCampus } from "./createCampus";
 import { createFurniture, paintTexture } from "./createFurniture";
+import { createSteam } from "./createDetails";
+import posterTakeCare from "@/assets/poster-take-care.jpg";
 import { PORTFOLIO_SPOTS, type PortfolioId } from "./portfolioSpots";
 import { CLOSET, COLORS, DOOR, HERO, LAYOUT, ROOM, WINDOW } from "./roomLayout";
 
@@ -359,6 +361,29 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     };
     setBlind(WINDOW.blindDown);
     slab(W, 0.1, 0.015, trim, 0, 0.05, back + 0.0075, backWall);
+  }
+  // the Take Care poster, framed on the wall to the left of the window, above the headboard
+  {
+    const pw = 0.42;
+    const ph = pw * (380 / 270);
+    const cx = (left + WINDOW.x0) / 2 - 0.01;
+    const cy = (WINDOW.y0 + WINDOW.y1) / 2 + 0.02;
+    const frame = slab(pw + 0.028, ph + 0.028, 0.018, new THREE.MeshStandardMaterial({ color: "#121212", roughness: 0.45 }), cx, cy, back + 0.009, backWall);
+    frame.castShadow = false;
+    // a dark stand-in until the print loads, so the material is built with its picture slot from the start
+    const blank = new THREE.DataTexture(new Uint8Array([20, 16, 12, 255]), 1, 1);
+    blank.needsUpdate = true;
+    const printMat = new THREE.MeshStandardMaterial({ map: blank, roughness: 0.55 });
+    new THREE.TextureLoader().load(posterTakeCare, (tex) => {
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = 4;
+      printMat.map = tex;
+      blank.dispose();
+    });
+    const print = new THREE.Mesh(new THREE.PlaneGeometry(pw, ph), printMat);
+    print.position.set(cx, cy, back + 0.0185);
+    print.receiveShadow = true;
+    backWall.add(print);
   }
 
   // the sky outside, painted three times (night, sunrise/sunset, day) and cross-faded to match the
@@ -915,6 +940,14 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     disposables.push(d);
     return d;
   };
+  // coffee in the desk mug, still steaming
+
+  // denser and whiter than the dark room needs, so it reads against the light wall behind the desk
+  const steam = createSteam(track, 0.62, new THREE.Color("#f4f1ec"));
+  steam.group.position.copy(furniture.mugTop);
+  steam.group.scale.setScalar(0.85);
+  scene.add(steam.group);
+
   let seed = 7;
   const rand = () => {
     seed = (seed * 16807) % 2147483647;
@@ -2169,6 +2202,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     adaptResolution(dt, behindConsole);
     updateShadows();
     updateGlows();
+    steam.update(time, camera);
     if (outline.selectedObjects.length) composer.render(dt);
     else renderer.render(scene, camera);
     if (!firstFrameSent) {

@@ -17,18 +17,18 @@ const easeOutBack = (x: number) => {
 // ---------- steam ----------
 
 /** Wisps of steam: a few camera-facing ribbons whose shape is drawn by noise in the shader. */
-export function createSteam(track: Track) {
+export function createSteam(track: Track, strength = 0.32, color = new THREE.Color(1.0, 0.86, 0.72)) {
   const group = new THREE.Group();
   const material = track(
     new THREE.ShaderMaterial({
       transparent: true,
       depthWrite: false,
-      uniforms: { uTime: { value: 0 }, uColor: { value: new THREE.Color(1.0, 0.86, 0.72) } },
+      uniforms: { uTime: { value: 0 }, uColor: { value: color }, uStrength: { value: strength } },
       vertexShader: /* glsl */ `
         varying vec2 vUv;
         void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
       fragmentShader: /* glsl */ `
-        uniform float uTime; uniform vec3 uColor; varying vec2 vUv;
+        uniform float uTime; uniform vec3 uColor; uniform float uStrength; varying vec2 vUv;
         float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
         float noise(vec2 p) {
           vec2 i = floor(p); vec2 f = fract(p); f = f * f * (3.0 - 2.0 * f);
@@ -43,7 +43,7 @@ export function createSteam(track: Track) {
           float body = smoothstep(width, 0.0, abs(x));
           float wisps = fbm(vec2(x * 7.0, y * 3.2 - uTime * 0.55));
           float a = body * smoothstep(0.35, 0.8, wisps) * smoothstep(0.0, 0.12, y) * (1.0 - smoothstep(0.55, 1.0, y));
-          gl_FragColor = vec4(uColor, a * 0.32);
+          gl_FragColor = vec4(uColor, a * uStrength);
         }`,
     }),
   );
