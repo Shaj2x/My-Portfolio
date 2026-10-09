@@ -19,7 +19,7 @@ import ssCoin from "@/assets/ss-coin.png";
  * Hold down to crouch: crawl through the hollows at the foot of the giant trees and duck the paper planes. Press down in
  * the air to ground pound: a slam that flattens what's under you, knocks out enemies nearby,
  * opens ? blocks from above, smashes bricks when big, and turns a spring into a super launch.
- * Worlds 2-1 to 2-3 build on all of it: tunnels, planes, springs and longer gaps.
+ * Worlds 2-1 to 3-3 build on all of it: trees to crawl under, planes, springs, rooftops and longer gaps.
  *
  * Extras: stomp combos (chain stomps without landing for more points, then extra lives), springs,
  * three hidden gold SS coins per world, a checkpoint halfway, best times, and 100 coins for a life.
@@ -455,6 +455,145 @@ const LEVELS: Level[] = [
       b.flag(192);
     },
     { name: "2-3", place: "The Gauntlet", coinName: "Grades", coinValue: 1, enemyName: "Midterm" },
+  ),
+  build(
+    190,
+    { sky: ["#0a1a1a", "#16343a"], ground: "#3a4a48", groundTop: "#5a8a7a", groundDark: "#26302f", brick: "#4a6a64", far: "#10282a", near: "#1c3a3c", stars: true, enemy: "clock", coin: "credit", landmark: "none" },
+    (b) => {
+      b.ground(0, 40);
+      b.tile(8, 8, "?");
+      b.row(12, 8, 5, "B");
+      b.tile(14, 8, "N");
+      b.enemy(16);
+      b.enemy(19);
+      b.tunnel(24, 4);
+      b.coins(30, 8, 4);
+      b.plane(38);
+      b.ground(44, 70);
+      b.row(48, 8, 3, "X");
+      b.row(53, 5, 3, "X");
+      b.gold(54, 2);
+      b.enemy(58);
+      b.enemy(62);
+      b.pipe(66, 3);
+      b.ground(75, 110);
+      b.checkpoint(77);
+      b.spring(82);
+      b.coins(81, 4, 3);
+      b.tunnel(88, 6);
+      b.plane(100);
+      b.enemy(104);
+      b.enemy(107);
+      b.gold(112, 10);
+      b.ground(114, 140);
+      b.row(118, 8, 4, "B");
+      b.tile(119, 8, "?");
+      b.tile(120, 8, "O");
+      b.enemy(124);
+      b.enemy(127);
+      b.enemy(130);
+      b.tunnel(133, 4);
+      b.ground(144, 189);
+      b.stairs(152, 6);
+      b.gold(158, 2);
+      b.enemy(165);
+      b.flag(176);
+    },
+    { name: "3-1", place: "Deep Focus", coinName: "Credits", coinValue: 1, enemyName: "Deadline" },
+  ),
+  build(
+    200,
+    { sky: ["#2a1a4a", "#e0789a"], ground: "#4a4a5a", groundTop: "#8a8aa0", groundDark: "#2e2e3a", brick: "#a05a4a", far: "#3a2a5a", near: "#2a2040", stars: false, enemy: "hater", coin: "heart", landmark: "none" },
+    (b) => {
+      // rooftops at different heights: hop from roof to roof
+      b.ground(0, 18, 12);
+      b.ground(21, 32, 10);
+      b.enemy(26, 9);
+      b.tile(26, 6, "?");
+      b.ground(35, 44, 9);
+      b.coins(37, 5, 4);
+      b.ground(48, 60, 11);
+      b.tile(52, 7, "M");
+      b.enemy(54, 10);
+      b.enemy(57, 10);
+      b.ground(63, 74, 9);
+      b.gold(68, 4);
+      b.ground(78, 100, 12);
+      b.checkpoint(80);
+      b.tunnel(86, 5);
+      b.plane(98);
+      b.ground(103, 115, 10);
+      b.spring(108, 9);
+      b.gold(108, 1);
+      b.enemy(112, 9);
+      b.ground(119, 132, 8);
+      b.row(122, 4, 4, "B");
+      b.tile(123, 4, "?");
+      b.enemy(126, 7);
+      b.enemy(129, 7);
+      b.gold(134, 6);
+      b.ground(136, 150, 11);
+      b.enemy(144, 10);
+      b.ground(153, 199, 12);
+      b.stairs(160, 5);
+      b.stairs(166, 5, true);
+      b.enemy(175);
+      b.flag(186);
+    },
+    { name: "3-2", place: "Rooftops", coinName: "Followers", coinValue: 250, enemyName: "Hater" },
+  ),
+  build(
+    220,
+    { sky: ["#1a0a1a", "#5a1a3a"], ground: "#3a2a3a", groundTop: "#b03a5a", groundDark: "#241a24", brick: "#7a2a4a", far: "#2a1430", near: "#3a1a3a", stars: true, enemy: "midterm", coin: "grade", landmark: "none" },
+    (b) => {
+      b.ground(0, 30);
+      b.tile(8, 8, "?");
+      b.row(12, 8, 3, "B");
+      b.tile(13, 8, "O");
+      b.enemy(16);
+      b.enemy(19);
+      b.enemy(22);
+      b.tunnel(25, 4);
+      b.ground(34, 60);
+      b.plane(42);
+      b.plane(46);
+      b.row(48, 8, 4, "X");
+      b.row(53, 5, 4, "X");
+      b.gold(55, 1);
+      b.enemy(50);
+      b.enemy(56);
+      b.ground(64, 90);
+      b.pipe(67, 3);
+      b.enemy(70);
+      b.pipe(73, 4);
+      b.enemy(77);
+      b.tunnel(81, 6);
+      b.ground(94, 130);
+      b.checkpoint(96);
+      b.row(100, 8, 5, "B");
+      b.tile(102, 8, "N");
+      b.tile(102, 4, "?");
+      b.enemy(104);
+      b.enemy(107);
+      b.enemy(110);
+      b.plane(118);
+      b.spring(122);
+      b.gold(122, 2);
+      b.ground(135, 165);
+      b.tunnel(140, 5);
+      b.enemy(150);
+      b.enemy(153);
+      b.plane(160);
+      b.gold(167, 10);
+      b.ground(169, 219);
+      b.tile(174, 8, "M");
+      b.enemy(180);
+      b.enemy(183);
+      b.enemy(186);
+      b.stairs(192, 8);
+      b.flag(208);
+    },
+    { name: "3-3", place: "Final Exam", coinName: "Grades", coinValue: 1, enemyName: "Midterm" },
   ),
 ];
 
