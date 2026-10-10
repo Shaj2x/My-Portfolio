@@ -241,7 +241,7 @@ export const profile = {
 /** the About Me paragraphs; `strong` runs are emphasised */
 export const aboutParagraphs: { text: string; strong?: boolean }[][] = [
   [
-    { text: "I'm in my first year at Western University, working toward a dual degree in " },
+    { text: "I'm in my second year at Western University, working toward a dual degree in " },
     { text: "Engineering Science and an Ivey HBA", strong: true },
     { text: ". I picked it because I never wanted to choose between building things and understanding the business behind them. I'm happiest when a problem needs a little of both." },
   ],
