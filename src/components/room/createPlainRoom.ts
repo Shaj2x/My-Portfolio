@@ -24,7 +24,7 @@ export interface SoundSettings {
   ambience: number;
   outside: "breeze" | "rain" | "storm" | "snow";
 }
-export const DEFAULT_SOUND: SoundSettings = { effects: 1, ambience: 1, outside: "breeze" };
+export const DEFAULT_SOUND: SoundSettings = { effects: 0.4, ambience: 0.1, outside: "breeze" };
 export const OUTSIDE_SOUNDS: [SoundSettings["outside"], string][] = [
   ["breeze", "Night breeze"],
   ["rain", "Rain"],
@@ -106,17 +106,18 @@ export const DESK_TONES: [string, string][] = [
   ["Cool", "#e2edff"],
 ];
 
+/** what a first-time visitor sees: the floor lamp on low in candlelight, everything else off */
 export const LAMP_DEFAULT: LampSettings = {
   on: true,
-  brightness: 1,
-  color: "#ffd6a0",
+  brightness: 0.15,
+  color: "#ff9a45",
   ceiling: false,
   ceilingTone: "#fff1dc",
   sunset: false,
-  sunsetStyle: "Sunset",
+  sunsetStyle: "Ember",
   desk: false,
-  deskBrightness: 1,
-  deskTone: "#fff3e3",
+  deskBrightness: 0.32,
+  deskTone: "#ffa95a",
 };
 
 /** bulb colours offered in the lamp panel */
