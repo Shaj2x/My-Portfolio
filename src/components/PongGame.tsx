@@ -12,6 +12,8 @@ const BALL_R = 18;
 const PADDLE_SPEED = 5;
 const INITIAL_BALL_SPEED = 4;
 const WIN_SCORE = 5;
+/** how long the ball waits in the middle before each serve, in ms */
+const SERVE_WAIT = 1000;
 
 /** `showHelp` off hides the how-to-play line, for hosts that show it themselves */
 const PongGame = ({ showHelp = true }: { showHelp?: boolean }) => {
@@ -34,6 +36,11 @@ const PongGame = ({ showHelp = true }: { showHelp?: boolean }) => {
     animId: 0,
     playerScore: 0,
     cpuScore: 0,
+    /** when the waiting ball is served (performance.now() time), and which way: -1 to you, 1 to the CPU */
+    serveAt: 0,
+    serveDir: 1 as 1 | -1,
+    /** serves so far: they alternate between a gentle upward and downward angle */
+    serves: 0,
   });
 
   useEffect(() => {
@@ -42,12 +49,15 @@ const PongGame = ({ showHelp = true }: { showHelp?: boolean }) => {
     img.onload = () => { logoImg.current = img; };
   }, []);
 
-  const resetBall = useCallback(() => {
+  // the ball waits in the middle for a moment, then goes to whoever is receiving at a gentle angle
+  const resetBall = useCallback((towards: 1 | -1) => {
     const g = gameState.current;
     g.ballX = CANVAS_W / 2;
     g.ballY = CANVAS_H / 2;
-    g.ballVX = INITIAL_BALL_SPEED * (Math.random() > 0.5 ? 1 : -1);
-    g.ballVY = INITIAL_BALL_SPEED * 0.6 * (Math.random() > 0.5 ? 1 : -1);
+    g.ballVX = 0;
+    g.ballVY = 0;
+    g.serveDir = towards;
+    g.serveAt = performance.now() + SERVE_WAIT;
   }, []);
 
   const endGame = useCallback((winnerName?: string) => {
@@ -75,7 +85,8 @@ const PongGame = ({ showHelp = true }: { showHelp?: boolean }) => {
     g.cpuY = CANVAS_H / 2 - PADDLE_H / 2;
     setScore({ player: 0, cpu: 0 });
     setWinner(null);
-    resetBall();
+    g.serves = 0;
+    resetBall(1);
     setPlaying(true);
     sfx("start");
   }, [resetBall]);
@@ -111,6 +122,13 @@ const PongGame = ({ showHelp = true }: { showHelp?: boolean }) => {
       g.cpuY = Math.max(0, Math.min(CANVAS_H - PADDLE_H, g.cpuY));
 
       // Ball movement
+      // waiting to serve: the paddles can move, the ball stays put
+      const waiting = g.ballVX === 0;
+      if (waiting && t >= g.serveAt) {
+        g.ballVX = INITIAL_BALL_SPEED * g.serveDir;
+        g.ballVY = INITIAL_BALL_SPEED * 0.35 * (g.serves % 2 ? 1 : -1);
+        g.serves++;
+      }
       g.ballX += g.ballVX * k;
       g.ballY += g.ballVY * k;
 
@@ -139,13 +157,13 @@ const PongGame = ({ showHelp = true }: { showHelp?: boolean }) => {
         setScore({ player: g.playerScore, cpu: g.cpuScore });
         if (g.cpuScore >= WIN_SCORE) { sfx("lose"); endGame("CPU"); return; }
         sfx("miss");
-        resetBall();
+        resetBall(-1);
       } else if (g.ballX > CANVAS_W) {
         g.playerScore++;
         setScore({ player: g.playerScore, cpu: g.cpuScore });
         if (g.playerScore >= WIN_SCORE) { sfx("win"); endGame("You"); return; }
         sfx("point");
-        resetBall();
+        resetBall(1);
       }
 
       // Draw
@@ -172,7 +190,8 @@ const PongGame = ({ showHelp = true }: { showHelp?: boolean }) => {
       ctx.fillRect(CANVAS_W - PADDLE_W - 10, g.cpuY, PADDLE_W, PADDLE_H);
       ctx.shadowBlur = 0;
 
-      // Ball (logo)
+      // Ball (logo), pulsing gently while it waits to be served
+      ctx.globalAlpha = waiting ? 0.55 + 0.45 * Math.abs(Math.sin(t / 160)) : 1;
       if (logoImg.current) {
         ctx.save();
         ctx.beginPath();
@@ -196,6 +215,7 @@ const PongGame = ({ showHelp = true }: { showHelp?: boolean }) => {
         ctx.arc(g.ballX, g.ballY, BALL_R, 0, Math.PI * 2);
         ctx.fill();
       }
+      ctx.globalAlpha = 1;
 
       // Score
       ctx.fillStyle = "hsl(0, 0%, 40%)";

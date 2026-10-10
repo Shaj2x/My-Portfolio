@@ -8,7 +8,7 @@ const CANVAS_H = 400;
 const CELL = 20;
 const COLS = CANVAS_W / CELL;
 const ROWS = CANVAS_H / CELL;
-const TICK_MS = 120;
+const TICK_MS = 85;
 
 type Point = { x: number; y: number };
 type Dir = "UP" | "DOWN" | "LEFT" | "RIGHT";
@@ -33,6 +33,8 @@ const SnakeGame = ({ showHelp = true }: { showHelp?: boolean }) => {
     snake: [{ x: 5, y: Math.floor(ROWS / 2) }] as Point[],
     dir: "RIGHT" as Dir,
     nextDir: "RIGHT" as Dir,
+    /** turns pressed but not made yet, oldest first: quick presses in a row all count */
+    turns: [] as Dir[],
     food: { x: 15, y: Math.floor(ROWS / 2) } as Point,
     score: 0,
     intervalId: undefined as ReturnType<typeof setInterval> | undefined,
@@ -120,6 +122,8 @@ const SnakeGame = ({ showHelp = true }: { showHelp?: boolean }) => {
 
   const tick = useCallback(() => {
     const s = state.current;
+    const turn = s.turns.shift();
+    if (turn) s.nextDir = turn;
     s.dir = s.nextDir;
     const head = { ...s.snake[0] };
 
@@ -154,6 +158,7 @@ const SnakeGame = ({ showHelp = true }: { showHelp?: boolean }) => {
     s.snake = [{ x: 5, y: Math.floor(ROWS / 2) }];
     s.dir = "RIGHT";
     s.nextDir = "RIGHT";
+    s.turns = [];
     s.food = randomFood(s.snake);
     s.score = 0;
     setScore(0);
@@ -168,7 +173,9 @@ const SnakeGame = ({ showHelp = true }: { showHelp?: boolean }) => {
   const steer = useCallback((newDir: Dir) => {
     const s = state.current;
     const opposites: Record<Dir, Dir> = { UP: "DOWN", DOWN: "UP", LEFT: "RIGHT", RIGHT: "LEFT" };
-    if (newDir !== opposites[s.dir]) s.nextDir = newDir;
+    // each turn is checked against the one before it, so up-then-left in one beat makes both turns
+    const last = s.turns[s.turns.length - 1] ?? s.dir;
+    if (newDir !== last && newDir !== opposites[last] && s.turns.length < 3) s.turns.push(newDir);
   }, []);
 
   // touch: a swipe on the board turns the snake the way the finger went
