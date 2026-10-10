@@ -248,7 +248,7 @@ export const aboutParagraphs: { text: string; strong?: boolean }[][] = [
   [
     { text: "At 15, I co-founded a streetwear brand, and watching it grow to " },
     { text: "10K+ followers", strong: true },
-    { text: " taught me more than any class has. In high school I was Student Activity Council President at Chinguacousy S.S. and president of the Tamil Student Association, where we put on cultural events I'm still proud of. I also worked federal elections as a Deputy Returning Officer, which is a whole different kind of pressure." },
+    { text: " across all platforms taught me more about how to market and do business than any class could teach. In high school, I was Student Activity Council President at Chinguacousy S.S. and president of the Tamil Student Association, where we put on all kinds of events I'm still proud of. I also worked federal elections as a Deputy Returning Officer, which is the role that taught me how to work under pressure." },
   ],
   [
     { text: "These days I build AI tools and websites for businesses, from AI receptionists that pick up every call to full sites and brand identities. My goal is simple: make the tech feel easy, so owners can get back to the work they actually love." },
