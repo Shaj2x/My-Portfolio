@@ -12,6 +12,8 @@ const Room = lazy(() => import("./pages/Room"));
 const RoomPlain = lazy(() => import("./pages/RoomPlain"));
 // the whole portfolio on one plain page, for anyone short on time; no three.js
 const QuickView = lazy(() => import("./pages/QuickView"));
+// Ma's Garden, a fruit-matching game made for Ma
+const MasGarden = lazy(() => import("./pages/MasGarden"));
 
 const queryClient = new QueryClient();
 
@@ -45,6 +47,14 @@ const App = () => (
               element={
                 <Suspense fallback={<div className="fixed inset-0 bg-[#0d0e11]" />}>
                   <QuickView />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/ma"
+              element={
+                <Suspense fallback={<div className="fixed inset-0 bg-[#ffd9e2]" />}>
+                  <MasGarden />
                 </Suspense>
               }
             />

@@ -1,0 +1,13 @@
+{
+  "name": "Ma's Garden",
+  "short_name": "Ma's Garden",
+  "start_url": "/ma",
+  "scope": "/ma",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffd9e2",
+  "theme_color": "#ffd9e2",
+  "icons": [
+    { "src": "/ma-icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
