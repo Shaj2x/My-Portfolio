@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Gamepad2 } from "lucide-react";
+import { Gamepad2, Volume2, VolumeX } from "lucide-react";
+import { useGameSound } from "./gameSound";
 import MotionSection from "./MotionSection";
 import PongGame from "./PongGame";
 import SnakeGame from "./SnakeGame";
@@ -8,6 +9,7 @@ type GameType = "pong" | "snake";
 
 const GameSection = () => {
   const [activeGame, setActiveGame] = useState<GameType>("pong");
+  const [soundOn, setSoundOn] = useGameSound();
 
   return (
     <section id="pong" className="section-padding">
@@ -38,6 +40,14 @@ const GameSection = () => {
           >
             <Gamepad2 size={14} className="inline mr-2 -mt-0.5" />
             Snake
+          </button>
+          <button
+            onClick={() => setSoundOn(!soundOn)}
+            aria-pressed={soundOn}
+            aria-label={soundOn ? "Turn game sound off" : "Turn game sound on"}
+            className="px-3 py-2 rounded-md text-sm font-medium border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+          >
+            {soundOn ? <Volume2 size={14} className="inline -mt-0.5" /> : <VolumeX size={14} className="inline -mt-0.5" />}
           </button>
         </div>
 
