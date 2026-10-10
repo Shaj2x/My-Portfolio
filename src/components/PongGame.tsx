@@ -12,8 +12,10 @@ const BALL_R = 18;
 const PADDLE_SPEED = 5;
 const INITIAL_BALL_SPEED = 4;
 const WIN_SCORE = 5;
-/** how long the ball waits in the middle before each serve, in ms */
-const SERVE_WAIT = 1000;
+/** how long the ball waits in the middle before each serve, in ms (a 3-2-1 countdown) */
+const SERVE_WAIT = 1500;
+/** a serve starts slower, and picks up to full speed on its first paddle hit */
+const SERVE_SPEED = INITIAL_BALL_SPEED * 0.75;
 
 /** `showHelp` off hides the how-to-play line, for hosts that show it themselves */
 const PongGame = ({ showHelp = true }: { showHelp?: boolean }) => {
@@ -125,8 +127,8 @@ const PongGame = ({ showHelp = true }: { showHelp?: boolean }) => {
       // waiting to serve: the paddles can move, the ball stays put
       const waiting = g.ballVX === 0;
       if (waiting && t >= g.serveAt) {
-        g.ballVX = INITIAL_BALL_SPEED * g.serveDir;
-        g.ballVY = INITIAL_BALL_SPEED * 0.35 * (g.serves % 2 ? 1 : -1);
+        g.ballVX = SERVE_SPEED * g.serveDir;
+        g.ballVY = SERVE_SPEED * 0.35 * (g.serves % 2 ? 1 : -1);
         g.serves++;
       }
       g.ballX += g.ballVX * k;
@@ -139,14 +141,14 @@ const PongGame = ({ showHelp = true }: { showHelp?: boolean }) => {
 
       // Player paddle collision
       if (g.ballX - BALL_R <= PADDLE_W + 10 && g.ballY >= g.playerY && g.ballY <= g.playerY + PADDLE_H && g.ballVX < 0) {
-        g.ballVX *= -1.05;
+        g.ballVX = Math.max(INITIAL_BALL_SPEED, Math.abs(g.ballVX) * 1.05);
         g.ballVY = ((g.ballY - g.playerY) / PADDLE_H - 0.5) * INITIAL_BALL_SPEED * 1.5;
         sfx("paddle");
       }
 
       // CPU paddle collision
       if (g.ballX + BALL_R >= CANVAS_W - PADDLE_W - 10 && g.ballY >= g.cpuY && g.ballY <= g.cpuY + PADDLE_H && g.ballVX > 0) {
-        g.ballVX *= -1.05;
+        g.ballVX = -Math.max(INITIAL_BALL_SPEED, Math.abs(g.ballVX) * 1.05);
         g.ballVY = ((g.ballY - g.cpuY) / PADDLE_H - 0.5) * INITIAL_BALL_SPEED * 1.5;
         sfx("paddle");
       }
@@ -223,6 +225,22 @@ const PongGame = ({ showHelp = true }: { showHelp?: boolean }) => {
       ctx.textAlign = "center";
       ctx.fillText(String(g.playerScore), CANVAS_W / 4, 60);
       ctx.fillText(String(g.cpuScore), (3 * CANVAS_W) / 4, 60);
+
+      // before a serve: a 3-2-1 under the ball, and an arrow to whoever is receiving
+      if (waiting) {
+        const left = Math.max(0, g.serveAt - t);
+        ctx.fillStyle = "hsl(0, 0%, 85%)";
+        ctx.font = "bold 28px 'Space Grotesk', sans-serif";
+        ctx.fillText(String(Math.min(3, Math.ceil(left / (SERVE_WAIT / 3)))), CANVAS_W / 2, CANVAS_H / 2 + BALL_R + 38);
+        const ax = CANVAS_W / 2 + g.serveDir * (BALL_R + 22);
+        ctx.fillStyle = paddleColor;
+        ctx.beginPath();
+        ctx.moveTo(ax + g.serveDir * 10, CANVAS_H / 2);
+        ctx.lineTo(ax - g.serveDir * 4, CANVAS_H / 2 - 8);
+        ctx.lineTo(ax - g.serveDir * 4, CANVAS_H / 2 + 8);
+        ctx.closePath();
+        ctx.fill();
+      }
 
       g.animId = requestAnimationFrame(loop);
     };
