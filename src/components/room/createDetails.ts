@@ -232,7 +232,7 @@ export function createCat(track: Track) {
 // ---------- phone ----------
 
 const NOTIFICATIONS = [
-  { app: "GitHub", text: "PR #214 approved — ready to merge" },
+  { app: "GitHub", text: "PR #214 approved, ready to merge" },
   { app: "Messages", text: "Mom: go to sleep!!" },
   { app: "Calendar", text: "Midterm tomorrow, 9:00 AM" },
   { app: "Slack", text: "Deploy finished · all checks green" },

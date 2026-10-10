@@ -265,10 +265,10 @@ const QuickView = () => {
             </Reveal>
             <div className="grid grid-cols-2 content-start gap-3">
               {[
-                ["2", "degrees at once: BESc + Ivey HBA"],
-                ["10K+", "followers for my streetwear brand, started at 15"],
+                ["2", "degrees, one program: BESc and Ivey HBA"],
+                ["10K+", "followers on the streetwear brand I started at 15"],
                 ["96.3%", "four-year high school average"],
-                ["3", "student and community leadership roles"],
+                ["3", "leadership roles at school and in my community"],
               ].map(([n, label], i) => (
                 <Reveal key={label} delay={i * 0.06}>
                   <Glass className="h-full p-4">

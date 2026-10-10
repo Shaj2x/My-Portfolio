@@ -241,16 +241,16 @@ export const profile = {
 /** the About Me paragraphs; `strong` runs are emphasised */
 export const aboutParagraphs: { text: string; strong?: boolean }[][] = [
   [
-    { text: "I'm a first-year student in the dual-degree " },
-    { text: "Engineering Science + Ivey HBA", strong: true },
-    { text: " program at Western University — one of Canada's most selective combined engineering and business programs. I thrive at the intersection of technology, business, and creative problem-solving." },
+    { text: "I'm in my first year at Western University, working toward a dual degree in " },
+    { text: "Engineering Science and an Ivey HBA", strong: true },
+    { text: ". I picked it because I never wanted to choose between building things and understanding the business behind them. I'm happiest when a problem needs a little of both." },
   ],
   [
-    { text: "At 15, I co-founded a streetwear brand that scaled to " },
+    { text: "At 15, I co-founded a streetwear brand, and watching it grow to " },
     { text: "10K+ followers", strong: true },
-    { text: ". I led as Student Activity Council President at Chinguacousy S.S., organized cultural events as Tamil Student Association President, and managed federal election operations as a Deputy Returning Officer." },
+    { text: " taught me more than any class has. In high school I was Student Activity Council President at Chinguacousy S.S. and president of the Tamil Student Association, where we put on cultural events I'm still proud of. I also worked federal elections as a Deputy Returning Officer, which is a whole different kind of pressure." },
   ],
   [
-    { text: "Today, I build fully automated AI systems — from intelligent receptionists to complete websites and brand identities — helping businesses scale smarter. I'm driven by the belief that great technology should feel effortless." },
+    { text: "These days I build AI tools and websites for businesses, from AI receptionists that pick up every call to full sites and brand identities. My goal is simple: make the tech feel easy, so owners can get back to the work they actually love." },
   ],
 ];
