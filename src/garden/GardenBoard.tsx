@@ -1,5 +1,5 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from "react";
-import type { Game, Piece, Pos, Snap, Step } from "./engine";
+import type { Game, Piece, Pos, Progress, Snap, Step } from "./engine";
 import { drawBasket, drawHedge, drawPiece, drawVine, drawWeed, JUICE, roundRect } from "./draw";
 import { sfx } from "./sound";
 
@@ -18,8 +18,8 @@ interface Props {
   /** the trowel booster is armed: the next tap clears one fruit */
   trowel: boolean;
   onTrowelUsed: () => void;
-  /** points scored by a step, as it happens */
-  onPoints: (points: number) => void;
+  /** the score and goal counters as each step plays (the engine works a move out ahead of the animation) */
+  onProgress: (progress: Progress) => void;
   /** a move has finished playing out */
   onSettled: () => void;
   /** a move started (it used up a move) */
@@ -35,7 +35,7 @@ const WORDS = ["", "", "Sweet!", "Juicy!", "Delicious!", "Fruitastic!"];
 const ease = (t: number) => 1 - Math.pow(1 - t, 3);
 const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
-export const GardenBoard = forwardRef<BoardHandle, Props>(({ game, trowel, onTrowelUsed, onPoints, onSettled, onMove }, ref) => {
+export const GardenBoard = forwardRef<BoardHandle, Props>(({ game, trowel, onTrowelUsed, onProgress, onSettled, onMove }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const snap = useRef<Snap>(game.snap());
@@ -48,8 +48,9 @@ export const GardenBoard = forwardRef<BoardHandle, Props>(({ game, trowel, onTro
   const hint = useRef<[Pos, Pos] | null>(null);
   const idleSince = useRef(performance.now());
   const layout = useRef({ tile: 40, ox: 0, oy: 0, w: 0, h: 0, dpr: 1 });
-  const props = useRef({ trowel, onTrowelUsed, onPoints, onSettled, onMove });
-  props.current = { trowel, onTrowelUsed, onPoints, onSettled, onMove };
+  const hintTried = useRef(false);
+  const props = useRef({ trowel, onTrowelUsed, onProgress, onSettled, onMove });
+  props.current = { trowel, onTrowelUsed, onProgress, onSettled, onMove };
 
   const cellXY = (r: number, c: number) => {
     const L = layout.current;
@@ -107,7 +108,7 @@ export const GardenBoard = forwardRef<BoardHandle, Props>(({ game, trowel, onTro
       const L = layout.current;
       float(WORDS[Math.min(5, step.cascade)], L.ox + L.w / 2, L.oy + L.h / 2, { big: true, life: 1100, size: L.tile * 1.1, color: "#fff" });
     }
-    props.current.onPoints(step.points);
+    props.current.onProgress(step.progress);
     await tween(step.fx.length ? 300 : 200, (k) => {
       for (const [id, x] of at) views.current.set(id, { x: x.c, y: x.r, scale: 1 - ease(k), alpha: 1 - k * 0.6 });
     });
@@ -173,9 +174,21 @@ export const GardenBoard = forwardRef<BoardHandle, Props>(({ game, trowel, onTro
       game.justShuffled = false;
       const L = layout.current;
       float("No moves left. Shuffling!", L.ox + L.w / 2, L.oy + L.h / 2, { big: true, life: 1300, size: L.tile * 0.55 });
-      await wait(500);
+      await wait(400);
+      // the fruit shrink away and come back mixed up
+      const ids: { id: number; r: number; c: number }[] = [];
+      snap.current.pieces.forEach((row, r) => row.forEach((p, c) => p && ids.push({ id: p.id, r, c })));
+      await tween(220, (k) => ids.forEach((x) => views.current.set(x.id, { x: x.c, y: x.r, scale: 1 - ease(k), alpha: 1 })));
+      snap.current = game.snap();
+      const fresh: { id: number; r: number; c: number }[] = [];
+      snap.current.pieces.forEach((row, r) => row.forEach((p, c) => p && fresh.push({ id: p.id, r, c })));
+      views.current.clear();
+      await tween(260, (k) => fresh.forEach((x) => views.current.set(x.id, { x: x.c, y: x.r, scale: ease(k), alpha: 1 })));
+      views.current.clear();
     }
     snap.current = game.snap();
+    hint.current = null;
+    hintTried.current = false;
   };
 
   /** a swap: slide the two fruits; if it doesn't work, slide them back */
@@ -219,6 +232,8 @@ export const GardenBoard = forwardRef<BoardHandle, Props>(({ game, trowel, onTro
     const steps = game.trowel(p);
     if (!steps) return;
     busy.current = true;
+    selected.current = null;
+    hint.current = null;
     props.current.onTrowelUsed();
     await playSteps(steps);
     busy.current = false;
@@ -252,6 +267,7 @@ export const GardenBoard = forwardRef<BoardHandle, Props>(({ game, trowel, onTro
     const down = (e: PointerEvent) => {
       idleSince.current = performance.now();
       hint.current = null;
+      hintTried.current = false;
       if (busy.current) return;
       const pos = cellAt(e.clientX, e.clientY);
       if (!pos) return;
@@ -287,8 +303,10 @@ export const GardenBoard = forwardRef<BoardHandle, Props>(({ game, trowel, onTro
     canvas.addEventListener("pointerdown", down);
     canvas.addEventListener("pointermove", move);
     canvas.addEventListener("pointerup", up);
-    canvas.addEventListener("pointercancel", () => (start = null));
+    const cancel = () => (start = null);
+    canvas.addEventListener("pointercancel", cancel);
     return () => {
+      canvas.removeEventListener("pointercancel", cancel);
       canvas.removeEventListener("pointerdown", down);
       canvas.removeEventListener("pointermove", move);
       canvas.removeEventListener("pointerup", up);
@@ -306,6 +324,7 @@ export const GardenBoard = forwardRef<BoardHandle, Props>(({ game, trowel, onTro
     fxs.current = [];
     selected.current = null;
     hint.current = null;
+    hintTried.current = false;
     busy.current = false;
     idleSince.current = performance.now();
   }, [game]);
@@ -339,7 +358,18 @@ export const GardenBoard = forwardRef<BoardHandle, Props>(({ game, trowel, onTro
     const ctx = canvas.getContext("2d")!;
     let raf = 0;
     let last = performance.now();
-    const frame = (now: number) => {
+    const frame = () => {
+      // keep the loop going even if one frame fails to draw, so the board can never freeze
+      raf = requestAnimationFrame(frame);
+      try {
+        draw();
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    const draw = () => {
+      // the clock the effects were stamped with (a frame's own timestamp can be a little behind it)
+      const now = performance.now();
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
       const t = now / 1000;
@@ -374,7 +404,10 @@ export const GardenBoard = forwardRef<BoardHandle, Props>(({ game, trowel, onTro
         }
 
       // hint: the two fruits of a good move bob after a few idle seconds
-      if (!busy.current && !hint.current && now - idleSince.current > 5000) hint.current = game.findMove();
+      if (!busy.current && !hint.current && !hintTried.current && now - idleSince.current > 5000) {
+        hint.current = game.findMove();
+        hintTried.current = true;
+      }
       const hinted = new Set(hint.current ? hint.current.map((p) => `${p.r},${p.c}`) : []);
 
       // the fruit
@@ -403,8 +436,9 @@ export const GardenBoard = forwardRef<BoardHandle, Props>(({ game, trowel, onTro
         }
       // pieces in motion
       for (const [id, v] of views.current) {
-        const p = findPiece(s, id) ?? findPiece(snap.current, id);
-        if (!p) continue;
+        const found = findPiece(s, id);
+        if (!found) continue;
+        const p = found.piece;
         const { x, y } = cellXY(v.y, v.x);
         if (y < L.oy - T * 0.5) continue;
         ctx.save();
@@ -414,13 +448,15 @@ export const GardenBoard = forwardRef<BoardHandle, Props>(({ game, trowel, onTro
         ctx.rect(L.ox - T, L.oy, L.w + T * 2, L.h + T);
         ctx.clip();
         drawAt(ctx, p, x, y, T * 0.92 * v.scale, t);
+        // a vined fruit carries its vine as it falls
+        if (s.vine[found.r][found.c]) drawVine(ctx, x, y, T * v.scale);
         ctx.restore();
       }
 
       // effects
       fxs.current = fxs.current.filter((a) => now - a.born < 520);
       for (const a of fxs.current) {
-        const k = (now - a.born) / 520;
+        const k = Math.max(0, (now - a.born) / 520);
         const f = a.fx;
         ctx.save();
         ctx.globalAlpha = 1 - k;
@@ -476,7 +512,7 @@ export const GardenBoard = forwardRef<BoardHandle, Props>(({ game, trowel, onTro
       // words and points
       floats.current = floats.current.filter((f) => now - f.born < f.life);
       for (const f of floats.current) {
-        const k = (now - f.born) / f.life;
+        const k = Math.max(0, (now - f.born) / f.life);
         ctx.save();
         const pop = f.big ? (k < 0.2 ? 0.6 + ease(k / 0.2) * 0.5 : 1.1 - (k - 0.2) * 0.12) : 1;
         ctx.globalAlpha = k > 0.7 ? 1 - (k - 0.7) / 0.3 : 1;
@@ -493,7 +529,6 @@ export const GardenBoard = forwardRef<BoardHandle, Props>(({ game, trowel, onTro
         ctx.fillText(f.text, 0, 0);
         ctx.restore();
       }
-      raf = requestAnimationFrame(frame);
     };
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
@@ -508,7 +543,11 @@ export const GardenBoard = forwardRef<BoardHandle, Props>(({ game, trowel, onTro
 GardenBoard.displayName = "GardenBoard";
 
 const findPiece = (s: Snap, id: number) => {
-  for (const row of s.pieces) for (const p of row) if (p?.id === id) return p;
+  for (let r = 0; r < s.pieces.length; r++)
+    for (let c = 0; c < s.pieces[r].length; c++) {
+      const piece = s.pieces[r][c];
+      if (piece?.id === id) return { piece, r, c };
+    }
   return null;
 };
 

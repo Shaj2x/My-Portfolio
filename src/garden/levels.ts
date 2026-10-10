@@ -88,11 +88,21 @@ export function levelSpec(n: number): LevelSpec {
   const shapeName = isHeart ? "heart" : n <= 3 ? "square8" : shapeNames[pick(n, 0, shapeNames.length)];
   const rows = [...SHAPES[shapeName]];
 
+  // how hard: climbs steadily from level 1 to about level 150, with a harder stretch near the end of
+  // each garden (levels 6 to 9) and an easier breather at the start of the next
+  const climb = Math.pow(Math.min(1, (n - 1) / 120), 0.8);
+  const wave = [-0.04, -0.02, 0, 0.02, 0, 0.04, 0.06, 0.08, 0.1, 0.03][inEpisode - 1];
+  const tight = Math.max(0, Math.min(0.4, climb * 0.3 + (n > 10 ? wave : 0)));
+  // six kinds of fruit make matches rarer, so those levels get some moves back
+  // (acorn levels keep five, since acorns only move when the fruit under them clear)
+  const sixColors = n > 25 && type !== "acorns" && (n <= 70 ? n % 2 === 0 : n % 5 !== 0);
+
   // what's on it
-  const colors = n <= 3 ? 4 : n <= 30 ? 5 : n % 2 === 0 ? 6 : 5;
+  const colors = n <= 3 ? 4 : sixColors ? 6 : 5;
   if (type === "weeds") addWeeds(rows, n, n > 20);
   if (n >= 8 && n % 3 !== 1 && type !== "acorns") addHedges(rows, n, n > 15);
   if (n >= 13 && n % 4 === 1) addVines(rows, n);
+  if (n >= 60 && n % 4 === 3 && type !== "acorns") addVines(rows, n + 7);
   if (type === "acorns") {
     // the first acorn waits at the top; more fall in as you go
     const c = rows[0].indexOf("o");
@@ -102,33 +112,32 @@ export function levelSpec(n: number): LevelSpec {
   // the goal, and enough moves to reach it
   let goal: Goal;
   let moves: number;
-  const ease = Math.max(0, 3 - episode); // the first gardens get a few spare moves
+  const ease = n <= 10 ? 3 : n <= 20 ? 1 : 0; // the first gardens get a few spare moves
   if (type === "score") {
     goal = { type: "score" };
-    moves = 20 + Math.min(4, ease);
+    moves = 22 + ease + (sixColors ? 4 : 0);
   } else if (type === "weeds") {
     const cells = rows.join("").split("").filter((ch) => ch === "w" || ch === "W").length;
     const layers = rows.join("").split("").reduce((s, ch) => s + (ch === "w" ? 1 : ch === "W" ? 2 : 0), 0);
     goal = { type: "weeds" };
-    moves = Math.max(18, Math.min(36, 10 + Math.ceil(layers * 0.42) + ease - Math.floor(cells / 40) + (n > 20 ? 3 : 0)));
+    moves = Math.max(18, Math.min(38, 10 + Math.ceil(layers * 0.42) + ease - Math.floor(cells / 40) + (n > 20 ? 3 : 0)));
   } else if (type === "collect") {
     const kinds = n <= 2 ? 1 : n < 20 ? 2 : 3;
-    const each = Math.min(40, 14 + episode * 4 + (kinds === 1 ? 6 : 0));
+    const each = Math.min(36, Math.round(14 + n * 0.16 + (kinds === 1 ? 6 : 0)));
     const first = pick(n, 4, colors);
     const items = Array.from({ length: kinds }, (_, i) => ({ color: (first + i * 2) % colors, count: each }));
     goal = { type: "collect", items };
-    moves = Math.ceil((each * kinds) / (colors <= 4 ? 3.4 : colors === 5 ? 3.1 : 2.7)) + 5 + ease;
+    moves = Math.ceil((each * kinds) / (colors <= 4 ? 3.4 : colors === 5 ? 3.1 : 2.45)) + 5 + ease;
   } else {
-    const count = Math.min(4, 2 + Math.floor(episode / 2));
+    const count = Math.min(4, 2 + Math.floor(n / 40));
     goal = { type: "acorns", count };
-    moves = 20 + count * 2 + ease + episode * 2;
+    moves = 22 + count * 4 + ease;
   }
 
-  // each garden is a little tighter than the last
-  moves = Math.max(14, Math.round(moves * (1 - Math.min(0.32, episode * 0.08))));
+  moves = Math.max(14, Math.round(moves * (1 - tight)));
 
   // stars: one for finishing (or for the target on score levels), two and three for a big score
-  const perMove = 700 + episode * 110;
+  const perMove = (700 + Math.min(episode, 8) * 110) * (sixColors ? 0.75 : 1);
   const base = moves * perMove;
   const stars: [number, number, number] =
     type === "score" ? [Math.round(base / 10) * 10, Math.round((base * 1.6) / 10) * 10, Math.round((base * 2.3) / 10) * 10] : [Math.round((base * 0.4) / 10) * 10, Math.round((base * 1.1) / 10) * 10, Math.round((base * 1.7) / 10) * 10];

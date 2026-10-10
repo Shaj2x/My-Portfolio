@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Heart, Lock, Shovel, Star, Volume2, VolumeX } from "lucide-react";
-import { Game, type LevelSpec } from "@/garden/engine";
+import { Game, type LevelSpec, type Progress } from "@/garden/engine";
 import { GardenBoard, type BoardHandle } from "@/garden/GardenBoard";
 import { drawFruit, drawPiece, drawWeed } from "@/garden/draw";
 import { FRUIT_NAMES, GARDENS, gardenOf, goalText, levelSpec } from "@/garden/levels";
@@ -58,9 +58,8 @@ function Icon({ kind, size = 28 }: { kind: IconKind; size?: number }) {
 }
 
 /** what's left of the goal, as icons with counts */
-function GoalChips({ spec, game, size = 28 }: { spec: LevelSpec; game?: Game; size?: number }) {
+function GoalChips({ spec, progress: p, size = 28 }: { spec: LevelSpec; progress?: Progress; size?: number }) {
   const g = spec.goal;
-  const p = game?.progress;
   const chip = (key: string, icon: React.ReactNode, left: number, label: string) => (
     <div key={key} className="flex items-center gap-1" title={label}>
       {icon}
@@ -103,6 +102,17 @@ const Modal = ({ children }: { children: React.ReactNode }) => (
   </div>
 );
 
+// what the win screen says, the more stars the bigger the word
+const WIN_WORDS = [
+  ["Level Complete!", "Well Done!", "Nice!", "You Did It!"],
+  ["Great!", "Excellent!", "Sweet!", "Tasty!"],
+  ["Amazing!", "Perfect!", "Superb!", "Divine!", "Fruitastic!"],
+];
+const pickWord = (stars: number) => {
+  const list = WIN_WORDS[Math.max(0, Math.min(2, stars - 1))];
+  return list[Math.floor(Math.random() * list.length)];
+};
+
 // ---------- the page ----------
 type Phase = "map" | "intro" | "play" | "won" | "lost";
 
@@ -111,11 +121,12 @@ export default function MasGarden() {
   const [phase, setPhase] = useState<Phase>("map");
   const [level, setLevel] = useState(save.unlocked);
   const [game, setGame] = useState<Game | null>(null);
-  const [, setTick] = useState(0);
+  // the counters on screen, which follow the animation rather than the engine (it works a move out at once)
+  const [shown, setShown] = useState<Progress | undefined>();
   const [trowel, setTrowel] = useState(false);
   const [trowels, setTrowels] = useState(TROWELS);
   const [rescued, setRescued] = useState(false);
-  const [result, setResult] = useState({ stars: 0, score: 0, best: false });
+  const [result, setResult] = useState({ stars: 0, score: 0, best: false, word: "" });
   const [shownStars, setShownStars] = useState(0);
   const board = useRef<BoardHandle>(null);
   const ending = useRef(false);
@@ -170,7 +181,9 @@ export default function MasGarden() {
   const start = () => {
     sfx.tap();
     ending.current = false;
-    setGame(new Game(spec, Date.now() ^ (level * 7919)));
+    const g = new Game(spec, Date.now() ^ (level * 7919));
+    setGame(g);
+    setShown({ ...g.progress, collected: [...g.progress.collected] });
     setTrowel(false);
     setTrowels(TROWELS);
     setRescued(false);
@@ -183,14 +196,14 @@ export default function MasGarden() {
     if (g.progress.movesLeft > 0) await board.current?.bloom();
     const stars = Math.max(1, g.stars());
     const score = g.progress.score;
-    const best = score > (save.best[level] ?? 0);
+    const best = (save.best[level] ?? 0) > 0 && score > save.best[level];
     update((s) => ({
       ...s,
       unlocked: Math.max(s.unlocked, level + 1),
       stars: { ...s.stars, [level]: Math.max(s.stars[level] ?? 0, stars) },
       best: { ...s.best, [level]: Math.max(s.best[level] ?? 0, score) },
     }));
-    setResult({ stars, score, best });
+    setResult({ stars, score, best, word: pickWord(stars) });
     setShownStars(0);
     setPhase("won");
     for (let i = 0; i < stars; i++) {
@@ -202,7 +215,7 @@ export default function MasGarden() {
 
   const onSettled = () => {
     if (!game || ending.current) return;
-    setTick((t) => t + 1);
+    setShown({ ...game.progress, collected: [...game.progress.collected] });
     if (game.spec.goal.type !== "score" && game.goalDone()) void win(game);
     else if (game.progress.movesLeft <= 0) {
       if (game.isWon()) void win(game);
@@ -217,6 +230,7 @@ export default function MasGarden() {
   const rescue = () => {
     if (!game) return;
     game.progress.movesLeft += 5;
+    setShown({ ...game.progress, collected: [...game.progress.collected] });
     ending.current = false;
     setRescued(true);
     setPhase("play");
@@ -259,13 +273,13 @@ export default function MasGarden() {
             <div className="mt-2 flex items-stretch gap-2">
               <div className="flex w-20 flex-col items-center justify-center rounded-2xl bg-white/85 py-1 shadow">
                 <div className="text-[11px] font-semibold uppercase opacity-60">Moves</div>
-                <div className={`text-3xl font-bold tabular-nums leading-none ${game.progress.movesLeft <= 5 ? "text-[#e8457d]" : ""}`}>{game.progress.movesLeft}</div>
+                <div className={`text-3xl font-bold tabular-nums leading-none ${(shown?.movesLeft ?? 0) <= 5 ? "text-[#e8457d]" : ""}`}>{shown?.movesLeft ?? game.progress.movesLeft}</div>
               </div>
               <div className="flex flex-1 flex-col justify-center rounded-2xl bg-white/85 px-3 py-1.5 shadow">
                 <div className="flex items-center justify-center gap-3">
-                  <GoalChips spec={spec} game={game} />
+                  <GoalChips spec={spec} progress={shown} />
                 </div>
-                <ScoreBar score={game.progress.score} stars={spec.stars} />
+                <ScoreBar score={shown?.score ?? 0} stars={spec.stars} />
               </div>
             </div>
             {/* the board */}
@@ -278,8 +292,8 @@ export default function MasGarden() {
                   setTrowel(false);
                   setTrowels((n) => n - 1);
                 }}
-                onPoints={() => setTick((t) => t + 1)}
-                onMove={() => setTick((t) => t + 1)}
+                onProgress={(p) => setShown(p)}
+                onMove={() => setShown((s) => s && { ...s, movesLeft: game.progress.movesLeft })}
                 onSettled={onSettled}
               />
             </div>
@@ -323,13 +337,13 @@ export default function MasGarden() {
 
       {phase === "won" && (
         <Modal>
-          <h2 className="text-3xl font-bold text-[#e8457d]">{["Lovely!", "Lovely!", "Wonderful!", "Perfect, Ma!"][result.stars]}</h2>
+          <h2 className="text-3xl font-bold text-[#e8457d]">{result.word}</h2>
           <div className="my-4 flex justify-center">
             <Stars n={shownStars} size={44} />
           </div>
           <div className="text-sm font-semibold uppercase opacity-60">Score</div>
           <div className="text-3xl font-bold tabular-nums">{result.score.toLocaleString()}</div>
-          {result.best && (save.best[level] ?? 0) > 0 && <div className="mt-1 text-sm font-semibold text-[#3c9a3c]">A new best!</div>}
+          {result.best && <div className="mt-1 text-sm font-semibold text-[#3c9a3c]">A new best!</div>}
           <div className="mt-5 flex justify-center gap-3">
             <Button tone="plain" onClick={toMap}>
               Map
@@ -349,9 +363,9 @@ export default function MasGarden() {
 
       {phase === "lost" && game && (
         <Modal>
-          <h2 className="text-3xl font-bold">So close!</h2>
+          <h2 className="text-3xl font-bold">Out of moves!</h2>
           <div className="mx-auto my-4 flex justify-center gap-4 rounded-2xl bg-white p-3">
-            <GoalChips spec={spec} game={game} size={34} />
+            <GoalChips spec={spec} progress={shown} size={34} />
           </div>
           {!rescued ? (
             <>
