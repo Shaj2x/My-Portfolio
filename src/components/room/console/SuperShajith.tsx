@@ -817,9 +817,11 @@ const newGame = (): State => {
 export interface SuperShajithProps {
   /** called once when the last level is cleared */
   onWin?: () => void;
+  /** off hides the how-to-play line, for hosts that show it themselves */
+  showHelp?: boolean;
 }
 
-const SuperShajith = ({ onWin }: SuperShajithProps) => {
+const SuperShajith = ({ onWin, showHelp = true }: SuperShajithProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const keys = useRef<Record<string, boolean>>({});
   const touch = useRef({ left: false, right: false, down: false, jump: false, run: false });
@@ -2169,7 +2171,7 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
 
   return (
     <div className="text-center">
-      <p className="mb-4 text-sm text-white/70">
+      <p className={`mb-4 text-sm text-white/70 ${showHelp ? "" : "hidden"}`}>
         <span className="[@media(pointer:coarse)]:hidden">Move with ← → or A/D, jump with Space, ↑ or W, crouch with ↓ or S (in the air, ↓ ground pounds), run with Shift, and shoot with B (once you've got Oud Noir). Progress saves on this device.</span>
         <span className="hidden [@media(pointer:coarse)]:inline">Use the buttons below: move, ▼ to crouch (or ground pound in the air), B to run and shoot, A to jump.</span>
       </p>
@@ -2177,14 +2179,14 @@ const SuperShajith = ({ onWin }: SuperShajithProps) => {
         <canvas ref={canvasRef} width={VIEW_W} height={VIEW_H} className="block max-w-full [image-rendering:pixelated]" style={{ aspectRatio: `${VIEW_W}/${VIEW_H}`, width: 720 }} />
       </div>
       {/* touch controls, only on touch screens */}
-      <div className="mx-auto mt-4 hidden max-w-sm items-center justify-between gap-3 [@media(pointer:coarse)]:flex">
-        <div className="flex gap-2">
-          {pad("left", "◀", "h-14 w-14")}
-          {pad("down", "▼", "h-14 w-12")}
-          {pad("right", "▶", "h-14 w-14")}
+      <div className="mx-auto mt-3 hidden w-full max-w-sm items-center justify-between gap-2 [@media(pointer:coarse)]:flex">
+        <div className="flex gap-1.5">
+          {pad("left", "◀", "h-14 w-12")}
+          {pad("down", "▼", "h-14 w-11")}
+          {pad("right", "▶", "h-14 w-12")}
         </div>
-        <div className="flex gap-2">
-          {pad("run", "B", "h-14 w-14 text-amber-200")}
+        <div className="flex items-center gap-2">
+          {pad("run", "B", "h-14 w-12 text-amber-200")}
           {pad("jump", "A", "h-16 w-16 bg-amber-200/20 text-amber-100")}
         </div>
       </div>

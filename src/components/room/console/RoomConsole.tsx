@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { BarChart3, Cherry, Crown, ExternalLink, Gamepad2, Sparkles, Trophy, X, type LucideIcon } from "lucide-react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { BarChart3, Cherry, Crown, ExternalLink, Gamepad2, Maximize2, Minimize2, Sparkles, Trophy, X, type LucideIcon } from "lucide-react";
 import PongGame from "@/components/PongGame";
 import SnakeGame from "@/components/SnakeGame";
 import SuperShajith from "./SuperShajith";
@@ -7,9 +7,9 @@ import { customDescriptions, demoLinks, profile } from "@/data/portfolio";
 
 /*
  * The PS5 on the desk, as a console you can drive: a home screen with his games, the selected
- * tile's art filling the background. Super S, Ma's Garden, Pong and Snake play on the screen; the games that live on
- * their own sites open in a new tab. It drives with the keyboard, the mouse, or a real
- * controller (Gamepad API).
+ * tile's art filling the background. Super S, Ma's Garden, Pong and Snake play on the screen (or
+ * full screen); the games that live on their own sites open in a new tab. It drives with the
+ * keyboard, the mouse, or a real controller (Gamepad API).
  */
 
 interface Game {
@@ -22,13 +22,15 @@ interface Game {
   art: [string, string];
   /** a game that lives on its own site, opened in a new tab */
   site?: string;
+  /** how to play, shown under the game: with a keyboard, and on a touch screen */
+  controls?: { keys: string; touch: string };
 }
 
 const GAMES: Game[] = [
-  { id: "super", title: "Super S", blurb: "A platformer through the grind, the hustle and the next level. Collect SS coins, hunt the hidden gold ones, spray on one of seven random fragrances for a power-up. Crouch through tunnels and ground pound across nine worlds. Progress saves on this device. Arrows, Space to jump, B to shoot, or the buttons on a phone.", icon: Crown, art: ["#e8a33a", "#2a1306"] },
-  { id: "garden", title: "Ma's Garden", blurb: "A fruit-matching game made for Ma. Swap fruit to make lines of three, build stripes, wreaths and blossoms, and clear weeds, hedges and vines on an endless road of gardens. Unlimited lives, and progress saves on this device. Swipe or click to swap.", icon: Cherry, art: ["#ff7aa8", "#3d7a2e"] },
-  { id: "pong", title: "Pong", blurb: "First to 5 against the CPU. Move with W/S, the arrow keys, the D-pad, or drag on the board.", icon: Gamepad2, art: ["#d4202c", "#2a0507"] },
-  { id: "snake", title: "Snake", blurb: "Eat the SS logo to grow. Steer with WASD, the arrow keys, the D-pad, or a swipe.", icon: Gamepad2, art: ["#1f9d55", "#03200f"] },
+  { id: "super", title: "Super S", blurb: "A platformer through the grind, the hustle and the next level. Collect SS coins, hunt the hidden gold ones, spray on one of seven random fragrances for a power-up. Crouch through tunnels and ground pound across nine worlds. Progress saves on this device. Arrows, Space to jump, B to shoot, or the buttons on a phone.", icon: Crown, art: ["#e8a33a", "#2a1306"], controls: { keys: "← → move · Space jump · ↓ crouch (ground pound in the air) · Shift run · B shoot", touch: "◀ ▶ move · ▼ crouch · B run and shoot · A jump" } },
+  { id: "garden", title: "Ma's Garden", blurb: "A fruit-matching game made for Ma. Swap fruit to make lines of three, build stripes, wreaths and blossoms, and clear weeds, hedges and vines on an endless road of gardens. Unlimited lives, and progress saves on this device. Swipe or click to swap.", icon: Cherry, art: ["#ff7aa8", "#3d7a2e"], controls: { keys: "Click or drag a fruit to swap it", touch: "Swipe a fruit to swap it" } },
+  { id: "pong", title: "Pong", blurb: "First to 5 against the CPU. Move with W/S, the arrow keys, the D-pad, or drag on the board.", icon: Gamepad2, art: ["#d4202c", "#2a0507"], controls: { keys: "W/S or ↑ ↓ to move · first to 5", touch: "Drag on the board to move · first to 5" } },
+  { id: "snake", title: "Snake", blurb: "Eat the SS logo to grow. Steer with WASD, the arrow keys, the D-pad, or a swipe.", icon: Gamepad2, art: ["#1f9d55", "#03200f"], controls: { keys: "WASD or the arrow keys to steer", touch: "Swipe or use the pad to steer" } },
   { id: "slots", title: "Raptors Slot Machine", blurb: "A Toronto Raptors slot machine. Opens in a new tab.", icon: Trophy, art: ["#ce1141", "#1a0207"], site: demoLinks["Raptors-Slot-Machine"] },
   { id: "blackjack", title: "Raptors BlackJack", blurb: "Blackjack at a Raptors table. Opens in a new tab.", icon: Trophy, art: ["#a1a1a4", "#1c0b0d"], site: demoLinks["Raptors-BlackJack"] },
   { id: "statstack", title: "StatStack", blurb: "Opens in a new tab.", icon: BarChart3, art: ["#2f6fd6", "#06122b"], site: demoLinks["StatStack"] },
@@ -54,6 +56,63 @@ const Hint = ({ glyph, children }: { glyph: Parameters<typeof Glyph>[0]["kind"];
     {children}
   </span>
 );
+
+/**
+ * Scales the game's canvas to the biggest size that fits the space it's given, keeping its shape.
+ * Whatever sits around the canvas (start buttons, scores, touch controls) keeps its own size.
+ */
+const FitStage = ({ children }: { children: ReactNode }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const stage = ref.current;
+    const inner = stage?.firstElementChild as HTMLElement | null;
+    if (!stage || !inner) return;
+    const fit = () => {
+      const canvas = stage.querySelector("canvas");
+      if (!canvas) return;
+      const around = inner.offsetHeight - canvas.offsetHeight;
+      const ratio = canvas.width / canvas.height;
+      const w = Math.floor(Math.max(200, Math.min(stage.clientWidth, (stage.clientHeight - around) * ratio)));
+      if (canvas.style.width !== `${w}px`) {
+        canvas.style.width = `${w}px`;
+        canvas.style.height = "auto";
+      }
+    };
+    const ro = new ResizeObserver(fit);
+    ro.observe(stage);
+    ro.observe(inner);
+    fit();
+    return () => ro.disconnect();
+  }, []);
+  return (
+    <div ref={ref} data-console-page className="flex min-h-0 flex-1 items-center justify-center overflow-hidden [&_canvas]:max-w-none">
+      <div className="max-w-full">{children}</div>
+    </div>
+  );
+};
+
+/** the browser's own full screen where there is one (not on iPhone), with the prefixed Safari version */
+type FsElement = HTMLElement & { webkitRequestFullscreen?: () => Promise<void> | void };
+type FsDocument = Document & { webkitFullscreenElement?: Element | null; webkitExitFullscreen?: () => Promise<void> | void };
+const fsElement = () => document.fullscreenElement ?? (document as FsDocument).webkitFullscreenElement ?? null;
+const enterFs = async (el: FsElement) => {
+  try {
+    if (el.requestFullscreen) await el.requestFullscreen({ navigationUI: "hide" });
+    else await el.webkitRequestFullscreen?.();
+  } catch {
+    // not allowed here: the screen-filling layout still works without it
+  }
+};
+const exitFs = async () => {
+  if (!fsElement()) return;
+  const d = document as FsDocument;
+  try {
+    if (d.exitFullscreen) await d.exitFullscreen();
+    else await d.webkitExitFullscreen?.();
+  } catch {
+    // already out
+  }
+};
 
 export interface RoomConsoleProps {
   /** shown once the camera has reached the monitor */
@@ -81,6 +140,39 @@ export const RoomConsole = ({ open, onExit, onPlay, onWin }: RoomConsoleProps) =
   const clock = useClock();
   const sel = GAMES[index];
   const tileRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  // full screen: the console fills the whole window (and the screen, where the browser allows it)
+  const [full, setFull] = useState(false);
+  const monitorRef = useRef<HTMLDivElement>(null);
+  const toggleFull = useCallback(() => {
+    if (full) {
+      setFull(false);
+      void exitFs();
+    } else {
+      setFull(true);
+      if (monitorRef.current) void enterFs(monitorRef.current);
+    }
+  }, [full]);
+
+  // leaving the browser's full screen (Esc, a swipe) leaves ours too
+  useEffect(() => {
+    const onChange = () => {
+      if (!fsElement()) setFull(false);
+    };
+    document.addEventListener("fullscreenchange", onChange);
+    document.addEventListener("webkitfullscreenchange", onChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", onChange);
+      document.removeEventListener("webkitfullscreenchange", onChange);
+    };
+  }, []);
+
+  // full screen is for playing: back on the home screen, or out of the console, it ends
+  useEffect(() => {
+    if (!playing || !open) {
+      setFull(false);
+      void exitFs();
+    }
+  }, [playing, open]);
 
   // reopening the console lands on the home screen
   useEffect(() => {
@@ -122,7 +214,10 @@ export const RoomConsole = ({ open, onExit, onPlay, onWin }: RoomConsoleProps) =
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       const k = e.key;
       if (playing) {
-        if (k === "Escape" || k === "Backspace") {
+        if (k === "Escape" && full) {
+          e.preventDefault();
+          toggleFull();
+        } else if (k === "Escape" || k === "Backspace") {
           e.preventDefault();
           act("back");
         }
@@ -137,7 +232,7 @@ export const RoomConsole = ({ open, onExit, onPlay, onWin }: RoomConsoleProps) =
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, playing, act]);
+  }, [open, playing, act, full, toggleFull]);
 
   // a real controller: D-pad and left stick move, ✕ plays, ○ goes back, PS goes home. Inside
   // Pong and Snake the D-pad and stick drive the game as arrow keys, and ✕ presses its button.
@@ -202,9 +297,13 @@ export const RoomConsole = ({ open, onExit, onPlay, onWin }: RoomConsoleProps) =
   if (!open) return null;
 
   return (
-    <div className="pointer-events-auto absolute inset-0 z-20 grid place-items-center p-3 sm:p-6" role="dialog" aria-label="PlayStation">
-      {/* the monitor: a dark bezel around the screen */}
-      <div className="relative flex h-full w-full max-w-[1400px] flex-col overflow-hidden rounded-[18px] border-[10px] border-[#0b0b0d] bg-[#030a1e] text-white shadow-[0_30px_120px_rgba(0,0,0,0.7)] animate-in fade-in zoom-in-95 duration-500" style={{ fontFamily: "system-ui, -apple-system, 'Segoe UI', sans-serif" }}>
+    <div className={`pointer-events-auto grid place-items-center ${full ? "fixed inset-0 z-[60] bg-black" : "absolute inset-0 z-20 p-3 sm:p-6"}`} role="dialog" aria-label="PlayStation">
+      {/* the monitor: a dark bezel around the screen (none in full screen) */}
+      <div
+        ref={monitorRef}
+        className={`relative flex h-full w-full flex-col overflow-hidden bg-[#030a1e] text-white ${full ? "" : "max-w-[1400px] rounded-[18px] border-[10px] border-[#0b0b0d] shadow-[0_30px_120px_rgba(0,0,0,0.7)] animate-in fade-in zoom-in-95 duration-500"}`}
+        style={{ fontFamily: "system-ui, -apple-system, 'Segoe UI', sans-serif" }}
+      >
         {/* the selected game's art, filling the background */}
         <div
           key={sel.id}
@@ -214,7 +313,7 @@ export const RoomConsole = ({ open, onExit, onPlay, onWin }: RoomConsoleProps) =
         />
         <div className="absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.12)_1px,transparent_1px)] [background-size:22px_22px] opacity-30" aria-hidden="true" />
 
-        <header className="relative z-10 flex items-center justify-between gap-4 px-5 pt-4 sm:px-10 sm:pt-6">
+        <header className={`relative z-10 items-center justify-between gap-4 px-5 pt-4 sm:px-10 sm:pt-6 ${full ? "hidden" : "flex"}`}>
           <p className="text-lg font-semibold sm:text-2xl">Games</p>
           <div className="flex items-center gap-3 text-sm text-white/85">
             <span className="hidden sm:inline">{profile.name.split(" ")[0]}</span>
@@ -228,21 +327,28 @@ export const RoomConsole = ({ open, onExit, onPlay, onWin }: RoomConsoleProps) =
         </header>
 
         {playing ? (
-          <div className="relative z-10 flex min-h-0 flex-1 flex-col px-5 pb-4 pt-4 sm:px-10">
-            <div className="mb-4 flex items-center gap-3">
-              <button type="button" onClick={() => act("back")} className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-sm text-white/85 hover:bg-white/20">
+          <div className={`relative z-10 flex min-h-0 flex-1 flex-col ${full ? "px-3 pb-3 pt-[max(12px,env(safe-area-inset-top))] sm:px-6" : "px-5 pb-4 pt-3 sm:px-10 sm:pt-4"}`}>
+            <div className="mb-3 flex items-center gap-3">
+              <button type="button" onClick={() => act("back")} className="inline-flex shrink-0 items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-sm text-white/85 hover:bg-white/20">
                 <Glyph kind="circle" /> Back
               </button>
-              <h2 className="min-w-0 truncate text-xl font-bold sm:text-3xl">{playing.title}</h2>
+              <h2 className="min-w-0 flex-1 truncate text-lg font-semibold sm:text-2xl">{playing.title}</h2>
+              <button
+                type="button"
+                onClick={toggleFull}
+                aria-label={full ? "Exit full screen" : "Full screen"}
+                className="inline-flex shrink-0 items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-sm text-white/85 hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
+              >
+                {full ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                <span className="hidden sm:inline">{full ? "Exit full screen" : "Full screen"}</span>
+              </button>
             </div>
             {playing.id === "garden" ? (
               // Ma's Garden is its own page, so it plays here in a frame, saves and all
               <iframe src="/ma" title="Ma's Garden" className="min-h-0 w-full flex-1 rounded-2xl border-0 bg-[#ffd9e2]" />
             ) : (
-              <div data-console-page className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
-                {/* game boards shrink to fit the screen, keeping their shape */}
-                <div className="mx-auto max-w-4xl pb-6 [&_canvas]:h-auto [&_canvas]:max-h-[52vh] [&_canvas]:w-auto [&_canvas]:max-w-full">{playing.id === "super" ? <SuperShajith onWin={() => onWin?.(playing.id)} /> : playing.id === "pong" ? <PongGame /> : <SnakeGame />}</div>
-              </div>
+              // the board grows to fill the screen, keeping its shape
+              <FitStage key={playing.id}>{playing.id === "super" ? <SuperShajith showHelp={false} onWin={() => onWin?.(playing.id)} /> : playing.id === "pong" ? <PongGame showHelp={false} /> : <SnakeGame showHelp={false} />}</FitStage>
             )}
           </div>
         ) : (
@@ -287,11 +393,19 @@ export const RoomConsole = ({ open, onExit, onPlay, onWin }: RoomConsoleProps) =
           </div>
         )}
 
-        <footer className="relative z-10 flex flex-wrap items-center justify-end gap-x-5 gap-y-1 border-t border-white/10 bg-black/30 px-5 py-2 text-xs text-white/70 sm:px-10">
+        <footer className={`relative z-10 flex flex-wrap items-center justify-end gap-x-5 gap-y-1 border-t border-white/10 bg-black/30 px-5 py-2 text-xs text-white/70 sm:px-10 ${full ? "pb-[max(8px,env(safe-area-inset-bottom))]" : ""}`}>
           {playing ? (
-            <button type="button" onClick={() => act("back")} className="rounded-full px-2 py-1 hover:bg-white/10">
-              <Hint glyph="circle">Back to games</Hint>
-            </button>
+            <>
+              {playing.controls && (
+                <p className="mr-auto min-w-0 text-white/60">
+                  <span className="[@media(pointer:coarse)]:hidden">{playing.controls.keys}</span>
+                  <span className="hidden [@media(pointer:coarse)]:inline">{playing.controls.touch}</span>
+                </p>
+              )}
+              <button type="button" onClick={() => act("back")} className="hidden rounded-full px-2 py-1 hover:bg-white/10 sm:inline-flex">
+                <Hint glyph="circle">Back to games</Hint>
+              </button>
+            </>
           ) : (
             <>
               <span className="hidden [@media(pointer:fine)]:inline-flex">
@@ -306,7 +420,7 @@ export const RoomConsole = ({ open, onExit, onPlay, onWin }: RoomConsoleProps) =
               <span className="text-white/55 [@media(pointer:fine)]:hidden">Tap a game, then Play</span>
             </>
           )}
-          <span className="hidden items-center gap-1.5 text-white/45 sm:inline-flex">
+          <span className={`hidden items-center gap-1.5 text-white/45 ${playing ? "lg:inline-flex" : "sm:inline-flex"}`}>
             <Gamepad2 className="h-3.5 w-3.5" /> Works with a PS5 controller
           </span>
         </footer>
