@@ -91,6 +91,8 @@ export interface Step {
   exited: { r: number; c: number; piece: Piece }[];
   points: number;
   cascade: number;
+  /** where the level stands once this step has played, for the score and goal counters */
+  progress: Progress;
 }
 
 export interface Progress {
@@ -361,13 +363,12 @@ export class Game {
   /** the end-of-level bloom: every move left turns a fruit into a striped one, then everything goes off */
   bloom(): Step[] {
     const steps: Step[] = [];
+    // the moves count down batch by batch as they turn into stripes
     let moves = this.progress.movesLeft;
-    this.progress.movesLeft = 0;
     while (moves > 0) {
       const normals: Pos[] = [];
       for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.cols; c++) if (this.piece(r, c)?.kind === "normal") normals.push({ r, c });
       if (!normals.length) break;
-      const before = this.snap();
       const n = Math.min(moves, normals.length, 3);
       for (let i = 0; i < n; i++) {
         const pick = normals.splice(Math.floor(this.rng() * normals.length), 1)[0];
@@ -376,6 +377,9 @@ export class Game {
         this.progress.score += SCORE.bloomMove;
       }
       moves -= n;
+      this.progress.movesLeft = moves;
+      // taken after the stripes are made, so they show before they go off
+      const before = this.snap();
       // the new stripes go off one batch at a time
       const hits = new Map<string, Pos>();
       for (let r = 0; r < this.rows; r++) for (let c = 0; c < this.cols; c++) if (isSpecial(this.piece(r, c))) hits.set(`${r},${c}`, { r, c });
@@ -383,6 +387,7 @@ export class Game {
       steps.push(this.finishStep(before, res, [], 1));
       this.cascade(steps, []);
     }
+    this.progress.movesLeft = 0;
     // then any specials still on the board
     for (let guard = 0; guard < 10; guard++) {
       const hits = new Map<string, Pos>();
@@ -627,7 +632,8 @@ export class Game {
     const points = res.points + exited.length * SCORE.acorn;
     this.progress.score += points;
     this.progress.weedsLeft = this.countWeeds();
-    return { before, cleared: res.cleared, fx: res.fx, created, afterClear, afterFall: this.snap(), exited, points, cascade };
+    const progress = { ...this.progress, collected: [...this.progress.collected] };
+    return { before, cleared: res.cleared, fx: res.fx, created, afterClear, afterFall: this.snap(), exited, points, cascade, progress };
   }
 
   // ---------- falling and refilling ----------
