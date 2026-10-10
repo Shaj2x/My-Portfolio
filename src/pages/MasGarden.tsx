@@ -420,11 +420,24 @@ function ScoreBar({ score, stars }: { score: number; stars: [number, number, num
 }
 
 // ---------- the map: a winding road, level 1 at the bottom ----------
+
+/** fruit scattered beside the road on wider screens: [side, across the margin %, up the garden %, size, turn] */
+const SCATTER: ["l" | "r", number, number, number, number][] = [
+  ["l", 30, 12, 46, -14],
+  ["r", 62, 22, 40, 12],
+  ["l", 70, 40, 34, 8],
+  ["r", 24, 50, 52, -8],
+  ["l", 22, 68, 42, 16],
+  ["r", 68, 78, 36, -12],
+  ["l", 58, 90, 30, 4],
+];
+
 function LevelMap({ save, onOpen, muteButton }: { save: Save; onOpen: (n: number) => void; muteButton: React.ReactNode }) {
   const scroller = useRef<HTMLDivElement>(null);
   const shown = Math.ceil((save.unlocked + 10) / 10) * 10;
   const gardens = Array.from({ length: shown / 10 }, (_, i) => i);
   const totalStars = Object.values(save.stars).reduce((a, b) => a + b, 0);
+  const first = GARDENS[0];
 
   useEffect(() => {
     const el = scroller.current?.querySelector<HTMLElement>(`[data-level="${save.unlocked}"]`);
@@ -433,43 +446,65 @@ function LevelMap({ save, onOpen, muteButton }: { save: Save; onOpen: (n: number
 
   return (
     <div className="flex h-full flex-col">
-      <header className="z-10 flex items-center gap-3 bg-white/70 px-4 pb-3 pt-[max(12px,env(safe-area-inset-top))] shadow-sm backdrop-blur">
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold leading-none text-[#e8457d]">Ma's Garden</h1>
-          <div className="mt-1 text-xs font-semibold opacity-70">
-            Made with <Heart size={11} className="inline -translate-y-px text-[#e8457d]" fill="#e8457d" /> for Ma
+      <header className="z-10 bg-white/75 pt-[max(12px,env(safe-area-inset-top))] shadow-[0_1px_0_rgba(122,75,42,0.08)] backdrop-blur">
+        <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 pb-3 sm:px-6">
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold leading-none text-[#e8457d] sm:text-[28px]">Ma's Garden</h1>
+            <div className="mt-1 text-xs font-semibold opacity-70">
+              Made with <Heart size={11} className="inline -translate-y-px text-[#e8457d]" fill="#e8457d" /> for Ma
+            </div>
           </div>
+          <div className="flex items-center gap-1 rounded-full bg-white px-3 py-1.5 font-bold shadow">
+            <Star size={18} className="text-[#f5b301]" fill="#f5b301" /> {totalStars}
+          </div>
+          {muteButton}
         </div>
-        <div className="flex items-center gap-1 rounded-full bg-white px-3 py-1.5 font-bold shadow">
-          <Star size={18} className="text-[#f5b301]" fill="#f5b301" /> {totalStars}
-        </div>
-        {muteButton}
       </header>
-      <div ref={scroller} className="flex-1 overflow-y-auto">
-        <div className="mx-auto flex max-w-md flex-col-reverse pb-10">
+      {/* the bands run edge to edge; the road keeps to a column down the middle */}
+      <div ref={scroller} className="flex-1 overflow-y-auto overscroll-contain" style={{ background: GARDENS[(gardens.length - 1) % GARDENS.length].sky[0] }}>
+        <div className="flex min-h-full flex-col-reverse">
+          {/* the ground the road starts from */}
+          <div className="relative h-16 shrink-0" style={{ background: first.sky[1] }} aria-hidden>
+            <div className="absolute inset-x-0 bottom-0 h-10 rounded-t-[50%_100%]" style={{ background: first.grass }} />
+          </div>
           {gardens.map((gi) => {
             const g = GARDENS[gi % GARDENS.length];
             const levels = Array.from({ length: 10 }, (_, i) => gi * 10 + i + 1);
+            const top = gi === gardens.length - 1;
+            // each garden fades in from the top colour of the one below it, so there's no seam
+            const below = gi === 0 ? g.sky[1] : GARDENS[(gi - 1) % GARDENS.length].sky[0];
             return (
-              <section key={gi} className="relative" style={{ background: `linear-gradient(0deg, ${g.sky[1]}, ${g.sky[0]})` }}>
-                <div className="flex flex-col-reverse py-4">
+              <section key={gi} className={`relative overflow-hidden ${top ? "flex-1" : ""}`} style={{ background: `linear-gradient(0deg, ${below} 0%, ${g.sky[1]} 22%, ${g.sky[0]} 100%)` }}>
+                {/* fruit of this garden, scattered in the margins where there's room */}
+                <div className="pointer-events-none absolute inset-y-0 left-1/2 hidden w-full max-w-5xl -translate-x-1/2 sm:block" aria-hidden>
+                  {SCATTER.map(([side, across, up, size, turn], i) => (
+                    <div
+                      key={i}
+                      className="absolute opacity-40"
+                      style={{ [side === "l" ? "left" : "right"]: `calc(${across} * (50% - 14rem) / 100)`, bottom: `${up}%`, transform: `translate(${side === "l" ? "-50%" : "50%"}, 50%) rotate(${turn}deg)` }}
+                    >
+                      <Icon kind={{ fruit: gi % GARDENS.length < FRUIT_NAMES.length ? gi % GARDENS.length : i % FRUIT_NAMES.length }} size={size} />
+                    </div>
+                  ))}
+                </div>
+                <div className="relative mx-auto flex max-w-md flex-col-reverse pb-4 pt-12">
                   {levels.map((n) => {
                     const x = 50 + Math.sin(n * 0.9) * 28;
                     const locked = n > save.unlocked;
                     const current = n === save.unlocked;
                     const heart = n % 10 === 0;
                     return (
-                      <div key={n} className="relative h-[76px]">
+                      <div key={n} className="relative h-[76px] sm:h-[84px]">
                         {/* the path to the next level */}
                         <svg className="absolute inset-0 h-full w-full overflow-visible" viewBox="0 0 100 76" preserveAspectRatio="none" aria-hidden>
-                          <path d={`M ${x} 38 L ${50 + Math.sin((n + 1) * 0.9) * 28} -38`} stroke="rgba(160,110,60,0.35)" strokeWidth="14" strokeLinecap="round" vectorEffect="non-scaling-stroke" fill="none" />
+                          <path d={`M ${x} 38 L ${50 + Math.sin((n + 1) * 0.9) * 28} -38`} stroke="rgba(160,110,60,0.3)" strokeWidth="14" strokeLinecap="round" vectorEffect="non-scaling-stroke" fill="none" />
                         </svg>
                         <button
                           data-level={n}
                           disabled={locked}
                           onClick={() => onOpen(n)}
                           className={`absolute top-1/2 grid -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border-4 font-bold transition-transform duration-150 active:scale-95 ${
-                            locked ? "h-12 w-12 border-white/70 bg-[#d9cfc4] text-white" : current ? "h-16 w-16 border-white bg-gradient-to-b from-[#ff7aa8] to-[#e8457d] text-2xl text-white shadow-[0_4px_0_#b82a5c]" : "h-14 w-14 border-white bg-gradient-to-b from-[#7fd66b] to-[#45a83a] text-xl text-white shadow-[0_4px_0_#2f7d27]"
+                            locked ? "h-12 w-12 border-white/80 bg-[#e4d9cd] text-white" : current ? "h-16 w-16 border-white bg-gradient-to-b from-[#ff7aa8] to-[#e8457d] text-2xl text-white shadow-[0_4px_0_#b82a5c]" : "h-14 w-14 border-white bg-gradient-to-b from-[#7fd66b] to-[#45a83a] text-xl text-white shadow-[0_4px_0_#2f7d27] hover:scale-105"
                           } ${heart && !locked ? "rounded-[40%]" : ""}`}
                           style={{ left: `${x}%` }}
                           aria-label={locked ? `Level ${n}, locked` : `Level ${n}${save.stars[n] ? `, ${save.stars[n]} stars` : ""}`}
@@ -487,8 +522,12 @@ function LevelMap({ save, onOpen, muteButton }: { save: Save; onOpen: (n: number
                     );
                   })}
                 </div>
-                <div className="sticky top-0 py-2 text-center">
-                  <span className="rounded-full bg-white/85 px-4 py-1.5 text-sm font-bold shadow">{g.name}</span>
+                {/* the garden's sign, where its road begins */}
+                <div className="relative pb-3 text-center">
+                  <span className="inline-flex items-center gap-2 rounded-full bg-white/90 px-4 py-1.5 text-sm font-bold shadow-[0_2px_0_rgba(122,75,42,0.15)]">
+                    <span className="text-xs font-semibold uppercase tracking-wider opacity-50">Garden {gi + 1}</span>
+                    {g.name}
+                  </span>
                 </div>
               </section>
             );

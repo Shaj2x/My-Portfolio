@@ -12,7 +12,8 @@ const PADDLE_SPEED = 5;
 const INITIAL_BALL_SPEED = 4;
 const WIN_SCORE = 5;
 
-const PongGame = () => {
+/** `showHelp` off hides the how-to-play line, for hosts that show it themselves */
+const PongGame = ({ showHelp = true }: { showHelp?: boolean }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [playing, setPlaying] = useState(false);
   const [score, setScore] = useState({ player: 0, cpu: 0 });
@@ -208,7 +209,7 @@ const PongGame = () => {
 
   return (
     <div className="text-center">
-      <p className="text-muted-foreground mb-8">
+      <p className={`text-muted-foreground mb-8 ${showHelp ? "" : "hidden"}`}>
         First to {WIN_SCORE} wins! Use <span className="text-primary font-mono">W/S</span> or <span className="text-primary font-mono">↑/↓</span> to move, or drag on the board.
       </p>
 

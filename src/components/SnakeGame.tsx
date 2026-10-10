@@ -20,7 +20,8 @@ const randomFood = (snake: Point[]): Point => {
   return p;
 };
 
-const SnakeGame = () => {
+/** `showHelp` off hides the how-to-play line, for hosts that show it themselves */
+const SnakeGame = ({ showHelp = true }: { showHelp?: boolean }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [playing, setPlaying] = useState(false);
   const [score, setScore] = useState(0);
@@ -195,7 +196,7 @@ const SnakeGame = () => {
 
   return (
     <div className="text-center">
-      <p className="text-muted-foreground mb-8">
+      <p className={`text-muted-foreground mb-8 ${showHelp ? "" : "hidden"}`}>
         Use <span className="text-primary font-mono">W/A/S/D</span>, the <span className="text-primary font-mono">Arrow Keys</span>, or swipe on the board. Eat the logo to grow!
       </p>
       <div className="relative inline-block rounded-lg overflow-hidden border border-border">
