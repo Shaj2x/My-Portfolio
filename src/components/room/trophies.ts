@@ -28,7 +28,7 @@ export const TIER_COLORS: Record<TrophyTier, string> = {
 const KEY = "portfolio-room-plain:trophies";
 const GAMES_KEY = "portfolio-room-plain:games-played";
 /** every game on the PS5 home screen */
-export const ALL_GAMES = ["super", "pong", "snake", "slots", "blackjack", "statstack", "mercatus"];
+export const ALL_GAMES = ["super", "garden", "pong", "snake", "slots", "blackjack", "statstack", "mercatus"];
 
 const read = (key: string): string[] => {
   try {
