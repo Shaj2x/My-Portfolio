@@ -14,7 +14,7 @@ export const education: TimelineItem[] = [
     title: "BESc + Ivey HBA",
     org: "Western University",
     date: "2025 – 2029 (Expected)",
-    description: "Dual-degree in Engineering Science and Ivey Honors Business Administration.",
+    description: "Dual degree in Electrical Engineering and Ivey Honors Business Administration.",
     type: "education",
   },
   {
@@ -230,7 +230,7 @@ export const featuredProjects = [
 
 export const profile = {
   name: "Shajith Sasikumar",
-  tagline: "Engineering Science + Ivey HBA @ Western University. AI builder, entrepreneur, and full-stack developer.",
+  tagline: "Electrical Engineering + Ivey HBA @ Western University. AI builder, entrepreneur, and full-stack developer.",
   email: "shajithskumar@gmail.com",
   github: "https://github.com/Shaj2x",
   linkedin: "https://www.linkedin.com/in/shajith-sasikumar-5080a5344/",
@@ -241,8 +241,10 @@ export const profile = {
 /** the About Me paragraphs; `strong` runs are emphasised */
 export const aboutParagraphs: { text: string; strong?: boolean }[][] = [
   [
-    { text: "I'm in my second year at Western University, working toward a dual degree in " },
-    { text: "Engineering Science and an Ivey HBA", strong: true },
+    { text: "I'm an " },
+    { text: "Electrical Engineering", strong: true },
+    { text: " student at Western University, working toward a dual degree with an " },
+    { text: "Ivey HBA", strong: true },
     { text: ". I picked it because I never wanted to choose between building things and understanding the business behind them. I'm happiest when a problem needs a little of both." },
   ],
   [
