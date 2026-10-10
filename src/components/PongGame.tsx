@@ -1,7 +1,8 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { motion } from "framer-motion";
 
-import ssLogo from "@/assets/ss-logo.png";
+import ssLogo from "@/assets/ss-logo-new.png";
+import { sfx } from "@/components/gameSound";
 
 const CANVAS_W = 600;
 const CANVAS_H = 400;
@@ -76,6 +77,7 @@ const PongGame = ({ showHelp = true }: { showHelp?: boolean }) => {
     setWinner(null);
     resetBall();
     setPlaying(true);
+    sfx("start");
   }, [resetBall]);
 
   useEffect(() => {
@@ -114,31 +116,35 @@ const PongGame = ({ showHelp = true }: { showHelp?: boolean }) => {
 
       // Top/bottom bounce
       // (pushed back inside so a long frame can't leave it stuck in the wall)
-      if (g.ballY - BALL_R <= 0) { g.ballY = BALL_R; g.ballVY = Math.abs(g.ballVY); }
-      else if (g.ballY + BALL_R >= CANVAS_H) { g.ballY = CANVAS_H - BALL_R; g.ballVY = -Math.abs(g.ballVY); }
+      if (g.ballY - BALL_R <= 0) { g.ballY = BALL_R; g.ballVY = Math.abs(g.ballVY); sfx("wall"); }
+      else if (g.ballY + BALL_R >= CANVAS_H) { g.ballY = CANVAS_H - BALL_R; g.ballVY = -Math.abs(g.ballVY); sfx("wall"); }
 
       // Player paddle collision
       if (g.ballX - BALL_R <= PADDLE_W + 10 && g.ballY >= g.playerY && g.ballY <= g.playerY + PADDLE_H && g.ballVX < 0) {
         g.ballVX *= -1.05;
         g.ballVY = ((g.ballY - g.playerY) / PADDLE_H - 0.5) * INITIAL_BALL_SPEED * 1.5;
+        sfx("paddle");
       }
 
       // CPU paddle collision
       if (g.ballX + BALL_R >= CANVAS_W - PADDLE_W - 10 && g.ballY >= g.cpuY && g.ballY <= g.cpuY + PADDLE_H && g.ballVX > 0) {
         g.ballVX *= -1.05;
         g.ballVY = ((g.ballY - g.cpuY) / PADDLE_H - 0.5) * INITIAL_BALL_SPEED * 1.5;
+        sfx("paddle");
       }
 
       // Scoring
       if (g.ballX < 0) {
         g.cpuScore++;
         setScore({ player: g.playerScore, cpu: g.cpuScore });
-        if (g.cpuScore >= WIN_SCORE) { endGame("CPU"); return; }
+        if (g.cpuScore >= WIN_SCORE) { sfx("lose"); endGame("CPU"); return; }
+        sfx("miss");
         resetBall();
       } else if (g.ballX > CANVAS_W) {
         g.playerScore++;
         setScore({ player: g.playerScore, cpu: g.cpuScore });
-        if (g.playerScore >= WIN_SCORE) { endGame("You"); return; }
+        if (g.playerScore >= WIN_SCORE) { sfx("win"); endGame("You"); return; }
+        sfx("point");
         resetBall();
       }
 
@@ -172,7 +178,9 @@ const PongGame = ({ showHelp = true }: { showHelp?: boolean }) => {
         ctx.beginPath();
         ctx.arc(g.ballX, g.ballY, BALL_R, 0, Math.PI * 2);
         ctx.clip();
-        ctx.drawImage(logoImg.current, g.ballX - BALL_R, g.ballY - BALL_R, BALL_R * 2, BALL_R * 2);
+        // crop to the S in the middle of the logo's black square
+        const img = logoImg.current;
+        ctx.drawImage(img, img.width * 0.2, img.height * 0.2, img.width * 0.6, img.height * 0.6, g.ballX - BALL_R, g.ballY - BALL_R, BALL_R * 2, BALL_R * 2);
         ctx.restore();
         ctx.shadowColor = paddleColor;
         ctx.shadowBlur = 15;

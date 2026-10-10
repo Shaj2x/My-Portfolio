@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import ssCoin from "@/assets/ss-coin.png";
+import { sfx } from "@/components/gameSound";
 
 /*
  * Super S: a side-scrolling platformer through Shajith's life, in the classic run-and-jump
@@ -934,10 +935,12 @@ const SuperShajith = ({ onWin, showHelp = true }: SuperShajithProps) => {
     const oneUp = (s: State, x: number, y: number) => {
       s.lives = Math.min(99, s.lives + 1);
       s.fx.push({ kind: "score", x, y, vx: 0, vy: -36, t: 1.1, text: "1-UP" });
+      sfx("oneUp");
     };
     const getCoin = (s: State, x: number, y: number, popped: boolean) => {
       s.coins += 1;
       s.score += 50;
+      sfx("coin");
       if (popped) s.fx.push({ kind: "coin", x, y, vx: 0, vy: -230, t: 0.55 });
       if (s.coins % 100 === 0) oneUp(s, x, y - 10);
     };
@@ -957,14 +960,21 @@ const SuperShajith = ({ onWin, showHelp = true }: SuperShajithProps) => {
         s.bumps.push({ x: tx, y: ty, t: 0.15 });
         // fragrance blocks give a random fragrance, and a plain ? block sometimes surprises you with one
         if (t === "?" && Math.random() > SURPRISE) getCoin(s, tx * TILE + 4, ty * TILE - 8, true);
-        else s.items.push({ x: tx * TILE + 3, y: ty * TILE, w: 10, h: 14, vx: 0, vy: 0, ground: false, rise: 0.6, scent: randomScent() });
+        else {
+          sfx("item");
+          s.items.push({ x: tx * TILE + 3, y: ty * TILE, w: 10, h: 14, vx: 0, vy: 0, ground: false, rise: 0.6, scent: randomScent() });
+        }
       } else if (t === "B") {
         if (p.big) {
           s.grid[ty][tx] = " ";
           s.score += 20;
+          sfx("break");
           for (const [vx, vy] of [[-60, -260], [60, -260], [-40, -180], [40, -180]]) s.fx.push({ kind: "bit", x: tx * TILE + 8, y: ty * TILE + 8, vx, vy, t: 1.2 });
-        } else s.bumps.push({ x: tx, y: ty, t: 0.15 });
-      }
+        } else {
+          s.bumps.push({ x: tx, y: ty, t: 0.15 });
+          sfx("bump");
+        }
+      } else sfx("bump");
       // an enemy standing on a bumped block gets knocked out
       for (const e of s.enemies) {
         if (e.alive && !e.squash && Math.abs(e.x + e.w / 2 - (tx * TILE + 8)) < 14 && Math.abs(e.y + e.h - ty * TILE) < 4) {
@@ -977,6 +987,7 @@ const SuperShajith = ({ onWin, showHelp = true }: SuperShajithProps) => {
     };
 
     const knockOut = (s: State, e: Enemy, combo = false) => {
+      sfx("kick");
       e.alive = false;
       e.flip = true;
       e.vy = -220;
@@ -989,6 +1000,7 @@ const SuperShajith = ({ onWin, showHelp = true }: SuperShajithProps) => {
       if (p.crouch) p.crouch = false;
       p.big = true;
       p.giant = GIANT_TIME;
+      sfx("grow");
       p.x -= (GIANT_W - p.w) / 2;
       p.y -= GIANT_H - p.h;
       p.w = GIANT_W;
@@ -999,6 +1011,7 @@ const SuperShajith = ({ onWin, showHelp = true }: SuperShajithProps) => {
     const shrink = (s: State) => {
       const p = s.player;
       p.giant = 0;
+      sfx("shrink");
       p.x += (p.w - 12) / 2;
       p.y += p.h - 24;
       p.w = 12;
@@ -1024,10 +1037,12 @@ const SuperShajith = ({ onWin, showHelp = true }: SuperShajithProps) => {
               }
             s.score += 100;
             s.shake = Math.max(s.shake, 0.15);
+            sfx("break");
             continue;
           }
           s.grid[ty][tx] = " ";
           s.score += 50;
+          sfx("break");
           if (t === "?" || SCENT_OF[t]) getCoin(s, tx * TILE + 4, ty * TILE - 8, true);
           for (const [vx, vy] of [[-70, -240], [70, -240]]) s.fx.push({ kind: "bit", x: tx * TILE + 8, y: ty * TILE + 8, vx, vy, t: 1.1 });
         }
@@ -1053,6 +1068,7 @@ const SuperShajith = ({ onWin, showHelp = true }: SuperShajithProps) => {
       }
       p.pound = false;
       s.shake = 0.22;
+      sfx("pound");
       const feet = p.y + p.h;
       const cx = p.x + p.w / 2;
       for (const [vx, vy] of [[-90, -140], [-50, -200], [50, -200], [90, -140]]) s.fx.push({ kind: "mist", x: cx, y: feet - 2, vx, vy, t: 0.5, text: "dust" });
@@ -1070,6 +1086,7 @@ const SuperShajith = ({ onWin, showHelp = true }: SuperShajithProps) => {
     const hurt = (s: State) => {
       const p = s.player;
       if (p.hurt > 0 || p.star > 0 || p.giant > 0 || s.phase !== "play") return;
+      if (p.held || p.big) sfx("hurt");
       if (p.held) {
         p.held = null;
         p.hurt = 1.6;
@@ -1083,6 +1100,7 @@ const SuperShajith = ({ onWin, showHelp = true }: SuperShajithProps) => {
       } else die(s);
     };
     const die = (s: State) => {
+      sfx("die");
       s.phase = "dying";
       s.phaseT = 0;
       s.player.vy = -330;
@@ -1098,13 +1116,17 @@ const SuperShajith = ({ onWin, showHelp = true }: SuperShajithProps) => {
       if (s.phase === "title" || s.phase === "clear" || s.phase === "over" || s.phase === "end") {
         // on the title, left/right (or down) picks Continue or New game
         const side = input.left || input.right || input.down;
-        if (s.phase === "title" && hasProgress(s.save) && side && !s.menuHeld) s.menu = 1 - s.menu;
+        if (s.phase === "title" && hasProgress(s.save) && side && !s.menuHeld) {
+          s.menu = 1 - s.menu;
+          sfx("blip");
+        }
         s.menuHeld = side;
         // jump to go on, after a short beat so a held key doesn't skip the card
         if (s.phaseT > 0.5 && input.jump && !s.player.jumpHeld) {
           const start = () => {
             s.phase = "intro";
             s.phaseT = 0;
+            sfx("start");
           };
           if (s.phase === "title") {
             if (s.menu === 0 && hasProgress(s.save)) {
@@ -1130,6 +1152,7 @@ const SuperShajith = ({ onWin, showHelp = true }: SuperShajithProps) => {
             } else {
               s.phase = "end";
               s.phaseT = 0;
+              sfx("fanfare");
               // beaten: the next game starts from the top (gold coins and best times stay)
               Object.assign(s.save, { level: 0, checkpoint: false, lives: 3, score: 0, coins: 0, big: false, held: null });
               writeSave(s.save);
@@ -1163,6 +1186,7 @@ const SuperShajith = ({ onWin, showHelp = true }: SuperShajithProps) => {
           if (s.lives <= 0) {
             s.phase = "over";
             s.phaseT = 0;
+            sfx("gameOver");
           } else {
             s.player.big = false;
             s.player.held = null;
@@ -1209,6 +1233,7 @@ const SuperShajith = ({ onWin, showHelp = true }: SuperShajithProps) => {
         if (s.flagSlide > 2.6) {
           s.phase = "clear";
           s.phaseT = 0;
+          sfx("clear");
           const best = s.save.best[s.level];
           s.record = best === null || s.time < best;
           if (s.record) s.save.best[s.level] = Math.round(s.time * 10) / 10;
@@ -1263,12 +1288,14 @@ const SuperShajith = ({ onWin, showHelp = true }: SuperShajithProps) => {
       if (p.ground) p.airJump = p.held === "aqua";
       if (p.buffer > 0 && p.coyote > 0 && !p.crouch && !p.pound) {
         p.vy = -(390 + Math.abs(p.vx) * 0.35) * (star ? 1.12 : 1);
+        sfx("jump");
         p.coyote = 0;
         p.buffer = 0;
       } else if (input.jump && !p.jumpHeld && p.coyote <= 0 && !p.ground && p.airJump && !p.pound) {
         // Aqua Mist: a second jump in mid-air, off a puff of mist
         p.airJump = false;
         p.vy = -350;
+        sfx("airJump");
         p.buffer = 0;
         mistPuff(s, p.x + p.w / 2, p.y + p.h, 10, "aqua");
       }
@@ -1277,6 +1304,7 @@ const SuperShajith = ({ onWin, showHelp = true }: SuperShajithProps) => {
       if (p.held === "oud" && input.shoot && !p.shootHeld && p.sprayCool <= 0) {
         s.clouds.push({ x: p.x + (p.face > 0 ? p.w : -6), y: p.y + Math.min(6, p.h - 4), vx: p.face * 190 + p.vx * 0.5, t: 0.6 });
         p.sprayCool = 0.32;
+        sfx("spray");
       }
       p.shootHeld = input.shoot;
       p.runHeld = input.run;
@@ -1317,6 +1345,7 @@ const SuperShajith = ({ onWin, showHelp = true }: SuperShajithProps) => {
         if (tileAt(s, sx, sy) === "S") {
           // a ground pound onto a spring is the biggest launch there is
           p.vy = p.pound ? -560 : input.jump ? -540 : -420;
+          sfx("spring");
           p.ground = false;
           p.coyote = 0;
           p.pound = false;
@@ -1349,6 +1378,7 @@ const SuperShajith = ({ onWin, showHelp = true }: SuperShajithProps) => {
               writeSave(s.save);
             }
             addScore(s, fresh ? 2000 : 200, tx * TILE, ty * TILE);
+            sfx(fresh ? "gold" : "coin");
             s.fx.push({ kind: "score", x: tx * TILE - 14, y: ty * TILE - 14, vx: 0, vy: -24, t: 1.3, text: fresh ? `GOLD SS ${s.save.gold[s.level].filter(Boolean).length}/${L.golds.length}` : "already found" });
             for (let k = 0; k < 8; k++) s.fx.push({ kind: "mist", x: tx * TILE + 8, y: ty * TILE + 8, vx: Math.cos(k) * 60, vy: Math.sin(k) * 60, t: 0.6, text: "gold" });
           }
@@ -1356,6 +1386,7 @@ const SuperShajith = ({ onWin, showHelp = true }: SuperShajithProps) => {
       // the checkpoint
       if (!s.checkpoint && p.x > L.checkX * TILE) {
         s.checkpoint = true;
+        sfx("checkpoint");
         s.fx.push({ kind: "score", x: L.checkX * TILE - 20, y: 7 * TILE, vx: 0, vy: -20, t: 1.4, text: "CHECKPOINT" });
         saveProgress(s);
       }
@@ -1366,6 +1397,7 @@ const SuperShajith = ({ onWin, showHelp = true }: SuperShajithProps) => {
         p.vx = 0;
         p.vy = 0;
         s.flagSlide = 0.001;
+        sfx("flag");
         const height = Math.max(0, 11 * TILE - (p.y + p.h));
         addScore(s, 100 + Math.round(height / 16) * 400, p.x + 16, p.y);
         return;
@@ -1399,6 +1431,7 @@ const SuperShajith = ({ onWin, showHelp = true }: SuperShajithProps) => {
           else if (p.hurt <= 0 && overlap(p, e)) {
             if (p.vy > 30 && p.y + p.h - e.y < 8) {
               e.squash = 0.3;
+              sfx("stomp");
               if (!p.pound) p.vy = input.jump ? -380 : -240;
               comboReward(s, e.x, e.y - 6);
             } else hurt(s);
@@ -1422,6 +1455,7 @@ const SuperShajith = ({ onWin, showHelp = true }: SuperShajithProps) => {
         if (p.hurt <= 0 && overlap(p, e)) {
           if (p.vy > 30 && p.y + p.h - e.y < 10) {
             e.squash = 0.45;
+            sfx("stomp");
             if (!p.pound) p.vy = input.jump ? -380 : -240;
             comboReward(s, e.x, e.y - 6);
           } else hurt(s);
@@ -1465,6 +1499,7 @@ const SuperShajith = ({ onWin, showHelp = true }: SuperShajithProps) => {
           it.y = 9999;
           s.score += 1000;
           s.spritz = { t: SPRITZ_TIME, scent: it.scent };
+          sfx("spritz");
           if (it.scent === "citrus") p.star = STAR_TIME;
           else if (it.scent === "titan") {
             // growing happens once the spritz is done

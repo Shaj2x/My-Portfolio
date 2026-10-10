@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { BarChart3, Cherry, Crown, ExternalLink, Gamepad2, Maximize2, Minimize2, Sparkles, Trophy, X, type LucideIcon } from "lucide-react";
+import { BarChart3, Cherry, Crown, ExternalLink, Gamepad2, Maximize2, Minimize2, Sparkles, Trophy, Volume2, VolumeX, X, type LucideIcon } from "lucide-react";
 import PongGame from "@/components/PongGame";
 import SnakeGame from "@/components/SnakeGame";
 import SuperShajith from "./SuperShajith";
+import ssLogo from "@/assets/ss-logo-new.png";
+import { setGameSoundHost, useGameSound } from "@/components/gameSound";
 import { customDescriptions, demoLinks, profile } from "@/data/portfolio";
 
 /*
@@ -18,6 +20,8 @@ interface Game {
   /** one line under the title on the home screen */
   blurb: string;
   icon: LucideIcon;
+  /** a logo shown on the tile in place of the icon */
+  logo?: string;
   /** two colours for the tile and the background art */
   art: [string, string];
   /** a game that lives on its own site, opened in a new tab */
@@ -29,8 +33,8 @@ interface Game {
 const GAMES: Game[] = [
   { id: "super", title: "Super S", blurb: "A platformer through the grind, the hustle and the next level. Collect SS coins, hunt the hidden gold ones, spray on one of seven random fragrances for a power-up. Crouch through tunnels and ground pound across nine worlds. Progress saves on this device. Arrows, Space to jump, B to shoot, or the buttons on a phone.", icon: Crown, art: ["#e8a33a", "#2a1306"], controls: { keys: "← → move · Space jump · ↓ crouch (ground pound in the air) · Shift run · B shoot", touch: "◀ ▶ move · ▼ crouch · B run and shoot · A jump" } },
   { id: "garden", title: "Ma's Garden", blurb: "A fruit-matching game made for Ma. Swap fruit to make lines of three, build stripes, wreaths and blossoms, and clear weeds, hedges and vines on an endless road of gardens. Unlimited lives, and progress saves on this device. Swipe or click to swap.", icon: Cherry, art: ["#ff7aa8", "#3d7a2e"], controls: { keys: "Click or drag a fruit to swap it", touch: "Swipe a fruit to swap it" } },
-  { id: "pong", title: "Pong", blurb: "First to 5 against the CPU. Move with W/S, the arrow keys, the D-pad, or drag on the board.", icon: Gamepad2, art: ["#d4202c", "#2a0507"], controls: { keys: "W/S or ↑ ↓ to move · first to 5", touch: "Drag on the board to move · first to 5" } },
-  { id: "snake", title: "Snake", blurb: "Eat the SS logo to grow. Steer with WASD, the arrow keys, the D-pad, or a swipe.", icon: Gamepad2, art: ["#1f9d55", "#03200f"], controls: { keys: "WASD or the arrow keys to steer", touch: "Swipe or use the pad to steer" } },
+  { id: "pong", title: "Pong", blurb: "First to 5 against the CPU. Move with W/S, the arrow keys, the D-pad, or drag on the board.", icon: Gamepad2, logo: ssLogo, art: ["#2b2b2e", "#050505"], controls: { keys: "W/S or ↑ ↓ to move · first to 5", touch: "Drag on the board to move · first to 5" } },
+  { id: "snake", title: "Snake", blurb: "Eat the SS logo to grow. Steer with WASD, the arrow keys, the D-pad, or a swipe.", icon: Gamepad2, logo: ssLogo, art: ["#3a3a3d", "#060606"], controls: { keys: "WASD or the arrow keys to steer", touch: "Swipe or use the pad to steer" } },
   { id: "slots", title: "Raptors Slot Machine", blurb: "A Toronto Raptors slot machine. Opens in a new tab.", icon: Trophy, art: ["#ce1141", "#1a0207"], site: demoLinks["Raptors-Slot-Machine"] },
   { id: "blackjack", title: "Raptors BlackJack", blurb: "Blackjack at a Raptors table. Opens in a new tab.", icon: Trophy, art: ["#a1a1a4", "#1c0b0d"], site: demoLinks["Raptors-BlackJack"] },
   { id: "statstack", title: "StatStack", blurb: "Opens in a new tab.", icon: BarChart3, art: ["#2f6fd6", "#06122b"], site: demoLinks["StatStack"] },
@@ -123,6 +127,10 @@ export interface RoomConsoleProps {
   onPlay?: (game: string) => void;
   /** a game was beaten (Super S's last world cleared) */
   onWin?: (game: string) => void;
+  /** the room's sound is muted: the games stay quiet too */
+  muted?: boolean;
+  /** the room's sound effects level (0..1), which the games' sounds follow */
+  volume?: number;
 }
 
 const useClock = () => {
@@ -134,12 +142,19 @@ const useClock = () => {
   return now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 };
 
-export const RoomConsole = ({ open, onExit, onPlay, onWin }: RoomConsoleProps) => {
+export const RoomConsole = ({ open, onExit, onPlay, onWin, muted = false, volume = 1 }: RoomConsoleProps) => {
   const [index, setIndex] = useState(0);
   const [playing, setPlaying] = useState<Game | null>(null);
   const clock = useClock();
   const sel = GAMES[index];
   const tileRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const [soundOn, setSoundOn] = useGameSound();
+
+  // the games' sound follows the room's mute and effects level; back to normal once the console goes
+  useEffect(() => {
+    setGameSoundHost(muted, volume);
+  }, [muted, volume]);
+  useEffect(() => () => setGameSoundHost(false, 1), []);
   // full screen: the console fills the whole window (and the screen, where the browser allows it)
   const [full, setFull] = useState(false);
   const monitorRef = useRef<HTMLDivElement>(null);
@@ -333,6 +348,20 @@ export const RoomConsole = ({ open, onExit, onPlay, onWin }: RoomConsoleProps) =
                 <Glyph kind="circle" /> Back
               </button>
               <h2 className="min-w-0 flex-1 truncate text-lg font-semibold sm:text-2xl">{playing.title}</h2>
+              {/* Ma's Garden has its own sound button, inside the game */}
+              {playing.id !== "garden" && (
+                <button
+                  type="button"
+                  onClick={() => setSoundOn(!soundOn)}
+                  aria-pressed={soundOn}
+                  aria-label={soundOn ? "Turn game sound off" : "Turn game sound on"}
+                  title={muted ? "The room's sound is muted" : undefined}
+                  className="inline-flex shrink-0 items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-sm text-white/85 hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white"
+                >
+                  {soundOn && !muted ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+                  <span className="hidden sm:inline">{soundOn ? "Sound on" : "Sound off"}</span>
+                </button>
+              )}
               <button
                 type="button"
                 onClick={toggleFull}
@@ -367,7 +396,7 @@ export const RoomConsole = ({ open, onExit, onPlay, onWin }: RoomConsoleProps) =
                     className={`relative grid shrink-0 snap-start place-items-center rounded-2xl transition-all duration-200 ${active ? "h-24 w-24 outline outline-[3px] outline-offset-4 outline-white sm:h-32 sm:w-32" : "mt-3 h-20 w-20 opacity-80 hover:opacity-100 sm:h-24 sm:w-24"}`}
                     style={{ background: `linear-gradient(145deg, ${g.art[0]}, ${g.art[1]})` }}
                   >
-                    <g.icon className={active ? "h-10 w-10" : "h-8 w-8"} />
+                    {g.logo ? <img src={g.logo} alt="" className="h-full w-full rounded-2xl object-cover" draggable={false} /> : <g.icon className={active ? "h-10 w-10" : "h-8 w-8"} />}
                     {g.site && <ExternalLink className="absolute right-2 top-2 h-3.5 w-3.5 opacity-70" />}
                     <span className="sr-only">{g.title}</span>
                   </button>

@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { motion } from "framer-motion";
-import ssLogo from "@/assets/ss-logo.png";
+import ssLogo from "@/assets/ss-logo-new.png";
+import { sfx } from "@/components/gameSound";
 
 const CANVAS_W = 600;
 const CANVAS_H = 400;
@@ -74,8 +75,15 @@ const SnakeGame = ({ showHelp = true }: { showHelp?: boolean }) => {
       ctx.beginPath();
       ctx.arc(fx, fy, CELL / 2, 0, Math.PI * 2);
       ctx.clip();
-      ctx.drawImage(logoImg.current, s.food.x * CELL, s.food.y * CELL, CELL, CELL);
+      // the S sits in the middle of the logo's black square: crop to it so it fills the circle
+      const img = logoImg.current;
+      ctx.drawImage(img, img.width * 0.2, img.height * 0.2, img.width * 0.6, img.height * 0.6, s.food.x * CELL, s.food.y * CELL, CELL, CELL);
       ctx.restore();
+      ctx.strokeStyle = "rgba(255,255,255,0.85)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(fx, fy, CELL / 2 - 0.75, 0, Math.PI * 2);
+      ctx.stroke();
     } else {
       ctx.fillStyle = color;
       ctx.fillRect(s.food.x * CELL, s.food.y * CELL, CELL, CELL);
@@ -122,6 +130,7 @@ const SnakeGame = ({ showHelp = true }: { showHelp?: boolean }) => {
 
     // Wall or self collision
     if (head.x < 0 || head.x >= COLS || head.y < 0 || head.y >= ROWS || s.snake.some((seg) => seg.x === head.x && seg.y === head.y)) {
+      sfx("crash");
       endGame();
       return;
     }
@@ -131,6 +140,7 @@ const SnakeGame = ({ showHelp = true }: { showHelp?: boolean }) => {
     if (head.x === s.food.x && head.y === s.food.y) {
       s.score++;
       setScore(s.score);
+      sfx("eat");
       s.food = randomFood(s.snake);
     } else {
       s.snake.pop();
@@ -149,6 +159,7 @@ const SnakeGame = ({ showHelp = true }: { showHelp?: boolean }) => {
     setScore(0);
     setGameOver(false);
     setPlaying(true);
+    sfx("start");
     draw();
     s.intervalId = setInterval(tick, TICK_MS);
   }, [draw, tick]);
