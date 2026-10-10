@@ -391,6 +391,10 @@ const QuickView = () => {
           <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
             <p>
               © {new Date().getFullYear()} {profile.name}
+              <span className="mx-2 text-white/25">·</span>
+              <Link to="/ma" className="hover:text-white">
+                🍓 Play Ma's Garden
+              </Link>
             </p>
             <Link to="/" className="inline-flex items-center gap-1.5 hover:text-white">
               <DoorOpen className="h-4 w-4" /> The 3D version is more fun. Step into the room
