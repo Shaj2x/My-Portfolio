@@ -45,7 +45,7 @@ const Hero = () => {
           transition={{ delay: 0.7, duration: 0.6 }}
           className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-8"
         >
-          Engineering Science + Ivey HBA @ Western University.
+          Electrical Engineering + Ivey HBA @ Western University.
           AI builder, entrepreneur, and full-stack developer.
         </motion.p>
 
