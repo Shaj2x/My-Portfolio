@@ -981,6 +981,7 @@ const SuperShajith = ({ onWin, showHelp = true }: SuperShajithProps) => {
           e.alive = false;
           e.flip = true;
           e.vy = -200;
+          sfx("defeat");
           addScore(s, 100, e.x, e.y);
         }
       }
@@ -988,6 +989,7 @@ const SuperShajith = ({ onWin, showHelp = true }: SuperShajithProps) => {
 
     const knockOut = (s: State, e: Enemy, combo = false) => {
       sfx("kick");
+      sfx("defeat");
       e.alive = false;
       e.flip = true;
       e.vy = -220;
@@ -1432,6 +1434,7 @@ const SuperShajith = ({ onWin, showHelp = true }: SuperShajithProps) => {
             if (p.vy > 30 && p.y + p.h - e.y < 8) {
               e.squash = 0.3;
               sfx("stomp");
+              sfx("defeat");
               if (!p.pound) p.vy = input.jump ? -380 : -240;
               comboReward(s, e.x, e.y - 6);
             } else hurt(s);
@@ -1456,6 +1459,7 @@ const SuperShajith = ({ onWin, showHelp = true }: SuperShajithProps) => {
           if (p.vy > 30 && p.y + p.h - e.y < 10) {
             e.squash = 0.45;
             sfx("stomp");
+            sfx("defeat");
             if (!p.pound) p.vy = input.jump ? -380 : -240;
             comboReward(s, e.x, e.y - 6);
           } else hurt(s);

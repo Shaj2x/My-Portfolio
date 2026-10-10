@@ -22,6 +22,7 @@ export type GameSfx =
   | "spritz"
   | "stomp"
   | "kick"
+  | "defeat"
   | "grow"
   | "shrink"
   | "hurt"
@@ -146,6 +147,12 @@ const SOUNDS: Record<GameSfx, (t: number) => void> = {
     hiss(t, 0.06, 900, 0.15);
   },
   kick: (t) => note(t, 900, 0.14, 0.2, "square", 220),
+  // an enemy taken out: a pop and a bright two-note "got it"
+  defeat: (t) => {
+    hiss(t, 0.08, 2500, 0.22, "bandpass");
+    note(t, 520, 0.06, 0.2, "square", 1040);
+    note(t + 0.06, N.E6, 0.14, 0.16, "square");
+  },
   grow: (t) => {
     for (let i = 0; i < 6; i++) note(t + i * 0.06, 110 * (1 + i * 0.35), 0.12, 0.18, "square", 140 * (1 + i * 0.35));
   },
