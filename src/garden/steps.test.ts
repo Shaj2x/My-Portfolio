@@ -104,3 +104,26 @@ describe("move steps line up for the animation", () => {
     expect([...issues]).toEqual([]);
   });
 });
+
+describe("saving a level part way through", () => {
+  it("picks up with the same board, moves and score", () => {
+    const g = new Game(levelSpec(9), 42);
+    for (let m = 0; m < 4; m++) {
+      const mv = g.findMove()!;
+      g.play(mv[0], mv[1]);
+    }
+    const saved = JSON.parse(JSON.stringify(g.save()));
+    const back = Game.restore(levelSpec(9), saved)!;
+    expect(back.progress).toEqual(g.progress);
+    expect(back.snap().pieces.map((row) => row.map((p) => p && `${p.color}${p.kind}`))).toEqual(g.snap().pieces.map((row) => row.map((p) => p && `${p.color}${p.kind}`)));
+    expect(back.snap().weed).toEqual(g.snap().weed);
+    // and keeps playing from there
+    const mv = back.findMove()!;
+    expect(back.play(mv[0], mv[1])).not.toBeNull();
+  });
+
+  it("won't load a save into a different level", () => {
+    const saved = new Game(levelSpec(9), 1).save();
+    expect(Game.restore(levelSpec(10), saved)).toBeNull();
+  });
+});
