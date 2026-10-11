@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Heart, Lock, Shovel, Star, Volume2, VolumeX } from "lucide-react";
-import { Game, type LevelSpec, type Progress } from "@/garden/engine";
+import { Game, type LevelSpec, type Progress, type SavedGame } from "@/garden/engine";
 import { GardenBoard, type BoardHandle } from "@/garden/GardenBoard";
 import { drawFruit, drawPiece, drawWeed } from "@/garden/draw";
 import { FRUIT_NAMES, GARDENS, gardenOf, goalText, levelSpec } from "@/garden/levels";
@@ -30,6 +30,33 @@ const writeSave = (s: Save) => {
   } catch {
     /* no storage */
   }
+};
+
+// the level being played, saved after every move so it picks up exactly where it was left
+const RUN_KEY = "mas-garden:run:v1";
+type Run = { game: SavedGame; trowels: number; rescued: boolean };
+const loadRun = (): Run | null => {
+  try {
+    const raw = localStorage.getItem(RUN_KEY);
+    return raw ? (JSON.parse(raw) as Run) : null;
+  } catch {
+    return null;
+  }
+};
+const writeRun = (run: Run | null) => {
+  try {
+    if (run) localStorage.setItem(RUN_KEY, JSON.stringify(run));
+    else localStorage.removeItem(RUN_KEY);
+  } catch {
+    /* no storage */
+  }
+};
+/** the saved level, if it still fits the level it was saved from */
+const resumeRun = () => {
+  const run = loadRun();
+  if (!run?.game) return null;
+  const g = Game.restore(levelSpec(run.game.n), run.game);
+  return g ? { game: g, trowels: run.trowels ?? TROWELS, rescued: !!run.rescued } : null;
 };
 
 const FONT = 'Fredoka, "Baloo 2", "Trebuchet MS", system-ui, sans-serif';
@@ -116,16 +143,26 @@ const pickWord = (stars: number) => {
 // ---------- the page ----------
 type Phase = "map" | "intro" | "play" | "won" | "lost";
 
+const copyProgress = (p: Progress): Progress => ({ ...p, collected: [...p.collected] });
+
 export default function MasGarden() {
   const [save, setSave] = useState<Save>(loadSave);
-  const [phase, setPhase] = useState<Phase>("map");
-  const [level, setLevel] = useState(save.unlocked);
-  const [game, setGame] = useState<Game | null>(null);
+  // opening the game goes straight back into the level that was being played, if there is one
+  const [resumed] = useState(resumeRun);
+  const [phase, setPhase] = useState<Phase>(resumed ? (resumed.game.progress.movesLeft > 0 ? "play" : "lost") : "map");
+  const [level, setLevel] = useState(resumed?.game.spec.n ?? save.unlocked);
+  const [game, setGame] = useState<Game | null>(resumed?.game ?? null);
   // the counters on screen, which follow the animation rather than the engine (it works a move out at once)
-  const [shown, setShown] = useState<Progress | undefined>();
+  const [shown, setShown] = useState<Progress | undefined>(resumed ? copyProgress(resumed.game.progress) : undefined);
   const [trowel, setTrowel] = useState(false);
-  const [trowels, setTrowels] = useState(TROWELS);
-  const [rescued, setRescued] = useState(false);
+  const [trowels, setTrowels] = useState(resumed?.trowels ?? TROWELS);
+  const [rescued, setRescued] = useState(resumed?.rescued ?? false);
+  // a level on the map with a saved board offers Continue
+  const [savedRun, setSavedRun] = useState<number | null>(resumed?.game.spec.n ?? null);
+  const trowelsRef = useRef(trowels);
+  trowelsRef.current = trowels;
+  const rescuedRef = useRef(rescued);
+  rescuedRef.current = rescued;
   const [result, setResult] = useState({ stars: 0, score: 0, best: false, word: "" });
   const [shownStars, setShownStars] = useState(0);
   const board = useRef<BoardHandle>(null);
@@ -142,6 +179,20 @@ export default function MasGarden() {
   }, []);
 
   useEffect(() => setMuted(save.muted), [save.muted]);
+
+  // ask the browser to keep the save, even when space runs low
+  useEffect(() => {
+    void navigator.storage?.persist?.().catch(() => {});
+  }, []);
+
+  const keepRun = (g: Game, extra: Partial<Omit<Run, "game">> = {}) => {
+    writeRun({ game: g.save(), trowels: extra.trowels ?? trowelsRef.current, rescued: extra.rescued ?? rescuedRef.current });
+    setSavedRun(g.spec.n);
+  };
+  const dropRun = () => {
+    writeRun(null);
+    setSavedRun(null);
+  };
 
   // the page's own font, title and home-screen icon (so Ma can keep it on her phone like an app)
   useEffect(() => {
@@ -183,15 +234,33 @@ export default function MasGarden() {
     ending.current = false;
     const g = new Game(spec, Date.now() ^ (level * 7919));
     setGame(g);
-    setShown({ ...g.progress, collected: [...g.progress.collected] });
+    setShown(copyProgress(g.progress));
     setTrowel(false);
     setTrowels(TROWELS);
     setRescued(false);
+    keepRun(g, { trowels: TROWELS, rescued: false });
     setPhase("play");
+  };
+
+  /** back into the saved board for this level */
+  const resume = () => {
+    const r = resumeRun();
+    if (!r || r.game.spec.n !== level) return start();
+    sfx.tap();
+    ending.current = false;
+    setGame(r.game);
+    setShown(copyProgress(r.game.progress));
+    setTrowel(false);
+    setTrowels(r.trowels);
+    setRescued(r.rescued);
+    setPhase(r.game.progress.movesLeft > 0 ? "play" : "lost");
   };
 
   const win = async (g: Game) => {
     ending.current = true;
+    dropRun();
+    // the next level opens straight away, so closing during the bloom still keeps the win
+    update((s) => ({ ...s, unlocked: Math.max(s.unlocked, level + 1), stars: { ...s.stars, [level]: Math.max(s.stars[level] ?? 0, 1) } }));
     sfx.win();
     if (g.progress.movesLeft > 0) await board.current?.bloom();
     const stars = Math.max(1, g.stars());
@@ -215,7 +284,8 @@ export default function MasGarden() {
 
   const onSettled = () => {
     if (!game || ending.current) return;
-    setShown({ ...game.progress, collected: [...game.progress.collected] });
+    setShown(copyProgress(game.progress));
+    if (!(game.spec.goal.type !== "score" && game.goalDone()) && !(game.progress.movesLeft <= 0 && game.isWon())) keepRun(game);
     if (game.spec.goal.type !== "score" && game.goalDone()) void win(game);
     else if (game.progress.movesLeft <= 0) {
       if (game.isWon()) void win(game);
@@ -230,7 +300,8 @@ export default function MasGarden() {
   const rescue = () => {
     if (!game) return;
     game.progress.movesLeft += 5;
-    setShown({ ...game.progress, collected: [...game.progress.collected] });
+    setShown(copyProgress(game.progress));
+    keepRun(game, { rescued: true });
     ending.current = false;
     setRescued(true);
     setPhase("play");
@@ -239,6 +310,8 @@ export default function MasGarden() {
 
   const toMap = () => {
     sfx.tap();
+    // leaving a lost level lets it go; leaving one part way through keeps it for later
+    if (phase === "lost") dropRun();
     setPhase("map");
     setGame(null);
   };
@@ -324,14 +397,30 @@ export default function MasGarden() {
             <GoalChips spec={spec} size={34} />
           </div>
           <p className="mb-5 text-lg leading-snug">{goalText(spec)}</p>
-          <div className="flex justify-center gap-3">
-            <Button tone="plain" onClick={() => (game ? setPhase("play") : setPhase("map"))}>
-              Back
-            </Button>
-            <Button tone="green" onClick={start}>
-              Play!
-            </Button>
-          </div>
+          {savedRun === level ? (
+            <div className="flex flex-col items-center gap-3">
+              <Button tone="green" onClick={resume}>
+                Continue
+              </Button>
+              <div className="flex justify-center gap-3">
+                <Button tone="plain" onClick={() => (game ? setPhase("play") : setPhase("map"))}>
+                  Back
+                </Button>
+                <Button tone="pink" onClick={start}>
+                  Start over
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex justify-center gap-3">
+              <Button tone="plain" onClick={() => (game ? setPhase("play") : setPhase("map"))}>
+                Back
+              </Button>
+              <Button tone="green" onClick={start}>
+                Play!
+              </Button>
+            </div>
+          )}
         </Modal>
       )}
 

@@ -95,6 +95,13 @@ export interface Step {
   progress: Progress;
 }
 
+export interface SavedGame {
+  n: number;
+  cells: Cell[][];
+  progress: Progress;
+  nextId: number;
+}
+
 export interface Progress {
   score: number;
   movesLeft: number;
@@ -172,6 +179,32 @@ export class Game {
       }),
     );
     this.progress.weedsLeft = this.countWeeds();
+  }
+
+  // ---------- saving a level part way through ----------
+
+  /** everything needed to pick a level back up later: the board, the counters, the next fruit id */
+  save(): SavedGame {
+    return {
+      n: this.spec.n,
+      cells: this.cells.map((row) => row.map((cell) => ({ ...cell, piece: cell.piece ? { ...cell.piece } : null }))),
+      progress: { ...this.progress, collected: [...this.progress.collected] },
+      nextId: this.nextId,
+    };
+  }
+
+  /** a level picked back up from a save (null if the save doesn't fit this level any more) */
+  static restore(spec: LevelSpec, saved: SavedGame, seed = Date.now()): Game | null {
+    const g = new Game(spec, seed);
+    const ok = saved.n === spec.n && saved.cells?.length === g.rows && saved.cells.every((row) => row?.length === g.cols && row.every((cell) => typeof cell?.hole === "boolean" && (cell.hole || !!cell.piece || cell.hedge > 0))) && typeof saved.progress?.movesLeft === "number";
+    if (!ok) return null;
+    // the layout must match, or the level changed since it was saved
+    if (saved.cells.some((row, r) => row.some((cell, c) => cell.hole !== g.cells[r][c].hole))) return null;
+    g.cells = saved.cells.map((row) => row.map((cell) => ({ ...cell, piece: cell.piece ? { ...cell.piece } : null })));
+    g.progress = { ...saved.progress, collected: [...saved.progress.collected] };
+    g.nextId = saved.nextId;
+    if (!g.findMove()) g.shuffle();
+    return g;
   }
 
   // ---------- basics ----------
