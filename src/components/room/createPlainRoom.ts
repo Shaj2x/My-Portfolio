@@ -365,16 +365,41 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     setBlind(WINDOW.blindDown);
     slab(W, 0.1, 0.015, trim, 0, 0.05, back + 0.0075, backWall);
   }
-  // framed posters, all one size with the same thin black frame. `side` turns a print to face into
-  // the room from the back wall or the left wall; (u, y) is its centre along that wall.
+  // framed posters, all one size with the same thin black frame and a small black picture light on
+  // top. Each is built facing out of its wall, then turned onto the back wall or the left wall;
+  // `u` is its centre along that wall.
   const POSTER_W = 0.42;
   const POSTER_H = POSTER_W * (380 / 270);
+  const POSTER_FRAME_W = POSTER_W + 0.028;
   const posterFrameMat = new THREE.MeshStandardMaterial({ color: "#121212", roughness: 0.45 });
+  const posterLightMat = new THREE.MeshStandardMaterial({ color: "#151515", roughness: 0.35, metalness: 0.5 });
+  const posterBulbMat = new THREE.MeshBasicMaterial({ color: "#ffe2b0" });
+  // the warm wash each light throws down over its print: brightest just under the light, fading
+  // out by the bottom of the frame
+  const posterWash = (() => {
+    const c = document.createElement("canvas");
+    c.width = 64;
+    c.height = 128;
+    const g = c.getContext("2d")!;
+    const img = g.createImageData(64, 128);
+    for (let y = 0; y < 128; y++)
+      for (let x = 0; x < 64; x++) {
+        // a soft cone: strongest at the top centre, fading to nothing at every edge
+        const dx = (x + 0.5) / 32 - 1;
+        const dy = (y + 0.5) / 128;
+        const a = Math.max(0, 1 - dx * dx * (1 + dy * 0.6)) ** 2 * Math.max(0, 1 - dy) ** 1.6 * Math.min(1, dy * 10);
+        const i = (y * 64 + x) * 4;
+        img.data.set([255, 212, 158, Math.round(a * 255)], i);
+      }
+    g.putImageData(img, 0, 0);
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.32, blending: THREE.AdditiveBlending, depthWrite: false });
+  })();
   const hangPoster = (src: string, side: "back" | "left", u: number, y: number, group: THREE.Object3D) => {
-    const onLeft = side === "left";
-    const fw = POSTER_W + 0.028;
     const fh = POSTER_H + 0.028;
-    const frame = onLeft ? slab(0.018, fh, fw, posterFrameMat, left + 0.009, y, u, group) : slab(fw, fh, 0.018, posterFrameMat, u, y, back + 0.009, group);
+    const g = new THREE.Group();
+    const frame = slab(POSTER_FRAME_W, fh, 0.018, posterFrameMat, 0, 0, 0.009, g);
     frame.castShadow = false;
     // a dark stand-in until the print loads, so the material is built with its picture slot from the start
     const blank = new THREE.DataTexture(new Uint8Array([20, 16, 12, 255]), 1, 1);
@@ -387,12 +412,31 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       blank.dispose();
     });
     const print = new THREE.Mesh(new THREE.PlaneGeometry(POSTER_W, POSTER_H), printMat);
-    if (onLeft) {
-      print.rotation.y = Math.PI / 2;
-      print.position.set(left + 0.0185, y, u);
-    } else print.position.set(u, y, back + 0.0185);
+    print.position.z = 0.0185;
     print.receiveShadow = true;
-    group.add(print);
+    g.add(print);
+    // the picture light: a wall plate above the frame, a short arm, and a slim hood with a warm strip
+    const top = fh / 2;
+    const plate = slab(0.05, 0.03, 0.008, posterLightMat, 0, top + 0.065, 0.004, g);
+    const arm = slab(0.012, 0.012, 0.07, posterLightMat, 0, top + 0.065, 0.04, g);
+    const hood = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.24, 20), posterLightMat);
+    hood.rotation.z = Math.PI / 2;
+    hood.position.set(0, top + 0.06, 0.078);
+    g.add(hood);
+    const bulb = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 0.012), posterBulbMat);
+    bulb.rotation.x = Math.PI / 2;
+    bulb.position.set(0, top + 0.046, 0.078);
+    g.add(bulb);
+    for (const m of [plate, arm, hood]) m.castShadow = false;
+    const wash = new THREE.Mesh(new THREE.PlaneGeometry(POSTER_FRAME_W + 0.12, fh + 0.06), posterWash);
+    wash.position.set(0, 0.0, 0.021);
+    wash.renderOrder = 1;
+    g.add(wash);
+    if (side === "left") {
+      g.rotation.y = Math.PI / 2;
+      g.position.set(left, y, u);
+    } else g.position.set(u, y, back);
+    group.add(g);
   };
   const posterY = (WINDOW.y0 + WINDOW.y1) / 2 + 0.02;
   // the Take Care poster, on the wall to the left of the window, above the headboard
@@ -564,9 +608,12 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   // a row of album posters along the wall beside the bed, level with Take Care, alternating Drake
   // and not (read left to right facing the wall, which runs from the foot of the bed to the corner)
   {
-    const gap = 0.1;
-    const step = POSTER_W + 0.028 + gap;
-    const first = back + 0.15 + (POSTER_W + 0.028) / 2;
+    // the wall runs from the window corner to the closet; the five frames split it into six equal
+    // spaces, so the gap between posters matches the gap to the wall at each end
+    const wallEnd = front - CLOSET.depth;
+    const gap = (wallEnd - back - 5 * POSTER_FRAME_W) / 6;
+    const step = POSTER_FRAME_W + gap;
+    const first = back + gap + POSTER_FRAME_W / 2;
     [posterNwts, posterPx3, posterHabibti, posterTrilogy, posterSos4u].forEach((src, i) => hangPoster(src, "left", first + i * step, posterY, leftWall));
   }
   const rightWall = wallGroup(new THREE.Vector3(right, 0, 0), new THREE.Vector3(-1, 0, 0));
