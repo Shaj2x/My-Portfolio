@@ -8,6 +8,11 @@ import { createCampus } from "./createCampus";
 import { createFurniture, paintTexture } from "./createFurniture";
 import { createSteam } from "./createDetails";
 import posterTakeCare from "@/assets/poster-take-care.jpg";
+import posterSos4u from "@/assets/poster-sos4u.jpg";
+import posterTrilogy from "@/assets/poster-trilogy.jpg";
+import posterHabibti from "@/assets/poster-habibti.jpg";
+import posterPx3 from "@/assets/poster-px3.jpg";
+import posterNwts from "@/assets/poster-nwts.jpg";
 import { PORTFOLIO_SPOTS, type PortfolioId } from "./portfolioSpots";
 import { CLOSET, COLORS, DOOR, HERO, LAYOUT, ROOM, WINDOW } from "./roomLayout";
 
@@ -360,29 +365,38 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     setBlind(WINDOW.blindDown);
     slab(W, 0.1, 0.015, trim, 0, 0.05, back + 0.0075, backWall);
   }
-  // the Take Care poster, framed on the wall to the left of the window, above the headboard
-  {
-    const pw = 0.42;
-    const ph = pw * (380 / 270);
-    const cx = (left + WINDOW.x0) / 2 - 0.01;
-    const cy = (WINDOW.y0 + WINDOW.y1) / 2 + 0.02;
-    const frame = slab(pw + 0.028, ph + 0.028, 0.018, new THREE.MeshStandardMaterial({ color: "#121212", roughness: 0.45 }), cx, cy, back + 0.009, backWall);
+  // framed posters, all one size with the same thin black frame. `side` turns a print to face into
+  // the room from the back wall or the left wall; (u, y) is its centre along that wall.
+  const POSTER_W = 0.42;
+  const POSTER_H = POSTER_W * (380 / 270);
+  const posterFrameMat = new THREE.MeshStandardMaterial({ color: "#121212", roughness: 0.45 });
+  const hangPoster = (src: string, side: "back" | "left", u: number, y: number, group: THREE.Object3D) => {
+    const onLeft = side === "left";
+    const fw = POSTER_W + 0.028;
+    const fh = POSTER_H + 0.028;
+    const frame = onLeft ? slab(0.018, fh, fw, posterFrameMat, left + 0.009, y, u, group) : slab(fw, fh, 0.018, posterFrameMat, u, y, back + 0.009, group);
     frame.castShadow = false;
     // a dark stand-in until the print loads, so the material is built with its picture slot from the start
     const blank = new THREE.DataTexture(new Uint8Array([20, 16, 12, 255]), 1, 1);
     blank.needsUpdate = true;
     const printMat = new THREE.MeshStandardMaterial({ map: blank, roughness: 0.55 });
-    new THREE.TextureLoader().load(posterTakeCare, (tex) => {
+    new THREE.TextureLoader().load(src, (tex) => {
       tex.colorSpace = THREE.SRGBColorSpace;
       tex.anisotropy = 4;
       printMat.map = tex;
       blank.dispose();
     });
-    const print = new THREE.Mesh(new THREE.PlaneGeometry(pw, ph), printMat);
-    print.position.set(cx, cy, back + 0.0185);
+    const print = new THREE.Mesh(new THREE.PlaneGeometry(POSTER_W, POSTER_H), printMat);
+    if (onLeft) {
+      print.rotation.y = Math.PI / 2;
+      print.position.set(left + 0.0185, y, u);
+    } else print.position.set(u, y, back + 0.0185);
     print.receiveShadow = true;
-    backWall.add(print);
-  }
+    group.add(print);
+  };
+  const posterY = (WINDOW.y0 + WINDOW.y1) / 2 + 0.02;
+  // the Take Care poster, on the wall to the left of the window, above the headboard
+  hangPoster(posterTakeCare, "back", (left + WINDOW.x0) / 2 - 0.01, posterY, backWall);
 
   // the sky outside, painted three times (night, sunrise/sunset, day) and cross-faded to match the
   // visitor's clock. Night: deep blue, a city glow, stars, the moon and lit windows. Golden hour:
@@ -547,6 +561,14 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   const leftWall = wallGroup(new THREE.Vector3(left, 0, 0), new THREE.Vector3(1, 0, 0));
   slab(t, height, D + t * 2, wallMat, left - t / 2, height / 2, ROOM.midZ, leftWall);
   slab(0.015, 0.1, D, trim, left + 0.0075, 0.05, ROOM.midZ, leftWall);
+  // a row of album posters along the wall beside the bed, level with Take Care, alternating Drake
+  // and not (read left to right facing the wall, which runs from the foot of the bed to the corner)
+  {
+    const gap = 0.1;
+    const step = POSTER_W + 0.028 + gap;
+    const first = back + 0.15 + (POSTER_W + 0.028) / 2;
+    [posterNwts, posterPx3, posterHabibti, posterTrilogy, posterSos4u].forEach((src, i) => hangPoster(src, "left", first + i * step, posterY, leftWall));
+  }
   const rightWall = wallGroup(new THREE.Vector3(right, 0, 0), new THREE.Vector3(-1, 0, 0));
   slab(t, height, D + t * 2, wallMat, right + t / 2, height / 2, ROOM.midZ, rightWall);
   slab(0.015, 0.1, D, trim, right - 0.0075, 0.05, ROOM.midZ, rightWall);
