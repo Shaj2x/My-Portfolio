@@ -373,7 +373,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   const POSTER_FRAME_W = POSTER_W + 0.028;
   const posterFrameMat = new THREE.MeshStandardMaterial({ color: "#121212", roughness: 0.45 });
   const posterLightMat = new THREE.MeshStandardMaterial({ color: "#151515", roughness: 0.35, metalness: 0.5 });
-  const posterBulbMat = new THREE.MeshBasicMaterial({ color: "#ffe2b0" });
+  const posterBulbMat = new THREE.MeshBasicMaterial({ color: "#f2a35a" });
   // the warm wash each light throws down over its print: brightest just under the light, fading
   // out by the bottom of the frame
   const posterWash = (() => {
@@ -387,14 +387,14 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
         // a soft cone: strongest at the top centre, fading to nothing at every edge
         const dx = (x + 0.5) / 32 - 1;
         const dy = (y + 0.5) / 128;
-        const a = Math.max(0, 1 - dx * dx * (1 + dy * 0.6)) ** 2 * Math.max(0, 1 - dy) ** 1.6 * Math.min(1, dy * 10);
+        const a = Math.max(0, 1 - dx * dx * (1 + dy * 0.6)) ** 2 * Math.max(0, 1 - dy) ** 1.15 * Math.min(1, dy * 10);
         const i = (y * 64 + x) * 4;
-        img.data.set([255, 212, 158, Math.round(a * 255)], i);
+        img.data.set([255, 168, 88, Math.round(a * 255)], i);
       }
     g.putImageData(img, 0, 0);
     const tex = new THREE.CanvasTexture(c);
     tex.colorSpace = THREE.SRGBColorSpace;
-    return new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.32, blending: THREE.AdditiveBlending, depthWrite: false });
+    return new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.2, blending: THREE.AdditiveBlending, depthWrite: false });
   })();
   const hangPoster = (src: string, side: "back" | "left", u: number, y: number, group: THREE.Object3D) => {
     const fh = POSTER_H + 0.028;
