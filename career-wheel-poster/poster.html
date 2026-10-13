@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>My Career Identity Wheel</title>
+<style>
+  :root{
+    --ink:#13213a; --ink-2:#3b4a63; --muted:#6b7689;
+    --paper:#f6f2ea; --card:#fffdf9; --line:#e6dfd2;
+    --c1:#1d3557; --c2:#26618a; --c3:#2a8a8f; --c4:#4f9d7e; --c5:#8aae6a;
+    --c6:#d9a53a; --c7:#ec8f4e; --c8:#df6548; --c9:#b83f3c; --c10:#7b2d4f;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:1800px;height:2700px;background:var(--paper)}
+  body{font-family:Inter,"Liberation Sans",sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased}
+  .serif{font-family:"Bitstream Charter",Caladea,Georgia,serif}
+  .poster{width:1800px;height:2700px;position:relative;overflow:hidden;display:flex;flex-direction:column}
+
+  /* ---------- header ---------- */
+  header{flex:none;background:var(--ink);color:#f6f2ea;padding:54px 90px 54px;position:relative;overflow:hidden}
+  header .stripe{position:absolute;left:0;right:0;bottom:0;height:12px;display:flex}
+  header .stripe span{flex:1}
+  header .rings{position:absolute;right:-150px;top:-210px;width:720px;height:720px;opacity:.13}
+  .kicker{font-size:20px;letter-spacing:.32em;text-transform:uppercase;font-weight:600;color:#e9c46a}
+  h1{font-size:104px;line-height:1;font-weight:700;letter-spacing:-.02em;margin-top:16px}
+  h1 em{font-style:italic;font-weight:400;color:#e9c46a}
+  .sub{font-size:27px;line-height:1.42;color:#c9d1de;margin-top:18px;max-width:1080px;font-weight:400}
+  .nameline{position:absolute;right:90px;bottom:70px;text-align:right}
+  .nameline .lbl{font-size:16px;letter-spacing:.28em;text-transform:uppercase;color:#8f9bb0;font-weight:600}
+  .nameline .blank{width:400px;border-bottom:2px solid #8f9bb0;height:54px;margin-top:6px}
+
+  main{padding:40px 70px 0;display:flex;flex-direction:column;gap:30px}
+
+  /* ---------- cards ---------- */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:24px 30px 22px;position:relative;
+        box-shadow:0 1px 0 rgba(19,33,58,.04),0 10px 30px -18px rgba(19,33,58,.25);display:flex;flex-direction:column;overflow:hidden}
+  .card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:8px;background:var(--accent)}
+  .card-head{display:flex;align-items:center;gap:16px;margin-bottom:12px}
+  .ico{width:58px;height:58px;border-radius:16px;background:var(--accent);display:grid;place-items:center;flex:none}
+  .ico svg{width:32px;height:32px;stroke:#fff;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .num{font-size:15px;font-weight:700;letter-spacing:.2em;color:var(--accent);text-transform:uppercase}
+  .card h2{font-size:34px;font-weight:700;letter-spacing:-.01em;line-height:1.05}
+  .chip{margin-left:auto;font-size:15px;font-weight:600;color:var(--accent);border:1.5px solid var(--accent);border-radius:999px;padding:6px 14px;white-space:nowrap}
+  .lead{font-size:20px;line-height:1.45;color:var(--ink-2);margin-bottom:12px}
+  ul{list-style:none;display:flex;flex-direction:column;gap:6px}
+  li{font-size:19px;line-height:1.42;color:var(--ink-2);padding-left:22px;position:relative}
+  li::before{content:"";position:absolute;left:2px;top:.62em;width:8px;height:8px;border-radius:50%;background:var(--accent)}
+  li b{color:var(--ink);font-weight:600}
+  .shapes{margin-top:auto;padding-top:12px}
+  .shapes p{border-top:1.5px dashed var(--line);padding-top:10px;font-size:18px;line-height:1.45;color:var(--ink)}
+  .shapes p span{font-weight:700;color:var(--accent);letter-spacing:.06em;text-transform:uppercase;font-size:14px;display:block;margin-bottom:3px}
+  .quote{font-family:"Bitstream Charter",Caladea,Georgia,serif;font-style:italic;font-size:23px;line-height:1.35;color:var(--ink);
+         background:color-mix(in srgb,var(--accent) 9%,transparent);border-radius:12px;padding:12px 18px;margin:2px 0 10px}
+  .tags{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px}
+  .tags span{font-size:16.5px;font-weight:500;padding:7px 13px;border-radius:10px;background:color-mix(in srgb,var(--accent) 12%,white);color:var(--ink)}
+
+  /* ---------- hero row ---------- */
+  .hero{display:grid;grid-template-columns:1fr 640px 1fr;gap:28px;flex:none}
+  .col{display:flex;flex-direction:column;gap:30px}
+  .col .card{flex:1 1 auto}
+  .wheel-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .wheel-wrap svg{width:640px;height:640px;overflow:visible}
+  .wheel-cap{text-align:center;margin-top:30px}
+  .wheel-cap .t{font-size:16px;letter-spacing:.3em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .wheel-cap .s{font-family:"Bitstream Charter",Caladea,Georgia,serif;font-style:italic;font-size:28px;color:var(--ink);margin-top:10px;line-height:1.35}
+
+  /* ---------- grid ---------- */
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);grid-auto-rows:1fr;gap:28px;flex:none}
+
+  /* timeline (schools) */
+  .tl{display:flex;flex-direction:column;gap:0;margin-top:2px}
+  .tl .step{display:grid;grid-template-columns:22px 1fr;gap:14px;position:relative;padding-bottom:13px}
+  .tl .step:not(:last-child)::after{content:"";position:absolute;left:10px;top:20px;bottom:-2px;width:2px;background:color-mix(in srgb,var(--accent) 35%,white)}
+  .tl .dot{width:22px;height:22px;border-radius:50%;border:4px solid var(--accent);background:#fff;margin-top:3px;position:relative;z-index:1}
+  .tl .step:last-child .dot{background:var(--accent)}
+  .tl h4{font-size:20px;font-weight:700;line-height:1.3}
+  .tl p{font-size:17.5px;color:var(--ink-2);line-height:1.4}
+
+  /* travel map pins */
+  .pins{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:2px 0 12px}
+  .pin{border:1.5px solid color-mix(in srgb,var(--accent) 30%,white);border-radius:14px;padding:12px 14px}
+  .pin .k{font-size:13px;letter-spacing:.18em;font-weight:700;text-transform:uppercase;color:var(--accent)}
+  .pin .v{font-size:21px;font-weight:700;margin-top:2px}
+  .pin .d{font-size:15.5px;color:var(--ink-2);margin-top:2px;line-height:1.35}
+
+  /* ---------- footer ---------- */
+  footer{flex:none;margin:auto 70px 48px;background:var(--ink);color:#f6f2ea;border-radius:26px;padding:36px 48px;display:grid;grid-template-columns:470px 1fr;gap:50px;align-items:center}
+  footer .k{font-size:16px;letter-spacing:.3em;text-transform:uppercase;color:#e9c46a;font-weight:600}
+  footer h3{font-size:46px;line-height:1.08;font-weight:700;margin-top:12px;letter-spacing:-.01em}
+  footer h3 em{font-family:"Bitstream Charter",Caladea,Georgia,serif;font-weight:400;color:#e9c46a}
+  footer .intro{font-size:19px;color:#c9d1de;line-height:1.5;margin-top:14px}
+  .pillars{display:grid;grid-template-columns:repeat(5,1fr);gap:16px}
+  .pillar{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:20px 18px;border-top:5px solid var(--accent)}
+  .pillar h5{font-size:22px;font-weight:700}
+  .pillar .from{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-top:6px}
+  .pillar p{font-size:16px;color:#c9d1de;line-height:1.42;margin-top:8px}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="i-family" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9v12h14V9"/><path d="M12 17.8s-3.2-1.9-3.2-4a1.7 1.7 0 0 1 3.2-.8 1.7 1.7 0 0 1 3.2.8c0 2.1-3.2 4-3.2 4z"/></symbol>
+    <symbol id="i-friends" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15 15 0 0 1 4 10 15 15 0 0 1-4 10 15 15 0 0 1-4-10 15 15 0 0 1 4-10z"/></symbol>
+    <symbol id="i-faith" viewBox="0 0 24 24"><path d="M12 2.5c1.6 2 2.6 3.4 2.6 5A2.6 2.6 0 0 1 12 10.1a2.6 2.6 0 0 1-2.6-2.6c0-1.6 1-3 2.6-5z"/><path d="M3 13h18c-.8 4-4.5 6.5-9 6.5S3.8 17 3 13z"/><path d="M8 22h8"/></symbol>
+    <symbol id="i-school" viewBox="0 0 24 24"><path d="M22 10 12 5 2 10l10 5 10-5z"/><path d="M6 12v5c3 2 9 2 12 0v-5"/><path d="M22 10v6"/></symbol>
+    <symbol id="i-music" viewBox="0 0 24 24"><path d="M3 14v-2a9 9 0 0 1 18 0v2"/><rect x="2" y="14" width="5" height="7" rx="2"/><rect x="17" y="14" width="5" height="7" rx="2"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 2.5l2.9 6 6.6.8-4.8 4.6 1.2 6.6L12 17.3l-5.9 3.2 1.2-6.6-4.8-4.6 6.6-.8z"/></symbol>
+    <symbol id="i-ball" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 2v20"/><path d="M2 12h20"/><path d="M5 4.9a10 10 0 0 1 0 14.2"/><path d="M19 4.9a10 10 0 0 0 0 14.2"/></symbol>
+    <symbol id="i-plane" viewBox="0 0 24 24"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7z"/></symbol>
+  </defs>
+</svg>
+
+<div class="poster">
+  <header>
+    <svg class="rings" viewBox="0 0 200 200" fill="none" stroke="#f6f2ea" stroke-width="1">
+      <circle cx="100" cy="100" r="98"/><circle cx="100" cy="100" r="78"/><circle cx="100" cy="100" r="58"/><circle cx="100" cy="100" r="38"/>
+      <g id="spokes"></g>
+    </svg>
+    <div class="kicker">Career Studies &nbsp;·&nbsp; Identity Project</div>
+    <h1>My Career <em class="serif">&amp;</em> Identity Wheel</h1>
+    <p class="sub">Ten parts of my life, past and present, that make me who I am today and shape the kind of person, teammate and leader I want to be in my future career.</p>
+    <div class="nameline"><div class="lbl">Name</div><div class="blank"></div></div>
+    <div class="stripe"><span style="background:var(--c1)"></span><span style="background:var(--c2)"></span><span style="background:var(--c3)"></span><span style="background:var(--c4)"></span><span style="background:var(--c5)"></span><span style="background:var(--c6)"></span><span style="background:var(--c7)"></span><span style="background:var(--c8)"></span><span style="background:var(--c9)"></span><span style="background:var(--c10)"></span></div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="col">
+        <article class="card" style="--accent:var(--c1)">
+          <div class="card-head"><div class="ico"><svg><use href="#i-family"/></svg></div><div><div class="num">01</div><h2>Family</h2></div></div>
+          <div class="tags"><span>Proud son</span><span>Younger sibling</span><span>Grandson</span><span>Cousin to many</span></div>
+          <ul>
+            <li><b>Son</b> to parents who raised me with Sri Lankan Tamil values</li>
+            <li><b>Younger sibling</b> who learned by watching and following the example set for me</li>
+            <li><b>Grandson and cousin</b> in a big, close extended family</li>
+          </ul>
+          <div class="shapes"><p><span>How it shapes me</span>Family taught me loyalty, respect for my elders and to work hard for the people who support me.</p></div>
+        </article>
+        <article class="card" style="--accent:var(--c2)">
+          <div class="card-head"><div class="ico"><svg><use href="#i-friends"/></svg></div><div><div class="num">02</div><h2>Friends</h2></div><span class="chip">Since 2015</span></div>
+          <div class="quote">"Anish has always been important to me because he's someone I can trust."</div>
+          <ul>
+            <li>Best friends since <b>kindergarten in 2015</b>, and still in 2026</li>
+            <li>Same school, <b>gym partners</b> and on the <b>basketball court</b> together</li>
+          </ul>
+          <div class="shapes"><p><span>How it shapes me</span>Showed me the value of trust and loyalty, which I'll look for in teammates and coworkers.</p></div>
+        </article>
+      </div>
+
+      <div class="wheel-wrap">
+        <svg id="wheel" viewBox="-320 -320 640 640"></svg>
+        <div class="wheel-cap">
+          <div class="t">Ten parts · One identity</div>
+          <div class="s">Every part of my life adds<br>to who I'm becoming.</div>
+        </div>
+      </div>
+
+      <div class="col">
+        <article class="card" style="--accent:var(--c3)">
+          <div class="card-head"><div class="ico"><svg><use href="#i-globe"/></svg></div><div><div class="num">03</div><h2>Nationality &amp; Culture</h2></div></div>
+          <div class="tags"><span>🇱🇰 Sri Lankan roots</span><span>🇨🇦 Born in Toronto</span><span>English</span><span>Tamil (learning)</span></div>
+          <ul>
+            <li>I grew up speaking English and I'm working to speak <b>Tamil, my mother tongue</b></li>
+            <li>Tamil customs at home: <b>no meat on Fridays</b> and <b>no beef</b></li>
+            <li>We don't cut nails or hair <b>on Fridays or late at night</b>. It may be a myth, but we still follow it</li>
+          </ul>
+          <div class="shapes"><p><span>How it shapes me</span>Living between two cultures makes me adaptable and open to different perspectives.</p></div>
+        </article>
+        <article class="card" style="--accent:var(--c4)">
+          <div class="card-head"><div class="ico"><svg><use href="#i-faith"/></svg></div><div><div class="num">04</div><h2>Religion &amp; Faith</h2></div></div>
+          <div class="quote">"I am a proud Tamil Hindu."</div>
+          <ul>
+            <li>Faith and culture go hand in hand in my family's traditions</li>
+            <li>Friday observances keep me connected to my <b>beliefs and my roots</b></li>
+          </ul>
+          <div class="shapes"><p><span>How it shapes me</span>Gives me a foundation of respect, discipline and gratitude that I bring to school, sport and work.</p></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="grid">
+      <article class="card" style="--accent:var(--c5)">
+        <div class="card-head"><div class="ico"><svg><use href="#i-school"/></svg></div><div><div class="num">05</div><h2>Schools</h2></div></div>
+        <div class="tl">
+          <div class="step"><div class="dot"></div><div><h4>Kindergarten · 2015</h4><p>Where my school journey began and where I met Anish</p></div></div>
+          <div class="step"><div class="dot"></div><div><h4>Middle School</h4><p>School Council, SAC, volleyball, basketball and cross country</p></div></div>
+          <div class="step"><div class="dot"></div><div><h4>High School · Ching</h4><p>TSA member and Grade 8 orientation volunteer</p></div></div>
+        </div>
+        <div class="shapes"><p><span>How it shapes me</span>Each school brought new people, responsibilities and goals to work toward.</p></div>
+      </article>
+
+      <article class="card" style="--accent:var(--c6)">
+        <div class="card-head"><div class="ico"><svg><use href="#i-music"/></svg></div><div><div class="num">06</div><h2>Hobbies &amp; Interests</h2></div></div>
+        <div class="tags"><span>🏀 Basketball</span><span>🏋️ Gym, almost daily</span><span>⚽ All sports</span><span>🎮 Video games</span><span>🚗 Road trips</span><span>✈️ Travelling</span><span>🎧 Drake</span><span>🎤 Rap &amp; R&amp;B</span><span>🤝 Going out with friends</span></div>
+        <ul>
+          <li>I love being <b>active</b>. The gym and basketball are part of my daily routine</li>
+          <li>Music is always on, especially <b>Drake</b>, rap and R&amp;B</li>
+        </ul>
+        <div class="shapes"><p><span>How it shapes me</span>My daily gym habit builds the discipline and consistency that any career needs.</p></div>
+      </article>
+
+      <article class="card" style="--accent:var(--c7)">
+        <div class="card-head"><div class="ico"><svg><use href="#i-star"/></svg></div><div><div class="num">07</div><h2>Clubs &amp; Groups</h2></div><span class="chip">Then &amp; now</span></div>
+        <div class="tags"><span>🛠️ TSA</span><span>🏛️ School Council</span><span>📣 SAC</span><span>🙌 School events</span></div>
+        <ul>
+          <li><b>TSA</b> at Ching (current member)</li>
+          <li><b>School Council</b> in middle school</li>
+          <li><b>SAC</b> in middle school</li>
+          <li>Took part in <b>as many activities as I could</b></li>
+        </ul>
+        <div class="shapes"><p><span>How it shapes me</span>Builds leadership, communication and organization skills, and teaches me how to represent others.</p></div>
+      </article>
+
+      <article class="card" style="--accent:var(--c8)">
+        <div class="card-head"><div class="ico"><svg><use href="#i-ball"/></svg></div><div><div class="num">08</div><h2>Sports Teams</h2></div><span class="chip">4 yrs basketball</span></div>
+        <div class="tags"><span>🏀 Basketball</span><span>🏐 Volleyball</span><span>🏃 Cross Country</span></div>
+        <ul>
+          <li>Played on many <b>middle school teams</b></li>
+          <li><b>Basketball</b> for the last 4 years. It has a special place in my heart</li>
+          <li>Every team has been a <b>good opportunity</b> to grow</li>
+        </ul>
+        <div class="shapes"><p><span>How it shapes me</span>Taught me teamwork, handling pressure and pushing through when it gets tough.</p></div>
+      </article>
+
+      <article class="card" style="--accent:var(--c9)">
+        <div class="card-head"><div class="ico"><svg><use href="#i-plane"/></svg></div><div><div class="num">09</div><h2>Travel</h2></div></div>
+        <div class="pins">
+          <div class="pin"><div class="k">Asia</div><div class="v">🇮🇳 India</div><div class="d">Culture, family and history</div></div>
+          <div class="pin"><div class="k">USA</div><div class="v">🗽 New York</div><div class="d">The energy of the big city</div></div>
+          <div class="pin"><div class="k">Home base</div><div class="v">🍁 Toronto</div><div class="d">Where I was born and raised</div></div>
+          <div class="pin"><div class="k">On the road</div><div class="v">🚗 Road trips</div><div class="d">Near or far, I love the drive</div></div>
+        </div>
+        <div class="shapes"><p><span>How it shapes me</span>Seeing new places keeps me curious, open-minded and comfortable with change.</p></div>
+      </article>
+
+      <article class="card" style="--accent:var(--c10)">
+        <div class="card-head"><div class="ico"><svg><use href="#i-heart"/></svg></div><div><div class="num">10</div><h2>Volunteer Work</h2></div></div>
+        <div class="quote">"We welcomed the Grade 8s with open arms."</div>
+        <ul>
+          <li>Volunteered at the <b>Grade 8 Orientation</b></li>
+          <li>Ran a wide variety of <b>games</b> to break the ice</li>
+          <li><b>Toured</b> new students around the school so they knew what was coming next</li>
+        </ul>
+        <div class="shapes"><p><span>How it shapes me</span>Showed me I enjoy mentoring and helping others feel welcome, which is a strength in any workplace.</p></div>
+      </article>
+    </section>
+  </main>
+
+  <footer>
+    <div>
+      <div class="k">Bringing it together</div>
+      <h3>My career identity, <em>in five words</em></h3>
+      <p class="intro">Together, these experiences shape the strengths I'll bring to school, work and whatever career comes next.</p>
+    </div>
+    <div class="pillars">
+      <div class="pillar" style="--accent:var(--c8)"><h5>Teamwork</h5><div class="from">Sports · Friends</div><p>Years on teams taught me how to win and lose together.</p></div>
+      <div class="pillar" style="--accent:var(--c7)"><h5>Leadership</h5><div class="from">Council · SAC · TSA</div><p>Speaking up and representing others.</p></div>
+      <div class="pillar" style="--accent:var(--c6)"><h5>Discipline</h5><div class="from">Gym · Traditions</div><p>Showing up every day, even when it's hard.</p></div>
+      <div class="pillar" style="--accent:var(--c3)"><h5>Adaptability</h5><div class="from">Culture · Travel</div><p>At home in two cultures and new places.</p></div>
+      <div class="pillar" style="--accent:#5fb4b9"><h5>Service</h5><div class="from">Volunteering · Family</div><p>Helping people feel welcome and supported.</p></div>
+    </div>
+  </footer>
+</div>
+
+<script>
+  // spokes on header rings
+  const sp = document.getElementById('spokes');
+  for (let i=0;i<10;i++){ const a=i*Math.PI/5; sp.innerHTML += `<line x1="100" y1="100" x2="${100+98*Math.cos(a)}" y2="${100+98*Math.sin(a)}"/>`; }
+
+  // identity wheel
+  const segs = [
+    ['Family','i-family'],['Friends','i-friends'],['Culture','i-globe'],['Faith','i-faith'],['Schools','i-school'],
+    ['Hobbies','i-music'],['Clubs','i-star'],['Sports','i-ball'],['Travel','i-plane'],['Volunteer','i-heart']
+  ];
+  const cs = getComputedStyle(document.documentElement);
+  const colors = segs.map((_,i)=>cs.getPropertyValue('--c'+(i+1)).trim());
+  const R=310, r=128, gap=0.012, n=segs.length, step=2*Math.PI/n;
+  const pt=(rad,a)=>[rad*Math.cos(a),rad*Math.sin(a)];
+  let out = `<circle r="${R+8}" fill="none" stroke="#e6dfd2" stroke-width="2"/>`;
+  segs.forEach(([label,icon],i)=>{
+    const a0=-Math.PI/2+i*step-step/2+gap, a1=a0+step-2*gap;
+    const [x0,y0]=pt(R,a0),[x1,y1]=pt(R,a1),[x2,y2]=pt(r,a1),[x3,y3]=pt(r,a0);
+    out += `<path d="M${x0},${y0} A${R},${R} 0 0 1 ${x1},${y1} L${x2},${y2} A${r},${r} 0 0 0 ${x3},${y3}Z" fill="${colors[i]}"/>`;
+    const am=(a0+a1)/2, [cx,cy]=pt(222,am);
+    out += `<g transform="translate(${cx},${cy})">
+      <text y="-34" text-anchor="middle" font-size="14" font-weight="700" fill="rgba(255,255,255,.7)" letter-spacing="2">${String(i+1).padStart(2,'0')}</text>
+      <use href="#${icon}" x="-19" y="-24" width="38" height="38" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <text y="36" text-anchor="middle" font-size="19" font-weight="700" fill="#fff">${label}</text></g>`;
+  });
+  out += `<circle r="${r-10}" fill="#13213a"/>
+    <circle r="${r-22}" fill="none" stroke="#e9c46a" stroke-width="1.5" stroke-dasharray="3 6"/>
+    <text y="-14" text-anchor="middle" font-size="15" font-weight="600" letter-spacing="4" fill="#e9c46a">THIS IS</text>
+    <text y="30" text-anchor="middle" font-size="46" font-weight="700" fill="#f6f2ea" font-family="Bitstream Charter, Caladea, Georgia, serif" font-style="italic">Me</text>`;
+  document.getElementById('wheel').innerHTML = out;
+</script>
+</body>
+</html>
