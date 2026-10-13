@@ -387,14 +387,14 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
         // a soft cone: strongest at the top centre, fading to nothing at every edge
         const dx = (x + 0.5) / 32 - 1;
         const dy = (y + 0.5) / 128;
-        const a = Math.max(0, 1 - dx * dx * (1 + dy * 0.6)) ** 2 * Math.max(0, 1 - dy) ** 1.15 * Math.min(1, dy * 10);
+        const a = Math.max(0, 1 - dx * dx * (1 + dy * 0.6)) ** 2 * Math.max(0, 1 - dy) ** 1.0 * Math.min(1, dy * 10);
         const i = (y * 64 + x) * 4;
-        img.data.set([255, 168, 88, Math.round(a * 255)], i);
+        img.data.set([255, 176, 98, Math.round(a * 255)], i);
       }
     g.putImageData(img, 0, 0);
     const tex = new THREE.CanvasTexture(c);
     tex.colorSpace = THREE.SRGBColorSpace;
-    return new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.2, blending: THREE.AdditiveBlending, depthWrite: false });
+    return new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.27, blending: THREE.AdditiveBlending, depthWrite: false });
   })();
   const hangPoster = (src: string, side: "back" | "left", u: number, y: number, group: THREE.Object3D) => {
     const fh = POSTER_H + 0.028;
