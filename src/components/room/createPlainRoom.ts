@@ -13,6 +13,7 @@ import posterTrilogy from "@/assets/poster-trilogy.jpg";
 import posterHabibti from "@/assets/poster-habibti.jpg";
 import posterPx3 from "@/assets/poster-px3.jpg";
 import posterNwts from "@/assets/poster-nwts.jpg";
+import posterRodeo from "@/assets/poster-rodeo.jpg";
 import { PORTFOLIO_SPOTS, type PortfolioId } from "./portfolioSpots";
 import { CLOSET, COLORS, DOOR, HERO, LAYOUT, ROOM, WINDOW } from "./roomLayout";
 
@@ -440,7 +441,11 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   };
   const posterY = (WINDOW.y0 + WINDOW.y1) / 2 + 0.02;
   // the Take Care poster, on the wall to the left of the window, above the headboard
-  hangPoster(posterTakeCare, "back", (left + WINDOW.x0) / 2 - 0.01, posterY, backWall);
+  const takeCareX = (left + WINDOW.x0) / 2 - 0.01;
+  hangPoster(posterTakeCare, "back", takeCareX, posterY, backWall);
+  // Rodeo on the other side of the window, over the dresser: the same distance from the window as
+  // Take Care, so the two frame it evenly
+  hangPoster(posterRodeo, "back", WINDOW.x1 + (WINDOW.x0 - takeCareX), posterY, backWall);
 
   // the sky outside, painted three times (night, sunrise/sunset, day) and cross-faded to match the
   // visitor's clock. Night: deep blue, a city glow, stars, the moon and lit windows. Golden hour:
