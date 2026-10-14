@@ -238,6 +238,15 @@ export const profile = {
   resumePdf: "/Shajith_Sasikumar_Resume.pdf",
 };
 
+/** the whiteboard in the room: what I'm building right now. Keep it to three or four short lines. */
+export const nowBuilding = ["this room, one object at a time", "Ma's Garden, a game for my mom", "AI tools for local businesses"];
+
+/**
+ * A booking link (Cal.com or Calendly) for the wall calendar in the room. Left empty, the calendar
+ * opens the Contact section instead.
+ */
+export const bookingUrl = "";
+
 /** the About Me paragraphs; `strong` runs are emphasised */
 export const aboutParagraphs: { text: string; strong?: boolean }[][] = [
   [

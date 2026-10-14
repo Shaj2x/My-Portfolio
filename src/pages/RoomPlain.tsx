@@ -5,7 +5,9 @@ import { ArrowUpRight, Binoculars, Briefcase, Camera, Check, Gamepad2, LayoutGri
 import type { ReactNode } from "react";
 import { RADIO_STATION } from "@/components/room/createAudio";
 import { playlistEmbed } from "@/components/room/playlist";
-import { profile } from "@/data/portfolio";
+import { bookingUrl, profile } from "@/data/portfolio";
+import { NowPlaying } from "@/components/room/NowPlaying";
+import { joinRoom } from "@/components/room/presence";
 import { RoomConsole } from "@/components/room/console/RoomConsole";
 import { PortfolioPage } from "@/components/room/PortfolioPages";
 import { FidgetKeyboard } from "@/components/room/FidgetKeyboard";
@@ -62,6 +64,7 @@ import {
   type MonitorProject,
   type PlainRoomHandle,
   type PlainRoomView,
+  type PosterInfo,
 } from "@/components/room/createPlainRoom";
 
 const chip =
@@ -246,6 +249,34 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
   const awardRef = useRef(award);
   awardRef.current = award;
   const [playerOpen, setPlayerOpen] = useState(false);
+  // the poster whose "what am I listening to" card is open
+  const [poster, setPoster] = useState<PosterInfo | null>(null);
+  // how many people are in the room right now, this visitor included
+  const [people, setPeople] = useState(1);
+
+  // join the other visitors: share where we're standing, and draw them as ghosts
+  useEffect(() => {
+    let presence: Awaited<ReturnType<typeof joinRoom>> = null;
+    let gone = false;
+    void joinRoom(({ count, ghosts }) => {
+      setPeople(count);
+      roomRef.current?.setGhosts(ghosts);
+    })
+      .then((p) => {
+        if (gone) p?.leave();
+        else presence = p;
+      })
+      .catch(() => {});
+    const timer = window.setInterval(() => {
+      const pose = roomRef.current?.getPose();
+      if (pose && !document.hidden) presence?.sendPose(pose);
+    }, 250);
+    return () => {
+      gone = true;
+      window.clearInterval(timer);
+      presence?.leave();
+    };
+  }, []);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -308,6 +339,15 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
           onRadioChange: setRadioOn,
           onSpeaker: playlist ? () => setPlayerOpen((o) => !o) : undefined,
           onHover: setHover,
+          onPoster: (p) => {
+            setPlayerOpen(false);
+            setPoster(p);
+          },
+          onCalendar: () => {
+            // book a call; with no booking link yet, the Contact section does the job
+            if (bookingUrl) window.open(bookingUrl, "_blank", "noopener");
+            else setSection("contact");
+          },
           muted: mutedRef.current,
           sound: soundRef.current,
         });
@@ -456,6 +496,15 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
               <ScrollText className="h-3.5 w-3.5 text-amber-200" /> Quick view
             </Link>
           )}
+          {!away && people > 1 && (
+            <p className="liquid-glass on-glass flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs text-white/90" aria-live="polite">
+              <span className="relative flex h-2 w-2" aria-hidden="true">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60 motion-reduce:animate-none" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+              </span>
+              {people} people here now
+            </p>
+          )}
           {!away && found.length === PORTFOLIO_IDS.length && (
             <p className="rounded-full bg-black/40 px-4 py-1.5 text-xs text-amber-100/85 backdrop-blur-md" aria-live="polite">
               You found the whole portfolio
@@ -494,6 +543,11 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
         )}
       </div>
 
+      <AnimatePresence>{poster && !away && (
+        <motion.div key={poster.album} {...pop} style={{ transformOrigin: "top left" }} className="pointer-events-auto absolute left-4 top-20 z-10">
+          <NowPlaying poster={poster} onClose={() => setPoster(null)} />
+        </motion.div>
+      )}</AnimatePresence>
       <AnimatePresence>{playlist && playerOpen && (
         // kept mounted while open so the music carries on when the lights panel or binoculars are used
         <motion.div key="player" {...pop} style={{ transformOrigin: "top left" }} className={`pointer-events-auto absolute left-4 top-20 z-10 w-[min(360px,calc(100%-32px))] liquid-glass-panel overflow-hidden rounded-[24px] ${away ? "invisible" : ""}`}>
