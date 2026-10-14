@@ -15,6 +15,7 @@ import posterPx3 from "@/assets/poster-px3.jpg";
 import posterNwts from "@/assets/poster-nwts.jpg";
 import posterRodeo from "@/assets/poster-rodeo.jpg";
 import { PORTFOLIO_SPOTS, type PortfolioId } from "./portfolioSpots";
+import { nowBuilding } from "@/data/portfolio";
 import { CLOSET, COLORS, DOOR, HERO, LAYOUT, ROOM, WINDOW } from "./roomLayout";
 
 /**
@@ -162,6 +163,10 @@ export interface PlainRoomOptions {
   onRadioChange?: (on: boolean) => void;
   /** the thing under the pointer, named for a hover label, or null */
   onHover?: (label: string | null) => void;
+  /** a poster was clicked */
+  onPoster?: (poster: PosterInfo) => void;
+  /** the wall calendar was clicked */
+  onCalendar?: () => void;
   /** start muted */
   muted?: boolean;
   /** the candle was lit (true) or blown out (false) */
@@ -195,7 +200,25 @@ export interface PlainRoomHandle {
   focusMonitor: (on: boolean) => void;
   /** what time it is outside: follow the visitor's clock, or pick one */
   setSky: (mode: SkyMode) => void;
+  /** where this visitor is looking from and at, for sharing with the others in the room */
+  getPose: () => { pos: [number, number, number]; look: [number, number, number] } | null;
+  /** the other visitors in the room right now, drawn as faint ghosts where they're standing */
+  setGhosts: (ghosts: Ghost[]) => void;
   dispose: () => void;
+}
+
+/** a poster on the wall: the album on it */
+export interface PosterInfo {
+  album: string;
+  artist: string;
+}
+
+/** another visitor, somewhere in the room */
+export interface Ghost {
+  id: string;
+  pos: [number, number, number];
+  look: [number, number, number];
+  hue: number;
 }
 
 const vec = (v: [number, number, number]) => new THREE.Vector3(...v);
@@ -397,7 +420,20 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     tex.colorSpace = THREE.SRGBColorSpace;
     return new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.27, blending: THREE.AdditiveBlending, depthWrite: false });
   })();
-  const hangPoster = (src: string, side: "back" | "left", u: number, y: number, group: THREE.Object3D) => {
+  // things on the walls that can be clicked: the posters, the calendar, the whiteboard
+  const wallPicks: ({ root: THREE.Object3D } & ({ kind: "poster"; info: PosterInfo } | { kind: "calendar" | "whiteboard" }))[] = [];
+  /** turns something built facing out of its wall (local +z) onto the back, left or right wall */
+  const mount = (g: THREE.Object3D, side: "back" | "left" | "right", u: number, y: number, group: THREE.Object3D) => {
+    if (side === "left") {
+      g.rotation.y = Math.PI / 2;
+      g.position.set(left, y, u);
+    } else if (side === "right") {
+      g.rotation.y = -Math.PI / 2;
+      g.position.set(right, y, u);
+    } else g.position.set(u, y, back);
+    group.add(g);
+  };
+  const hangPoster = (src: string, info: PosterInfo, side: "back" | "left", u: number, y: number, group: THREE.Object3D) => {
     const fh = POSTER_H + 0.028;
     const g = new THREE.Group();
     const frame = slab(POSTER_FRAME_W, fh, 0.018, posterFrameMat, 0, 0, 0.009, g);
@@ -433,19 +469,16 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     wash.position.set(0, 0.0, 0.021);
     wash.renderOrder = 1;
     g.add(wash);
-    if (side === "left") {
-      g.rotation.y = Math.PI / 2;
-      g.position.set(left, y, u);
-    } else g.position.set(u, y, back);
-    group.add(g);
+    mount(g, side, u, y, group);
+    wallPicks.push({ root: g, kind: "poster", info });
   };
   const posterY = (WINDOW.y0 + WINDOW.y1) / 2 + 0.02;
   // the Take Care poster, on the wall to the left of the window, above the headboard
   const takeCareX = (left + WINDOW.x0) / 2 - 0.01;
-  hangPoster(posterTakeCare, "back", takeCareX, posterY, backWall);
+  hangPoster(posterTakeCare, { album: "Take Care", artist: "Drake" }, "back", takeCareX, posterY, backWall);
   // Rodeo on the other side of the window, over the dresser: the same distance from the window as
   // Take Care, so the two frame it evenly
-  hangPoster(posterRodeo, "back", WINDOW.x1 + (WINDOW.x0 - takeCareX), posterY, backWall);
+  hangPoster(posterRodeo, { album: "Rodeo", artist: "Travis Scott" }, "back", WINDOW.x1 + (WINDOW.x0 - takeCareX), posterY, backWall);
 
   // the sky outside, painted three times (night, sunrise/sunset, day) and cross-faded to match the
   // visitor's clock. Night: deep blue, a city glow, stars, the moon and lit windows. Golden hour:
@@ -619,11 +652,165 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     const gap = (wallEnd - back - 5 * POSTER_FRAME_W) / 6;
     const step = POSTER_FRAME_W + gap;
     const first = back + gap + POSTER_FRAME_W / 2;
-    [posterNwts, posterPx3, posterHabibti, posterTrilogy, posterSos4u].forEach((src, i) => hangPoster(src, "left", first + i * step, posterY, leftWall));
+    const row: [string, PosterInfo][] = [
+      [posterNwts, { album: "Nothing Was the Same", artist: "Drake" }],
+      [posterPx3, { album: "PARTYNEXTDOOR 3", artist: "PARTYNEXTDOOR" }],
+      [posterHabibti, { album: "Habibti", artist: "Drake" }],
+      [posterTrilogy, { album: "Trilogy", artist: "The Weeknd" }],
+      [posterSos4u, { album: "$ome $exy $ongs 4 U", artist: "Drake & PARTYNEXTDOOR" }],
+    ];
+    row.forEach(([src, info], i) => hangPoster(src, info, "left", first + i * step, posterY, leftWall));
   }
   const rightWall = wallGroup(new THREE.Vector3(right, 0, 0), new THREE.Vector3(-1, 0, 0));
   slab(t, height, D + t * 2, wallMat, right + t / 2, height / 2, ROOM.midZ, rightWall);
   slab(0.015, 0.1, D, trim, right - 0.0075, 0.05, ROOM.midZ, rightWall);
+
+  // on the wall between the tapestry and the door: a whiteboard of what I'm building right now,
+  // and a wall calendar that books a call. Both are painted in marker; the handwriting font is
+  // loaded with the page, so they repaint once it arrives.
+  const marker = (px: number, weight = 700) => `${weight} ${px}px Caveat, "Segoe Print", "Bradley Hand", "Comic Sans MS", cursive`;
+  const repaints: (() => void)[] = [];
+  {
+    const W2 = 0.74;
+    const H2 = 0.5;
+    const g = new THREE.Group();
+    const frameMat = new THREE.MeshStandardMaterial({ color: "#c9ccd1", metalness: 0.6, roughness: 0.35 });
+    slab(W2 + 0.03, H2 + 0.03, 0.016, frameMat, 0, 0, 0.008, g);
+    const c = document.createElement("canvas");
+    c.width = 1024;
+    c.height = Math.round((1024 * H2) / W2);
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 4;
+    const paint = () => {
+      const x = c.getContext("2d")!;
+      const h = c.height;
+      x.fillStyle = "#f7f8f6";
+      x.fillRect(0, 0, 1024, h);
+      // a faint ghost of old writing, like any well-used whiteboard
+      x.globalAlpha = 0.05;
+      x.fillStyle = "#3a4a8a";
+      x.font = marker(70, 500);
+      x.fillText("E = mc²   ∫ f(x) dx", 520, h - 70);
+      x.globalAlpha = 1;
+      x.fillStyle = "#1f4fb4";
+      x.font = marker(78);
+      x.fillText("currently building:", 56, 104);
+      x.strokeStyle = "#1f4fb4";
+      x.lineWidth = 5;
+      x.lineCap = "round";
+      x.beginPath();
+      x.moveTo(60, 124);
+      x.quadraticCurveTo(320, 134, 600, 120);
+      x.stroke();
+      x.fillStyle = "#1d1d1f";
+      x.font = marker(60, 600);
+      nowBuilding.slice(0, 4).forEach((line, i) => {
+        const y = 214 + i * 92;
+        x.strokeStyle = "#c2272d";
+        x.lineWidth = 6;
+        x.beginPath();
+        x.moveTo(70, y - 18);
+        x.lineTo(96, y - 18);
+        x.moveTo(86, y - 30);
+        x.lineTo(98, y - 18);
+        x.lineTo(86, y - 6);
+        x.stroke();
+        x.fillText(line, 124, y);
+      });
+      tex.needsUpdate = true;
+    };
+    paint();
+    repaints.push(paint);
+    const surface = new THREE.Mesh(new THREE.PlaneGeometry(W2, H2), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.25 }));
+    surface.position.z = 0.0165;
+    g.add(surface);
+    // the marker tray, with a red and a blue marker in it
+    slab(W2 * 0.6, 0.012, 0.045, frameMat, -W2 * 0.12, -H2 / 2 - 0.02, 0.026, g);
+    for (const [i, col] of ["#c2272d", "#1f4fb4"].entries()) {
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.12, 12), new THREE.MeshStandardMaterial({ color: col, roughness: 0.4 }));
+      m.rotation.z = Math.PI / 2;
+      m.position.set(-0.2 + i * 0.15, -H2 / 2 - 0.006, 0.03);
+      g.add(m);
+    }
+    mount(g, "right", 0.98, 1.48, rightWall);
+    wallPicks.push({ root: g, kind: "whiteboard" });
+  }
+  {
+    const W3 = 0.3;
+    const H3 = 0.42;
+    const g = new THREE.Group();
+    const c = document.createElement("canvas");
+    c.width = 512;
+    c.height = Math.round((512 * H3) / W3);
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 4;
+    const paint = () => {
+      const x = c.getContext("2d")!;
+      const w = c.width;
+      const h = c.height;
+      const now = new Date();
+      x.fillStyle = "#fbfaf6";
+      x.fillRect(0, 0, w, h);
+      // the month across the top in red
+      x.fillStyle = "#b5262c";
+      x.fillRect(0, 34, w, 96);
+      x.fillStyle = "#fff";
+      x.font = `700 46px "Space Grotesk", system-ui, sans-serif`;
+      x.textAlign = "center";
+      x.fillText(now.toLocaleString("en", { month: "long" }).toUpperCase(), w / 2, 98);
+      // the days of the month, with today circled
+      const first = new Date(now.getFullYear(), now.getMonth(), 1).getDay();
+      const days = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      const cw = (w - 40) / 7;
+      x.font = `600 22px "Space Grotesk", system-ui, sans-serif`;
+      x.fillStyle = "#8a8580";
+      "SMTWTFS".split("").forEach((d, i) => x.fillText(d, 20 + cw * (i + 0.5), 172));
+      x.font = `500 28px "Space Grotesk", system-ui, sans-serif`;
+      for (let d = 1; d <= days; d++) {
+        const i = first + d - 1;
+        const cx = 20 + cw * ((i % 7) + 0.5);
+        const cy = 222 + Math.floor(i / 7) * 58;
+        x.fillStyle = d < now.getDate() ? "#b9b4ae" : "#2a2725";
+        x.fillText(String(d), cx, cy);
+        if (d === now.getDate()) {
+          x.strokeStyle = "#c2272d";
+          x.lineWidth = 4;
+          x.beginPath();
+          x.ellipse(cx, cy - 9, 30, 25, -0.2, 0.3, Math.PI * 2.15);
+          x.stroke();
+        }
+      }
+      // and a note in marker at the bottom
+      x.fillStyle = "#c2272d";
+      x.font = marker(54);
+      x.fillText("book a call w/ me →", w / 2, h - 40);
+      x.textAlign = "left";
+      tex.needsUpdate = true;
+    };
+    paint();
+    repaints.push(paint);
+    const page = new THREE.Mesh(new THREE.PlaneGeometry(W3, H3), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.8 }));
+    page.position.z = 0.004;
+    g.add(page);
+    // the backing board peeking out, and the wire binding along the top
+    slab(W3 + 0.012, H3 + 0.012, 0.004, new THREE.MeshStandardMaterial({ color: "#3a3532", roughness: 0.8 }), 0, 0, 0.0015, g);
+    const ringMat = new THREE.MeshStandardMaterial({ color: "#9a9ea4", metalness: 0.8, roughness: 0.3 });
+    for (let i = 0; i < 9; i++) {
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.007, 0.0016, 6, 12), ringMat);
+      ring.rotation.y = Math.PI / 2;
+      ring.position.set(-W3 / 2 + 0.03 + (i * (W3 - 0.06)) / 8, H3 / 2 - 0.008, 0.006);
+      g.add(ring);
+    }
+    // hung from a nail
+    const nail = new THREE.Mesh(new THREE.SphereGeometry(0.005, 8, 6), ringMat);
+    nail.position.set(0, H3 / 2 + 0.03, 0.004);
+    g.add(nail);
+    mount(g, "right", 1.68, 1.5, rightWall);
+    wallPicks.push({ root: g, kind: "calendar" });
+  }
+  document.fonts?.load(marker(40)).then(() => repaints.forEach((r) => r())).catch(() => {});
 
   // front wall: the entry door in an alcove by the desk wall, and the closet jutting out beside it
   const frontWall = wallGroup(new THREE.Vector3(0, 0, front), new THREE.Vector3(0, 0, -1));
@@ -1313,7 +1500,9 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     | { kind: "lamp" | "binoculars" | "ceiling" | "sunset" | "desk" | "switch" | "radio" | "console" | "blind" | "drawer" | "keyboard" | "candle" }
     | { kind: "plushie"; target: (typeof inter.plushies)[number] }
     | { kind: "perfume"; target: THREE.Group }
-    | { kind: "portfolio"; id: PortfolioId };
+    | { kind: "portfolio"; id: PortfolioId }
+    | { kind: "poster"; info: PosterInfo; root: THREE.Object3D }
+    | { kind: "calendar" | "whiteboard"; root: THREE.Object3D };
   const inter = furniture.interact;
   const isIn = (o: THREE.Object3D, root: THREE.Object3D) => {
     for (let p: THREE.Object3D | null = o; p; p = p.parent) if (p === root) return true;
@@ -1333,6 +1522,8 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     keyboard: "Keyboard · leave me a note",
     candle: "Candle · blow it out or light it",
     perfume: "The fragrances · spray one",
+    calendar: "Calendar · book a call with me",
+    whiteboard: "Whiteboard · what I'm building right now",
   };
   // the mesh under the pointer at the last pick, for the hover glow and lift
   let lastHitObject: THREE.Object3D | null = null;
@@ -1342,7 +1533,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     const r = renderer.domElement.getBoundingClientRect();
     ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     raycaster.setFromCamera(ndc, camera);
-    const hit = raycaster.intersectObjects([...furniture.group.children, ...ceilingParts, ...blindParts, ...roomSpots.map((r) => r.root)], true).find((h) => {
+    const hit = raycaster.intersectObjects([...furniture.group.children, ...ceilingParts, ...blindParts, ...roomSpots.map((r) => r.root), ...wallPicks.map((w) => w.root)], true).find((h) => {
       if (!(h.object as THREE.Mesh).isMesh) return false;
       // skip anything hidden, including walls cut away for the dollhouse view
       for (let p: THREE.Object3D | null = h.object; p; p = p.parent) if (!p.visible) return false;
@@ -1368,6 +1559,8 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     if (inter.candle.parts.includes(o)) return { kind: "candle" };
     const spot = [...inter.spots, ...roomSpots].find((r) => isIn(o, r.root));
     if (spot) return { kind: "portfolio", id: spot.id };
+    const wall = wallPicks.find((w) => isIn(o, w.root));
+    if (wall) return wall.kind === "poster" ? { kind: "poster", info: wall.info, root: wall.root } : { kind: wall.kind, root: wall.root };
     const plush = inter.plushies.find((p) => isIn(o, p.group));
     if (plush) return { kind: "plushie", target: plush };
     const bottle = inter.bottles.find((g) => isIn(o, g));
@@ -1754,6 +1947,17 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       } else if (hit?.kind === "plushie") {
         bounces.set(hit.target.group, 0);
         audio.play("squeak");
+      } else if (hit?.kind === "poster") {
+        audio.click("radio");
+        options.onPoster?.(hit.info);
+      } else if (kind === "calendar") {
+        audio.play("chime");
+        options.onCalendar?.();
+      } else if (kind === "whiteboard" && hit && "root" in hit) {
+        // step up to the board so it can be read
+        const c = new THREE.Box3().setFromObject(hit.root).getCenter(new THREE.Vector3());
+        moveTo(c.clone().add(new THREE.Vector3(-1.05, 0.02, 0)), c);
+        audio.click("lamp");
       } else if (hit?.kind === "portfolio") {
         audio.play("chime");
         burst(lastHitPoint);
@@ -1820,6 +2024,10 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
         return [inter.lightSwitch];
       case "console":
         return [isIn(o, inter.controller) ? inter.controller : isIn(o, inter.monitor) ? inter.monitor : inter.ps5];
+      case "poster":
+      case "calendar":
+      case "whiteboard":
+        return [hit.root];
       case "portfolio": {
         const spot = [...inter.spots, ...roomSpots].find((r) => isIn(o, r.root));
         return spot ? [spot.root] : [o];
@@ -1876,7 +2084,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     const hit = pickTarget(e);
     renderer.domElement.style.cursor = hit ? "pointer" : "";
     setHover(hit);
-    const label = !hit ? null : hit.kind === "plushie" ? `${hit.target.name} · give it a squeeze` : hit.kind === "portfolio" ? `${PORTFOLIO_SPOTS[hit.id].object} · something's here` : LABELS[hit.kind];
+    const label = !hit ? null : hit.kind === "plushie" ? `${hit.target.name} · give it a squeeze` : hit.kind === "portfolio" ? `${PORTFOLIO_SPOTS[hit.id].object} · something's here` : hit.kind === "poster" ? `${hit.info.album} · what am I listening to?` : LABELS[hit.kind];
     if (label !== hoverLabel) {
       hoverLabel = label;
       options.onHover?.(label);
@@ -1998,9 +2206,68 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   let firstFrameSent = false;
   const clock = new THREE.Clock();
   const toCamera = new THREE.Vector3();
+  // ---------- the other visitors: faint glowing ghosts where they're standing ----------
+  const ghostGroup = new THREE.Group();
+  scene.add(ghostGroup);
+  const ghostCoreGeo = new THREE.SphereGeometry(0.03, 16, 12);
+  const ghostHaloGeo = new THREE.SphereGeometry(0.085, 16, 12);
+  const ghostNoseGeo = new THREE.ConeGeometry(0.014, 0.05, 10).rotateX(Math.PI / 2).translate(0, 0, 0.07);
+  type GhostView = { g: THREE.Group; body: THREE.Group; to: THREE.Vector3; look: THREE.Vector3; mats: THREE.MeshBasicMaterial[]; phase: number };
+  const ghosts = new Map<string, GhostView>();
+  const setGhosts = (list: Ghost[]) => {
+    const keep = new Set(list.map((l) => l.id));
+    for (const [id, gh] of ghosts)
+      if (!keep.has(id)) {
+        ghostGroup.remove(gh.g);
+        gh.mats.forEach((m) => m.dispose());
+        ghosts.delete(id);
+      }
+    for (const l of list) {
+      let gh = ghosts.get(l.id);
+      if (!gh) {
+        const color = new THREE.Color().setHSL(l.hue, 0.85, 0.58);
+        // a solid coloured core (so the colour reads against the pale walls) in a soft additive halo
+        const solid = (opacity: number) => new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false });
+        const glow = (opacity: number) => new THREE.MeshBasicMaterial({ color, transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false });
+        const mats = [solid(0.85), glow(0.1), solid(0.5)];
+        const g = new THREE.Group();
+        const body = new THREE.Group();
+        body.add(new THREE.Mesh(ghostCoreGeo, mats[0]), new THREE.Mesh(ghostHaloGeo, mats[1]), new THREE.Mesh(ghostNoseGeo, mats[2]));
+        g.add(body);
+        g.position.set(...l.pos);
+        ghostGroup.add(g);
+        gh = { g, body, to: new THREE.Vector3(), look: new THREE.Vector3(), mats, phase: Math.random() * Math.PI * 2 };
+        ghosts.set(l.id, gh);
+      }
+      gh.to.set(...l.pos);
+      gh.look.set(...l.look);
+    }
+  };
+  const updateGhosts = (dt: number, time: number) => {
+    ghostGroup.visible = mode === "room" && ghosts.size > 0;
+    if (!ghostGroup.visible) return;
+    const k = 1 - Math.exp(-dt * 3);
+    for (const gh of ghosts.values()) {
+      gh.g.position.lerp(gh.to, k);
+      gh.body.position.y = Math.sin(time * 1.6 + gh.phase) * 0.012;
+      gh.g.lookAt(gh.look);
+      // fade out up close, so a visitor standing where you are doesn't sit in your face
+      const near = THREE.MathUtils.clamp((gh.g.position.distanceTo(camera.position) - 0.25) / 0.6, 0, 1);
+      gh.mats[0].opacity = 0.85 * near;
+      gh.mats[1].opacity = 0.1 * near;
+      gh.mats[2].opacity = 0.5 * near;
+    }
+  };
+  const getPose = () => {
+    if (mode !== "room") return null;
+    const r = (v: THREE.Vector3) => v.toArray().map((n) => Math.round(n * 100) / 100) as [number, number, number];
+    return { pos: r(camera.position), look: r(controls.target) };
+  };
+
   renderer.setAnimationLoop(() => {
     const dt = Math.min(clock.getDelta(), 0.1);
     const time = clock.elapsedTime;
+    updateGhosts(dt, time);
     if (intro < 1) {
       intro = Math.min(1, time / 1.8);
       lampLevel = (lampSettings.on ? lampSettings.brightness : 0) * flicker(time);
@@ -2288,6 +2555,8 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   });
 
   return {
+    getPose,
+    setGhosts,
     setView,
     toggleLamp,
     toggleLight,
