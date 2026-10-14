@@ -165,8 +165,6 @@ export interface PlainRoomOptions {
   onHover?: (label: string | null) => void;
   /** a poster was clicked */
   onPoster?: (poster: PosterInfo) => void;
-  /** the wall calendar was clicked */
-  onCalendar?: () => void;
   /** start muted */
   muted?: boolean;
   /** the candle was lit (true) or blown out (false) */
@@ -421,7 +419,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     return new THREE.MeshBasicMaterial({ map: tex, transparent: true, opacity: 0.27, blending: THREE.AdditiveBlending, depthWrite: false });
   })();
   // things on the walls that can be clicked: the posters, the calendar, the whiteboard
-  const wallPicks: ({ root: THREE.Object3D } & ({ kind: "poster"; info: PosterInfo } | { kind: "calendar" | "whiteboard" }))[] = [];
+  const wallPicks: ({ root: THREE.Object3D } & ({ kind: "poster"; info: PosterInfo } | { kind: "whiteboard" }))[] = [];
   /** turns something built facing out of its wall (local +z) onto the back, left or right wall */
   const mount = (g: THREE.Object3D, side: "back" | "left" | "right", u: number, y: number, group: THREE.Object3D) => {
     if (side === "left") {
@@ -665,11 +663,13 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   slab(t, height, D + t * 2, wallMat, right + t / 2, height / 2, ROOM.midZ, rightWall);
   slab(0.015, 0.1, D, trim, right - 0.0075, 0.05, ROOM.midZ, rightWall);
 
-  // on the wall between the tapestry and the door: a whiteboard of what I'm building right now,
-  // and a wall calendar that books a call. Both are painted in marker; the handwriting font is
+  // on the wall between the tapestry and the door, a whiteboard of what I'm building right now; and
+  // on the door, a calendar that's the way to get in touch. Both are painted in marker; the handwriting font is
   // loaded with the page, so they repaint once it arrives.
   const marker = (px: number, weight = 700) => `${weight} ${px}px Caveat, "Segoe Print", "Bradley Hand", "Comic Sans MS", cursive`;
   const repaints: (() => void)[] = [];
+  // built here with the whiteboard, hung on the door once the front wall is up
+  let doorCalendar: THREE.Group | null = null;
   {
     const W2 = 0.74;
     const H2 = 0.5;
@@ -807,8 +807,11 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     const nail = new THREE.Mesh(new THREE.SphereGeometry(0.005, 8, 6), ringMat);
     nail.position.set(0, H3 / 2 + 0.03, 0.004);
     g.add(nail);
-    mount(g, "right", 1.68, 1.5, rightWall);
-    wallPicks.push({ root: g, kind: "calendar" });
+    // hung on the entry door at eye level, facing into the room; it's the Contact section's spot
+    g.rotation.y = Math.PI;
+    g.position.set((DOOR.x0 + DOOR.x1) / 2, 1.45, front + 0.008);
+    doorCalendar = g;
+    roomSpots.push({ id: "contact", root: g });
   }
   document.fonts?.load(marker(40)).then(() => repaints.forEach((r) => r())).catch(() => {});
 
@@ -849,7 +852,9 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       c.strokeRect(w * 0.14, h * 0.07, w * 0.72, h * 0.38);
       c.strokeRect(w * 0.14, h * 0.55, w * 0.72, h * 0.38);
     });
-    roomSpots.push({ id: "contact", root: slab(DOOR.x1 - DOOR.x0, DOOR.h, 0.04, new THREE.MeshStandardMaterial({ map: entry, roughness: 0.4 }), (DOOR.x0 + DOOR.x1) / 2, DOOR.h / 2, front + 0.03, frontWall) });
+    // the door itself is just a door; the calendar hung on it is the way to get in touch
+    slab(DOOR.x1 - DOOR.x0, DOOR.h, 0.04, new THREE.MeshStandardMaterial({ map: entry, roughness: 0.4 }), (DOOR.x0 + DOOR.x1) / 2, DOOR.h / 2, front + 0.03, frontWall);
+    if (doorCalendar) frontWall.add(doorCalendar);
     casing(DOOR.x0, DOOR.x1, DOOR.h, front);
     hinges(DOOR.x1 - 0.005, front + 0.01, DOOR.h);
     lever(DOOR.x0 + 0.08, 0.98, front + 0.01, 1);
@@ -1502,7 +1507,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     | { kind: "perfume"; target: THREE.Group }
     | { kind: "portfolio"; id: PortfolioId }
     | { kind: "poster"; info: PosterInfo; root: THREE.Object3D }
-    | { kind: "calendar" | "whiteboard"; root: THREE.Object3D };
+    | { kind: "whiteboard"; root: THREE.Object3D };
   const inter = furniture.interact;
   const isIn = (o: THREE.Object3D, root: THREE.Object3D) => {
     for (let p: THREE.Object3D | null = o; p; p = p.parent) if (p === root) return true;
@@ -1522,7 +1527,6 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     keyboard: "Keyboard · leave me a note",
     candle: "Candle · blow it out or light it",
     perfume: "The fragrances · spray one",
-    calendar: "Calendar · book a call with me",
     whiteboard: "Whiteboard · what I'm building right now",
   };
   // the mesh under the pointer at the last pick, for the hover glow and lift
@@ -1950,9 +1954,6 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       } else if (hit?.kind === "poster") {
         audio.click("radio");
         options.onPoster?.(hit.info);
-      } else if (kind === "calendar") {
-        audio.play("chime");
-        options.onCalendar?.();
       } else if (kind === "whiteboard" && hit && "root" in hit) {
         // step up to the board so it can be read
         const c = new THREE.Box3().setFromObject(hit.root).getCenter(new THREE.Vector3());
@@ -2025,7 +2026,6 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       case "console":
         return [isIn(o, inter.controller) ? inter.controller : isIn(o, inter.monitor) ? inter.monitor : inter.ps5];
       case "poster":
-      case "calendar":
       case "whiteboard":
         return [hit.root];
       case "portfolio": {

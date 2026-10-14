@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { AnimatePresence, motion, useReducedMotion, type Transition } from "framer-motion";
-import { ArrowUpRight, Binoculars, Briefcase, Camera, Check, Gamepad2, LayoutGrid, Lightbulb, LightbulbOff, Radio, ScrollText, SlidersHorizontal, Trophy, Volume2, VolumeX, X } from "lucide-react";
+import { ArrowUpRight, Binoculars, Briefcase, CalendarDays, Camera, Check, Gamepad2, LayoutGrid, Lightbulb, LightbulbOff, Radio, ScrollText, SlidersHorizontal, Trophy, Volume2, VolumeX, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { RADIO_STATION } from "@/components/room/createAudio";
 import { playlistEmbed } from "@/components/room/playlist";
-import { bookingUrl, profile } from "@/data/portfolio";
+import { profile } from "@/data/portfolio";
 import { NowPlaying } from "@/components/room/NowPlaying";
 import { joinRoom } from "@/components/room/presence";
 import { RoomConsole } from "@/components/room/console/RoomConsole";
@@ -343,11 +343,6 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
             setPlayerOpen(false);
             setPoster(p);
           },
-          onCalendar: () => {
-            // book a call; with no booking link yet, the Contact section does the job
-            if (bookingUrl) window.open(bookingUrl, "_blank", "noopener");
-            else setSection("contact");
-          },
           muted: mutedRef.current,
           sound: soundRef.current,
         });
@@ -496,15 +491,6 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
               <ScrollText className="h-3.5 w-3.5 text-amber-200" /> Quick view
             </Link>
           )}
-          {!away && people > 1 && (
-            <p className="liquid-glass on-glass flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs text-white/90" aria-live="polite">
-              <span className="relative flex h-2 w-2" aria-hidden="true">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60 motion-reduce:animate-none" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
-              </span>
-              {people} people here now
-            </p>
-          )}
           {!away && found.length === PORTFOLIO_IDS.length && (
             <p className="rounded-full bg-black/40 px-4 py-1.5 text-xs text-amber-100/85 backdrop-blur-md" aria-live="polite">
               You found the whole portfolio
@@ -517,6 +503,15 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
           animate={chromeIn ? { opacity: 1, transform: "translateY(0px)" } : undefined}
           transition={{ duration: 0.5, ease: EASE_OUT, delay: 0.05 }}
         >
+          {!away && people > 1 && (
+            <p className="liquid-glass on-glass flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs text-white/90" aria-live="polite">
+              <span className="relative flex h-2 w-2" aria-hidden="true">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60 motion-reduce:animate-none" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+              </span>
+              {people} people here now
+            </p>
+          )}
           <button type="button" className={chip} aria-expanded={soundOpen} aria-label={`Sound settings${muted ? " (muted)" : ""}`} onClick={() => setSoundOpen((o) => !o)}>
             {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
           </button>
@@ -1095,6 +1090,20 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
                 }}
               >
                 <Briefcase className="h-5 w-5" />
+              </DockButton>
+              {/* getting in touch, one tap away (it's also the calendar on the door) */}
+              <DockButton
+                label="Contact"
+                accent
+                open={section === "contact"}
+                onClick={() => {
+                  setMenu(null);
+                  setPanelOpen(false);
+                  setSoundOpen(false);
+                  setSection("contact");
+                }}
+              >
+                <CalendarDays className="h-5 w-5" />
               </DockButton>
               <span className="mx-1 hidden w-px self-stretch bg-white/10 sm:block" aria-hidden="true" />
               <DockButton label="PlayStation" onClick={() => roomRef.current?.setView("console")}>
