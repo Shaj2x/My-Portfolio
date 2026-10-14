@@ -163,6 +163,8 @@ export interface PlainRoomOptions {
   onRadioChange?: (on: boolean) => void;
   /** the thing under the pointer, named for a hover label, or null */
   onHover?: (label: string | null) => void;
+  /** the whiteboard was clicked (the camera steps up to it): open the drawing pad */
+  onWhiteboard?: () => void;
   /** a poster was clicked */
   onPoster?: (poster: PosterInfo) => void;
   /** start muted */
@@ -202,6 +204,8 @@ export interface PlainRoomHandle {
   getPose: () => { pos: [number, number, number]; look: [number, number, number] } | null;
   /** the other visitors in the room right now, drawn as faint ghosts where they're standing */
   setGhosts: (ghosts: Ghost[]) => void;
+  /** the whiteboard: the plain board as an image (for drawing over), and the doodle to show on it */
+  whiteboard: { base: () => { url: string; width: number; height: number }; setDoodle: (img: CanvasImageSource | null) => void };
   dispose: () => void;
 }
 
@@ -668,6 +672,9 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   // loaded with the page, so they repaint once it arrives.
   const marker = (px: number, weight = 700) => `${weight} ${px}px Caveat, "Segoe Print", "Bradley Hand", "Comic Sans MS", cursive`;
   const repaints: (() => void)[] = [];
+  // the whiteboard's own drawing: the plain board (for the drawing pad) and the visitor's doodle on it
+  let doodle: CanvasImageSource | null = null;
+  let whiteboard: PlainRoomHandle["whiteboard"] = { base: () => ({ url: "", width: 1, height: 1 }), setDoodle: () => {} };
   // built here with the whiteboard, hung on the door once the front wall is up
   let doorCalendar: THREE.Group | null = null;
   {
@@ -718,10 +725,27 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
         x.stroke();
         x.fillText(line, 124, y);
       });
+      // the visitor's own doodle, drawn over the top
+      if (doodle) x.drawImage(doodle, 0, 0, 1024, h);
       tex.needsUpdate = true;
     };
     paint();
     repaints.push(paint);
+    whiteboard = {
+      base: () => {
+        const keep = doodle;
+        doodle = null;
+        paint();
+        const url = c.toDataURL("image/png");
+        doodle = keep;
+        paint();
+        return { url, width: c.width, height: c.height };
+      },
+      setDoodle: (img) => {
+        doodle = img;
+        paint();
+      },
+    };
     const surface = new THREE.Mesh(new THREE.PlaneGeometry(W2, H2), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.25 }));
     surface.position.z = 0.0165;
     g.add(surface);
@@ -1959,6 +1983,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
         const c = new THREE.Box3().setFromObject(hit.root).getCenter(new THREE.Vector3());
         moveTo(c.clone().add(new THREE.Vector3(-1.05, 0.02, 0)), c);
         audio.click("lamp");
+        options.onWhiteboard?.();
       } else if (hit?.kind === "portfolio") {
         audio.play("chime");
         burst(lastHitPoint);
@@ -2555,6 +2580,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   });
 
   return {
+    whiteboard: { base: () => whiteboard.base(), setDoodle: (img) => whiteboard.setDoodle(img) },
     getPose,
     setGhosts,
     setView,

@@ -239,7 +239,7 @@ export const profile = {
 };
 
 /** the whiteboard in the room: what I'm building right now. Keep it to three or four short lines. */
-export const nowBuilding = ["this room, one object at a time", "Ma's Garden, a game for my mom", "AI tools for local businesses"];
+export const nowBuilding = ["Dev Assist", "Schematica", "Digital Dash"];
 
 /**
  * A booking link (Cal.com or Calendly) for the wall calendar in the room. Left empty, the calendar

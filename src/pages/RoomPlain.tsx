@@ -7,6 +7,8 @@ import { RADIO_STATION } from "@/components/room/createAudio";
 import { playlistEmbed } from "@/components/room/playlist";
 import { profile } from "@/data/portfolio";
 import { NowPlaying } from "@/components/room/NowPlaying";
+import { WhiteboardPad } from "@/components/room/WhiteboardPad";
+import { loadDoodle } from "@/components/room/whiteboardDoodle";
 import { joinRoom } from "@/components/room/presence";
 import { RoomConsole } from "@/components/room/console/RoomConsole";
 import { PortfolioPage } from "@/components/room/PortfolioPages";
@@ -249,6 +251,10 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
   const awardRef = useRef(award);
   awardRef.current = award;
   const [playerOpen, setPlayerOpen] = useState(false);
+  // the whiteboard's drawing pad, open with the plain board to draw over
+  const [pad, setPad] = useState<{ url: string; width: number; height: number } | null>(null);
+  const padRef = useRef(false);
+  padRef.current = !!pad;
   // the poster whose "what am I listening to" card is open
   const [poster, setPoster] = useState<PosterInfo | null>(null);
   // how many people are in the room right now, this visitor included
@@ -339,6 +345,13 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
           onRadioChange: setRadioOn,
           onSpeaker: playlist ? () => setPlayerOpen((o) => !o) : undefined,
           onHover: setHover,
+          onWhiteboard: () => {
+            // let the camera step up to the board first
+            window.setTimeout(() => {
+              const base = roomRef.current?.whiteboard.base();
+              if (base?.url) setPad(base);
+            }, 700);
+          },
           onPoster: (p) => {
             setPlayerOpen(false);
             setPoster(p);
@@ -347,6 +360,8 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
           sound: soundRef.current,
         });
         window.__boot?.set(92, "Switching on the lamp…");
+        // this visitor's doodle, back on the whiteboard
+        void loadDoodle().then((img) => img && roomRef.current?.whiteboard.setDoodle(img));
       } catch (e) {
         console.error("Failed to start the room:", e);
         setError(true);
@@ -358,6 +373,10 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
       const key = e.key.toLowerCase();
       // the console takes the keyboard while it's on screen
       if (viewRef.current === "console" || keyboardOpenRef.current) return;
+      if (padRef.current) {
+        if (key === "escape") setPad(null);
+        return;
+      }
       if (sectionRef.current) {
         if (key === "escape") setSection(null);
         return;
@@ -538,6 +557,18 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
         )}
       </div>
 
+      <AnimatePresence>{pad && !away && (
+        <motion.div key="pad" {...fade} className="pointer-events-auto absolute inset-0 z-20 flex items-center justify-center bg-black/35 p-3" onPointerDown={(e) => e.target === e.currentTarget && setPad(null)}>
+          <WhiteboardPad
+            base={pad}
+            onClose={() => setPad(null)}
+            onSave={(doodle) => {
+              roomRef.current?.whiteboard.setDoodle(doodle);
+              setPad(null);
+            }}
+          />
+        </motion.div>
+      )}</AnimatePresence>
       <AnimatePresence>{poster && !away && (
         <motion.div key={poster.album} {...pop} style={{ transformOrigin: "top left" }} className="pointer-events-auto absolute left-4 top-20 z-10">
           <NowPlaying poster={poster} onClose={() => setPoster(null)} />
