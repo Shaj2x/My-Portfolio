@@ -11,7 +11,7 @@ export const PORTFOLIO_SPOTS: Record<PortfolioId, { object: string; title: strin
   leadership: { object: "The Western lanyard", title: "Leadership" },
   skills: { object: "The mouse", title: "Skills" },
   services: { object: "The desk chair", title: "What I Build" },
-  contact: { object: "The door", title: "Contact" },
+  contact: { object: "The calendar on the door", title: "Contact" },
 };
 
 export const PORTFOLIO_IDS = Object.keys(PORTFOLIO_SPOTS) as PortfolioId[];

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { FileText, Gamepad2, Github, Linkedin, Mail } from "lucide-react";
+import { CalendarDays, FileText, Gamepad2, Github, Linkedin, Mail } from "lucide-react";
 import {
   aboutParagraphs,
+  bookingUrl,
   customDescriptions,
   demoLinks,
   education,
@@ -204,6 +205,11 @@ const ContactPage = () => {
         </div>
       </Card>
       <div className="flex flex-wrap gap-3">
+        {bookingUrl && (
+          <LinkButton href={bookingUrl}>
+            <CalendarDays className="h-4 w-4" /> Book a call
+          </LinkButton>
+        )}
         <LinkButton href={`mailto:${profile.email}`}>
           <Mail className="h-4 w-4" /> Write to me
         </LinkButton>
