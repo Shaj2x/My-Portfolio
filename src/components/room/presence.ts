@@ -51,7 +51,10 @@ export async function joinRoom(onChange: (people: { count: number; ghosts: Ghost
     emit();
   });
   channel.subscribe((status) => {
-    if (status === "SUBSCRIBED") void channel.track({ at: Date.now() });
+    if (status !== "SUBSCRIBED") return;
+    void channel.track({ at: Date.now() });
+    // connected: say so straight away, before the first head count arrives
+    emit();
   });
 
   let last = "";
