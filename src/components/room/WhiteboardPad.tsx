@@ -3,9 +3,9 @@ import { Eraser, Trash2, Undo2, X } from "lucide-react";
 import { DOODLE_KEY, loadDoodle } from "./whiteboardDoodle";
 
 /**
- * Drawing on the whiteboard: the board as it is, with a transparent layer on top to draw on in
- * marker. Saving keeps the doodle in this browser and puts it on the board in the room; nobody
- * else sees it.
+ * Drawing on the whiteboard: a clean board, with a transparent layer on top to draw on in marker.
+ * Saving keeps the drawing in this browser and shows it on the board in the room in place of my
+ * list (clearing it brings the list back); nobody else sees it.
  */
 
 const MARKERS = [
@@ -131,7 +131,7 @@ export const WhiteboardPad = ({ base, onSave, onClose }: { base: { url: string; 
       <div className="mb-3 flex items-center justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-[0.18em] text-amber-200/75">The whiteboard</p>
-          <p className="text-sm text-white/65">Leave a doodle. It stays on the board, just for you.</p>
+          <p className="text-sm text-white/65">Draw whatever you like. Saving puts it on the board in the room, just for you; clear it to bring my list back.</p>
         </div>
         <button type="button" aria-label="Close without saving" className="rounded-full p-2 text-white/60 hover:bg-white/10 hover:text-white" onClick={onClose}>
           <X className="h-4 w-4" />
