@@ -204,7 +204,7 @@ export interface PlainRoomHandle {
   getPose: () => { pos: [number, number, number]; look: [number, number, number] } | null;
   /** the other visitors in the room right now, drawn as faint ghosts where they're standing */
   setGhosts: (ghosts: Ghost[]) => void;
-  /** the whiteboard: the plain board as an image (for drawing over), and the doodle to show on it */
+  /** the whiteboard: a clean board as an image (to draw on), and the visitor's drawing to show on it instead of the list */
   whiteboard: { base: () => { url: string; width: number; height: number }; setDoodle: (img: CanvasImageSource | null) => void };
   dispose: () => void;
 }
@@ -694,6 +694,12 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       const h = c.height;
       x.fillStyle = "#f7f8f6";
       x.fillRect(0, 0, 1024, h);
+      // a visitor who's drawn on the board sees their own drawing on it instead of my list
+      if (doodle) {
+        x.drawImage(doodle, 0, 0, 1024, h);
+        tex.needsUpdate = true;
+        return;
+      }
       // a faint ghost of old writing, like any well-used whiteboard
       x.globalAlpha = 0.05;
       x.fillStyle = "#3a4a8a";
@@ -725,21 +731,20 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
         x.stroke();
         x.fillText(line, 124, y);
       });
-      // the visitor's own doodle, drawn over the top
-      if (doodle) x.drawImage(doodle, 0, 0, 1024, h);
       tex.needsUpdate = true;
     };
     paint();
     repaints.push(paint);
     whiteboard = {
+      // a clean board to draw on
       base: () => {
-        const keep = doodle;
-        doodle = null;
-        paint();
-        const url = c.toDataURL("image/png");
-        doodle = keep;
-        paint();
-        return { url, width: c.width, height: c.height };
+        const blank = document.createElement("canvas");
+        blank.width = c.width;
+        blank.height = c.height;
+        const x = blank.getContext("2d")!;
+        x.fillStyle = "#f7f8f6";
+        x.fillRect(0, 0, blank.width, blank.height);
+        return { url: blank.toDataURL("image/png"), width: c.width, height: c.height };
       },
       setDoodle: (img) => {
         doodle = img;
