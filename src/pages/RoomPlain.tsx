@@ -257,8 +257,8 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
   padRef.current = !!pad;
   // the poster whose "what am I listening to" card is open
   const [poster, setPoster] = useState<PosterInfo | null>(null);
-  // how many people are in the room right now, this visitor included
-  const [people, setPeople] = useState(1);
+  // how many people are in the room right now, this visitor included (0 until connected)
+  const [people, setPeople] = useState(0);
 
   // join the other visitors: share where we're standing, and draw them as ghosts
   useEffect(() => {
@@ -522,13 +522,13 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
           animate={chromeIn ? { opacity: 1, transform: "translateY(0px)" } : undefined}
           transition={{ duration: 0.5, ease: EASE_OUT, delay: 0.05 }}
         >
-          {!away && people > 1 && (
+          {!away && people > 0 && (
             <p className="liquid-glass on-glass flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs text-white/90" aria-live="polite">
               <span className="relative flex h-2 w-2" aria-hidden="true">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60 motion-reduce:animate-none" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
               </span>
-              {people} people here now
+              {people === 1 ? "Just you here right now" : `${people} people here now`}
             </p>
           )}
           <button type="button" className={chip} aria-expanded={soundOpen} aria-label={`Sound settings${muted ? " (muted)" : ""}`} onClick={() => setSoundOpen((o) => !o)}>
