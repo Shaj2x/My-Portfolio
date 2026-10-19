@@ -1,20 +1,21 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { BarChart3, Cherry, Crown, ExternalLink, Gamepad2, Maximize2, Minimize2, Sparkles, Trophy, Volume2, VolumeX, X, type LucideIcon } from "lucide-react";
+import { BarChart3, Cherry, Crown, Timer, ExternalLink, Gamepad2, Maximize2, Minimize2, Sparkles, Trophy, Volume2, VolumeX, X, type LucideIcon } from "lucide-react";
 import PongGame from "@/components/PongGame";
 import SnakeGame from "@/components/SnakeGame";
 import SuperShajith from "./SuperShajith";
+import TimerGame from "./TimerGame";
 import { setGameSoundHost, useGameSound } from "@/components/gameSound";
 import { customDescriptions, demoLinks, profile } from "@/data/portfolio";
 
 /*
  * The PS5 on the desk, as a console you can drive: a home screen with his games, the selected
- * tile's art filling the background. Super S, Ma's Garden, Pong and Snake play on the screen (or
+ * tile's art filling the background. Super S, Ma's Garden, Stop the Clock, Pong and Snake play on the screen (or
  * full screen); the games that live on their own sites open in a new tab. It drives with the
  * keyboard, the mouse, or a real controller (Gamepad API).
  */
 
 interface Game {
-  id: "super" | "garden" | "pong" | "snake" | "slots" | "blackjack" | "mercatus" | "statstack";
+  id: "super" | "garden" | "timer" | "pong" | "snake" | "slots" | "blackjack" | "mercatus" | "statstack";
   title: string;
   /** one line under the title on the home screen */
   blurb: string;
@@ -30,6 +31,7 @@ interface Game {
 const GAMES: Game[] = [
   { id: "super", title: "Super S", blurb: "A platformer through the grind, the hustle and the next level. Collect SS coins, hunt the hidden gold ones, spray on one of seven random fragrances for a power-up. Crouch through tunnels and ground pound across nine worlds. Progress saves on this device. Arrows, Space to jump, B to shoot, or the buttons on a phone.", icon: Crown, art: ["#e8a33a", "#2a1306"], controls: { keys: "← → move · Space jump · ↓ crouch (ground pound in the air) · Shift run · B shoot", touch: "◀ ▶ move · ▼ crouch · B run and shoot · A jump" } },
   { id: "garden", title: "Ma's Garden", blurb: "A fruit-matching game made for Ma. Swap fruit to make lines of three, build stripes, wreaths and blossoms, and clear weeds, hedges and vines on an endless road of gardens. Unlimited lives, and progress saves on this device. Swipe or click to swap.", icon: Cherry, art: ["#ff7aa8", "#3d7a2e"], controls: { keys: "Click or drag a fruit to swap it", touch: "Swipe a fruit to swap it" } },
+  { id: "timer", title: "Stop the Clock", blurb: "How good is your internal clock? Stop a hidden timer as close to the target as you can, or run it in secret and make everyone guess. One to six players on one device, with points for accuracy and a bonus for a perfect stop.", icon: Timer, art: ["#1fb6c9", "#04232a"], controls: { keys: "Space or Enter to start and stop", touch: "Tap START, then STOP" } },
   { id: "pong", title: "Pong", blurb: "First to 5 against the CPU. Move with W/S, the arrow keys, the D-pad, or drag on the board.", icon: Gamepad2, art: ["#d4202c", "#2a0507"], controls: { keys: "W/S or ↑ ↓ to move · first to 5", touch: "Drag on the board to move · first to 5" } },
   { id: "snake", title: "Snake", blurb: "Eat the SS logo to grow. Steer with WASD, the arrow keys, the D-pad, or a swipe.", icon: Gamepad2, art: ["#1f9d55", "#03200f"], controls: { keys: "WASD or the arrow keys to steer", touch: "Swipe or use the pad to steer" } },
   { id: "slots", title: "Raptors Slot Machine", blurb: "A Toronto Raptors slot machine. Opens in a new tab.", icon: Trophy, art: ["#ce1141", "#1a0207"], site: demoLinks["Raptors-Slot-Machine"] },
@@ -279,7 +281,8 @@ export const RoomConsole = ({ open, onExit, onPlay, onWin, muted = false, volume
           key("ArrowRight", dir.right);
           key("ArrowUp", dir.up);
           key("ArrowDown", dir.down);
-          if (playingRef.current?.id === "super") {
+          if (playingRef.current?.id === "timer") key(" ", b(0));
+          else if (playingRef.current?.id === "super") {
             key(" ", b(0));
             key("Shift", b(2));
             // □ runs and shoots (B on a keyboard); △ just shoots
@@ -372,6 +375,10 @@ export const RoomConsole = ({ open, onExit, onPlay, onWin, muted = false, volume
             {playing.id === "garden" ? (
               // Ma's Garden is its own page, so it plays here in a frame, saves and all
               <iframe src="/ma" title="Ma's Garden" className="min-h-0 w-full flex-1 rounded-2xl border-0 bg-[#ffd9e2]" />
+            ) : playing.id === "timer" ? (
+              <div className="min-h-0 w-full flex-1">
+                <TimerGame />
+              </div>
             ) : (
               // the board grows to fill the screen, keeping its shape
               <FitStage key={playing.id}>{playing.id === "super" ? <SuperShajith showHelp={false} onWin={() => onWin?.(playing.id)} /> : playing.id === "pong" ? <PongGame showHelp={false} /> : <SnakeGame showHelp={false} />}</FitStage>
