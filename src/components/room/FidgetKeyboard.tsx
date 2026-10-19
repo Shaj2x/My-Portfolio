@@ -205,6 +205,7 @@ export const FidgetKeyboard = ({ onClose, muted = false, volume = 1 }: FidgetKey
     });
   };
 
+  const [errorText, setErrorText] = useState("");
   const send = async () => {
     if (!message.trim() || status === "sending") return;
     setStatus("sending");
@@ -214,7 +215,8 @@ export const FidgetKeyboard = ({ onClose, muted = false, volume = 1 }: FidgetKey
       setShared(r.shared);
       setMessage("");
       setStatus("sent");
-    } catch {
+    } catch (e) {
+      setErrorText(e instanceof Error && e.message ? e.message : "");
       setStatus("error");
     }
   };
@@ -267,7 +269,7 @@ export const FidgetKeyboard = ({ onClose, muted = false, volume = 1 }: FidgetKey
           >
             {status === "sending" ? "Pinning…" : status === "sent" ? "Pinned ✓" : "Pin it"}
           </button>
-          {status === "error" && <p className="text-sm text-red-700 sm:col-span-2">That didn't go through. Check your connection and try again.</p>}
+          {status === "error" && <p className="text-sm text-red-700 sm:col-span-2">{errorText || "That didn't go through. Check your connection and try again."}</p>}
         </div>
 
         <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-label="Switch sound">

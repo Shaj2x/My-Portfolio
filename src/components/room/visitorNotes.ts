@@ -13,6 +13,7 @@ export interface VisitorNote {
 }
 
 export const NOTE_LIMIT = 280;
+const LINK = /(https?:\/\/|www\.|\.(com|net|org|io|xyz|ru|cn|top|link|click)(\/|\s|$))/i;
 export const NAME_LIMIT = 40;
 /** notes are kept forever; this is how many of the newest the desk shows */
 const SHOWN = 200;
@@ -48,10 +49,15 @@ export async function addNote(name: string, message: string): Promise<{ note: Vi
     message: message.trim().slice(0, NOTE_LIMIT),
   };
   if (!clean.message) throw new Error("Write something first.");
+  // links are how spam gets into a guestbook, so they're kept out (the database checks too)
+  if (LINK.test(clean.message) || LINK.test(clean.name)) throw new Error("Links aren't allowed in notes.");
   if (hasDatabase()) {
     const { supabase } = await import("@/integrations/supabase/client");
     const { data, error } = await supabase.from("visitor_notes").insert(clean).select("id, name, message, created_at").single();
     if (!error && data) return { note: data, shared: true };
+    // turned away on purpose (a rule it broke, or too many notes at once): say so, don't keep it
+    if (error?.code === "23514") throw new Error("That note can't be posted. Links aren't allowed.");
+    if (error?.code === "P0001") throw new Error("Lots of notes right now. Try again in a minute.");
     console.warn("Visitor notes: couldn't save to the database, keeping the note in this browser.", error?.message);
   }
   const note: VisitorNote = { id: `local-${Date.now()}`, ...clean, created_at: new Date().toISOString() };
