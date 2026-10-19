@@ -345,3 +345,15 @@ html {
 @media (prefers-reduced-motion: reduce) {
   .eq-bar { animation: none; transform: scaleY(0.7); }
 }
+
+/* Stop the Clock: the clock glows and breathes while it's hidden */
+.timer-glow {
+  animation: timer-glow 1.1s ease-in-out infinite;
+}
+@keyframes timer-glow {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--glow) 0%, transparent); }
+  50% { box-shadow: 0 0 60px 6px color-mix(in srgb, var(--glow) 45%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .timer-glow { animation: none; }
+}
