@@ -1,12 +1,14 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import { ServicesShowcase } from "@/components/ServicesShowcase";
-import { Accessibility, ArrowUpRight, Bot, Building2, ChevronDown, CircuitBoard, DoorOpen, FileText, FolderGit2, Gamepad2, Github, Linkedin, Mail, MapPin, Music2, type LucideIcon } from "lucide-react";
+import { DemoSources, DemoVideoDialog, WatchDemo } from "@/components/DemoVideo";
+import { Accessibility, ArrowUpRight, Bot, Building2, ChevronDown, CircuitBoard, DoorOpen, FileText, FolderGit2, Gamepad2, Github, Linkedin, Mail, MapPin, Music2, Play, type LucideIcon } from "lucide-react";
 import {
   aboutParagraphs,
   customDescriptions,
   demoLinks,
+  demoVideos,
   displayNames,
   education,
   experience,
@@ -80,18 +82,52 @@ const COVERS: Record<string, { icon: LucideIcon; tint: string }> = {
   HarmonAI: { icon: Music2, tint: "236,110,170" },
 };
 
-/** a project tile: its screenshot when there is one, otherwise cover art */
+/** a demo's thumbnail: its still, playing the clip silently while pointed at; clicking opens the full video */
+const VideoThumb = ({ name, title }: { name: string; title: string }) => {
+  const video = demoVideos[name];
+  const [playing, setPlaying] = useState(false);
+  const ref = useRef<HTMLVideoElement>(null);
+  const reduce = useReducedMotion();
+  const hover = (on: boolean) => {
+    const v = ref.current;
+    if (!v || reduce) return;
+    if (on) void v.play().then(() => setPlaying(true), () => {});
+    else {
+      v.pause();
+      setPlaying(false);
+    }
+  };
+  return (
+    <DemoVideoDialog video={video} title={title}>
+      <button type="button" aria-label={`Watch the ${title} demo`} className="absolute inset-0 block h-full w-full" onPointerEnter={() => hover(true)} onPointerLeave={() => hover(false)}>
+        <video ref={ref} poster={video.poster} muted loop playsInline preload="none" className="h-full w-full object-cover object-top opacity-90 transition-transform duration-500 ease-out group-hover:scale-[1.03]">
+          <DemoSources video={video} />
+        </video>
+        <span className={`absolute inset-0 grid place-items-center transition-opacity duration-200 ${playing ? "opacity-0" : "opacity-100"}`} aria-hidden="true">
+          <span className="grid h-12 w-12 place-items-center rounded-full border border-white/20 bg-black/55 backdrop-blur-md">
+            <Play className="ml-0.5 h-5 w-5 fill-white text-white" />
+          </span>
+        </span>
+      </button>
+    </DemoVideoDialog>
+  );
+};
+
+/** a project tile: its demo video when there is one, else its screenshot, else cover art */
 const ProjectCard = ({ name, delay }: { name: string; delay: number }) => {
   const title = displayNames[name] ?? name.replace(/-+/g, " ");
   const description = customDescriptions[name];
   const demo = demoLinks[name];
+  const video = demoVideos[name];
   const image = projectPreviews[name];
   const building = inProgressRepos.includes(name);
   return (
     <Reveal delay={delay} className="h-full">
       <Glass className="group flex h-full flex-col overflow-hidden">
         <div className="relative aspect-[16/9] overflow-hidden border-b border-white/10 bg-[#0b0c10]">
-          {image ? (
+          {video ? (
+            <VideoThumb name={name} title={title} />
+          ) : image ? (
             <img src={image} alt={`${title} screenshot`} loading="lazy" className="h-full w-full object-cover object-top opacity-90 transition-transform duration-500 ease-out group-hover:scale-[1.03]" />
           ) : (
             (() => {
@@ -110,7 +146,7 @@ const ProjectCard = ({ name, delay }: { name: string; delay: number }) => {
               );
             })()
           )}
-          {building && <span className="absolute left-3 top-3 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium text-amber-200 backdrop-blur-md">In progress</span>}
+          {building && <span className="pointer-events-none absolute left-3 top-3 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-medium text-amber-200 backdrop-blur-md">In progress</span>}
         </div>
         <div className="flex flex-1 flex-col p-5">
           <h3 className="text-lg font-semibold text-white">{title}</h3>
@@ -121,6 +157,7 @@ const ProjectCard = ({ name, delay }: { name: string; delay: number }) => {
                 <Gamepad2 className="h-4 w-4" /> Live demo
               </a>
             )}
+            {video && <WatchDemo video={video} title={title} className={`font-medium ${demo ? "text-white/60 hover:text-white" : "text-amber-200 hover:text-amber-100"}`} />}
             <a href={`https://github.com/${GITHUB_USERNAME}/${name}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-white/60 hover:text-white">
               <Github className="h-4 w-4" /> Code
             </a>

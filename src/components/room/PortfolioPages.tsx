@@ -5,17 +5,21 @@ import {
   bookingUrl,
   customDescriptions,
   demoLinks,
+  demoVideos,
   education,
   experience,
+  featuredProjects,
   GITHUB_USERNAME,
   inProgressRepos,
   displayNames,
+  playableSrc,
   profile,
   projectPreviews,
   roles,
   skillCategories,
 } from "@/data/portfolio";
 import { ServicesShowcase } from "@/components/ServicesShowcase";
+import { WatchDemo } from "@/components/DemoVideo";
 import type { PortfolioId } from "./portfolioSpots";
 import type { MonitorProject } from "./createPlainRoom";
 
@@ -76,7 +80,7 @@ interface Repo {
 const ProjectsPage = ({ onPreview }: { onPreview?: OnPreview }) => {
   const fallback = useMemo<Repo[]>(
     () =>
-      [...Object.keys(demoLinks), ...inProgressRepos].map((name) => ({
+      [...new Set([...featuredProjects, ...Object.keys(demoLinks), ...inProgressRepos])].map((name) => ({
         name,
         description: customDescriptions[name] ?? null,
         html_url: `https://github.com/${GITHUB_USERNAME}/${name}`,
@@ -103,11 +107,12 @@ const ProjectsPage = ({ onPreview }: { onPreview?: OnPreview }) => {
     name: r.name,
     title: displayNames[r.name] ?? r.name.replace(/-+/g, " "),
     description: customDescriptions[r.name] ?? r.description,
-    image: projectPreviews[r.name],
+    image: projectPreviews[r.name] ?? demoVideos[r.name]?.poster,
+    video: demoVideos[r.name] && playableSrc(demoVideos[r.name]),
     status: inProgressRepos.includes(r.name) ? "In progress" : demoLinks[r.name] ? "Live demo" : "Project",
   });
   // the monitor opens on the first project with a screenshot, and clears when the panel closes
-  const first = repos.find((r) => projectPreviews[r.name]) ?? repos[0];
+  const first = repos.find((r) => demoVideos[r.name] || projectPreviews[r.name]) ?? repos[0];
   useEffect(() => {
     if (first) onPreview?.(asMonitor(first));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -115,25 +120,28 @@ const ProjectsPage = ({ onPreview }: { onPreview?: OnPreview }) => {
   useEffect(() => () => onPreview?.(null), [onPreview]);
   return (
     <div className="space-y-4">
-      {onPreview && <p className="text-xs text-white/45">Point at a project to put it on the monitor.</p>}
+      {onPreview && <p className="text-xs text-white/45">Point at a project to play it on the monitor.</p>}
       <div className="grid gap-3 sm:grid-cols-2">
         {repos.map((r) => {
           // what's written here wins over GitHub's (often empty) description and website
           const description = customDescriptions[r.name] ?? r.description;
           const demo = demoLinks[r.name] ?? (r.homepage || null);
+          const video = demoVideos[r.name];
+          const title = displayNames[r.name] ?? r.name.replace(/-+/g, " ");
           return (
             <Card key={r.name} onPreview={onPreview ? () => onPreview(asMonitor(r)) : undefined}>
               <div className="flex items-start justify-between gap-2">
-                <p className="min-w-0 break-words font-semibold text-white">{displayNames[r.name] ?? r.name.replace(/-+/g, " ")}</p>
+                <p className="min-w-0 break-words font-semibold text-white">{title}</p>
                 {inProgressRepos.includes(r.name) && <span className="shrink-0 rounded-full bg-amber-300/15 px-2 py-0.5 text-[10px] font-medium text-amber-200">In progress</span>}
               </div>
               {description && <p className="mt-1.5 text-sm text-white/70">{description}</p>}
-              <div className="mt-3 flex flex-wrap gap-3 text-sm">
+              <div className="mt-3 flex flex-wrap gap-x-3 gap-y-2 text-sm">
                 {demo && (
                   <a className="inline-flex items-center gap-1 text-[#7fb2ff] hover:text-white" href={demo} target="_blank" rel="noopener noreferrer">
                     <Gamepad2 className="h-4 w-4" /> Live demo
                   </a>
                 )}
+                {video && <WatchDemo video={video} title={title} className="text-[#7fb2ff] hover:text-white" />}
                 <a className="inline-flex items-center gap-1 text-white/60 hover:text-white" href={r.html_url} target="_blank" rel="noopener noreferrer">
                   <Github className="h-4 w-4" /> Code
                 </a>
