@@ -116,19 +116,19 @@ export const roles = [
 export const skillCategories = [
   {
     title: "Languages",
-    skills: ["Java", "C++", "Python", "JavaScript", "C#", "HTML/CSS"],
+    skills: ["TypeScript", "JavaScript", "Python", "Go", "Rust", "C", "C++", "Java", "MATLAB", "VBA"],
   },
   {
-    title: "Tools & Frameworks",
-    skills: ["GitHub", "MATLAB", "OnShape", "CAD", "Photoshop", "After Effects"],
+    title: "Frameworks & Infrastructure",
+    skills: ["React", "Next.js", "FastAPI", "PyTorch", "Docker", "PostgreSQL", "Redis", "Kafka", "TimescaleDB", "Supabase", "Git"],
   },
   {
-    title: "Creative & Other",
-    skills: ["FL Studio", "Canva", "Leadership", "Entrepreneurship"],
+    title: "Hardware & Manufacturing",
+    skills: ["ESP32", "Sensors", "PLCs", "MQTT", "CNC (HOMAG)", "woodWOP", "SolidWorks", "OnShape"],
   },
   {
-    title: "Spoken Languages",
-    skills: ["English (Fluent)", "Tamil (Fluent)", "French (Limited)"],
+    title: "Beyond Code",
+    skills: ["English (Fluent)", "Tamil (Fluent)", "French (Limited)", "Photoshop", "After Effects", "FL Studio", "Leadership"],
   },
 ];
 
