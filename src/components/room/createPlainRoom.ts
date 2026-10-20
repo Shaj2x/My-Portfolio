@@ -57,6 +57,8 @@ export interface MonitorProject {
   description?: string | null;
   /** a screenshot, if there is one */
   image?: string;
+  /** a demo video, if there is one: it plays on the monitor, silently, in place of the screenshot */
+  video?: string;
   status?: string;
 }
 
@@ -1485,6 +1487,14 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       c.font = "22px ui-monospace, monospace";
       c.fillText(`github.com/Shaj2x/${p.name}`, 72, h - 56);
     });
+  const projectVideos = new Map<string, HTMLVideoElement>();
+  // swaps in a better picture for a project once it has loaded (the screenshot, then the video)
+  const upgrade = (name: string, tex: THREE.Texture) => {
+    const was = projectTex.get(name);
+    if (was instanceof THREE.VideoTexture) return;
+    projectTex.set(name, tex);
+    if (projectNext === was) projectNext = tex;
+  };
   const textureFor = (p: MonitorProject) => {
     const cached = projectTex.get(p.name);
     if (cached) return cached;
@@ -1495,11 +1505,35 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       loader.load(p.image, (tex) => {
         tex.colorSpace = THREE.SRGBColorSpace;
         tex.anisotropy = 4;
-        projectTex.set(p.name, tex);
-        if (projectShown === card || projectNext === card) projectNext = tex;
+        upgrade(p.name, tex);
       });
     }
+    if (p.video && !reducedMotion) {
+      const video = document.createElement("video");
+      video.muted = true;
+      video.loop = true;
+      video.playsInline = true;
+      video.preload = "auto";
+      video.src = p.video;
+      projectVideos.set(p.name, video);
+      video.addEventListener(
+        "loadeddata",
+        () => {
+          const tex = new THREE.VideoTexture(video);
+          tex.colorSpace = THREE.SRGBColorSpace;
+          upgrade(p.name, tex);
+        },
+        { once: true },
+      );
+    }
     return card;
+  };
+  // only the project on screen plays
+  const playOnly = (name: string | null) => {
+    for (const [n, v] of projectVideos) {
+      if (n === name) void v.play().catch(() => {});
+      else v.pause();
+    }
   };
   let projectShown: THREE.Texture | null = null;
   let projectNext: THREE.Texture | null = null;
@@ -1508,6 +1542,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   const showProject = (p: MonitorProject | null) => {
     projectWanted = !!p;
     projectNext = p ? textureFor(p) : null;
+    playOnly(p?.name ?? null);
   };
   let beforeFocus: { pos: THREE.Vector3; target: THREE.Vector3 } | null = null;
   const focusMonitor = (on: boolean) => {
@@ -2624,6 +2659,11 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       for (const d of disposables) d.dispose();
       for (const t of sunsetDiscs.values()) t.dispose();
       env.dispose();
+      for (const v of projectVideos.values()) {
+        v.pause();
+        v.removeAttribute("src");
+        v.load();
+      }
       outline.dispose();
       window.removeEventListener("pointerdown", unlockAudio);
       window.removeEventListener("keydown", unlockAudio);

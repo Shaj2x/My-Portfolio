@@ -204,6 +204,38 @@ export const projectPreviews: Record<string, string> = {
   "digitaldash": "/projects/digitaldash.jpg",
 };
 
+/**
+ * Short screen recordings of each project in use, made by running the real thing locally and
+ * scripting a walkthrough. `poster` is a still from the clip; `note` says how it was recorded where
+ * that matters.
+ */
+export interface DemoVideo {
+  /** the clip as WebM (VP9) and as MP4 (H.264), so every browser can play one */
+  webm: string;
+  mp4: string;
+  poster: string;
+  note?: string;
+}
+const demo = (name: string, note?: string): DemoVideo => ({
+  webm: `/projects/demos/${name}.webm`,
+  mp4: `/projects/demos/${name}.mp4`,
+  poster: `/projects/demos/${name}.jpg`,
+  note,
+});
+/** the one of a demo's files this browser can play */
+export const playableSrc = (v: DemoVideo) => (document.createElement("video").canPlayType("video/webm; codecs=vp9") ? v.webm : v.mp4);
+export const demoVideos: Record<string, DemoVideo> = {
+  "schematica-circuits": demo("schematica-circuits", "The browser build: drawing, the WebAssembly solver and live plots."),
+  devassist: demo("devassist", "The full stack running in Docker, with the built-in mock LLM standing in for Claude or GPT."),
+  "Marq-Living-Platform": demo("Marq-Living-Platform", "The real app on a local copy of the backend, with the building simulator standing in for the hardware."),
+  digitaldash: demo("digitaldash"),
+  Mercatus: demo("Mercatus"),
+  StatStack: demo("StatStack", "Player photos come from the NBA's servers and didn't load while recording."),
+  "Anthropogenic-Sound-Device-Simulator---ES1050-Project": demo("Anthropogenic-Sound-Device-Simulator---ES1050-Project", "Fed simulated street noise in place of a live microphone."),
+  "Raptors-Slot-Machine": demo("Raptors-Slot-Machine"),
+  "Raptors-BlackJack": demo("Raptors-BlackJack"),
+};
+
 export const inProgressRepos = ["MarkWise", "HarmonAI", "schematica-circuits", "devassist"];
 
 /** how a repo is titled on its card, where the repo name doesn't read well */
