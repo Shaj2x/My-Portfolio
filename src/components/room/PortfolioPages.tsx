@@ -139,8 +139,8 @@ const ProjectsPage = ({ onPreview }: { onPreview?: OnPreview }) => {
               {description && <p className="mt-1.5 text-sm text-white/70">{description}</p>}
               <div className="mt-3 flex flex-wrap gap-x-3 gap-y-2 text-sm">
                 {study && (
-                  <a className="inline-flex items-center gap-1 text-amber-200 hover:text-white" href={`/work/${study.slug}`} target="_blank" rel="noopener noreferrer">
-                    <BookOpen className="h-4 w-4" /> Case study
+                  <a className="inline-flex items-center gap-1 text-amber-200 hover:text-white" href={`/work/${study.slug}`} aria-label={`Why I built ${title}`} target="_blank" rel="noopener noreferrer">
+                    <BookOpen className="h-4 w-4" /> Why
                   </a>
                 )}
                 {demo && (

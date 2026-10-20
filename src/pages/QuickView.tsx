@@ -155,8 +155,8 @@ const ProjectCard = ({ name, delay }: { name: string; delay: number }) => {
           {description && <p className="mt-1.5 flex-1 text-sm leading-relaxed text-white/65">{description}</p>}
           <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm">
             {study && (
-              <Link to={`/work/${study.slug}`} className="inline-flex items-center gap-1.5 font-medium text-amber-200 hover:text-amber-100">
-                <BookOpen className="h-4 w-4" /> Case study
+              <Link to={`/work/${study.slug}`} aria-label={`Why I built ${title}`} className="inline-flex items-center gap-1.5 font-medium text-amber-200 hover:text-amber-100">
+                <BookOpen className="h-4 w-4" /> Why
               </Link>
             )}
             {demo && (

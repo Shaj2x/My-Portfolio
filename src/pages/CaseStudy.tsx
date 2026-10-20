@@ -49,7 +49,7 @@ const CaseStudy = () => {
   useEffect(() => {
     if (!study) return;
     const prev = document.title;
-    document.title = `${study.title} · Case study · Shajith Sasikumar`;
+    document.title = `Why I built ${study.title} · Shajith Sasikumar`;
     window.scrollTo(0, 0);
     return () => {
       document.title = prev;
@@ -92,7 +92,7 @@ const CaseStudy = () => {
             animate={{ opacity: 1, transform: "translateY(0px)" }}
             transition={{ duration: 0.6, ease: EASE_OUT }}
           >
-            Case study
+            Why I built
           </motion.p>
           <h1 className="mt-4 overflow-hidden pb-[0.08em] text-5xl font-bold leading-[0.95] tracking-[-0.045em] sm:text-7xl">
             <motion.span
@@ -131,7 +131,7 @@ const CaseStudy = () => {
 
         {/* why */}
         <section className="py-14">
-          <Heading eyebrow="Why I built it" title="The problem" />
+          <Heading eyebrow="The story" title="The problem" />
           <div className="grid gap-10 lg:grid-cols-[1.5fr_1fr]">
             <Reveal className="space-y-4 text-base leading-relaxed text-white/70">
               {study.story.map((p) => (
@@ -231,7 +231,7 @@ const CaseStudy = () => {
           <Link to={`/work/${next.slug}`} className="group block">
             <Glass className="flex items-center justify-between gap-4 p-6 transition-[border-color,background-color] duration-200 group-hover:border-white/20 group-hover:bg-white/[0.06] sm:p-8">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-amber-200/75">Next case study</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-amber-200/75">Next: why I built</p>
                 <p className="mt-2 text-2xl font-bold tracking-[-0.03em] sm:text-3xl">{next.title}</p>
                 <p className="mt-1 text-sm text-white/55">{next.tagline}</p>
               </div>
