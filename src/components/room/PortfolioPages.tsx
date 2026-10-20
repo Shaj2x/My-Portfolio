@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { CalendarDays, FileText, Gamepad2, Github, Linkedin, Mail } from "lucide-react";
+import { BookOpen, CalendarDays, FileText, Gamepad2, Github, Linkedin, Mail } from "lucide-react";
 import {
   aboutParagraphs,
   bookingUrl,
@@ -20,6 +20,7 @@ import {
 } from "@/data/portfolio";
 import { ServicesShowcase } from "@/components/ServicesShowcase";
 import { WatchDemo } from "@/components/DemoVideo";
+import { caseStudyFor } from "@/data/caseStudies";
 import type { PortfolioId } from "./portfolioSpots";
 import type { MonitorProject } from "./createPlainRoom";
 
@@ -127,6 +128,7 @@ const ProjectsPage = ({ onPreview }: { onPreview?: OnPreview }) => {
           const description = customDescriptions[r.name] ?? r.description;
           const demo = demoLinks[r.name] ?? (r.homepage || null);
           const video = demoVideos[r.name];
+          const study = caseStudyFor(r.name);
           const title = displayNames[r.name] ?? r.name.replace(/-+/g, " ");
           return (
             <Card key={r.name} onPreview={onPreview ? () => onPreview(asMonitor(r)) : undefined}>
@@ -136,6 +138,11 @@ const ProjectsPage = ({ onPreview }: { onPreview?: OnPreview }) => {
               </div>
               {description && <p className="mt-1.5 text-sm text-white/70">{description}</p>}
               <div className="mt-3 flex flex-wrap gap-x-3 gap-y-2 text-sm">
+                {study && (
+                  <a className="inline-flex items-center gap-1 text-amber-200 hover:text-white" href={`/work/${study.slug}`} target="_blank" rel="noopener noreferrer">
+                    <BookOpen className="h-4 w-4" /> Case study
+                  </a>
+                )}
                 {demo && (
                   <a className="inline-flex items-center gap-1 text-[#7fb2ff] hover:text-white" href={demo} target="_blank" rel="noopener noreferrer">
                     <Gamepad2 className="h-4 w-4" /> Live demo

@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import { ServicesShowcase } from "@/components/ServicesShowcase";
 import { DemoSources, DemoVideoDialog, WatchDemo } from "@/components/DemoVideo";
-import { Accessibility, ArrowUpRight, Bot, Building2, ChevronDown, CircuitBoard, DoorOpen, FileText, FolderGit2, Gamepad2, Github, Linkedin, Mail, MapPin, Music2, Play, type LucideIcon } from "lucide-react";
+import { caseStudyFor } from "@/data/caseStudies";
+import { Accessibility, ArrowUpRight, BookOpen, Bot, Building2, ChevronDown, CircuitBoard, DoorOpen, FileText, FolderGit2, Gamepad2, Github, Linkedin, Mail, MapPin, Music2, Play, type LucideIcon } from "lucide-react";
 import {
   aboutParagraphs,
   customDescriptions,
@@ -121,6 +122,7 @@ const ProjectCard = ({ name, delay }: { name: string; delay: number }) => {
   const video = demoVideos[name];
   const image = projectPreviews[name];
   const building = inProgressRepos.includes(name);
+  const study = caseStudyFor(name);
   return (
     <Reveal delay={delay} className="h-full">
       <Glass className="group flex h-full flex-col overflow-hidden">
@@ -151,13 +153,18 @@ const ProjectCard = ({ name, delay }: { name: string; delay: number }) => {
         <div className="flex flex-1 flex-col p-5">
           <h3 className="text-lg font-semibold text-white">{title}</h3>
           {description && <p className="mt-1.5 flex-1 text-sm leading-relaxed text-white/65">{description}</p>}
-          <div className="mt-4 flex flex-wrap gap-4 text-sm">
+          <div className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-sm">
+            {study && (
+              <Link to={`/work/${study.slug}`} className="inline-flex items-center gap-1.5 font-medium text-amber-200 hover:text-amber-100">
+                <BookOpen className="h-4 w-4" /> Case study
+              </Link>
+            )}
             {demo && (
-              <a href={demo} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 font-medium text-amber-200 hover:text-amber-100">
+              <a href={demo} target="_blank" rel="noopener noreferrer" className={`inline-flex items-center gap-1.5 font-medium ${study ? "text-white/60 hover:text-white" : "text-amber-200 hover:text-amber-100"}`}>
                 <Gamepad2 className="h-4 w-4" /> Live demo
               </a>
             )}
-            {video && <WatchDemo video={video} title={title} className={`font-medium ${demo ? "text-white/60 hover:text-white" : "text-amber-200 hover:text-amber-100"}`} />}
+            {video && <WatchDemo video={video} title={title} className={`font-medium ${demo || study ? "text-white/60 hover:text-white" : "text-amber-200 hover:text-amber-100"}`} />}
             <a href={`https://github.com/${GITHUB_USERNAME}/${name}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-white/60 hover:text-white">
               <Github className="h-4 w-4" /> Code
             </a>
@@ -182,6 +189,9 @@ const QuickView = () => {
   useEffect(() => {
     const prev = document.title;
     document.title = "Shajith Sasikumar · Quick view";
+    // arriving with #projects (say, back from a case study): go to that section once it's drawn
+    const target = window.location.hash && document.getElementById(window.location.hash.slice(1));
+    if (target) requestAnimationFrame(() => target.scrollIntoView());
     return () => {
       document.title = prev;
     };

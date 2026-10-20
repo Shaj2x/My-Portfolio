@@ -13,6 +13,8 @@ const Room = lazy(() => import("./pages/Room"));
 const RoomPlain = lazy(() => import("./pages/RoomPlain"));
 // the whole portfolio on one plain page, for anyone short on time; no three.js
 const QuickView = lazy(() => import("./pages/QuickView"));
+// a project's case study, opened from its card
+const CaseStudy = lazy(() => import("./pages/CaseStudy"));
 // Ma's Garden, a fruit-matching game made for Ma
 const MasGarden = lazy(() => import("./pages/MasGarden"));
 
@@ -58,6 +60,14 @@ const App = () => (
               element={
                 <Suspense fallback={<div className="fixed inset-0 bg-[#ffd9e2]" />}>
                   <MasGarden />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/work/:slug"
+              element={
+                <Suspense fallback={<div className="fixed inset-0 bg-[#0d0e11]" />}>
+                  <CaseStudy />
                 </Suspense>
               }
             />
