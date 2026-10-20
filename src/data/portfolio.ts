@@ -28,6 +28,27 @@ export const education: TimelineItem[] = [
 
 export const experience: TimelineItem[] = [
   {
+    title: "Manufacturing Engineering Intern",
+    org: "Visual Elements Manufacturing · Woodbridge, ON",
+    date: "Apr 2026 – Aug 2026",
+    description: "Built a Python CAD-to-CNC pipeline on the SolidWorks API that turned models into woodWOP programs and sent jobs to HOMAG CNCs over the network, improving workflow efficiency by 35%. Pulled CNC status, run-time and error data from machine sensors and PLC controls into Excel VBA dashboards, cutting production errors by 85%. Modeled millwork fixtures for Lululemon, UGG and Nordstrom and automated drawing exports and revision control with Python.",
+    type: "work",
+  },
+  {
+    title: "Software Engineering Intern",
+    org: "GreenVeil Packaging · Ottawa, ON",
+    date: "Feb 2026 – Apr 2026",
+    description: "Built a Python data pipeline that pulled pricing data from 5+ sources through REST APIs and cleaned thousands of records, cutting manual collection by over 80%. Automated the ETL flow into multi-sheet Excel workbooks with monthly aggregations, so years of pricing data reported the same way every time.",
+    type: "work",
+  },
+  {
+    title: "Software Developer Intern",
+    org: "ThinkThamizh · Toronto, ON",
+    date: "Dec 2025 – Feb 2026",
+    description: "Shipped React features for the event signup flow that made it easier and more accessible to use, lifting completed signups by 10%+. Built 10+ pages and interactive JavaScript components on the organization's Shopify site, and set up AI-assisted content workflows that cut time to publish by over 60%.",
+    type: "work",
+  },
+  {
     title: "Private Tutor (Owner)",
     org: "Self Employed",
     date: "Aug 2025 – Present",
