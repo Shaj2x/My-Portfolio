@@ -49,7 +49,7 @@ export interface FurnitureHandle {
     spots: { id: PortfolioId; root: THREE.Object3D }[];
     /** the keyboard, which opens the note pad */
     keyboard: THREE.Group;
-    /** the phone on the desk, which opens "Ask me anything" */
+    /** the phone on the desk, which opens R.V Bot */
     phone: THREE.Group;
     /** the dresser's top drawer: its meshes, the resume lying in it, and how far out it is (0–1) */
     drawer: { parts: THREE.Object3D[]; paper: THREE.Mesh; setOpen: (k: number) => void };
@@ -864,7 +864,7 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
         c.textAlign = "left";
         c.fillStyle = "#fff";
         c.font = "600 22px system-ui, sans-serif";
-        c.fillText("Shajith", 80, 274);
+        c.fillText("R.V Bot", 80, 274);
         c.fillStyle = "rgba(255,255,255,0.8)";
         c.font = "20px system-ui, sans-serif";
         c.fillText("Ask me anything :)", 34, 314);

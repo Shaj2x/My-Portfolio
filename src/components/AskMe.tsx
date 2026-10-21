@@ -5,7 +5,7 @@ import { demoVideos, displayNames } from "@/data/portfolio";
 import { WatchDemo } from "@/components/DemoVideo";
 
 /**
- * "Ask me anything": a chat about me that runs entirely in the page. Answers come from what I've
+ * R.V Bot: a chat about me that runs entirely in the page. Answers come from what I've
  * written down (src/assistant), never from an AI service, so nothing typed here is sent anywhere.
  */
 
@@ -120,14 +120,14 @@ export const AskMe = ({ onClose, pagesInNewTab = false, className = "" }: { onCl
     );
 
   return (
-    <section className={`flex max-h-[min(640px,calc(100dvh-24px))] w-[min(420px,calc(100vw-24px))] flex-col overflow-hidden rounded-[24px] liquid-glass-panel text-white ${className}`} aria-label="Ask me anything">
+    <section className={`flex max-h-[min(640px,calc(100dvh-24px))] w-[min(420px,calc(100vw-24px))] flex-col overflow-hidden rounded-[24px] liquid-glass-panel text-white ${className}`} aria-label="R.V Bot">
       <header className="flex items-center gap-3 border-b border-white/10 px-4 py-3">
         <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-br from-amber-200 to-[#c87a3a] text-xs font-bold text-[#1a1206]" aria-hidden="true">
-          SS
+          RV
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold">Ask me anything</p>
-          <p className="truncate text-xs text-white/50">Answers I wrote myself. Private to this page.</p>
+          <p className="text-sm font-semibold">R.V Bot</p>
+          <p className="truncate text-xs text-white/50">Shajith's assistant. Private to this page.</p>
         </div>
         <button type="button" aria-label="Close" className="rounded-full p-1.5 text-white/60 transition-colors duration-150 hover:bg-white/10 hover:text-white" onClick={onClose}>
           <X className="h-4 w-4" />
@@ -137,7 +137,7 @@ export const AskMe = ({ onClose, pagesInNewTab = false, className = "" }: { onCl
       <div ref={log} role="log" aria-live="polite" className="flex min-h-[180px] flex-1 flex-col gap-3 overflow-y-auto overscroll-contain px-4 py-4">
         {!messages.length && (
           <div className="max-w-[92%] rounded-2xl rounded-bl-md border border-white/10 bg-white/[0.06] px-3.5 py-2.5 text-sm leading-relaxed text-white/80">
-            Hey, I'm Shajith. Ask me about my projects, internships, skills or school. If I haven't written an answer to something, I'll say so.
+            Hey, I'm R.V Bot. Ask me about Shajith's projects, internships, skills or school, and I'll answer in Shajith's own words. If there's no answer written for something, I'll say so.
           </div>
         )}
         {messages.map(bubble)}

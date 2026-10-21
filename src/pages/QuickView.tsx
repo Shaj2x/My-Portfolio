@@ -494,7 +494,7 @@ const QuickView = () => {
         </footer>
       </main>
 
-      {/* ask me anything, bottom right */}
+      {/* R.V Bot, bottom right */}
       <div className="fixed bottom-[calc(16px+env(safe-area-inset-bottom,0px))] right-4 z-30 flex flex-col items-end gap-3">
         <AnimatePresence>
           {asking && (
@@ -516,7 +516,7 @@ const QuickView = () => {
             onClick={() => setAsking(true)}
             className="inline-flex items-center gap-2 rounded-full bg-amber-200 px-4 py-3 text-sm font-semibold text-[#1a1206] shadow-[0_12px_40px_rgba(0,0,0,0.45)] transition-[background-color,transform] duration-150 hover:bg-amber-100 active:scale-[0.97]"
           >
-            <MessageCircle className="h-4 w-4" /> Ask me anything
+            <MessageCircle className="h-4 w-4" /> Ask R.V Bot
           </button>
         )}
       </div>

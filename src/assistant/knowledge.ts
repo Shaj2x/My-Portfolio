@@ -29,8 +29,8 @@ export const knowledge: Entry[] = [
   {
     id: "hello",
     asks: ["hi", "hello", "hey", "yo", "good morning", "whats up", "sup"],
-    answer: "Hey! I'm Shajith, or at least the part of me that lives in this room. Ask me about my projects, internships, skills or school, and I'll answer from what I've written down.",
-    follow: ["Who are you?", "What are you building right now?", "What internships have you done?"],
+    answer: "Hey! I'm R.V Bot, Shajith's assistant. Ask me about Shajith's projects, internships, skills or school, and I'll answer in Shajith's own words.",
+    follow: ["Who is Shajith?", "What are you building right now?", "What internships have you done?"],
   },
   {
     id: "who",
@@ -41,10 +41,10 @@ export const knowledge: Entry[] = [
   },
   {
     id: "how-this-works",
-    asks: ["are you an ai", "are you a bot", "are you real", "is this chatgpt", "how do you work", "how does this chat work", "are you a chatbot", "who am i talking to"],
+    asks: ["are you an ai", "are you a bot", "are you real", "is this chatgpt", "how do you work", "how does this chat work", "are you a chatbot", "who am i talking to", "what is your name", "whats your name", "who is rv bot", "what is rv bot", "rv bot", "r.v bot"],
     answer:
-      "I'm not a chatbot and nothing you type leaves this page. I'm a small assistant that answers from what Shajith wrote down about himself and his work. If I don't know something, I'll say so instead of making it up.",
-    follow: ["Who are you?", "How do I contact you?"],
+      "I'm **R.V Bot**, Shajith's assistant. I'm not a chatbot, and nothing you type leaves this page: I answer from what Shajith wrote down, in Shajith's own words. If I don't know something, I'll say so instead of making it up.",
+    follow: ["Who is Shajith?", "How do I contact you?"],
   },
   {
     id: "why-dual",
@@ -178,4 +178,4 @@ export const knowledge: Entry[] = [
 ];
 
 /** what to suggest before anything has been asked */
-export const starters = ["Who are you?", "What are you building right now?", "What internships have you done?", "Do you know Python?", "Why did you build Marq Living?"];
+export const starters = ["Who is Shajith?", "What are you building right now?", "What internships have you done?", "Do you know Python?", "Why did you build Marq Living?"];
