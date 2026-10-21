@@ -153,7 +153,7 @@ export interface PlainRoomOptions {
   onConsoleReady?: () => void;
   /** the keyboard was clicked: open the note pad */
   onKeyboard?: () => void;
-  /** the phone on the desk was clicked: open "Ask me anything" */
+  /** the phone on the desk was clicked: open R.V Bot */
   onPhone?: () => void;
   /** an object hiding a section of the portfolio was clicked */
   onPortfolio?: (id: PortfolioId) => void;
@@ -1591,7 +1591,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     blind: "Blind · roll it up or down",
     drawer: "Dresser drawer · open it",
     keyboard: "Keyboard · leave me a note",
-    phone: "My phone · ask me anything",
+    phone: "My phone · ask R.V Bot",
     candle: "Candle · blow it out or light it",
     perfume: "The fragrances · spray one",
     whiteboard: "Whiteboard · what I'm building right now",

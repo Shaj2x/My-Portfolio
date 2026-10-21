@@ -252,7 +252,7 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
   const awardRef = useRef(award);
   awardRef.current = award;
   const [playerOpen, setPlayerOpen] = useState(false);
-  // "Ask me anything", from the phone on the desk or the dock
+  // R.V Bot, from the phone on the desk or the dock
   const [asking, setAsking] = useState(false);
   const askingRef = useRef(false);
   askingRef.current = asking;
@@ -1155,9 +1155,9 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
               >
                 <CalendarDays className="h-5 w-5" />
               </DockButton>
-              {/* ask me anything (it's also my phone on the desk) */}
+              {/* R.V Bot (it's also my phone on the desk) */}
               <DockButton
-                label="Ask me"
+                label="R.V Bot"
                 accent
                 open={asking}
                 onClick={() => {

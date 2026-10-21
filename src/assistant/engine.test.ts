@@ -27,6 +27,9 @@ const cases: [string, string][] = [
   ["what are you building right now", "Schematica"],
   ["what projects have you made", "Marq Living"],
   ["are you an AI?", "not a chatbot"],
+  ["what is your name", "R.V Bot"],
+  ["who is R.V Bot?", "R.V Bot"],
+  ["Who is Shajith?", "Electrical Engineering"],
   ["any ml experience?", "YOLOv8"],
   ["thanks!", "Anytime"],
 ];
