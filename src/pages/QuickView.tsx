@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ServicesShowcase } from "@/components/ServicesShowcase";
 import { DemoSources, DemoVideoDialog, WatchDemo } from "@/components/DemoVideo";
 import { caseStudyFor } from "@/data/caseStudies";
-import { Accessibility, ArrowUpRight, BookOpen, Bot, Building2, ChevronDown, CircuitBoard, DoorOpen, FileText, FolderGit2, Gamepad2, Github, Linkedin, Mail, MapPin, Music2, Play, type LucideIcon } from "lucide-react";
+import { AskMe } from "@/components/AskMe";
+import { Accessibility, ArrowUpRight, BookOpen, Bot, Building2, ChevronDown, CircuitBoard, DoorOpen, FileText, FolderGit2, Gamepad2, Github, Linkedin, Mail, MapPin, MessageCircle, Music2, Play, type LucideIcon } from "lucide-react";
 import {
   aboutParagraphs,
   customDescriptions,
@@ -186,6 +187,13 @@ const NAV = [
 
 const QuickView = () => {
   const reduce = useReducedMotion();
+  const [asking, setAsking] = useState(false);
+  useEffect(() => {
+    if (!asking) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setAsking(false);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [asking]);
   useEffect(() => {
     const prev = document.title;
     document.title = "Shajith Sasikumar · Quick view";
@@ -485,6 +493,33 @@ const QuickView = () => {
           </details>
         </footer>
       </main>
+
+      {/* ask me anything, bottom right */}
+      <div className="fixed bottom-[calc(16px+env(safe-area-inset-bottom,0px))] right-4 z-30 flex flex-col items-end gap-3">
+        <AnimatePresence>
+          {asking && (
+            <motion.div
+              key="ask"
+              initial={reduce ? { opacity: 0 } : { opacity: 0, transform: "translateY(12px) scale(0.97)" }}
+              animate={{ opacity: 1, transform: "translateY(0px) scale(1)" }}
+              exit={reduce ? { opacity: 0 } : { opacity: 0, transform: "translateY(12px) scale(0.97)" }}
+              transition={{ duration: 0.22, ease: EASE_OUT }}
+              style={{ transformOrigin: "bottom right" }}
+            >
+              <AskMe onClose={() => setAsking(false)} className="max-h-[min(620px,calc(100dvh-96px))]" />
+            </motion.div>
+          )}
+        </AnimatePresence>
+        {!asking && (
+          <button
+            type="button"
+            onClick={() => setAsking(true)}
+            className="inline-flex items-center gap-2 rounded-full bg-amber-200 px-4 py-3 text-sm font-semibold text-[#1a1206] shadow-[0_12px_40px_rgba(0,0,0,0.45)] transition-[background-color,transform] duration-150 hover:bg-amber-100 active:scale-[0.97]"
+          >
+            <MessageCircle className="h-4 w-4" /> Ask me anything
+          </button>
+        )}
+      </div>
     </div>
   );
 };
