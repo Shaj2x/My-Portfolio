@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { AnimatePresence, motion, useReducedMotion, type Transition } from "framer-motion";
-import { ArrowUpRight, Binoculars, Briefcase, CalendarDays, Camera, Check, Gamepad2, LayoutGrid, Lightbulb, LightbulbOff, Radio, ScrollText, SlidersHorizontal, Trophy, Volume2, VolumeX, X } from "lucide-react";
+import { ArrowUpRight, Binoculars, Briefcase, CalendarDays, Camera, Check, Gamepad2, LayoutGrid, Lightbulb, LightbulbOff, MessageCircle, Radio, ScrollText, SlidersHorizontal, Trophy, Volume2, VolumeX, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { RADIO_STATION } from "@/components/room/createAudio";
 import { playlistEmbed } from "@/components/room/playlist";
 import { profile } from "@/data/portfolio";
 import { NowPlaying } from "@/components/room/NowPlaying";
 import { WhiteboardPad } from "@/components/room/WhiteboardPad";
+import { AskMe } from "@/components/AskMe";
 import { loadDoodle } from "@/components/room/whiteboardDoodle";
 import { joinRoom } from "@/components/room/presence";
 import { RoomConsole } from "@/components/room/console/RoomConsole";
@@ -251,6 +252,10 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
   const awardRef = useRef(award);
   awardRef.current = award;
   const [playerOpen, setPlayerOpen] = useState(false);
+  // "Ask me anything", from the phone on the desk or the dock
+  const [asking, setAsking] = useState(false);
+  const askingRef = useRef(false);
+  askingRef.current = asking;
   // the whiteboard's drawing pad, open with the plain board to draw over
   const [pad, setPad] = useState<{ url: string; width: number; height: number } | null>(null);
   const padRef = useRef(false);
@@ -325,6 +330,10 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
             setKeyboardOpen(true);
             awardRef.current("guestbook");
           },
+          onPhone: () => {
+            setMenu(null);
+            setAsking(true);
+          },
           onPortfolio: (id) => {
             if (id === "resume" && profile.resumePdf) openResume();
             else setSection(id);
@@ -375,6 +384,11 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
       if (viewRef.current === "console" || keyboardOpenRef.current) return;
       if (padRef.current) {
         if (key === "escape") setPad(null);
+        return;
+      }
+      // typing a question isn't a shortcut
+      if (askingRef.current) {
+        if (key === "escape") setAsking(false);
         return;
       }
       if (sectionRef.current) {
@@ -567,6 +581,11 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
               setPad(null);
             }}
           />
+        </motion.div>
+      )}</AnimatePresence>
+      <AnimatePresence>{asking && !away && (
+        <motion.div key="ask" {...fade} className="pointer-events-auto absolute inset-0 z-20 flex items-end justify-center bg-black/35 p-3 sm:items-center" onPointerDown={(e) => e.target === e.currentTarget && setAsking(false)}>
+          <AskMe onClose={() => setAsking(false)} pagesInNewTab />
         </motion.div>
       )}</AnimatePresence>
       <AnimatePresence>{poster && !away && (
@@ -1135,6 +1154,20 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
                 }}
               >
                 <CalendarDays className="h-5 w-5" />
+              </DockButton>
+              {/* ask me anything (it's also my phone on the desk) */}
+              <DockButton
+                label="Ask me"
+                accent
+                open={asking}
+                onClick={() => {
+                  setMenu(null);
+                  setPanelOpen(false);
+                  setSoundOpen(false);
+                  setAsking((a) => !a);
+                }}
+              >
+                <MessageCircle className="h-5 w-5" />
               </DockButton>
               <span className="mx-1 hidden w-px self-stretch bg-white/10 sm:block" aria-hidden="true" />
               <DockButton label="PlayStation" onClick={() => roomRef.current?.setView("console")}>

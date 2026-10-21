@@ -153,6 +153,8 @@ export interface PlainRoomOptions {
   onConsoleReady?: () => void;
   /** the keyboard was clicked: open the note pad */
   onKeyboard?: () => void;
+  /** the phone on the desk was clicked: open "Ask me anything" */
+  onPhone?: () => void;
   /** an object hiding a section of the portfolio was clicked */
   onPortfolio?: (id: PortfolioId) => void;
   /** the room has drawn its first frame (shaders compiled, everything on screen) */
@@ -1566,7 +1568,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   const raycaster = new THREE.Raycaster();
   const ndc = new THREE.Vector2();
   type Pick =
-    | { kind: "lamp" | "binoculars" | "ceiling" | "sunset" | "desk" | "switch" | "radio" | "console" | "blind" | "drawer" | "keyboard" | "candle" }
+    | { kind: "lamp" | "binoculars" | "ceiling" | "sunset" | "desk" | "switch" | "radio" | "console" | "blind" | "drawer" | "keyboard" | "phone" | "candle" }
     | { kind: "plushie"; target: (typeof inter.plushies)[number] }
     | { kind: "perfume"; target: THREE.Group }
     | { kind: "portfolio"; id: PortfolioId }
@@ -1589,6 +1591,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     blind: "Blind · roll it up or down",
     drawer: "Dresser drawer · open it",
     keyboard: "Keyboard · leave me a note",
+    phone: "My phone · ask me anything",
     candle: "Candle · blow it out or light it",
     perfume: "The fragrances · spray one",
     whiteboard: "Whiteboard · what I'm building right now",
@@ -1624,6 +1627,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     if (o === inter.drawer.paper) return drawerTarget > 0.5 ? { kind: "portfolio", id: "resume" } : { kind: "drawer" };
     if (inter.drawer.parts.includes(o)) return { kind: "drawer" };
     if (isIn(o, inter.keyboard)) return { kind: "keyboard" };
+    if (isIn(o, inter.phone)) return { kind: "phone" };
     if (inter.candle.parts.includes(o)) return { kind: "candle" };
     const spot = [...inter.spots, ...roomSpots].find((r) => isIn(o, r.root));
     if (spot) return { kind: "portfolio", id: spot.id };
@@ -2001,6 +2005,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       }
       else if (kind === "console") enterConsole();
       else if (kind === "keyboard") options.onKeyboard?.();
+      else if (kind === "phone") options.onPhone?.();
       else if (kind === "candle") {
         candleTarget = candleTarget > 0.5 ? 0 : 1;
         audio.click("lamp");
@@ -2082,6 +2087,8 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
         return [...inter.drawer.parts, inter.drawer.paper];
       case "keyboard":
         return [inter.keyboard];
+      case "phone":
+        return [inter.phone];
       case "candle":
         return inter.candle.parts;
       case "radio":

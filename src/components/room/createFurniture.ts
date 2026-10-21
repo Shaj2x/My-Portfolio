@@ -49,6 +49,8 @@ export interface FurnitureHandle {
     spots: { id: PortfolioId; root: THREE.Object3D }[];
     /** the keyboard, which opens the note pad */
     keyboard: THREE.Group;
+    /** the phone on the desk, which opens "Ask me anything" */
+    phone: THREE.Group;
     /** the dresser's top drawer: its meshes, the resume lying in it, and how far out it is (0–1) */
     drawer: { parts: THREE.Object3D[]; paper: THREE.Mesh; setOpen: (k: number) => void };
     /** 0 = the PlayStation "who's using this controller" screen, 1 = signed in to the home screen */
@@ -130,6 +132,7 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
   const spots: FurnitureHandle["interact"]["spots"] = [];
   let drawer!: FurnitureHandle["interact"]["drawer"];
   let keyboard!: THREE.Group;
+  let phone!: THREE.Group;
   let speaker!: THREE.Mesh;
   let candle!: FurnitureHandle["interact"]["candle"];
   let controller!: THREE.Group;
@@ -833,6 +836,45 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     kbMesh.rotation.x = 0.05;
     cyl(0.009, 0.009, 0.012, std("#9aa3b2", 0.35, 0.6), 0.155, 0.041, -0.048, kg, 20);
 
+    // the phone, face up: a message waiting on the lock screen invites a question
+    {
+      const pp = LAYOUT.phone.pos;
+      const pg = anchor(pp[0], deskTop, pp[2], facing + 0.35);
+      phone = pg;
+      rounded(0.074, 0.008, 0.152, 0.009, std("#1b1c20", 0.35, 0.5), 0, 0.004, 0, pg);
+      const lock = paintTexture(256, 520, (c, w, h) => {
+        const g = c.createLinearGradient(0, 0, 0, h);
+        g.addColorStop(0, "#2a2140");
+        g.addColorStop(1, "#0d0e14");
+        c.fillStyle = g;
+        c.fillRect(0, 0, w, h);
+        c.fillStyle = "rgba(255,255,255,0.92)";
+        c.textAlign = "center";
+        c.font = "300 78px system-ui, sans-serif";
+        c.fillText("9:41", w / 2, 150);
+        // the waiting message
+        c.fillStyle = "rgba(255,255,255,0.14)";
+        c.beginPath();
+        c.roundRect(18, 230, w - 36, 104, 20);
+        c.fill();
+        c.fillStyle = "#fcd99a";
+        c.beginPath();
+        c.arc(52, 266, 18, 0, Math.PI * 2);
+        c.fill();
+        c.textAlign = "left";
+        c.fillStyle = "#fff";
+        c.font = "600 22px system-ui, sans-serif";
+        c.fillText("Shajith", 80, 274);
+        c.fillStyle = "rgba(255,255,255,0.8)";
+        c.font = "20px system-ui, sans-serif";
+        c.fillText("Ask me anything :)", 34, 314);
+      });
+      const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.066, 0.142), new THREE.MeshBasicMaterial({ map: lock, toneMapped: false }));
+      screen.rotation.x = -Math.PI / 2;
+      screen.position.set(0, 0.0085, 0);
+      pg.add(screen);
+    }
+
     const ms = LAYOUT.mouse.pos;
     spots.push({ id: "skills", root: ball(0.035, std("#101012", 0.4), ms[0], deskTop + 0.012, ms[2], group, [0.9, 0.45, 1.5]) });
 
@@ -1173,5 +1215,5 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     block(0.008, 0.035, 0.016, std("#f6f5f2", 0.4), sw[0] + 0.012, sw[1], sw[2], group, false);
   }
 
-  return { group, lamp, binoculars, sunset, deskLamp, screens, mugTop, interact: { plushies, bottles, speaker, controller, monitor, ps5, lightSwitch, setConsole, idle: { plants, setLaptopPing, setPsBreath: (b) => setPsBreath(b) }, setMonitorImage, spots, drawer, keyboard, candle } };
+  return { group, lamp, binoculars, sunset, deskLamp, screens, mugTop, interact: { plushies, bottles, speaker, controller, monitor, ps5, lightSwitch, setConsole, idle: { plants, setLaptopPing, setPsBreath: (b) => setPsBreath(b) }, setMonitorImage, spots, drawer, keyboard, phone, candle } };
 }

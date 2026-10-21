@@ -82,6 +82,8 @@ export const LAYOUT = {
   laptop: { pos: [1.28, 0, -0.55] as Vec3 },
   keyboard: { pos: [1.05, 0, -0.2] as Vec3 },
   mouse: { pos: [1.08, 0, 0.12] as Vec3 },
+  /** my phone, face up by the mouse: it opens "Ask me anything" */
+  phone: { pos: [1.15, 0, 0.245] as Vec3 },
   controller: { pos: [1.0, 0, -0.62] as Vec3 },
   mug: { pos: [1.06, 0, -0.8] as Vec3 },
   /** the gooseneck lamp, with the clock in its base */
