@@ -2283,10 +2283,10 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   let firstFrameSent = false;
   const clock = new THREE.Clock();
   const toCamera = new THREE.Vector3();
-  // ---------- the other visitors: glowing ghosts where they're standing, each with a name tag ----------
+  // ---------- the other visitors: glowing ghosts where they're standing, each with a tag ----------
   // A coloured orb in a soft glow with a ring turning around it, a faint cone of light showing where
-  // they're looking, a ring on the floor under them, and a tag above saying who they are and what
-  // they're doing right now (from activity.ts).
+  // they're looking, a ring on the floor under them, and a tag above saying what they're doing right
+  // now (from activity.ts).
   const ghostGroup = new THREE.Group();
   scene.add(ghostGroup);
   const ghostCoreGeo = new THREE.SphereGeometry(0.032, 20, 14);
@@ -2326,22 +2326,23 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     c.fillStyle = "rgba(13,14,17,0.82)";
     c.strokeStyle = color;
     c.lineWidth = 4;
+    // just what they're doing, sized to the text and centred, no name
+    const doing = describeActivity(l.activity) ?? describeActivity("look")!;
+    const label = `${doing.icon}  ${doing.text}`;
+    c.font = "600 32px system-ui, -apple-system, 'Segoe UI', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif";
+    const pill = Math.min(w - 8, c.measureText(label).width + 88);
+    const x = (w - pill) / 2;
     c.beginPath();
-    c.roundRect(4, 4, w - 8, h - 8, 34);
+    c.roundRect(x, 4, pill, h - 8, (h - 8) / 2);
     c.fill();
     c.stroke();
     c.fillStyle = color;
     c.beginPath();
-    c.arc(44, h / 2, 14, 0, Math.PI * 2);
+    c.arc(x + 34, h / 2, 10, 0, Math.PI * 2);
     c.fill();
     c.textBaseline = "middle";
     c.fillStyle = "#ffffff";
-    c.font = "600 34px system-ui, -apple-system, 'Segoe UI', sans-serif";
-    c.fillText(l.name, 74, 44, w - 100);
-    const doing = describeActivity(l.activity) ?? describeActivity("look")!;
-    c.fillStyle = "rgba(255,255,255,0.75)";
-    c.font = "28px system-ui, -apple-system, 'Segoe UI', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif";
-    c.fillText(`${doing.icon}  ${doing.text}`, 74, 90, w - 100);
+    c.fillText(label, x + 58, h / 2 + 1, pill - 74);
     gh.tagTex.needsUpdate = true;
   };
   const setGhosts = (list: Ghost[]) => {
@@ -2367,7 +2368,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
         const haloMat = new THREE.SpriteMaterial({ map: ghostGlowTex, color, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false });
         const tagCanvas = document.createElement("canvas");
         tagCanvas.width = 512;
-        tagCanvas.height = 132;
+        tagCanvas.height = 84;
         const tagTex = new THREE.CanvasTexture(tagCanvas);
         tagTex.colorSpace = THREE.SRGBColorSpace;
         // the tag stays the same size on screen however far away they are
@@ -2422,7 +2423,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       // tag: a fixed size on screen, with a bounce when the activity changes
       gh.pulse = Math.max(0, gh.pulse - dt * 2.5);
       const bump = 1 + Math.sin(gh.pulse * Math.PI) * 0.18;
-      gh.tag.scale.set(0.29 * bump, 0.075 * bump, 1);
+      gh.tag.scale.set(0.29 * bump, 0.0476 * bump, 1);
       // fade out up close, so a visitor standing where you are doesn't sit in your face
       const near = THREE.MathUtils.clamp((gh.g.position.distanceTo(camera.position) - 0.25) / 0.6, 0, 1);
       for (const { m, base } of gh.mats) m.opacity = base * near;
