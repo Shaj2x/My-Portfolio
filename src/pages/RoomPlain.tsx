@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { AnimatePresence, motion, useReducedMotion, type Transition } from "framer-motion";
-import { ArrowUpRight, Binoculars, Briefcase, CalendarDays, Camera, Check, Gamepad2, LayoutGrid, Lightbulb, LightbulbOff, MessageCircle, Radio, ScrollText, SlidersHorizontal, Trophy, Volume2, VolumeX, X } from "lucide-react";
+import { ArrowUpRight, Binoculars, Briefcase, CalendarDays, Camera, Check, Gamepad2, LayoutGrid, Lightbulb, LightbulbOff, ChevronDown, MessageCircle, Radio, ScrollText, SlidersHorizontal, Trophy, Volume2, VolumeX, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { RADIO_STATION } from "@/components/room/createAudio";
 import { playlistEmbed } from "@/components/room/playlist";
@@ -10,7 +10,8 @@ import { NowPlaying } from "@/components/room/NowPlaying";
 import { WhiteboardPad } from "@/components/room/WhiteboardPad";
 import { AskMe } from "@/components/AskMe";
 import { loadDoodle } from "@/components/room/whiteboardDoodle";
-import { joinRoom } from "@/components/room/presence";
+import { joinRoom, type Visitor } from "@/components/room/presence";
+import { activityCode, describeActivity } from "@/components/room/activity";
 import { RoomConsole } from "@/components/room/console/RoomConsole";
 import { PortfolioPage } from "@/components/room/PortfolioPages";
 import { FidgetKeyboard } from "@/components/room/FidgetKeyboard";
@@ -264,27 +265,43 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
   const [poster, setPoster] = useState<PosterInfo | null>(null);
   // how many people are in the room right now, this visitor included (0 until connected)
   const [people, setPeople] = useState(0);
+  // who they are and what each is doing, for the list under the head count
+  const [visitors, setVisitors] = useState<Visitor[]>([]);
+  const [peopleOpen, setPeopleOpen] = useState(false);
+  const presenceRef = useRef<Awaited<ReturnType<typeof joinRoom>>>(null);
+  // the game being played on the PS5, if any, and whether this tab is in the background
+  const [game, setGame] = useState<string | null>(null);
+  const [hidden, setHidden] = useState(() => typeof document !== "undefined" && document.hidden);
 
   // join the other visitors: share where we're standing, and draw them as ghosts
   useEffect(() => {
     let presence: Awaited<ReturnType<typeof joinRoom>> = null;
     let gone = false;
-    void joinRoom(({ count, ghosts }) => {
+    void joinRoom(({ count, ghosts, visitors }) => {
       setPeople(count);
+      setVisitors(visitors);
       roomRef.current?.setGhosts(ghosts);
     })
       .then((p) => {
         if (gone) p?.leave();
-        else presence = p;
+        else {
+          presence = p;
+          presenceRef.current = p;
+          p?.setActivity(activityRef.current);
+        }
       })
       .catch(() => {});
     const timer = window.setInterval(() => {
       const pose = roomRef.current?.getPose();
       if (pose && !document.hidden) presence?.sendPose(pose);
     }, 250);
+    const onVisibility = () => setHidden(document.hidden);
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
       gone = true;
       window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisibility);
+      presenceRef.current = null;
       presence?.leave();
     };
   }, []);
@@ -501,6 +518,28 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
   const inConsole = view === "console";
   const away = inBinoculars || inConsole;
 
+  // what this visitor is doing, shared with the others in the room (activity.ts)
+  const activity = activityCode({
+    away: hidden,
+    view,
+    game: inConsole ? game : null,
+    asking,
+    guestbook: keyboardOpen,
+    drawing: !!pad,
+    poster: poster?.album ?? null,
+    section,
+    music: !!playlist && playerOpen,
+  });
+  const activityRef = useRef(activity);
+  activityRef.current = activity;
+  useEffect(() => {
+    presenceRef.current?.setActivity(activity);
+  }, [activity]);
+  // leaving the PS5 ends the game
+  useEffect(() => {
+    if (!inConsole) setGame(null);
+  }, [inConsole]);
+
   return (
     <main className="fixed inset-0 bg-[#0d0e11] text-white">
       <div ref={containerRef} className="absolute inset-0" />
@@ -537,13 +576,60 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
           transition={{ duration: 0.5, ease: EASE_OUT, delay: 0.05 }}
         >
           {!away && people > 0 && (
-            <p className="liquid-glass on-glass flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs text-white/90" aria-live="polite">
-              <span className="relative flex h-2 w-2" aria-hidden="true">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60 motion-reduce:animate-none" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
-              </span>
-              {people === 1 ? "Just you here right now" : `${people} people here now`}
-            </p>
+            <div className="pointer-events-auto relative flex flex-col items-end">
+              <button
+                type="button"
+                aria-expanded={peopleOpen}
+                onClick={() => setPeopleOpen((o) => !o)}
+                className="liquid-glass on-glass flex items-center gap-2 rounded-full py-1.5 pl-3 pr-2.5 text-xs text-white/90 transition-colors duration-150 hover:text-white"
+              >
+                <span className="relative flex h-2 w-2" aria-hidden="true">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60 motion-reduce:animate-none" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+                </span>
+                {/* everyone's colour, overlapping like avatars */}
+                {people > 1 && (
+                  <span className="flex -space-x-1.5" aria-hidden="true">
+                    {visitors.filter((v) => !v.me).slice(0, 4).map((v) => (
+                      <span key={v.id} className="h-4 w-4 rounded-full border border-black/40" style={{ background: `hsl(${Math.round(v.hue * 360)}, 85%, 62%)` }} />
+                    ))}
+                  </span>
+                )}
+                <span aria-live="polite">{people === 1 ? "Just you here right now" : `${people} people here now`}</span>
+                <ChevronDown className={`h-3.5 w-3.5 text-white/60 transition-transform duration-200 ${peopleOpen ? "rotate-180" : ""}`} aria-hidden="true" />
+              </button>
+              <AnimatePresence>
+                {peopleOpen && (
+                  <motion.ul
+                    key="people"
+                    {...pop}
+                    style={{ transformOrigin: "top right" }}
+                    className="absolute right-0 top-full z-20 mt-2 w-64 space-y-1 liquid-glass-panel rounded-2xl p-2"
+                    aria-label="Who's in the room"
+                  >
+                    {visitors.map((v) => {
+                      const doing = describeActivity(v.activity) ?? describeActivity("look")!;
+                      return (
+                        <li key={v.id} className="flex items-center gap-2.5 rounded-xl px-2.5 py-2">
+                          <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: `hsl(${Math.round(v.hue * 360)}, 85%, 62%)`, boxShadow: `0 0 10px hsl(${Math.round(v.hue * 360)}, 85%, 62%)` }} aria-hidden="true" />
+                          <span className="min-w-0">
+                            <span className="block truncate text-sm font-medium text-white">
+                              {v.name}
+                              {v.me && <span className="font-normal text-white/50"> (you)</span>}
+                            </span>
+                            <span className="block truncate text-xs text-white/60">
+                              <span aria-hidden="true">{doing.icon} </span>
+                              {doing.text}
+                            </span>
+                          </span>
+                        </li>
+                      );
+                    })}
+                    {people === 1 && <li className="px-2.5 pb-1.5 pt-0.5 text-xs text-white/45">Share the link and you'll see each other here, live.</li>}
+                  </motion.ul>
+                )}
+              </AnimatePresence>
+            </div>
           )}
           <button type="button" className={chip} aria-expanded={soundOpen} aria-label={`Sound settings${muted ? " (muted)" : ""}`} onClick={() => setSoundOpen((o) => !o)}>
             {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
@@ -760,6 +846,7 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
         open={inConsole && consoleReady}
         onExit={() => roomRef.current?.setView(lastRoomView.current)}
         onPlay={(game) => {
+          setGame(game);
           award("player-one");
           if (markGamePlayed(game) >= ALL_GAMES.length) award("game-night");
         }}

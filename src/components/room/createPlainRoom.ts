@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { describeActivity } from "./activity";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RectAreaLightUniformsLib } from "three/examples/jsm/lights/RectAreaLightUniformsLib.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
@@ -225,6 +226,10 @@ export interface Ghost {
   pos: [number, number, number];
   look: [number, number, number];
   hue: number;
+  /** a friendly name, the same for everyone */
+  name: string;
+  /** what they're doing, as a code (see activity.ts) */
+  activity: string;
 }
 
 const vec = (v: [number, number, number]) => new THREE.Vector3(...v);
@@ -2278,38 +2283,123 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   let firstFrameSent = false;
   const clock = new THREE.Clock();
   const toCamera = new THREE.Vector3();
-  // ---------- the other visitors: faint glowing ghosts where they're standing ----------
+  // ---------- the other visitors: glowing ghosts where they're standing, each with a name tag ----------
+  // A coloured orb in a soft glow with a ring turning around it, a faint cone of light showing where
+  // they're looking, a ring on the floor under them, and a tag above saying who they are and what
+  // they're doing right now (from activity.ts).
   const ghostGroup = new THREE.Group();
   scene.add(ghostGroup);
-  const ghostCoreGeo = new THREE.SphereGeometry(0.03, 16, 12);
-  const ghostHaloGeo = new THREE.SphereGeometry(0.085, 16, 12);
-  const ghostNoseGeo = new THREE.ConeGeometry(0.014, 0.05, 10).rotateX(Math.PI / 2).translate(0, 0, 0.07);
-  type GhostView = { g: THREE.Group; body: THREE.Group; to: THREE.Vector3; look: THREE.Vector3; mats: THREE.MeshBasicMaterial[]; phase: number };
+  const ghostCoreGeo = new THREE.SphereGeometry(0.032, 20, 14);
+  const ghostRingGeo = new THREE.TorusGeometry(0.06, 0.0035, 8, 48);
+  // the gaze: a cone opening forward (+z, toward where they look) from the orb
+  const ghostGazeGeo = new THREE.ConeGeometry(0.1, 0.42, 32, 1, true).rotateX(-Math.PI / 2).translate(0, 0, 0.23);
+  const ghostFloorGeo = new THREE.RingGeometry(0.075, 0.1, 40).rotateX(-Math.PI / 2);
+  const ghostGlowTex = paintTexture(128, 128, (c, w, h) => {
+    const g = c.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, w / 2);
+    g.addColorStop(0, "rgba(255,255,255,1)");
+    g.addColorStop(0.25, "rgba(255,255,255,0.55)");
+    g.addColorStop(1, "rgba(255,255,255,0)");
+    c.fillStyle = g;
+    c.fillRect(0, 0, w, h);
+  });
+  type GhostView = {
+    g: THREE.Group;
+    body: THREE.Group;
+    ring: THREE.Mesh;
+    floor: THREE.Mesh;
+    tag: THREE.Sprite;
+    tagCanvas: HTMLCanvasElement;
+    tagTex: THREE.CanvasTexture;
+    activity: string;
+    pulse: number;
+    to: THREE.Vector3;
+    look: THREE.Vector3;
+    mats: { m: THREE.Material & { opacity: number }; base: number }[];
+    phase: number;
+  };
   const ghosts = new Map<string, GhostView>();
+  const drawTag = (gh: GhostView, l: Ghost) => {
+    const c = gh.tagCanvas.getContext("2d")!;
+    const { width: w, height: h } = gh.tagCanvas;
+    const color = `hsl(${Math.round(l.hue * 360)}, 85%, 62%)`;
+    c.clearRect(0, 0, w, h);
+    c.fillStyle = "rgba(13,14,17,0.82)";
+    c.strokeStyle = color;
+    c.lineWidth = 4;
+    c.beginPath();
+    c.roundRect(4, 4, w - 8, h - 8, 34);
+    c.fill();
+    c.stroke();
+    c.fillStyle = color;
+    c.beginPath();
+    c.arc(44, h / 2, 14, 0, Math.PI * 2);
+    c.fill();
+    c.textBaseline = "middle";
+    c.fillStyle = "#ffffff";
+    c.font = "600 34px system-ui, -apple-system, 'Segoe UI', sans-serif";
+    c.fillText(l.name, 74, 44, w - 100);
+    const doing = describeActivity(l.activity) ?? describeActivity("look")!;
+    c.fillStyle = "rgba(255,255,255,0.75)";
+    c.font = "28px system-ui, -apple-system, 'Segoe UI', 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif";
+    c.fillText(`${doing.icon}  ${doing.text}`, 74, 90, w - 100);
+    gh.tagTex.needsUpdate = true;
+  };
   const setGhosts = (list: Ghost[]) => {
     const keep = new Set(list.map((l) => l.id));
     for (const [id, gh] of ghosts)
       if (!keep.has(id)) {
-        ghostGroup.remove(gh.g);
-        gh.mats.forEach((m) => m.dispose());
+        ghostGroup.remove(gh.g, gh.floor);
+        gh.mats.forEach(({ m }) => m.dispose());
+        gh.tagTex.dispose();
         ghosts.delete(id);
       }
     for (const l of list) {
       let gh = ghosts.get(l.id);
       if (!gh) {
-        const color = new THREE.Color().setHSL(l.hue, 0.85, 0.58);
-        // a solid coloured core (so the colour reads against the pale walls) in a soft additive halo
+        const color = new THREE.Color().setHSL(l.hue, 0.85, 0.6);
         const solid = (opacity: number) => new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false });
-        const glow = (opacity: number) => new THREE.MeshBasicMaterial({ color, transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false });
-        const mats = [solid(0.85), glow(0.1), solid(0.5)];
+        const glow = (opacity: number, side: THREE.Side = THREE.FrontSide) =>
+          new THREE.MeshBasicMaterial({ color, transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false, side });
+        const core = solid(0.92);
+        const ringMat = glow(0.75);
+        const gazeMat = glow(0.07, THREE.DoubleSide);
+        const floorMat = glow(0.35);
+        const haloMat = new THREE.SpriteMaterial({ map: ghostGlowTex, color, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false });
+        const tagCanvas = document.createElement("canvas");
+        tagCanvas.width = 512;
+        tagCanvas.height = 132;
+        const tagTex = new THREE.CanvasTexture(tagCanvas);
+        tagTex.colorSpace = THREE.SRGBColorSpace;
+        // the tag stays the same size on screen however far away they are
+        const tagMat = new THREE.SpriteMaterial({ map: tagTex, transparent: true, depthTest: false, depthWrite: false, sizeAttenuation: false });
         const g = new THREE.Group();
         const body = new THREE.Group();
-        body.add(new THREE.Mesh(ghostCoreGeo, mats[0]), new THREE.Mesh(ghostHaloGeo, mats[1]), new THREE.Mesh(ghostNoseGeo, mats[2]));
+        const halo = new THREE.Sprite(haloMat);
+        halo.scale.setScalar(0.26);
+        const ring = new THREE.Mesh(ghostRingGeo, ringMat);
+        body.add(new THREE.Mesh(ghostCoreGeo, core), halo, ring, new THREE.Mesh(ghostGazeGeo, gazeMat));
         g.add(body);
+        const tag = new THREE.Sprite(tagMat);
+        tag.renderOrder = 10;
+        tag.center.set(0.5, 0);
+        tag.position.set(0, 0.11, 0);
+        g.add(tag);
+        const floor = new THREE.Mesh(ghostFloorGeo, floorMat);
         g.position.set(...l.pos);
-        ghostGroup.add(g);
-        gh = { g, body, to: new THREE.Vector3(), look: new THREE.Vector3(), mats, phase: Math.random() * Math.PI * 2 };
+        ghostGroup.add(g, floor);
+        gh = {
+          g, body, ring, floor, tag, tagCanvas, tagTex, activity: "", pulse: 0,
+          to: new THREE.Vector3(), look: new THREE.Vector3(),
+          mats: [core, ringMat, gazeMat, floorMat, haloMat, tagMat].map((m) => ({ m, base: m.opacity })),
+          phase: Math.random() * Math.PI * 2,
+        };
         ghosts.set(l.id, gh);
+      }
+      if (gh.activity !== l.activity) {
+        // a new activity: redraw the tag and give it a little bounce
+        if (gh.activity) gh.pulse = 1;
+        gh.activity = l.activity;
+        drawTag(gh, l);
       }
       gh.to.set(...l.pos);
       gh.look.set(...l.look);
@@ -2323,11 +2413,19 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       gh.g.position.lerp(gh.to, k);
       gh.body.position.y = Math.sin(time * 1.6 + gh.phase) * 0.012;
       gh.g.lookAt(gh.look);
+      // the ring turns on its own axis, tilted, so it reads as an orbit
+      gh.ring.rotation.set(1.1 + Math.sin(time * 0.7 + gh.phase) * 0.25, time * 1.3 + gh.phase, 0);
+      // the floor ring sits under them and breathes
+      gh.floor.position.set(gh.g.position.x, 0.006, gh.g.position.z);
+      const breath = 1 + Math.sin(time * 2 + gh.phase) * 0.12;
+      gh.floor.scale.set(breath, 1, breath);
+      // tag: a fixed size on screen, with a bounce when the activity changes
+      gh.pulse = Math.max(0, gh.pulse - dt * 2.5);
+      const bump = 1 + Math.sin(gh.pulse * Math.PI) * 0.18;
+      gh.tag.scale.set(0.29 * bump, 0.075 * bump, 1);
       // fade out up close, so a visitor standing where you are doesn't sit in your face
       const near = THREE.MathUtils.clamp((gh.g.position.distanceTo(camera.position) - 0.25) / 0.6, 0, 1);
-      gh.mats[0].opacity = 0.85 * near;
-      gh.mats[1].opacity = 0.1 * near;
-      gh.mats[2].opacity = 0.5 * near;
+      for (const { m, base } of gh.mats) m.opacity = base * near;
     }
   };
   const getPose = () => {
