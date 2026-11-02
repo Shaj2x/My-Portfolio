@@ -81,13 +81,13 @@
   "bytes": 6885
  },
  {
-  "name": "room/oink",
-  "source": "clip:dist/sounds/pig-snort.mp3",
-  "dur": 0.329,
+  "name": "room/thwip",
+  "source": "design:thwip",
+  "dur": 0.26,
   "lufs": -26.0,
-  "peak": -7.7,
-  "centroid_hz": 1660,
-  "bytes": 3456
+  "peak": -5.7,
+  "centroid_hz": 1821,
+  "bytes": 2728
  },
  {
   "name": "room/candle-out",

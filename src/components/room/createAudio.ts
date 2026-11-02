@@ -18,8 +18,8 @@ import { createSamples } from "@/lib/samples";
 /** the interface's own cues: R.V Bot, saving a doodle, a trophy (panels open silently) */
 export type UiSound = "send" | "receive" | "save" | "achievement";
 
-export type RoomSound = "squeak" | "spritz" | "chime" | "blind" | "meow" | "chirp" | "moo" | "oink" | "candle-out" | "candle-light" | "drawer-open" | "drawer-close" | "binoculars";
-const PLAYED: RoomSound[] = ["squeak", "spritz", "chime", "blind", "meow", "chirp", "moo", "oink", "candle-out", "candle-light", "drawer-open", "drawer-close", "binoculars"];
+export type RoomSound = "squeak" | "spritz" | "chime" | "blind" | "meow" | "chirp" | "moo" | "thwip" | "candle-out" | "candle-light" | "drawer-open" | "drawer-close" | "binoculars";
+const PLAYED: RoomSound[] = ["squeak", "spritz", "chime", "blind", "meow", "chirp", "moo", "thwip", "candle-out", "candle-light", "drawer-open", "drawer-close", "binoculars"];
 const ROOM_SOUNDS = ["room/lamp", "room/switch", "room/radio", ...PLAYED.map((k) => `room/${k}`)];
 const UI_SOUNDS = ["ui/send", "ui/receive", "ui/save", "ui/achievement"];
 const samples = createSamples();
@@ -461,7 +461,7 @@ export function createAudio(): RoomAudio {
       if (!ctx) return;
       const at = ctx.currentTime + 0.005;
       // a squeeze is never the same twice, and the plushies' voices shift a touch each time
-      const vary = kind === "squeak" ? 0.12 : kind === "meow" || kind === "chirp" || kind === "moo" || kind === "oink" ? 0.06 : 0.03;
+      const vary = kind === "squeak" ? 0.12 : kind === "meow" || kind === "chirp" || kind === "moo" || kind === "thwip" ? 0.06 : 0.03;
       if (samples.play(ctx, sfx, `room/${kind}`, { at, vary })) return;
       if (kind === "squeak") {
         // a soft squeeze: a rising then falling chirp, slightly different each time
@@ -493,9 +493,11 @@ export function createAudio(): RoomAudio {
         tone(at + 0.085, 5500, 0.08, 0.07, sfx, "sine", 3600);
       } else if (kind === "moo") {
         tone(at, 145, 0.9, 0.12, sfx, "triangle", 160);
-      } else if (kind === "oink") {
-        tone(at, 230, 0.13, 0.08, sfx, "sawtooth", 170);
-        tone(at + 0.18, 205, 0.15, 0.08, sfx, "sawtooth", 150);
+      } else if (kind === "thwip") {
+        // a web shooting out: a snap, then a whistle falling fast
+        burst(at, 0.006, "highpass", 3000, 0.2, sfx);
+        tone(at, 3200, 0.14, 0.06, sfx, "sine", 900);
+        burst(at, 0.15, "bandpass", 3000, 0.1, sfx, 4);
       } else if (kind === "candle-out") {
         burst(at, 0.35, "bandpass", 900, 0.12, sfx, 0.5);
       } else if (kind === "candle-light") {
