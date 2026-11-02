@@ -40,8 +40,6 @@ ROOM = {
     "room/blind": ("earshot", "swipe/cloth", {}, -27),
 }
 UI = {
-    "ui/open": ("uisfx", "soft/open", {}, -31),
-    "ui/close": ("uisfx", "soft/close", {}, -32),
     "ui/send": ("uisfx", "soft/send", {}, -29),
     "ui/receive": ("uisfx", "soft/receive", {}, -29),
     "ui/save": ("uisfx", "soft/complete", {}, -28),

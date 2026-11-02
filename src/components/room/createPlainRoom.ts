@@ -199,7 +199,7 @@ export interface PlainRoomHandle {
   setSpeakerPlaying: (on: boolean) => void;
   /** a soft two-note chime, for celebrations in the page (e.g. a trophy) */
   chime: () => void;
-  /** an interface cue (a panel opening, R.V Bot, a trophy), at the room's sound-effects level */
+  /** an interface cue (R.V Bot, saving, a trophy), at the room's sound-effects level */
   ui: (kind: UiSound) => void;
   /** put a project on the curved monitor (its screenshot, or a title card when there isn't one), or null to clear it */
   showProject: (project: MonitorProject | null) => void;
