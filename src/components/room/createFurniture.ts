@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 import { createDecor } from "./createDecor";
 import type { PortfolioId } from "./portfolioSpots";
-import { profile } from "@/data/portfolio";
+import { laptopScreen, profile } from "@/data/portfolio";
 import { paintTexture } from "./paintTexture";
 import { COLORS, LAYOUT, ROOM, WINDOW } from "./roomLayout";
 
@@ -763,9 +763,25 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
       c.fillRect(150, 110, 220, 10);
       for (let i = 0; i < 6; i++) c.fillRect(150, 140 + i * 16, between(120, 220), 5);
     });
-    const lcd = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.19), new THREE.MeshBasicMaterial({ map: page, toneMapped: false }));
+    const lcdMat = new THREE.MeshBasicMaterial({ map: page, toneMapped: false });
+    const lcd = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.19), lcdMat);
     lcd.position.set(0, 0.112, 0.001);
     hinge.add(lcd);
+    // the painted page stands in until the screenshot of what's open on it arrives
+    new THREE.TextureLoader().load(laptopScreen, (tex) => {
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = 4;
+      // fill the screen's shape, trimming the sides of the wider screenshot evenly
+      const img = tex.image as { width: number; height: number };
+      const fit = Math.min(1, 0.3 / 0.19 / (img.width / img.height));
+      tex.repeat.set(fit, 1);
+      tex.offset.set((1 - fit) / 2, 0);
+      lcdMat.map = tex;
+      // a lit screen in a dim room, not a lightbox
+      lcdMat.color.setScalar(0.85);
+      lcdMat.needsUpdate = true;
+      page.dispose();
+    });
     // now and then a notification slides in at the top right of the laptop screen
     const pingTex = paintTexture(256, 72, (c, w, h) => {
       c.fillStyle = "rgba(48,50,58,0.96)";
