@@ -34,7 +34,9 @@ export function createDecor({ env, rand }: DecorContext) {
   const glass = (color: string, opacity = 0.78) => {
     const key = `g|${color}|${opacity}`;
     let m = mats.get(key);
-    if (!m) mats.set(key, (m = new THREE.MeshStandardMaterial({ color, roughness: 0.06, metalness: 0.15, transparent: true, opacity, envMap: env, envMapIntensity: 1.1 })));
+    // clear glass has almost no colour of its own: what shows is the juice behind it and thin
+    // reflections, so the tint is kept dark and the reflections soft
+    if (!m) mats.set(key, (m = new THREE.MeshPhysicalMaterial({ color: new THREE.Color(color).multiplyScalar(0.3), roughness: 0.03, metalness: 0.05, transparent: true, opacity, clearcoat: 0.6, clearcoatRoughness: 0.04, envMap: env, envMapIntensity: 0.55 })));
     return m;
   };
   const printed = (tex: THREE.Texture, roughness = 0.6) => new THREE.MeshStandardMaterial({ map: tex, roughness });
@@ -58,62 +60,138 @@ export function createDecor({ env, rand }: DecorContext) {
   const label = (w: number, h: number, draw: (c: CanvasRenderingContext2D, w: number, h: number) => void) => paintTexture(w, h, draw);
 
   // ---------- fragrances ----------
+  // The collection on the dresser, bottle by bottle, from the photos of the shelf: twenty bottles on
+  // a black four-step riser, five to a step. Each has its own body, cap, finish and label.
+
+  /** polished, clear-coated finishes for the bottles that are metal or lacquer */
+  const lacquer = (color: string, roughness = 0.2, metalness = 1) => {
+    const key = `l|${color}|${roughness}|${metalness}`;
+    let m = mats.get(key);
+    if (!m) mats.set(key, (m = new THREE.MeshPhysicalMaterial({ color, roughness, metalness, clearcoat: 1, clearcoatRoughness: 0.08, envMap: env, envMapIntensity: 1.1 })));
+    return m;
+  };
+  /** cut glass: the same as glass, but each face catches the light on its own */
+  const cutGlass = (color: string, opacity = 0.85) => {
+    const key = `c|${color}|${opacity}`;
+    let m = mats.get(key);
+    if (!m)
+      mats.set(
+        key,
+        (m = new THREE.MeshPhysicalMaterial({ color, roughness: 0.04, metalness: 0.1, transparent: true, opacity, clearcoat: 0.7, clearcoatRoughness: 0.04, flatShading: true, envMap: env, envMapIntensity: 0.6 })),
+      );
+    return m;
+  };
+  /** the liquid inside clear glass: glossy and deep. Solid, so it's drawn before the glass around
+   *  it (a see-through liquid inside see-through glass is hidden by it) */
+  const juiceMat = (color: string) => {
+    const key = `j|${color}`;
+    let m = mats.get(key);
+    if (!m) mats.set(key, (m = new THREE.MeshPhysicalMaterial({ color, roughness: 0.12, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.1, envMap: env, envMapIntensity: 0.8 })));
+    return m;
+  };
+  const cutMetal = (color: string, roughness = 0.18) => {
+    const key = `f|${color}|${roughness}`;
+    let m = mats.get(key);
+    if (!m) mats.set(key, (m = new THREE.MeshStandardMaterial({ color, roughness, metalness: 1, flatShading: true, envMap: env, envMapIntensity: 1.2 })));
+    return m;
+  };
 
   type Cap =
-    | { kind: "cyl"; r: number; h: number; m: THREE.Material }
-    | { kind: "square"; s: number; h: number; m: THREE.Material }
-    | { kind: "ball"; r: number; m: THREE.Material }
+    | { kind: "cyl"; r: number; h: number; m: THREE.Material; ribs?: number }
+    | { kind: "square"; s: number; h: number; m: THREE.Material; top?: THREE.Material }
+    | { kind: "ball"; r: number; m: THREE.Material; neck?: THREE.Material }
     | { kind: "ring"; r: number; m: THREE.Material }
     | { kind: "fan"; m: THREE.Material }
-    | { kind: "dome"; r: number; m: THREE.Material }
-    | { kind: "gem"; r: number; m: THREE.Material }
-    | { kind: "ornate"; r: number; m: THREE.Material };
+    | { kind: "halfMoon"; r: number; t: number; m: THREE.Material }
+    | { kind: "crystal"; w: number; h: number; d: number }
+    | { kind: "faceted"; r: number; h: number; m: THREE.Material }
+    | { kind: "monogram"; r: number; m: THREE.Material }
+    | { kind: "sculpted"; r: number; m: THREE.Material }
+    | { kind: "gem"; r: number; m: THREE.Material };
 
   const putCap = (g: THREE.Group, cap: Cap, y: number) => {
     switch (cap.kind) {
       case "cyl":
-        add(g, new THREE.CylinderGeometry(cap.r, cap.r, cap.h, 24), cap.m, 0, y + cap.h / 2, 0);
+        add(g, new THREE.CylinderGeometry(cap.r, cap.r, cap.h, 28), cap.m, 0, y + cap.h / 2, 0);
+        // a knurled or ringed collar, as on Mancera's and Legacy's caps
+        for (let i = 0; i < (cap.ribs ?? 0); i++)
+          add(g, new THREE.TorusGeometry(cap.r + 0.0006, 0.0009, 6, 28), cap.m, 0, y + cap.h * ((i + 1) / ((cap.ribs ?? 0) + 1)), 0, false).rotation.x = Math.PI / 2;
         break;
       case "square":
         add(g, rbox(cap.s, cap.h, cap.s, 0.003), cap.m, 0, y + cap.h / 2, 0);
+        if (cap.top) add(g, rbox(cap.s * 0.86, 0.003, cap.s * 0.86, 0.001), cap.top, 0, y + cap.h + 0.0012, 0, false);
         break;
       case "ball":
-        add(g, new THREE.CylinderGeometry(cap.r * 0.4, cap.r * 0.4, 0.008, 12), cap.m, 0, y + 0.004, 0);
-        add(g, new THREE.SphereGeometry(cap.r, 24, 16), cap.m, 0, y + 0.006 + cap.r, 0);
+        add(g, new THREE.CylinderGeometry(cap.r * 0.45, cap.r * 0.5, 0.009, 16), cap.neck ?? cap.m, 0, y + 0.0045, 0);
+        add(g, new THREE.SphereGeometry(cap.r, 28, 20), cap.m, 0, y + 0.008 + cap.r, 0);
         break;
       case "ring": {
-        const ring = add(g, new THREE.TorusGeometry(cap.r, cap.r * 0.32, 10, 28), cap.m, 0, y + cap.r * 1.1, 0);
+        const ring = add(g, new THREE.TorusGeometry(cap.r, cap.r * 0.3, 12, 32), cap.m, 0, y + 0.01 + cap.r * 1.05, 0);
         ring.rotation.y = Math.PI / 2;
-        add(g, new THREE.CylinderGeometry(cap.r * 0.5, cap.r * 0.5, 0.008, 14), cap.m, 0, y + 0.004, 0);
+        add(g, new THREE.CylinderGeometry(cap.r * 0.45, cap.r * 0.45, 0.012, 16), cap.m, 0, y + 0.006, 0);
         break;
       }
       case "fan":
-        // the pleated fan stopper: a few thin blades spread like a hand of cards
+        // Bujairami's sail: pleated copper blades fanned out above a jewelled crown ring
+        add(g, new THREE.CylinderGeometry(0.013, 0.015, 0.012, 20), cap.m, 0, y + 0.006, 0);
+        add(g, new THREE.TorusGeometry(0.0135, 0.0018, 6, 20), cap.m, 0, y + 0.012, 0).rotation.x = Math.PI / 2;
         for (let i = -2; i <= 2; i++) {
-          const blade = add(g, new THREE.BoxGeometry(0.014, 0.045, 0.004), cap.m, i * 0.006, y + 0.024, 0, false);
-          blade.rotation.z = i * 0.28;
+          const blade = add(g, new THREE.ConeGeometry(0.008, 0.042, 3), cap.m, i * 0.0045, y + 0.034, 0, false);
+          blade.rotation.z = -i * 0.32;
+          blade.scale.z = 0.35;
         }
-        add(g, new THREE.CylinderGeometry(0.012, 0.014, 0.012, 16), cap.m, 0, y + 0.006, 0);
         break;
-      case "dome":
-        add(g, new THREE.SphereGeometry(cap.r, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), cap.m, 0, y, 0);
-        break;
-      case "gem": {
-        const gem = add(g, new THREE.OctahedronGeometry(cap.r, 0), cap.m, 0, y + cap.r * 0.9, 0);
-        gem.scale.set(1, 0.8, 1);
+      case "halfMoon": {
+        // Lattafa Pride's cap: an upright half-disc, flat side down, facing the front
+        const shape = new THREE.Shape();
+        shape.absarc(0, 0, cap.r, 0, Math.PI, false);
+        shape.lineTo(cap.r, 0);
+        const geo = new THREE.ExtrudeGeometry(shape, { depth: cap.t, bevelEnabled: true, bevelThickness: 0.001, bevelSize: 0.001, bevelSegments: 2, curveSegments: 32 });
+        geo.translate(0, 0, -cap.t / 2);
+        add(g, geo, cap.m, 0, y + 0.004, 0);
+        add(g, new THREE.BoxGeometry(cap.r * 1.2, 0.004, cap.t * 1.15), cap.m, 0, y + 0.002, 0);
         break;
       }
-      case "ornate":
-        // a sculpted metal crown: a stack of rings narrowing to a knob
-        add(g, new THREE.CylinderGeometry(cap.r * 0.7, cap.r, 0.012, 20), cap.m, 0, y + 0.006, 0);
-        add(g, new THREE.TorusGeometry(cap.r * 0.75, 0.004, 8, 20), cap.m, 0, y + 0.016, 0).rotation.x = Math.PI / 2;
-        add(g, new THREE.SphereGeometry(cap.r * 0.6, 18, 12), cap.m, 0, y + 0.026, 0);
+      case "crystal":
+        // Khamrah's cap: a big block of cut crystal, diagonal grooves on its faces
+        add(g, rbox(cap.w, cap.h, cap.d, 0.003), cutGlass("#eef3f6", 0.5), 0, y + cap.h / 2, 0);
+        decal(g, etched, cap.w * 0.92, cap.h * 0.9, 0, y + cap.h / 2, cap.d / 2 + 0.0008);
         break;
+      case "faceted":
+        add(g, new THREE.CylinderGeometry(cap.r * 0.85, cap.r, cap.h, 8), cap.m, 0, y + cap.h / 2, 0);
+        break;
+      case "monogram":
+        // Momento's cap: a gold drum, fluted at the base, with an open "R" medallion standing on top
+        add(g, new THREE.CylinderGeometry(cap.r, cap.r * 1.05, 0.014, 32), cap.m, 0, y + 0.007, 0);
+        for (let i = 0; i < 18; i++) {
+          const a = (i / 18) * Math.PI * 2;
+          add(g, new THREE.BoxGeometry(0.0016, 0.012, 0.0016), cap.m, Math.cos(a) * cap.r * 1.03, y + 0.007, Math.sin(a) * cap.r * 1.03, false);
+        }
+        add(g, new THREE.TorusGeometry(cap.r * 0.72, 0.0022, 8, 28), cap.m, 0, y + 0.014 + cap.r * 0.72, 0);
+        add(g, new THREE.BoxGeometry(0.003, cap.r * 0.9, 0.003), cap.m, -0.003, y + 0.014 + cap.r * 0.72, 0, false);
+        break;
+      case "sculpted":
+        // a chunky black cap, cast with knuckled ridges
+        add(g, new THREE.CylinderGeometry(cap.r, cap.r * 1.05, 0.016, 20), cap.m, 0, y + 0.008, 0);
+        for (let i = 0; i < 6; i++) {
+          const a = (i / 6) * Math.PI * 2;
+          add(g, new THREE.SphereGeometry(cap.r * 0.42, 12, 10), cap.m, Math.cos(a) * cap.r * 0.62, y + 0.02, Math.sin(a) * cap.r * 0.62, false);
+        }
+        add(g, new THREE.SphereGeometry(cap.r * 0.6, 16, 12), cap.m, 0, y + 0.026, 0);
+        break;
+      case "gem": {
+        // Marwa's cap: a cut diamond, table up
+        const gem = add(g, new THREE.CylinderGeometry(cap.r * 0.7, cap.r, cap.r * 1.3, 8), cap.m, 0, y + cap.r * 0.65, 0);
+        gem.rotation.y = Math.PI / 8;
+        break;
+      }
     }
   };
 
-  type BodyShape = "rect" | "round" | "shield" | "gem" | "box";
+  type BodyShape = "rect" | "round" | "box" | "gem" | "trophy" | "faceted";
   interface Bottle {
+    /** what it is, for the record */
+    name: string;
     x: number;
     shape: BodyShape;
     w: number;
@@ -123,275 +201,499 @@ export function createDecor({ env, rand }: DecorContext) {
     cap?: Cap;
     /** a printed label on the front face: texture, size and height of its centre (as a share of h) */
     face?: { tex: THREE.Texture; w: number; h: number; at?: number };
-    /** juice inside clear glass */
+    /** juice inside clear glass, and how full (share of the height) */
     juice?: string;
+    fill?: number;
+    /** anything else the bottle has (Taif's tentacles, Momento's gold foot) */
+    extra?: (g: THREE.Group) => void;
     turn?: number;
   }
 
   const buildBottle = (parent: THREE.Object3D, b: Bottle, y0: number, z: number) => {
     const g = new THREE.Group();
+    g.name = b.name;
     g.position.set(b.x, y0, z);
-    g.rotation.y = b.turn ?? between(-0.12, 0.12);
+    g.rotation.y = b.turn ?? between(-0.08, 0.08);
     parent.add(g);
     let top = b.h;
+    const fill = b.fill ?? 0.7;
     if (b.shape === "rect" || b.shape === "box") {
-      add(g, rbox(b.w, b.h, b.d, b.shape === "box" ? 0.002 : 0.006), b.body, 0, b.h / 2, 0);
-      if (b.juice) add(g, rbox(b.w * 0.82, b.h * 0.7, b.d * 0.7, 0.004), matte(b.juice, 0.4), 0, b.h * 0.4, 0, false);
+      add(g, rbox(b.w, b.h, b.d, b.shape === "box" ? 0.0025 : 0.007), b.body, 0, b.h / 2, 0);
+      if (b.juice) add(g, rbox(b.w * 0.84, b.h * fill, b.d * 0.72, 0.004), juiceMat(b.juice), 0, 0.004 + (b.h * fill) / 2, 0, false);
     } else if (b.shape === "round") {
-      add(g, new THREE.CylinderGeometry(b.w / 2, b.w / 2, b.h, 32), b.body, 0, b.h / 2, 0);
-      if (b.juice) add(g, new THREE.CylinderGeometry(b.w * 0.4, b.w * 0.4, b.h * 0.7, 20), matte(b.juice, 0.4), 0, b.h * 0.4, 0, false);
-    } else if (b.shape === "shield") {
-      // a faceted shield: eight-sided, flattened, narrowing to the shoulders
-      const shield = add(g, new THREE.CylinderGeometry(b.w * 0.34, b.w / 2, b.h * 0.8, 8), b.body, 0, b.h * 0.4, 0);
-      shield.scale.z = b.d / b.w;
-      const shoulder = add(g, new THREE.CylinderGeometry(b.w * 0.12, b.w * 0.34, b.h * 0.2, 8), b.body, 0, b.h * 0.9, 0);
-      shoulder.scale.z = b.d / b.w;
+      add(g, new THREE.CylinderGeometry(b.w / 2, b.w / 2, b.h, 40), b.body, 0, b.h / 2, 0);
+      if (b.juice) add(g, new THREE.CylinderGeometry(b.w * 0.42, b.w * 0.42, b.h * fill, 24), juiceMat(b.juice), 0, 0.004 + (b.h * fill) / 2, 0, false);
+    } else if (b.shape === "faceted") {
+      // an eight-sided cut-glass column, a little narrower at the shoulder
+      add(g, new THREE.CylinderGeometry(b.w * 0.44, b.w / 2, b.h, 8), b.body, 0, b.h / 2, 0).rotation.y = Math.PI / 8;
+      if (b.juice) add(g, new THREE.CylinderGeometry(b.w * 0.36, b.w * 0.4, b.h * fill, 8), juiceMat(b.juice), 0, 0.004 + (b.h * fill) / 2, 0, false);
+    } else if (b.shape === "trophy") {
+      // Invictus: a black cup on a stemmed foot, with two handles
+      const p = [
+        [0.4, 0], [0.48, 0.03], [0.3, 0.1], [0.2, 0.18], [0.3, 0.26], [0.48, 0.42], [0.52, 0.66], [0.46, 0.84], [0.3, 0.95], [0.18, 1],
+      ].map(([r, y]) => new THREE.Vector2(r * b.w, y * b.h));
+      add(g, new THREE.LatheGeometry(p, 40), b.body, 0, 0, 0);
+      for (const s of [-1, 1]) {
+        const handle = add(g, new THREE.TorusGeometry(b.h * 0.16, 0.0032, 8, 24, Math.PI), b.body, s * b.w * 0.5, b.h * 0.62, 0);
+        handle.rotation.z = s > 0 ? -Math.PI / 2 : Math.PI / 2;
+      }
     } else {
-      // a cut gem standing on its point, as the Marwa bottle does
-      const gem = add(g, new THREE.IcosahedronGeometry(b.w / 2, 0), b.body, 0, b.h / 2, 0);
-      gem.scale.set(1, b.h / b.w, b.d / b.w);
-      top = b.h * 0.92;
+      // Marwa: a faceted silver body, widest at the shoulder, standing on a narrow foot
+      const p = [[0.3, 0], [0.42, 0.12], [0.5, 0.55], [0.46, 0.8], [0.3, 0.95], [0.18, 1]].map(([r, y]) => new THREE.Vector2(r * b.w, y * b.h));
+      const gem = add(g, new THREE.LatheGeometry(p, 7), b.body, 0, 0, 0);
+      gem.scale.z = b.d / b.w;
+      top = b.h;
     }
-    if (b.face) decal(g, b.face.tex, b.face.w, b.face.h, 0, b.h * (b.face.at ?? 0.5), (b.shape === "round" ? b.w / 2 : b.d / 2) + 0.0012);
+    if (b.face) {
+      const front = b.shape === "rect" || b.shape === "box" ? b.d / 2 : b.shape === "faceted" ? (b.w / 2) * Math.cos(Math.PI / 8) : b.shape === "gem" ? (b.d / 2) * 0.98 : b.w / 2;
+      decal(g, b.face.tex, b.face.w, b.face.h, 0, b.h * (b.face.at ?? 0.5), front + 0.0012);
+    }
+    b.extra?.(g);
     if (b.cap) putCap(g, b.cap, top);
     return g;
   };
 
-  // painted labels, read off the photo
-  const breezeBox = label(160, 240, (c, w, h) => {
-    c.fillStyle = "#f3f1ec";
-    c.fillRect(0, 0, w, h);
-    c.fillStyle = "#1c1c1c";
-    c.font = "italic 600 34px Georgia, serif";
+  // ---------- labels, read off the photos ----------
+  const serif = "Georgia, 'Times New Roman', serif";
+  const center = (c: CanvasRenderingContext2D, text: string, x: number, y: number, font: string, color: string) => {
+    c.font = font;
+    c.fillStyle = color;
     c.textAlign = "center";
-    c.fillText("Breeze", w / 2, 52);
-    // the line-drawn tree: a trunk and a scribbled crown
-    c.strokeStyle = "#2a2a2a";
-    c.lineWidth = 3;
+    c.fillText(text, x, y);
+  };
+  /** a printed box face: the background colour and whatever goes on it */
+  const boxFace = (bg: string, draw: (c: CanvasRenderingContext2D, w: number, h: number) => void) =>
+    label(192, 288, (c, w, h) => {
+      c.fillStyle = bg;
+      c.fillRect(0, 0, w, h);
+      draw(c, w, h);
+    });
+
+  // Lattafa Pride Breeze: a white box, "Breeze" in script, a face drawn as a branching tree
+  const breezeBox = boxFace("#f5f3ee", (c, w, h) => {
+    center(c, "Breeze", w / 2, 58, `italic 700 38px ${serif}`, "#1b1b1b");
+    c.strokeStyle = "#262626";
+    c.lineCap = "round";
+    const branch = (x: number, y: number, a: number, len: number, depth: number) => {
+      if (depth === 0 || len < 3) return;
+      const x2 = x + Math.cos(a) * len;
+      const y2 = y + Math.sin(a) * len;
+      c.lineWidth = Math.max(0.6, depth * 0.7);
+      c.beginPath();
+      c.moveTo(x, y);
+      c.lineTo(x2, y2);
+      c.stroke();
+      branch(x2, y2, a - 0.45 + rand() * 0.2, len * 0.72, depth - 1);
+      branch(x2, y2, a + 0.4 + rand() * 0.2, len * 0.7, depth - 1);
+    };
+    branch(w / 2 - 6, h - 46, -Math.PI / 2 - 0.12, 46, 7);
+    // the profile of the face the tree makes, on its left
+    c.lineWidth = 2;
     c.beginPath();
-    c.moveTo(w / 2, h - 30);
-    c.lineTo(w / 2 - 4, h - 90);
+    c.moveTo(w / 2 - 40, 112);
+    c.quadraticCurveTo(w / 2 - 58, 140, w / 2 - 46, 160);
+    c.lineTo(w / 2 - 52, 170);
+    c.quadraticCurveTo(w / 2 - 40, 190, w / 2 - 34, 214);
     c.stroke();
-    c.lineWidth = 1.5;
-    for (let i = 0; i < 90; i++) {
-      const a = rand() * Math.PI * 2;
-      const r = rand() * 42;
+    center(c, "100ml  EAU DE PARFUM  3.4 FL.OZ", w / 2, h - 16, `600 10px ${serif}`, "#333");
+  });
+  // Lattafa Pride Vintage Radio: a white box with a wooden 1950s radio on it
+  const radioBox = boxFace("#f5f2ea", (c, w, h) => {
+    center(c, "Vintage Radio", w / 2, 56, `italic 600 27px ${serif}`, "#3b2a1f");
+    const wood = c.createLinearGradient(30, 110, w - 30, 210);
+    wood.addColorStop(0, "#8a4a26");
+    wood.addColorStop(1, "#c07a46");
+    c.fillStyle = wood;
+    c.beginPath();
+    c.roundRect(30, 112, w - 60, 100, 26);
+    c.fill();
+    c.fillStyle = "#3a2214";
+    c.beginPath();
+    c.roundRect(44, 128, 70, 66, 8);
+    c.fill();
+    c.strokeStyle = "#a76a3c";
+    c.lineWidth = 2;
+    for (let i = 0; i < 7; i++) {
       c.beginPath();
-      c.arc(w / 2 + Math.cos(a) * r, 140 + Math.sin(a) * r * 0.8, 4 + rand() * 5, 0, Math.PI * 1.4);
+      c.moveTo(48, 134 + i * 9);
+      c.lineTo(110, 134 + i * 9);
       c.stroke();
     }
-  });
-  const radioBox = label(160, 240, (c, w, h) => {
-    c.fillStyle = "#f4f1ea";
-    c.fillRect(0, 0, w, h);
-    c.fillStyle = "#3a2a20";
-    c.font = "italic 600 24px Georgia, serif";
-    c.textAlign = "center";
-    c.fillText("Vintage Radio", w / 2, 50);
-    // the copper radio: a rounded cabinet, a dial and a grille
-    c.fillStyle = "#b8653a";
+    c.fillStyle = "#efe1c4";
     c.beginPath();
-    c.roundRect(28, 92, w - 56, 92, 22);
+    c.arc(w - 64, 160, 26, 0, Math.PI * 2);
     c.fill();
-    c.fillStyle = "#e9c9a2";
-    c.beginPath();
-    c.arc(w / 2 + 26, 138, 24, 0, Math.PI * 2);
-    c.fill();
-    c.strokeStyle = "#7a3c1e";
+    c.strokeStyle = "#7c4a24";
     c.lineWidth = 3;
-    for (let i = 0; i < 6; i++) {
-      c.beginPath();
-      c.moveTo(42, 110 + i * 10);
-      c.lineTo(84, 110 + i * 10);
-      c.stroke();
-    }
+    c.stroke();
+    c.fillStyle = "#7c4a24";
+    c.fillRect(w - 66, 140, 3, 40);
+    center(c, "100ml  EAU DE PARFUM", w / 2, h - 16, `600 10px ${serif}`, "#3b2a1f");
   });
-  const sequin = label(128, 160, (c, w, h) => {
-    c.fillStyle = "#1a2236";
+  // Rayhaan: a silver box-bottle covered in a raised geometric star lattice
+  const rayhaanSilver = label(192, 224, (c, w, h) => {
+    const bg = c.createLinearGradient(0, 0, w, h);
+    bg.addColorStop(0, "#8d939c");
+    bg.addColorStop(0.5, "#d6dade");
+    bg.addColorStop(1, "#7a8089");
+    c.fillStyle = bg;
     c.fillRect(0, 0, w, h);
-    // the mirrored mosaic of the bottle's face
-    for (let y = 0; y < h; y += 10)
-      for (let x = (y / 10) % 2 ? 5 : 0; x < w; x += 10) {
-        c.fillStyle = `rgba(${200 + rand() * 55},${200 + rand() * 55},${210 + rand() * 45},${0.25 + rand() * 0.6})`;
+    c.strokeStyle = "rgba(40,48,62,0.75)";
+    c.lineWidth = 2;
+    for (let y = 0; y < h + 24; y += 24)
+      for (let x = (y / 24) % 2 ? 12 : 0; x < w + 24; x += 24) {
         c.beginPath();
-        c.moveTo(x + 5, y);
-        c.lineTo(x + 10, y + 5);
-        c.lineTo(x + 5, y + 10);
-        c.lineTo(x, y + 5);
-        c.fill();
+        for (let k = 0; k < 8; k++) {
+          const a = (k / 8) * Math.PI * 2;
+          const r = k % 2 ? 6 : 12;
+          c.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
+        }
+        c.closePath();
+        c.stroke();
       }
+    c.fillStyle = "rgba(20,26,36,0.85)";
+    c.fillRect(30, h - 52, w - 60, 26);
+    center(c, "RAYHAAN", w / 2, h - 33, `700 18px ${serif}`, "#e8ebef");
   });
-  const speckle = label(128, 192, (c, w, h) => {
-    c.fillStyle = "#c9c6c1";
+  // Paris Corner Rifaaqat: a white band with the name in Arabic and English, and the corner's tower
+  const rifaaqat = label(128, 112, (c, w, h) => {
+    c.fillStyle = "#f7f6f2";
     c.fillRect(0, 0, w, h);
-    for (let i = 0; i < 900; i++) {
-      c.fillStyle = `rgba(30,30,30,${0.2 + rand() * 0.6})`;
-      c.fillRect(rand() * w, rand() * h, 1.5, 1.5);
+    center(c, "رفاقات", w / 2, 36, `700 24px ${serif}`, "#2b2b2b");
+    center(c, "Rifaaqat", w / 2, 64, `italic 600 22px ${serif}`, "#2b2b2b");
+    c.fillStyle = "#3a3f52";
+    c.beginPath();
+    c.moveTo(w / 2, 74);
+    c.lineTo(w / 2 + 9, 100);
+    c.lineTo(w / 2 - 9, 100);
+    c.closePath();
+    c.fill();
+  });
+  // Mancera Instant Crush: a white label on the gold bottle, the big M and the name
+  const mancera = label(128, 176, (c, w, h) => {
+    c.fillStyle = "#f8f7f3";
+    c.fillRect(0, 0, w, h);
+    center(c, "M", w / 2, 50, `700 44px ${serif}`, "#111");
+    center(c, "MANCERA", w / 2, 72, `600 14px ${serif}`, "#111");
+    center(c, "PARIS", w / 2, 86, `500 9px ${serif}`, "#444");
+    center(c, "INSTANT", w / 2, 122, `700 16px ${serif}`, "#111");
+    center(c, "CRUSH", w / 2, 142, `700 16px ${serif}`, "#111");
+    center(c, "EAU DE PARFUM", w / 2, 164, `500 9px ${serif}`, "#444");
+  });
+  // Lattafa Khamrah Qahwa: the name in gold on the smoky brown glass
+  const khamrah = label(160, 112, (c, w, h) => {
+    c.clearRect(0, 0, w, h);
+    center(c, "خمرة", w / 2, 44, `700 32px ${serif}`, "#d9b56a");
+    center(c, "KHAMRAH", w / 2, 72, `700 16px ${serif}`, "#d9b56a");
+    center(c, "QAHWA", w / 2, 92, `600 12px ${serif}`, "#d9b56a");
+  });
+  // the white speckled stone bottle with a black flower emblem (its "Legacy · Collector Edition" bottle)
+  const speckle = label(160, 256, (c, w, h) => {
+    c.fillStyle = "#d8d5cf";
+    c.fillRect(0, 0, w, h);
+    for (let i = 0; i < 1400; i++) {
+      c.fillStyle = `rgba(25,25,25,${0.25 + rand() * 0.6})`;
+      const s = 1 + rand() * 2.2;
+      c.fillRect(rand() * w, rand() * h, s, s);
     }
-    // the black flower emblem
-    c.fillStyle = "#151515";
-    for (let k = 0; k < 8; k++) {
-      const a = (k / 8) * Math.PI * 2;
+    c.fillStyle = "#121212";
+    for (let k = 0; k < 10; k++) {
+      const a = (k / 10) * Math.PI * 2;
       c.beginPath();
-      c.arc(w * 0.62 + Math.cos(a) * 12, h * 0.42 + Math.sin(a) * 12, 7, 0, Math.PI * 2);
+      c.arc(w * 0.62 + Math.cos(a) * 15, h * 0.4 + Math.sin(a) * 15, 8, 0, Math.PI * 2);
       c.fill();
     }
+    center(c, "LEGACY", w / 2, h - 52, `700 15px ${serif}`, "#1a1a1a");
+    center(c, "COLLECTOR EDITION", w / 2, h - 34, `600 10px ${serif}`, "#1a1a1a");
   });
-  const vFace = label(128, 192, (c, w, h) => {
-    c.fillStyle = "#121212";
-    c.fillRect(0, 0, w, h);
-    c.strokeStyle = "rgba(255,255,255,0.08)";
-    for (let y = 6; y < h; y += 9) {
-      c.beginPath();
-      c.moveTo(0, y);
-      c.lineTo(w, y);
-      c.stroke();
-    }
-    c.strokeStyle = "#8a8a8a";
-    c.lineWidth = 6;
+  // Invictus Victory Elixir: the big silver V
+  const vFace = label(128, 128, (c, w, h) => {
+    c.clearRect(0, 0, w, h);
+    c.strokeStyle = "#c9cdd2";
+    c.lineWidth = 9;
+    c.lineJoin = "miter";
     c.beginPath();
-    c.moveTo(w * 0.3, h * 0.28);
-    c.lineTo(w * 0.5, h * 0.72);
-    c.lineTo(w * 0.7, h * 0.28);
+    c.moveTo(w * 0.24, h * 0.18);
+    c.lineTo(w * 0.5, h * 0.82);
+    c.lineTo(w * 0.76, h * 0.18);
     c.stroke();
   });
-  const navyGold = label(96, 240, (c, w, h) => {
-    c.fillStyle = "#1d2c63";
-    c.fillRect(0, 0, w, h);
-    c.strokeStyle = "rgba(220,185,110,0.75)";
-    c.lineWidth = 1.5;
-    for (let y = -w; y < h; y += 22) {
-      c.beginPath();
-      c.moveTo(0, y);
-      c.lineTo(w, y + w);
-      c.moveTo(w, y);
-      c.lineTo(0, y + w);
-      c.stroke();
-    }
+  // the clear bottle's vertical label
+  const clearLabel = label(64, 192, (c, w, h) => {
+    c.clearRect(0, 0, w, h);
+    c.save();
+    c.translate(w / 2, h / 2);
+    c.rotate(-Math.PI / 2);
+    center(c, "EAU DE PARFUM", 0, 6, `700 15px ${serif}`, "rgba(20,20,20,0.85)");
+    c.restore();
   });
-  const honor = label(128, 176, (c, w, h) => {
-    c.fillStyle = "#f2f0eb";
+  // Legacy, Royal Collection: royal blue, wrapped in a gold Moroccan lattice
+  const legacyBlue = label(160, 320, (c, w, h) => {
+    c.fillStyle = "#1f3596";
     c.fillRect(0, 0, w, h);
-    c.strokeStyle = "#a9a49a";
+    c.strokeStyle = "rgba(226,190,112,0.9)";
     c.lineWidth = 2;
-    c.strokeRect(18, 40, w - 36, h - 70);
+    const s = 26;
+    for (let y = 0; y < h + s; y += s)
+      for (let x = (y / s) % 2 ? s / 2 : 0; x < w + s; x += s) {
+        c.beginPath();
+        c.moveTo(x, y - s / 2);
+        c.quadraticCurveTo(x + s / 2, y - s / 2, x + s / 2, y);
+        c.quadraticCurveTo(x + s / 2, y + s / 2, x, y + s / 2);
+        c.quadraticCurveTo(x - s / 2, y + s / 2, x - s / 2, y);
+        c.quadraticCurveTo(x - s / 2, y - s / 2, x, y - s / 2);
+        c.stroke();
+      }
+    c.fillStyle = "#1f3596";
+    c.fillRect(34, h * 0.36, w - 68, 70);
+    c.strokeStyle = "#e2be70";
+    c.strokeRect(34, h * 0.36, w - 68, 70);
+    center(c, "LEGACY", w / 2, h * 0.36 + 34, `700 20px ${serif}`, "#e2be70");
+    center(c, "ROYAL COLLECTION", w / 2, h * 0.36 + 54, `600 9px ${serif}`, "#e2be70");
+  });
+  // Lattafa Badee Al Oud, Honor & Glory: white, a gold diamond frame and the name in Arabic and English
+  const honor = label(160, 208, (c, w, h) => {
+    c.fillStyle = "#f4f2ee";
+    c.fillRect(0, 0, w, h);
+    c.strokeStyle = "#b99a5a";
+    c.lineWidth = 2;
+    c.strokeRect(12, 12, w - 24, h - 24);
     c.beginPath();
-    c.moveTo(w / 2, 50);
-    c.lineTo(w - 30, h / 2);
-    c.lineTo(w / 2, h - 40);
-    c.lineTo(30, h / 2);
+    c.moveTo(w / 2, 26);
+    c.lineTo(w - 22, h / 2);
+    c.lineTo(w / 2, h - 26);
+    c.lineTo(22, h / 2);
     c.closePath();
     c.stroke();
+    center(c, "بديع العود", w / 2, h / 2 - 6, `700 18px ${serif}`, "#2a2a2a");
+    center(c, "BADEE AL OUD", w / 2, h / 2 + 16, `700 11px ${serif}`, "#2a2a2a");
+    c.fillStyle = "#c7a457";
+    c.fillRect(30, h - 46, w - 60, 18);
+    center(c, "HONOR & GLORY", w / 2, h - 33, `700 10px ${serif}`, "#fff");
   });
-  const ninePm = label(128, 256, (c, w, h) => {
-    c.fillStyle = "#151517";
-    c.fillRect(0, 0, w, h);
-    for (let i = 0; i < 600; i++) {
-      c.fillStyle = `rgba(255,255,255,${rand() * 0.08})`;
-      c.fillRect(rand() * w, rand() * h, 2, 2);
-    }
-    c.fillStyle = "#c9a54d";
-    c.font = "700 120px Georgia, serif";
-    c.textAlign = "center";
-    c.fillText("9", w / 2, 150);
-    c.font = "600 28px Georgia, serif";
-    c.fillText("pm", w / 2 + 6, 186);
-  });
-  const youFace = label(128, 160, (c, w, h) => {
+  // Riiffs Momento: gold lettering on black
+  const momento = label(128, 128, (c, w, h) => {
     c.clearRect(0, 0, w, h);
-    c.fillStyle = "rgba(255,240,215,0.85)";
-    c.font = "300 54px Georgia, serif";
-    c.textAlign = "center";
-    c.fillText("YOU", w / 2, h / 2 + 18);
+    center(c, "MOMENTO", w / 2, 56, `600 19px ${serif}`, "#d8b768");
+    center(c, "EXTRAIT DE PARFUM", w / 2, 74, `500 8px ${serif}`, "#b89a58");
+    center(c, "RIIFFS", w / 2, 106, `700 12px ${serif}`, "#d8b768");
   });
-  const marwa = label(96, 128, (c, w, h) => {
-    c.fillStyle = "#e9dcc4";
-    c.beginPath();
-    c.roundRect(4, 4, w - 8, h - 8, 10);
-    c.fill();
-    c.fillStyle = "#4a3a28";
-    c.textAlign = "center";
-    c.font = "600 22px Georgia, serif";
-    c.fillText("مروة", w / 2, 52);
-    c.font = "600 16px Georgia, serif";
-    c.fillText("MARWA", w / 2, 84);
-  });
-  const lion = label(128, 160, (c, w, h) => {
-    c.fillStyle = "#141414";
+  // Afnan 9pm Night Out: black crocodile leather, a gold 9 and "pm"
+  const ninePm = label(160, 320, (c, w, h) => {
+    c.fillStyle = "#141416";
     c.fillRect(0, 0, w, h);
-    c.strokeStyle = "#b8924a";
-    c.lineWidth = 3;
-    c.strokeRect(14, 14, w - 28, h - 28);
-    // a lion's mane: a ring of strokes around a face
-    for (let k = 0; k < 22; k++) {
-      const a = (k / 22) * Math.PI * 2;
+    // the croc scales: irregular cells with lighter edges
+    c.strokeStyle = "rgba(120,120,125,0.35)";
+    c.lineWidth = 1.5;
+    for (let y = 0; y < h; y += 16)
+      for (let x = (y / 16) % 2 ? 9 : 0; x < w; x += 18) {
+        c.beginPath();
+        c.roundRect(x + rand() * 2, y + rand() * 2, 14 + rand() * 4, 12 + rand() * 3, 4);
+        c.stroke();
+      }
+    const goldGrad = c.createLinearGradient(0, 80, 0, 230);
+    goldGrad.addColorStop(0, "#f0d98e");
+    goldGrad.addColorStop(1, "#a9822e");
+    c.font = `700 170px ${serif}`;
+    c.fillStyle = goldGrad;
+    c.textAlign = "center";
+    c.fillText("9", w / 2 + 6, 220);
+    center(c, "pm", w / 2 - 22, 200, `700 30px ${serif}`, "#e3c56f");
+    center(c, "Night Out", w / 2, 256, `italic 600 20px ${serif}`, "#e3c56f");
+    center(c, "AFNAN", w / 2, h - 20, `700 13px ${serif}`, "#bfa25a");
+  });
+  // Bujairami Sydney: mirrored rose gold, the harbour skyline etched darker
+  const bujairami = label(160, 192, (c, w, h) => {
+    c.clearRect(0, 0, w, h);
+    center(c, "BUJAIRAMI", w / 2, 40, `700 16px ${serif}`, "#4a2a18");
+    center(c, "SYDNEY", w / 2, 60, `600 12px ${serif}`, "#4a2a18");
+    c.fillStyle = "rgba(70,38,20,0.6)";
+    // the opera house sails and the bridge
+    for (let i = 0; i < 4; i++) {
       c.beginPath();
-      c.moveTo(w / 2 + Math.cos(a) * 16, h / 2 + Math.sin(a) * 16);
-      c.lineTo(w / 2 + Math.cos(a) * 34, h / 2 + Math.sin(a) * 34);
+      c.moveTo(40 + i * 14, 150);
+      c.quadraticCurveTo(48 + i * 14, 112, 64 + i * 14, 108);
+      c.lineTo(58 + i * 14, 150);
+      c.fill();
+    }
+    c.strokeStyle = "rgba(70,38,20,0.6)";
+    c.lineWidth = 3;
+    c.beginPath();
+    c.arc(w - 40, 170, 34, Math.PI, Math.PI * 2);
+    c.stroke();
+  });
+  // French Avenue Royal Blend Sequoia: a gold diamond plaque on the red glass
+  const sequoia = label(96, 96, (c, w, h) => {
+    c.clearRect(0, 0, w, h);
+    c.fillStyle = "#c7a457";
+    c.beginPath();
+    c.moveTo(w / 2, 4);
+    c.lineTo(w - 4, h / 2);
+    c.lineTo(w / 2, h - 4);
+    c.lineTo(4, h / 2);
+    c.closePath();
+    c.fill();
+    center(c, "ROYAL", w / 2, h / 2 - 8, `700 11px ${serif}`, "#2a1a10");
+    center(c, "BLEND", w / 2, h / 2 + 5, `700 11px ${serif}`, "#2a1a10");
+    center(c, "SEQUOIA", w / 2, h / 2 + 18, `600 8px ${serif}`, "#2a1a10");
+  });
+  // Emporio Armani Stronger With You Intensely, printed on the glass
+  const youFace = label(160, 160, (c, w, h) => {
+    c.clearRect(0, 0, w, h);
+    center(c, "STRONGER WITH", w / 2, 50, `500 12px ${serif}`, "rgba(255,244,225,0.9)");
+    center(c, "YOU", w / 2, 100, `300 52px ${serif}`, "rgba(255,244,225,0.95)");
+    center(c, "INTENSELY", w / 2, 124, `500 12px ${serif}`, "rgba(255,244,225,0.9)");
+  });
+  // Riiffs Taif: a round gold plaque with the name
+  const taif = label(96, 96, (c, w, h) => {
+    c.clearRect(0, 0, w, h);
+    c.fillStyle = "#d9c08a";
+    c.beginPath();
+    c.arc(w / 2, h / 2, w / 2 - 3, 0, Math.PI * 2);
+    c.fill();
+    c.strokeStyle = "#a88a4c";
+    c.lineWidth = 3;
+    c.stroke();
+    center(c, "طائف", w / 2, h / 2 + 2, `700 20px ${serif}`, "#3a2a14");
+    center(c, "TAIF", w / 2, h / 2 + 22, `700 12px ${serif}`, "#3a2a14");
+  });
+  // Armaf Odyssey Homme: white type on the black body
+  const odyssey = label(128, 128, (c, w, h) => {
+    c.clearRect(0, 0, w, h);
+    center(c, "ODYSSEY", w / 2, 54, `500 17px ${serif}`, "#e9e9e9");
+    center(c, "HOMME", w / 2, 76, `500 17px ${serif}`, "#e9e9e9");
+    center(c, "EAU DE PARFUM", w / 2, 98, `500 8px ${serif}`, "#bbbbbb");
+  });
+  // Arabiyat Prestige Marwa: a pale label on the silver gem
+  const marwa = label(112, 144, (c, w, h) => {
+    c.fillStyle = "#ece3d2";
+    c.beginPath();
+    c.roundRect(4, 4, w - 8, h - 8, 12);
+    c.fill();
+    center(c, "مروة", w / 2, 52, `700 26px ${serif}`, "#3c2e20");
+    center(c, "MARWA", w / 2, 82, `700 17px ${serif}`, "#3c2e20");
+    center(c, "ARABIYAT", w / 2, 106, `600 10px ${serif}`, "#3c2e20");
+    center(c, "PRESTIGE", w / 2, 120, `500 8px ${serif}`, "#3c2e20");
+  });
+  // Rayhaan's lion: a roaring bronze lion's head in a frame, on black
+  const lion = label(192, 224, (c, w, h) => {
+    c.fillStyle = "#121212";
+    c.fillRect(0, 0, w, h);
+    c.strokeStyle = "#a07d43";
+    c.lineWidth = 4;
+    c.beginPath();
+    c.roundRect(14, 14, w - 28, h - 56, 18);
+    c.stroke();
+    const cx = w / 2;
+    const cy = (h - 42) / 2 + 4;
+    // the mane: flames of bronze around the head
+    for (let k = 0; k < 30; k++) {
+      const a = (k / 30) * Math.PI * 2;
+      const r1 = 26;
+      const r2 = 50 + rand() * 12;
+      const grad = c.createLinearGradient(cx, cy, cx + Math.cos(a) * r2, cy + Math.sin(a) * r2);
+      grad.addColorStop(0, "#d4a95e");
+      grad.addColorStop(1, "#5e4320");
+      c.strokeStyle = grad;
+      c.lineWidth = 6;
+      c.beginPath();
+      c.moveTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1);
+      c.quadraticCurveTo(cx + Math.cos(a + 0.2) * (r1 + r2) / 2, cy + Math.sin(a + 0.2) * (r1 + r2) / 2, cx + Math.cos(a + 0.12) * r2, cy + Math.sin(a + 0.12) * r2);
       c.stroke();
     }
-    c.fillStyle = "#b8924a";
+    c.fillStyle = "#b8904c";
     c.beginPath();
-    c.arc(w / 2, h / 2, 13, 0, Math.PI * 2);
+    c.ellipse(cx, cy + 4, 26, 30, 0, 0, Math.PI * 2);
     c.fill();
+    c.fillStyle = "#2a1c0c";
+    for (const s of [-1, 1]) {
+      c.beginPath();
+      c.ellipse(cx + s * 10, cy - 6, 4, 2.5, s * 0.3, 0, Math.PI * 2);
+      c.fill();
+    }
+    // the open, roaring mouth
+    c.beginPath();
+    c.ellipse(cx, cy + 20, 10, 8, 0, 0, Math.PI * 2);
+    c.fill();
+    center(c, "RAYHAAN", w / 2, h - 16, `700 16px ${serif}`, "#a07d43");
   });
-  const espagnol = label(96, 96, (c, w, h) => {
-    c.fillStyle = "#f3f1ec";
-    c.fillRect(0, 0, w, h);
-    c.fillStyle = "#2a2a2a";
-    c.font = "italic 16px Georgia, serif";
-    c.textAlign = "center";
-    c.fillText("L'Espagnol", w / 2, h / 2 + 5);
-  });
+  // the diagonal grooves cut into Khamrah's crystal cap
   const etched = label(128, 128, (c, w, h) => {
     c.clearRect(0, 0, w, h);
-    c.strokeStyle = "rgba(255,255,255,0.55)";
+    c.strokeStyle = "rgba(255,255,255,0.6)";
     c.lineWidth = 3;
-    for (let y = 10; y < h; y += 16) {
+    for (let i = -h; i < w; i += 14) {
       c.beginPath();
-      for (let x = 0; x <= w; x += 8) c.lineTo(x, y + Math.sin(x * 0.12) * 5);
+      c.moveTo(i, h);
+      c.lineTo(i + h, 0);
       c.stroke();
     }
   });
 
-  const gold = metal("#c9a24a", 0.28);
-  const silver = metal("#c8ccd2", 0.22);
-  const blackCap = matte("#121212", 0.35);
-  const copper = metal("#b26a3c", 0.3);
+  const gold = metal("#d2ab55", 0.22);
+  const silver = metal("#c8ccd2", 0.18);
+  const gunmetal = metal("#4a4c52", 0.25);
+  const copper = metal("#b8724a", 0.26);
+  const blackCap = lacquer("#121212", 0.3, 0);
+  const pewter = metal("#55565c", 0.45);
 
-  /** rows from the front (0, on the riser's base) to the back (3, the top step), left to right */
+  /** Taif's gold octopus: tentacles curling down and around the round body from under the cap */
+  const tentacles = (g: THREE.Group, w: number, h: number) => {
+    // a gold crown under the cap where the tentacles meet
+    add(g, new THREE.SphereGeometry(w * 0.3, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2), gold, 0, h - 0.002, 0, false);
+    for (let i = 0; i < 6; i++) {
+      const a0 = (i / 6) * Math.PI * 2 + 0.3;
+      const dir = i % 2 ? 1 : -1;
+      const pts: THREE.Vector3[] = [];
+      for (let k = 0; k <= 14; k++) {
+        const t = k / 14;
+        // each one sweeps half way round the bottle as it comes down, then curls at the tip
+        const a = a0 + dir * (t * 2.2 + (t > 0.8 ? (t - 0.8) * 6 : 0));
+        const r = w / 2 + 0.0035 - (t > 0.85 ? (t - 0.85) * 0.03 : 0);
+        pts.push(new THREE.Vector3(Math.cos(a) * r, h * (1 - t * 0.8), Math.sin(a) * r));
+      }
+      const tube = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 48, 0.0034, 8, false);
+      add(g, tube, gold, 0, 0, 0, false);
+    }
+  };
+
+  /** rows from the front (0, the riser's lowest step) to the back (3, the top step), left to right */
+  const X = [-0.172, -0.086, 0, 0.086, 0.172];
   const ROWS: Bottle[][] = [
     [
-      { x: -0.15, shape: "rect", w: 0.066, h: 0.085, d: 0.034, body: glass("#e9d7b0", 0.55), juice: "#c88a3a", cap: { kind: "cyl", r: 0.013, h: 0.028, m: blackCap }, face: { tex: youFace, w: 0.05, h: 0.06 } },
-      { x: -0.065, shape: "round", w: 0.05, h: 0.085, d: 0.05, body: glass("#f1e2a0", 0.6), juice: "#d9b64a", cap: { kind: "ball", r: 0.02, m: matte("#ece7dc", 0.5) } },
-      { x: 0.025, shape: "round", w: 0.054, h: 0.09, d: 0.054, body: matte("#131314", 0.6), cap: { kind: "cyl", r: 0.027, h: 0.034, m: matte("#0e0e0e", 0.4) } },
-      { x: 0.105, shape: "gem", w: 0.062, h: 0.1, d: 0.05, body: glass("#d8dce2", 0.7), cap: { kind: "gem", r: 0.016, m: silver }, face: { tex: marwa, w: 0.034, h: 0.044, at: 0.45 } },
-      { x: 0.18, shape: "box", w: 0.052, h: 0.072, d: 0.05, body: matte("#141414", 0.5), face: { tex: lion, w: 0.048, h: 0.06 } },
+      { name: "Emporio Armani Stronger With You Intensely", x: X[0], shape: "rect", w: 0.068, h: 0.082, d: 0.036, body: glass("#f7efe2", 0.28), juice: "#5e2806", fill: 0.84, cap: { kind: "ball", r: 0.015, m: gunmetal }, face: { tex: youFace, w: 0.058, h: 0.058 } },
+      { name: "Riiffs Taif", x: X[1], shape: "round", w: 0.052, h: 0.086, d: 0.052, body: glass("#faf3d6", 0.28), juice: "#a87c0c", fill: 0.86, cap: { kind: "ball", r: 0.019, m: matte("#f1ede4", 0.45), neck: gold }, face: { tex: taif, w: 0.026, h: 0.026, at: 0.32 }, extra: (g) => tentacles(g, 0.052, 0.086) },
+      { name: "Armaf Odyssey Homme", x: X[2], shape: "round", w: 0.06, h: 0.088, d: 0.06, body: lacquer("#151517", 0.25, 0.2), cap: { kind: "cyl", r: 0.029, h: 0.034, m: lacquer("#0e0e10", 0.35, 0.2) }, face: { tex: odyssey, w: 0.044, h: 0.044, at: 0.42 } },
+      { name: "Arabiyat Prestige Marwa", x: X[3], shape: "gem", w: 0.062, h: 0.1, d: 0.046, body: cutMetal("#b9bdc4", 0.16), cap: { kind: "gem", r: 0.019, m: cutMetal("#c9ccd2", 0.14) }, face: { tex: marwa, w: 0.03, h: 0.038, at: 0.42 } },
+      { name: "Rayhaan (lion)", x: X[4], shape: "box", w: 0.058, h: 0.072, d: 0.05, body: lacquer("#121212", 0.4, 0), cap: { kind: "cyl", r: 0.016, h: 0.024, m: blackCap }, face: { tex: lion, w: 0.054, h: 0.064 } },
     ],
     [
-      { x: -0.14, shape: "rect", w: 0.06, h: 0.085, d: 0.04, body: matte("#f0eee8", 0.35), cap: { kind: "square", s: 0.032, h: 0.026, m: matte("#f0eee8", 0.35) }, face: { tex: honor, w: 0.05, h: 0.068 } },
-      { x: -0.055, shape: "round", w: 0.052, h: 0.09, d: 0.052, body: matte("#141414", 0.4), cap: { kind: "ornate", r: 0.022, m: gold } },
-      { x: 0.035, shape: "rect", w: 0.056, h: 0.11, d: 0.036, body: matte("#151517", 0.5), cap: { kind: "ball", r: 0.02, m: matte("#2a2a2c", 0.3) }, face: { tex: ninePm, w: 0.05, h: 0.1 } },
-      { x: 0.115, shape: "rect", w: 0.055, h: 0.075, d: 0.036, body: glass("#c99a52", 0.7), juice: "#b8742e", cap: { kind: "fan", m: metal("#b8562e", 0.3) } },
-      { x: 0.185, shape: "round", w: 0.05, h: 0.1, d: 0.05, body: glass("#5a1018", 0.85), cap: { kind: "cyl", r: 0.016, h: 0.026, m: blackCap } },
+      { name: "Lattafa Badee Al Oud Honor & Glory", x: X[0], shape: "rect", w: 0.062, h: 0.088, d: 0.04, body: lacquer("#f2f0eb", 0.3, 0), cap: { kind: "square", s: 0.034, h: 0.028, m: lacquer("#f2f0eb", 0.3, 0), top: gold }, face: { tex: honor, w: 0.054, h: 0.07 } },
+      { name: "Riiffs Momento", x: X[1], shape: "round", w: 0.052, h: 0.09, d: 0.052, body: lacquer("#121214", 0.25, 0.1), cap: { kind: "monogram", r: 0.022, m: gold }, face: { tex: momento, w: 0.04, h: 0.04, at: 0.55 }, extra: (g) => {
+        // the knurled gold foot
+        add(g, new THREE.CylinderGeometry(0.0268, 0.0268, 0.012, 40), gold, 0, 0.006, 0, false);
+      } },
+      { name: "Afnan 9pm Night Out", x: X[2], shape: "rect", w: 0.06, h: 0.118, d: 0.036, body: printed(ninePm, 0.5), cap: { kind: "ball", r: 0.021, m: pewter } },
+      { name: "Bujairami Sydney", x: X[3], shape: "rect", w: 0.058, h: 0.078, d: 0.034, body: lacquer("#c99071", 0.18, 1), cap: { kind: "fan", m: copper }, face: { tex: bujairami, w: 0.05, h: 0.06 } },
+      { name: "French Avenue Royal Blend Sequoia", x: X[4], shape: "faceted", w: 0.058, h: 0.112, d: 0.058, body: cutGlass("#5c0d16", 0.88), juice: "#3a060c", fill: 0.85, cap: { kind: "faceted", r: 0.02, h: 0.02, m: cutGlass("#2a0609", 0.95) }, face: { tex: sequoia, w: 0.024, h: 0.024, at: 0.3 } },
     ],
     [
-      { x: -0.155, shape: "rect", w: 0.06, h: 0.065, d: 0.05, body: glass("#e8eef2", 0.45), cap: { kind: "square", s: 0.03, h: 0.022, m: glass("#e8eef2", 0.6) }, face: { tex: etched, w: 0.056, h: 0.06 } },
-      { x: -0.08, shape: "rect", w: 0.06, h: 0.1, d: 0.036, body: printed(speckle, 0.5), cap: { kind: "ring", r: 0.018, m: blackCap } },
-      { x: 0.0, shape: "round", w: 0.058, h: 0.09, d: 0.058, body: printed(vFace, 0.35), cap: { kind: "cyl", r: 0.02, h: 0.03, m: blackCap } },
-      { x: 0.07, shape: "rect", w: 0.05, h: 0.09, d: 0.04, body: glass("#2a2c30", 0.9), cap: { kind: "cyl", r: 0.017, h: 0.03, m: blackCap } },
-      { x: 0.14, shape: "round", w: 0.046, h: 0.12, d: 0.046, body: printed(navyGold, 0.3), cap: { kind: "cyl", r: 0.02, h: 0.036, m: gold } },
+      { name: "Lattafa Khamrah Qahwa", x: X[0], shape: "rect", w: 0.064, h: 0.058, d: 0.05, body: glass("#3a2418", 0.9), cap: { kind: "crystal", w: 0.06, h: 0.042, d: 0.048 }, face: { tex: khamrah, w: 0.05, h: 0.035, at: 0.5 } },
+      { name: "Legacy · Collector Edition (speckled)", x: X[1], shape: "rect", w: 0.06, h: 0.1, d: 0.036, body: printed(speckle, 0.55), cap: { kind: "ring", r: 0.017, m: blackCap } },
+      { name: "Paco Rabanne Invictus Victory Elixir", x: X[2], shape: "trophy", w: 0.06, h: 0.1, d: 0.06, body: lacquer("#101012", 0.22, 0.3), face: { tex: vFace, w: 0.034, h: 0.034, at: 0.52 } },
+      { name: "clear bottle, sculpted black cap", x: X[3], shape: "rect", w: 0.052, h: 0.09, d: 0.036, body: glass("#eef0f2", 0.28), juice: "#cbbf98", fill: 0.62, cap: { kind: "sculpted", r: 0.017, m: blackCap }, face: { tex: clearLabel, w: 0.014, h: 0.05, at: 0.45 } },
+      { name: "Legacy Royal Collection", x: X[4], shape: "round", w: 0.046, h: 0.122, d: 0.046, body: printed(legacyBlue, 0.3), cap: { kind: "cyl", r: 0.02, h: 0.036, m: gold, ribs: 5 } },
     ],
     [
-      { x: -0.16, shape: "box", w: 0.075, h: 0.11, d: 0.045, body: matte("#f3f1ec", 0.7), face: { tex: breezeBox, w: 0.072, h: 0.106 } },
-      { x: -0.075, shape: "rect", w: 0.07, h: 0.085, d: 0.034, body: printed(sequin, 0.2), cap: { kind: "square", s: 0.034, h: 0.03, m: silver } },
-      { x: 0.0, shape: "rect", w: 0.045, h: 0.07, d: 0.034, body: glass("#e6d2b0", 0.6), juice: "#c49456", cap: { kind: "cyl", r: 0.016, h: 0.032, m: blackCap }, face: { tex: espagnol, w: 0.04, h: 0.03, at: 0.45 } },
-      { x: 0.08, shape: "shield", w: 0.07, h: 0.1, d: 0.04, body: glass("#1d2b74", 0.92), cap: { kind: "ornate", r: 0.018, m: silver } },
-      { x: 0.165, shape: "box", w: 0.07, h: 0.1, d: 0.045, body: matte("#f4f1ea", 0.7), face: { tex: radioBox, w: 0.068, h: 0.096 } },
+      { name: "Lattafa Pride Breeze", x: X[0], shape: "box", w: 0.07, h: 0.104, d: 0.042, body: lacquer("#f5f3ee", 0.35, 0), cap: { kind: "halfMoon", r: 0.022, t: 0.016, m: lacquer("#141414", 0.4, 0) }, face: { tex: breezeBox, w: 0.068, h: 0.1 } },
+      { name: "Rayhaan (silver)", x: X[1], shape: "rect", w: 0.07, h: 0.088, d: 0.038, body: printed(rayhaanSilver, 0.25), cap: { kind: "square", s: 0.03, h: 0.03, m: silver } },
+      { name: "Paris Corner Rifaaqat", x: X[2], shape: "rect", w: 0.05, h: 0.074, d: 0.05, body: glass("#f2f4f5", 0.26), juice: "#7c4814", fill: 0.42, cap: { kind: "cyl", r: 0.017, h: 0.034, m: blackCap }, face: { tex: rifaaqat, w: 0.04, h: 0.035, at: 0.62 } },
+      { name: "Mancera Instant Crush", x: X[3], shape: "rect", w: 0.052, h: 0.098, d: 0.036, body: lacquer("#d8b260", 0.16, 1), cap: { kind: "cyl", r: 0.013, h: 0.034, m: gold, ribs: 4 }, face: { tex: mancera, w: 0.036, h: 0.05, at: 0.42 } },
+      { name: "Lattafa Pride Vintage Radio", x: X[4], shape: "box", w: 0.07, h: 0.104, d: 0.042, body: lacquer("#f5f2ea", 0.35, 0), cap: { kind: "halfMoon", r: 0.024, t: 0.016, m: copper }, face: { tex: radioBox, w: 0.068, h: 0.1 } },
     ],
   ];
 
-  /** the black three-step riser and its bottles, standing on a surface at `at` (its centre) */
+  /** the black four-step riser and its bottles, standing on a surface at `at` (its centre) */
   /** returns each bottle's group, so a click on any of its meshes can spritz it */
   const perfumeShelf = (parent: THREE.Object3D, at: THREE.Vector3) => {
     const bottles: THREE.Group[] = [];
@@ -405,15 +707,6 @@ export function createDecor({ env, rand }: DecorContext) {
       add(parent, new THREE.BoxGeometry(W, LIFT[r], ROW), riser, at.x, at.y + LIFT[r] / 2, zc);
       for (const b of ROWS[r]) bottles.push(buildBottle(parent, { ...b, x: at.x + b.x }, at.y + LIFT[r], zc));
     }
-    // the copper-domed bottle standing behind the Vintage Radio box, and the black cap behind Breeze
-    const behind = new THREE.Group();
-    behind.position.set(at.x + 0.165, at.y + LIFT[3] + 0.1, zFront - 3.8 * ROW);
-    parent.add(behind);
-    putCap(behind, { kind: "dome", r: 0.024, m: copper }, 0);
-    const behind2 = new THREE.Group();
-    behind2.position.set(at.x - 0.16, at.y + LIFT[3] + 0.11, zFront - 3.8 * ROW);
-    parent.add(behind2);
-    putCap(behind2, { kind: "cyl", r: 0.022, h: 0.02, m: blackCap }, 0);
     return bottles;
   };
 
