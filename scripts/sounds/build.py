@@ -5,7 +5,10 @@ Builds the site's sound effects into public/sfx/ from two sources:
     `earshot sfx render` (no AI models needed). Used for the physical things in the room (switches,
     the speaker, the blind), the keyboard, and Ma's Garden's notes.
   - uisfx (CC0 audio; vendored in github.com/Clipwing/skills under skills/real-sfx): interface
-    sounds, for panels opening and closing, R.V Bot, trophies and the garden.
+    sounds, for R.V Bot, trophies and the garden.
+
+The perfume spray is designed in this file (spray()): earshot's micro click for the pump, then a
+steady, bright, grainy hiss of mist that thins as the pressure drops.
 
 Every sound is matched to a loudness target for its group (so nothing jumps out), its trailing
 silence trimmed, and written as a small mono MP3. A table of measurements is printed: the sounds
@@ -35,7 +38,8 @@ ROOM = {
     "room/switch": ("earshot", "toggle/rocker", {}, -24),
     "room/radio": ("earshot", "toggle/micro", {}, -25),
     "room/squeak": ("uisfx", "rubber/press", {}, -26),
-    "room/spritz": ("earshot", "swish/flick", {"dur": 0.3, "apex": 0.04}, -29),  # bright like a spray: 45% of its energy above 5 kHz
+    # neither bank has an atomiser, so it's made here: earshot's micro click for the pump, then a hiss (see spray())
+    "room/spritz": ("spray", "toggle/micro", {"seed": 7}, -28),
     "room/chime": ("uisfx", "soft/wake", {}, -25),
     "room/blind": ("earshot", "swipe/cloth", {}, -27),
 }
@@ -79,7 +83,35 @@ def run(cmd):
         sys.exit(f"failed: {' '.join(cmd)}\n{r.stderr[-2000:]}")
 
 
+def spray(click, seed):
+    """a perfume atomiser: the pump's click, then ~0.3 s of bright mist that holds, darkens a little
+    as the pressure drops, and stops quickly; a fine flutter in the level gives it the droplets"""
+    from scipy.signal import butter, sosfilt
+
+    band = lambda x, kind, f, order=4: sosfilt(butter(order, f, kind, fs=SR, output="sos"), x)
+    rng = np.random.default_rng(seed)
+    dur = 0.42
+    n = int(dur * SR)
+    t = np.arange(n) / SR
+    noise = rng.standard_normal(n)
+    bright = band(noise, "highpass", 2600) + 0.8 * band(noise, "bandpass", [6000, 10500], 2)
+    dark = band(bright, "lowpass", 7500)
+    k = np.clip((t - 0.06) / (dur - 0.06), 0, 1)
+    hiss = bright * (1 - 0.55 * k) + dark * 0.55 * k + 0.18 * band(noise, "bandpass", [900, 2200], 2)
+    flutter = band(rng.standard_normal(n), "lowpass", 45, 2)
+    hiss *= 1 + 0.126 * flutter / (np.abs(flutter).max() + 1e-9)
+    start = 0.012
+    env = np.clip((t - start) / 0.008, 0, 1) * (1 - 0.28 * np.clip((t - start) / 0.26, 0, 1))
+    env *= np.where(t < 0.30, 1, np.exp(-(t - 0.30) / 0.032))
+    out = hiss * env / np.abs(hiss * env).max()
+    click = click[: int(0.04 * SR)]
+    out[: len(click)] += 0.55 * click / (np.abs(click).max() + 1e-9)
+    return out / np.abs(out).max() * 0.89
+
+
 def render(source, sound_id, opts, earshot, uisfx, tmp):
+    if source == "spray":
+        return spray(render("earshot", sound_id, {}, earshot, uisfx, tmp), opts["seed"])
     wav = os.path.join(tmp, sound_id.replace("/", "_") + "_".join(f"{k}{v}" for k, v in opts.items()) + ".wav")
     if source == "earshot":
         cmd = [earshot, "sfx", "render", sound_id, "-o", wav, "--sr", "44100"]

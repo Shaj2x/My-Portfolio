@@ -467,9 +467,17 @@ export function createAudio(): RoomAudio {
         tone(at + 0.09, base * 1.5, 0.12, 0.1, sfx, "triangle", base * 0.9);
         burst(at, 0.05, "bandpass", 1200, 0.05, sfx, 1.5);
       } else if (kind === "spritz") {
-        // the pump's click, then a short hiss of mist
+        // the pump's click, then a steady hiss of mist that holds, eases off and stops
         burst(at, 0.01, "highpass", 3000, 0.25, sfx);
-        burst(at + 0.02, 0.22, "highpass", 6000, 0.22, sfx, 0.6);
+        const s = ctx!.createBufferSource();
+        s.buffer = noise;
+        const g = gain(0);
+        g.gain.setValueAtTime(0, at + 0.012);
+        g.gain.linearRampToValueAtTime(0.16, at + 0.02);
+        g.gain.linearRampToValueAtTime(0.115, at + 0.3);
+        g.gain.setTargetAtTime(0, at + 0.3, 0.03);
+        s.connect(filter("highpass", 2600, 0.7)).connect(g).connect(sfx);
+        s.start(at, Math.random() * 1.5, 0.45);
       } else if (kind === "chime") {
         // a gentle two-note console chime
         tone(at, midiHz(76), 0.5, 0.12, sfx, "sine");

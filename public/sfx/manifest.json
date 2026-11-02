@@ -37,12 +37,12 @@
  },
  {
   "name": "room/spritz",
-  "source": "earshot:swish/flick",
-  "dur": 0.22,
-  "lufs": -29.0,
-  "peak": -5.7,
-  "centroid_hz": 5348,
-  "bytes": 2754
+  "source": "spray:toggle/micro",
+  "dur": 0.42,
+  "lufs": -28.0,
+  "peak": -13.9,
+  "centroid_hz": 11419,
+  "bytes": 5651
  },
  {
   "name": "room/chime",
