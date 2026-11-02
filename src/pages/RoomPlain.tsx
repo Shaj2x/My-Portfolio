@@ -540,16 +540,6 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
     if (!inConsole) setGame(null);
   }, [inConsole]);
 
-  // a soft cue as a panel or card opens (or changes) and as it closes
-  const overlay = section ?? (pad ? "pad" : poster ? `poster:${poster.album}` : asking ? "bot" : keyboardOpen ? "guestbook" : null);
-  const lastOverlay = useRef(overlay);
-  useEffect(() => {
-    const was = lastOverlay.current;
-    lastOverlay.current = overlay;
-    if (overlay === was) return;
-    roomRef.current?.ui(overlay ? "open" : "close");
-  }, [overlay]);
-
   return (
     <main className="fixed inset-0 bg-[#0d0e11] text-white">
       <div ref={containerRef} className="absolute inset-0" />

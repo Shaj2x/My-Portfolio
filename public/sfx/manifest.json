@@ -63,24 +63,6 @@
   "bytes": 6374
  },
  {
-  "name": "ui/open",
-  "source": "uisfx:soft/open",
-  "dur": 0.405,
-  "lufs": -31.0,
-  "peak": -15.7,
-  "centroid_hz": 1103,
-  "bytes": 3792
- },
- {
-  "name": "ui/close",
-  "source": "uisfx:soft/close",
-  "dur": 0.421,
-  "lufs": -32.0,
-  "peak": -16.7,
-  "centroid_hz": 1009,
-  "bytes": 3689
- },
- {
   "name": "ui/send",
   "source": "uisfx:soft/send",
   "dur": 0.483,

@@ -1,7 +1,7 @@
 /*
  * The room's sound. The weather (rain on the glass, wind, distant thunder) and the little lo-fi radio
  * are synthesised live with the Web Audio API. The small sounds of things being touched (switches,
- * the speaker, the blind, the perfume, the PS5 waking) and the interface's own cues are short audio
+ * the speaker, the blind, the perfume, the PS5 waking) and a few interface cues are short audio
  * files in public/sfx (scripts/sounds/build.py); until a file has loaded, a synthesised stand-in plays.
  *
  * Browsers only allow audio after the visitor interacts, so nothing is created until
@@ -15,11 +15,11 @@ export type Outside = Weather | "storm";
 /** What the radio on the shelf is "tuned" to. Edit this to say what you actually listen to. */
 import { createSamples } from "@/lib/samples";
 
-/** the interface's own cues: a panel opening and closing, R.V Bot, saving, a trophy */
-export type UiSound = "open" | "close" | "send" | "receive" | "save" | "achievement";
+/** the interface's own cues: R.V Bot, saving a doodle, a trophy (panels open silently) */
+export type UiSound = "send" | "receive" | "save" | "achievement";
 
 const ROOM_SOUNDS = ["room/lamp", "room/switch", "room/radio", "room/squeak", "room/spritz", "room/chime", "room/blind"];
-const UI_SOUNDS = ["ui/open", "ui/close", "ui/send", "ui/receive", "ui/save", "ui/achievement"];
+const UI_SOUNDS = ["ui/send", "ui/receive", "ui/save", "ui/achievement"];
 const samples = createSamples();
 
 export const RADIO_STATION = {
