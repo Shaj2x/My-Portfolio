@@ -1,0 +1,158 @@
+"""
+Builds the site's sound effects into public/sfx/ from two sources:
+
+  - earshot (github.com/Leonxlnx/earshot, MIT): its bank of sounds made in code, rendered with
+    `earshot sfx render` (no AI models needed). Used for the physical things in the room (switches,
+    the speaker, the blind), the keyboard, and Ma's Garden's notes.
+  - uisfx (CC0 audio; vendored in github.com/Clipwing/skills under skills/real-sfx): interface
+    sounds, for panels opening and closing, R.V Bot, trophies and the garden.
+
+Every sound is matched to a loudness target for its group (so nothing jumps out), its trailing
+silence trimmed, and written as a small mono MP3. A table of measurements is printed: the sounds
+are chosen and checked by numbers, then by ear.
+
+Usage (earshot installed in a venv, both repos cloned):
+  python scripts/sounds/build.py --earshot PATH/TO/earshot --uisfx PATH/TO/uisfx --out public/sfx
+"""
+
+import argparse
+import json
+import os
+import subprocess
+import sys
+import tempfile
+
+import numpy as np
+import pyloudnorm
+import soundfile as sf
+
+SR = 44100
+
+# name -> (source, id, options, loudness target in LUFS). Chosen by what physically happens:
+# a rocker switch is a rocker switch, a fabric blind is cloth, a PS5 waking is a soft "wake" cue.
+ROOM = {
+    "room/lamp": ("earshot", "fit/snap/switch_flip", {}, -24),
+    "room/switch": ("earshot", "toggle/rocker", {}, -24),
+    "room/radio": ("earshot", "toggle/micro", {}, -25),
+    "room/squeak": ("uisfx", "rubber/press", {}, -26),
+    "room/spritz": ("earshot", "swish/flick", {"dur": 0.3, "apex": 0.04}, -29),  # bright like a spray: 45% of its energy above 5 kHz
+    "room/chime": ("uisfx", "soft/wake", {}, -25),
+    "room/blind": ("earshot", "swipe/cloth", {}, -27),
+}
+UI = {
+    "ui/open": ("uisfx", "soft/open", {}, -31),
+    "ui/close": ("uisfx", "soft/close", {}, -32),
+    "ui/send": ("uisfx", "soft/send", {}, -29),
+    "ui/receive": ("uisfx", "soft/receive", {}, -29),
+    "ui/save": ("uisfx", "soft/complete", {}, -28),
+    "ui/achievement": ("uisfx", "soft/achievement", {}, -25),
+}
+# three takes per key so a run of typing never repeats exactly
+KEYS = {}
+for profile, sound in {"creamy": "fit/key/lubed", "thocky": "fit/key/thock", "clacky": "typing_key/clicky"}.items():
+    for take in range(3):
+        KEYS[f"keys/{profile}-{take}"] = ("earshot", sound, {"seed": 11 + take}, -27)
+KEYS["keys/space"] = ("earshot", "fit/key.space/thock_space", {}, -27)
+# Ma's Garden: a marimba note per step of the cascade (C major pentatonic, as the game was tuned),
+# glockenspiel for the stars, dreamy interface cues for the rest
+GARDEN = {}
+for note in ["C5", "D5", "E5", "G5", "A5", "C6", "D6", "E6", "G6"]:
+    GARDEN[f"garden/pop-{note}"] = ("earshot", "mallet/marimba", {"pitch": note}, -22)
+for note in ["G5", "C6", "E6"]:
+    GARDEN[f"garden/star-{note}"] = ("earshot", "mallet/glock", {"pitch": note}, -22)
+GARDEN.update({
+    "garden/swap": ("uisfx", "dreamy/swipe", {}, -25),
+    "garden/bump": ("uisfx", "dreamy/invalid-drop", {}, -25),
+    "garden/special": ("earshot", "mallet/flourish", {}, -22),
+    "garden/stripe": ("earshot", "whoosh_fast/tight", {}, -24),
+    "garden/blast": ("earshot", "pro_pop_in/deep", {}, -21),
+    "garden/blossom": ("earshot", "pro_shimmer/m3", {}, -23),
+    "garden/acorn": ("earshot", "mallet/up4", {}, -22),
+    "garden/win": ("uisfx", "dreamy/level-up", {}, -20),
+    "garden/lose": ("uisfx", "dreamy/cancel", {}, -23),
+    "garden/tap": ("uisfx", "dreamy/select", {}, -28),
+})
+ALL = {**ROOM, **UI, **KEYS, **GARDEN}
+
+
+def run(cmd):
+    r = subprocess.run(cmd, capture_output=True, text=True)
+    if r.returncode:
+        sys.exit(f"failed: {' '.join(cmd)}\n{r.stderr[-2000:]}")
+
+
+def render(source, sound_id, opts, earshot, uisfx, tmp):
+    wav = os.path.join(tmp, sound_id.replace("/", "_") + "_".join(f"{k}{v}" for k, v in opts.items()) + ".wav")
+    if source == "earshot":
+        cmd = [earshot, "sfx", "render", sound_id, "-o", wav, "--sr", "44100"]
+        for k, v in opts.items():
+            cmd += [f"--{k}", str(v)]
+        run(cmd)
+    else:
+        run(["ffmpeg", "-y", "-loglevel", "error", "-i", os.path.join(uisfx, "sounds", sound_id + ".mp3"), "-ac", "1", "-ar", str(SR), wav])
+    x, sr = sf.read(wav, always_2d=True)
+    x = x.mean(axis=1)
+    if sr != SR:
+        import soxr
+
+        x = soxr.resample(x, sr, SR)
+    return x
+
+
+def trim(x, floor_db=-60):
+    """drop the leading and trailing near-silence, with a short fade so nothing clicks"""
+    env = np.abs(x)
+    above = np.where(env > 10 ** (floor_db / 20) * env.max())[0]
+    if not len(above):
+        return x
+    x = x[max(0, above[0] - int(0.002 * SR)) : min(len(x), above[-1] + int(0.03 * SR))].copy()
+    fade = min(len(x) // 4, int(0.01 * SR))
+    x[-fade:] *= np.linspace(1, 0, fade)
+    return x
+
+
+def loudness(x, meter):
+    # short sounds are measured padded to the meter's 400 ms window
+    pad = np.concatenate([x, np.zeros(max(0, int(0.6 * SR) - len(x)))])
+    return meter.integrated_loudness(pad)
+
+
+def centroid(x):
+    spec = np.abs(np.fft.rfft(x * np.hanning(len(x))))
+    freqs = np.fft.rfftfreq(len(x), 1 / SR)
+    return float((spec * freqs).sum() / max(spec.sum(), 1e-9))
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--earshot", required=True)
+    ap.add_argument("--uisfx", required=True)
+    ap.add_argument("--out", required=True)
+    a = ap.parse_args()
+    meter = pyloudnorm.Meter(SR)
+    rows = []
+    with tempfile.TemporaryDirectory() as tmp:
+        for name, (source, sound_id, opts, target) in ALL.items():
+            x = trim(render(source, sound_id, opts, a.earshot, a.uisfx, tmp))
+            gain = 10 ** ((target - loudness(x, meter)) / 20)
+            x = x * gain
+            peak = 20 * np.log10(np.abs(x).max() + 1e-12)
+            if peak > -1:  # never clip: give up loudness first
+                x *= 10 ** ((-1 - peak) / 20)
+            path = os.path.join(a.out, name + ".mp3")
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            wav = os.path.join(tmp, "out.wav")
+            sf.write(wav, x, SR, subtype="PCM_16")
+            run(["ffmpeg", "-y", "-loglevel", "error", "-i", wav, "-c:a", "libmp3lame", "-q:a", "5", "-ac", "1", path])
+            rows.append(dict(name=name, source=f"{source}:{sound_id}", dur=round(len(x) / SR, 3), lufs=round(loudness(x, meter), 1),
+                             peak=round(20 * np.log10(np.abs(x).max() + 1e-12), 1), centroid_hz=round(centroid(x)), bytes=os.path.getsize(path)))
+    print(f"{'name':24} {'source':38} {'dur':>6} {'LUFS':>6} {'peak':>6} {'bright':>7} {'KB':>5}")
+    for r in rows:
+        print(f"{r['name']:24} {r['source']:38} {r['dur']:6.2f} {r['lufs']:6.1f} {r['peak']:6.1f} {r['centroid_hz']:7d} {r['bytes'] / 1024:5.1f}")
+    with open(os.path.join(a.out, "manifest.json"), "w") as f:
+        json.dump(rows, f, indent=1)
+    print(f"\n{len(rows)} sounds, {sum(r['bytes'] for r in rows) / 1024:.0f} KB")
+
+
+if __name__ == "__main__":
+    main()

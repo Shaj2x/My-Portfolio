@@ -540,6 +540,16 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
     if (!inConsole) setGame(null);
   }, [inConsole]);
 
+  // a soft cue as a panel or card opens (or changes) and as it closes
+  const overlay = section ?? (pad ? "pad" : poster ? `poster:${poster.album}` : asking ? "bot" : keyboardOpen ? "guestbook" : null);
+  const lastOverlay = useRef(overlay);
+  useEffect(() => {
+    const was = lastOverlay.current;
+    lastOverlay.current = overlay;
+    if (overlay === was) return;
+    roomRef.current?.ui(overlay ? "open" : "close");
+  }, [overlay]);
+
   return (
     <main className="fixed inset-0 bg-[#0d0e11] text-white">
       <div ref={containerRef} className="absolute inset-0" />
@@ -663,6 +673,7 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
             base={pad}
             onClose={() => setPad(null)}
             onSave={(doodle) => {
+              roomRef.current?.ui("save");
               roomRef.current?.whiteboard.setDoodle(doodle);
               setPad(null);
             }}
@@ -671,7 +682,7 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
       )}</AnimatePresence>
       <AnimatePresence>{asking && !away && (
         <motion.div key="ask" {...fade} className="pointer-events-auto absolute inset-0 z-20 flex items-end justify-center bg-black/35 p-3 sm:items-center" onPointerDown={(e) => e.target === e.currentTarget && setAsking(false)}>
-          <AskMe onClose={() => setAsking(false)} pagesInNewTab />
+          <AskMe onClose={() => setAsking(false)} pagesInNewTab onSound={(kind) => roomRef.current?.ui(kind)} />
         </motion.div>
       )}</AnimatePresence>
       <AnimatePresence>{poster && !away && (

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
+import { createSamples } from "@/lib/samples";
 import { addNote, listNotes, NAME_LIMIT, NOTE_LIMIT, type VisitorNote } from "./visitorNotes";
 
 /*
@@ -34,6 +35,12 @@ const SOUND_PROFILES = {
 } as const;
 type SoundProfile = keyof typeof SOUND_PROFILES;
 
+// recorded key sounds (public/sfx/keys, from earshot's bank): three takes per switch type, so a
+// run of typing never repeats exactly, and the spacebar's own deeper thock
+const KEY_TAKES = 3;
+const keyFiles = (profile: SoundProfile) => Array.from({ length: KEY_TAKES }, (_, i) => `keys/${profile.toLowerCase()}-${i}`);
+const keySamples = createSamples();
+
 const useKeySound = (muted: boolean, profile: SoundProfile, volume: number) => {
   const ctx = useRef<AudioContext | null>(null);
   const burst = useRef<AudioBuffer | null>(null);
@@ -44,6 +51,11 @@ const useKeySound = (muted: boolean, profile: SoundProfile, volume: number) => {
       if (!AC) return;
       const c = (ctx.current ??= new AC());
       if (c.state === "suspended") void c.resume();
+      void keySamples.preload(c, [...keyFiles(profile), "keys/space"]);
+      // a release is the same key coming back up: quieter and a touch higher
+      const file = weight >= 3 ? "keys/space" : keyFiles(profile)[Math.floor(Math.random() * KEY_TAKES)];
+      if (keySamples.play(c, c.destination, file, { gain: volume * (release ? 0.3 : 1), rate: release ? 1.18 : 1, vary: 0.03 })) return;
+      // not loaded yet (or offline): the synthesised key below
       if (!burst.current) {
         // a few milliseconds of noise with a fast decay: the impulse of plastic meeting plastic
         const len = Math.floor(c.sampleRate * 0.012);

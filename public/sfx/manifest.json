@@ -1,0 +1,407 @@
+[
+ {
+  "name": "room/lamp",
+  "source": "earshot:fit/snap/switch_flip",
+  "dur": 0.141,
+  "lufs": -24.7,
+  "peak": -1.0,
+  "centroid_hz": 9379,
+  "bytes": 3043
+ },
+ {
+  "name": "room/switch",
+  "source": "earshot:toggle/rocker",
+  "dur": 0.215,
+  "lufs": -24.0,
+  "peak": -2.8,
+  "centroid_hz": 4065,
+  "bytes": 2781
+ },
+ {
+  "name": "room/radio",
+  "source": "earshot:toggle/micro",
+  "dur": 0.096,
+  "lufs": -29.3,
+  "peak": -1.0,
+  "centroid_hz": 7448,
+  "bytes": 1949
+ },
+ {
+  "name": "room/squeak",
+  "source": "uisfx:rubber/press",
+  "dur": 0.142,
+  "lufs": -26.0,
+  "peak": -7.6,
+  "centroid_hz": 1579,
+  "bytes": 1894
+ },
+ {
+  "name": "room/spritz",
+  "source": "earshot:swish/flick",
+  "dur": 0.22,
+  "lufs": -29.0,
+  "peak": -5.7,
+  "centroid_hz": 5348,
+  "bytes": 2754
+ },
+ {
+  "name": "room/chime",
+  "source": "uisfx:soft/wake",
+  "dur": 0.534,
+  "lufs": -25.0,
+  "peak": -10.7,
+  "centroid_hz": 1004,
+  "bytes": 4808
+ },
+ {
+  "name": "room/blind",
+  "source": "earshot:swipe/cloth",
+  "dur": 0.649,
+  "lufs": -27.0,
+  "peak": -8.4,
+  "centroid_hz": 2690,
+  "bytes": 6374
+ },
+ {
+  "name": "ui/open",
+  "source": "uisfx:soft/open",
+  "dur": 0.405,
+  "lufs": -31.0,
+  "peak": -15.7,
+  "centroid_hz": 1103,
+  "bytes": 3792
+ },
+ {
+  "name": "ui/close",
+  "source": "uisfx:soft/close",
+  "dur": 0.421,
+  "lufs": -32.0,
+  "peak": -16.7,
+  "centroid_hz": 1009,
+  "bytes": 3689
+ },
+ {
+  "name": "ui/send",
+  "source": "uisfx:soft/send",
+  "dur": 0.483,
+  "lufs": -29.0,
+  "peak": -15.2,
+  "centroid_hz": 1736,
+  "bytes": 4471
+ },
+ {
+  "name": "ui/receive",
+  "source": "uisfx:soft/receive",
+  "dur": 0.564,
+  "lufs": -29.0,
+  "peak": -15.9,
+  "centroid_hz": 1497,
+  "bytes": 4885
+ },
+ {
+  "name": "ui/save",
+  "source": "uisfx:soft/complete",
+  "dur": 0.923,
+  "lufs": -28.0,
+  "peak": -16.8,
+  "centroid_hz": 1214,
+  "bytes": 6575
+ },
+ {
+  "name": "ui/achievement",
+  "source": "uisfx:soft/achievement",
+  "dur": 1.369,
+  "lufs": -25.0,
+  "peak": -14.3,
+  "centroid_hz": 1334,
+  "bytes": 10603
+ },
+ {
+  "name": "keys/creamy-0",
+  "source": "earshot:fit/key/lubed",
+  "dur": 0.352,
+  "lufs": -31.1,
+  "peak": -1.0,
+  "centroid_hz": 3141,
+  "bytes": 3560
+ },
+ {
+  "name": "keys/creamy-1",
+  "source": "earshot:fit/key/lubed",
+  "dur": 0.35,
+  "lufs": -29.8,
+  "peak": -1.0,
+  "centroid_hz": 2672,
+  "bytes": 3665
+ },
+ {
+  "name": "keys/creamy-2",
+  "source": "earshot:fit/key/lubed",
+  "dur": 0.352,
+  "lufs": -29.0,
+  "peak": -1.0,
+  "centroid_hz": 2668,
+  "bytes": 3560
+ },
+ {
+  "name": "keys/thocky-0",
+  "source": "earshot:fit/key/thock",
+  "dur": 0.304,
+  "lufs": -31.8,
+  "peak": -1.0,
+  "centroid_hz": 4864,
+  "bytes": 3561
+ },
+ {
+  "name": "keys/thocky-1",
+  "source": "earshot:fit/key/thock",
+  "dur": 0.312,
+  "lufs": -30.1,
+  "peak": -1.0,
+  "centroid_hz": 4809,
+  "bytes": 3587
+ },
+ {
+  "name": "keys/thocky-2",
+  "source": "earshot:fit/key/thock",
+  "dur": 0.324,
+  "lufs": -29.7,
+  "peak": -1.0,
+  "centroid_hz": 4912,
+  "bytes": 3717
+ },
+ {
+  "name": "keys/clacky-0",
+  "source": "earshot:typing_key/clicky",
+  "dur": 0.215,
+  "lufs": -27.0,
+  "peak": -1.8,
+  "centroid_hz": 4407,
+  "bytes": 2910
+ },
+ {
+  "name": "keys/clacky-1",
+  "source": "earshot:typing_key/clicky",
+  "dur": 0.212,
+  "lufs": -27.0,
+  "peak": -2.5,
+  "centroid_hz": 4863,
+  "bytes": 3040
+ },
+ {
+  "name": "keys/clacky-2",
+  "source": "earshot:typing_key/clicky",
+  "dur": 0.181,
+  "lufs": -27.7,
+  "peak": -1.0,
+  "centroid_hz": 4886,
+  "bytes": 2729
+ },
+ {
+  "name": "keys/space",
+  "source": "earshot:fit/key.space/thock_space",
+  "dur": 0.303,
+  "lufs": -27.0,
+  "peak": -2.5,
+  "centroid_hz": 2507,
+  "bytes": 3197
+ },
+ {
+  "name": "garden/pop-C5",
+  "source": "earshot:mallet/marimba",
+  "dur": 0.574,
+  "lufs": -22.0,
+  "peak": -9.4,
+  "centroid_hz": 1040,
+  "bytes": 3584
+ },
+ {
+  "name": "garden/pop-D5",
+  "source": "earshot:mallet/marimba",
+  "dur": 0.566,
+  "lufs": -22.0,
+  "peak": -9.3,
+  "centroid_hz": 1175,
+  "bytes": 3637
+ },
+ {
+  "name": "garden/pop-E5",
+  "source": "earshot:mallet/marimba",
+  "dur": 0.559,
+  "lufs": -22.0,
+  "peak": -8.8,
+  "centroid_hz": 1487,
+  "bytes": 3585
+ },
+ {
+  "name": "garden/pop-G5",
+  "source": "earshot:mallet/marimba",
+  "dur": 0.537,
+  "lufs": -22.0,
+  "peak": -8.8,
+  "centroid_hz": 1728,
+  "bytes": 3584
+ },
+ {
+  "name": "garden/pop-A5",
+  "source": "earshot:mallet/marimba",
+  "dur": 0.558,
+  "lufs": -22.0,
+  "peak": -9.2,
+  "centroid_hz": 1731,
+  "bytes": 3558
+ },
+ {
+  "name": "garden/pop-C6",
+  "source": "earshot:mallet/marimba",
+  "dur": 0.527,
+  "lufs": -22.0,
+  "peak": -8.9,
+  "centroid_hz": 2195,
+  "bytes": 3506
+ },
+ {
+  "name": "garden/pop-D6",
+  "source": "earshot:mallet/marimba",
+  "dur": 0.554,
+  "lufs": -22.0,
+  "peak": -9.9,
+  "centroid_hz": 2326,
+  "bytes": 3610
+ },
+ {
+  "name": "garden/pop-E6",
+  "source": "earshot:mallet/marimba",
+  "dur": 0.518,
+  "lufs": -22.0,
+  "peak": -10.4,
+  "centroid_hz": 2615,
+  "bytes": 3402
+ },
+ {
+  "name": "garden/pop-G6",
+  "source": "earshot:mallet/marimba",
+  "dur": 0.564,
+  "lufs": -22.0,
+  "peak": -10.2,
+  "centroid_hz": 3159,
+  "bytes": 3714
+ },
+ {
+  "name": "garden/star-G5",
+  "source": "earshot:mallet/glock",
+  "dur": 0.452,
+  "lufs": -22.0,
+  "peak": -3.8,
+  "centroid_hz": 1176,
+  "bytes": 3272
+ },
+ {
+  "name": "garden/star-C6",
+  "source": "earshot:mallet/glock",
+  "dur": 0.42,
+  "lufs": -22.0,
+  "peak": -2.8,
+  "centroid_hz": 1509,
+  "bytes": 3299
+ },
+ {
+  "name": "garden/star-E6",
+  "source": "earshot:mallet/glock",
+  "dur": 0.403,
+  "lufs": -22.0,
+  "peak": -5.2,
+  "centroid_hz": 1667,
+  "bytes": 3064
+ },
+ {
+  "name": "garden/swap",
+  "source": "uisfx:dreamy/swipe",
+  "dur": 0.66,
+  "lufs": -25.0,
+  "peak": -13.0,
+  "centroid_hz": 1571,
+  "bytes": 5145
+ },
+ {
+  "name": "garden/bump",
+  "source": "uisfx:dreamy/invalid-drop",
+  "dur": 0.711,
+  "lufs": -25.0,
+  "peak": -13.0,
+  "centroid_hz": 1595,
+  "bytes": 5667
+ },
+ {
+  "name": "garden/special",
+  "source": "earshot:mallet/flourish",
+  "dur": 0.504,
+  "lufs": -22.0,
+  "peak": -5.1,
+  "centroid_hz": 1219,
+  "bytes": 3532
+ },
+ {
+  "name": "garden/stripe",
+  "source": "earshot:whoosh_fast/tight",
+  "dur": 0.491,
+  "lufs": -24.0,
+  "peak": -5.4,
+  "centroid_hz": 2028,
+  "bytes": 4261
+ },
+ {
+  "name": "garden/blast",
+  "source": "earshot:pro_pop_in/deep",
+  "dur": 0.176,
+  "lufs": -21.5,
+  "peak": -1.0,
+  "centroid_hz": 558,
+  "bytes": 2077
+ },
+ {
+  "name": "garden/blossom",
+  "source": "earshot:pro_shimmer/m3",
+  "dur": 1.15,
+  "lufs": -23.0,
+  "peak": -12.6,
+  "centroid_hz": 4071,
+  "bytes": 10782
+ },
+ {
+  "name": "garden/acorn",
+  "source": "earshot:mallet/up4",
+  "dur": 0.749,
+  "lufs": -22.0,
+  "peak": -12.6,
+  "centroid_hz": 3318,
+  "bytes": 5641
+ },
+ {
+  "name": "garden/win",
+  "source": "uisfx:dreamy/level-up",
+  "dur": 1.298,
+  "lufs": -20.0,
+  "peak": -10.9,
+  "centroid_hz": 899,
+  "bytes": 8315
+ },
+ {
+  "name": "garden/lose",
+  "source": "uisfx:dreamy/cancel",
+  "dur": 0.613,
+  "lufs": -23.0,
+  "peak": -11.2,
+  "centroid_hz": 731,
+  "bytes": 4521
+ },
+ {
+  "name": "garden/tap",
+  "source": "uisfx:dreamy/select",
+  "dur": 0.589,
+  "lufs": -28.0,
+  "peak": -16.2,
+  "centroid_hz": 973,
+  "bytes": 3661
+ }
+]
