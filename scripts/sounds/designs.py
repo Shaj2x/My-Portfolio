@@ -1,7 +1,8 @@
 """
 Sounds the banks don't have, designed here from first principles (all deterministic per seed):
 
-  voices   the plushies' meow, chirp, moo and oink: a voice is a buzz at a pitch that moves,
+  voices   Babs's chirp and the cow's moo (the cat and Spider-Ham use real recordings, see
+           build.py): a voice is a buzz at a pitch that moves,
            shaped by formants (the resonances that make an "ee" an "ee") that move too. Each
            harmonic of the pitch is given the loudness the formants allow at that moment.
   candle   blowing it out (a breath, then the flame guttering) and lighting it (a match's scratch,
@@ -66,27 +67,6 @@ def voice(dur, f0, formants, env, rng, tilt=0.6, vibrato=(5.5, 0.012), jitter=0.
     return _norm(out * _curve(t, env))
 
 
-def meow(seed=3):
-    """the crying cat: a plaintive "mee-ow", rising then falling, opening from "ee" to "ah" to "oo" """
-    rng = np.random.default_rng(seed)
-    dur = 0.62
-    return voice(
-        dur,
-        f0=[(0, 560), (0.16, 760), (0.3, 720), (0.62, 470)],
-        formants=[
-            (0.0, [(380, 160, 1.0), (2300, 260, 0.7), (3300, 400, 0.3)]),
-            (0.1, [(500, 180, 1.0), (2100, 260, 0.6), (3200, 400, 0.3)]),
-            (0.3, [(950, 220, 1.0), (1650, 260, 0.75), (2900, 400, 0.3)]),
-            (0.62, [(520, 180, 1.0), (950, 220, 0.6), (2700, 400, 0.15)]),
-        ],
-        env=[(0, 0), (0.05, 0.75), (0.24, 1.0), (0.5, 0.55), (0.62, 0)],
-        rng=rng,
-        tilt=0.85,
-        vibrato=(6.0, 0.015),
-        breath=0.04,
-    )
-
-
 def chirp(seed=5):
     """Babs: a songbird's "chip-chirrup", two quick whistled notes, the first sweeping up, the second down"""
     rng = np.random.default_rng(seed)
@@ -130,33 +110,6 @@ def moo(seed=9):
         jitter=0.012,
         breath=0.02,
     )
-
-
-def oink(seed=13):
-    """Spider-Ham: two quick nasal grunts, "oink-oink", each a rough buzz that falls in pitch"""
-    rng = np.random.default_rng(seed)
-    parts = []
-    for i, (length, top) in enumerate([(0.13, 230), (0.15, 205)]):
-        v = voice(
-            length,
-            f0=[(0, top), (length * 0.35, top * 1.08), (length, top * 0.72)],
-            formants=[
-                (0, [(420, 150, 1.0), (1250, 220, 0.8), (2600, 350, 0.3)]),
-                (length, [(360, 150, 1.0), (1050, 220, 0.6), (2500, 350, 0.2)]),
-            ],
-            env=[(0, 0), (0.015, 1.0), (length * 0.6, 0.8), (length, 0)],
-            rng=rng,
-            tilt=0.5,
-            vibrato=(0, 0),
-            jitter=0.03,
-            breath=0.05,
-        )
-        # a grunt is a train of pulses rather than a smooth tone
-        t = np.arange(len(v)) / SR
-        v *= 0.55 + 0.45 * np.abs(np.sin(np.pi * 38 * t)) ** 0.5
-        parts.append(v)
-        parts.append(np.zeros(int((0.05 if i == 0 else 0.0) * SR)))
-    return _norm(np.concatenate(parts))
 
 
 def candle_out(seed=17):
@@ -258,10 +211,8 @@ def drawer_close(seed=29):
 
 
 DESIGNS = {
-    "meow": meow,
     "chirp": chirp,
     "moo": moo,
-    "oink": oink,
     "candle_out": candle_out,
     "candle_light": candle_light,
     "drawer_open": drawer_open,
