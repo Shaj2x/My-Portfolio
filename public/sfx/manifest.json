@@ -55,12 +55,12 @@
  },
  {
   "name": "room/meow",
-  "source": "design:meow",
-  "dur": 0.62,
+  "source": "clip:dist/sounds/cat-meow.mp3",
+  "dur": 0.453,
   "lufs": -26.0,
-  "peak": -16.6,
-  "centroid_hz": 1914,
-  "bytes": 5716
+  "peak": -16.3,
+  "centroid_hz": 2073,
+  "bytes": 4208
  },
  {
   "name": "room/chirp",
@@ -82,12 +82,12 @@
  },
  {
   "name": "room/oink",
-  "source": "design:oink",
-  "dur": 0.33,
+  "source": "clip:dist/sounds/pig-snort.mp3",
+  "dur": 0.329,
   "lufs": -26.0,
-  "peak": -10.0,
-  "centroid_hz": 1675,
-  "bytes": 3429
+  "peak": -7.7,
+  "centroid_hz": 1660,
+  "bytes": 3456
  },
  {
   "name": "room/candle-out",

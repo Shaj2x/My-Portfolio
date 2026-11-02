@@ -1,22 +1,26 @@
 """
-Builds the site's sound effects into public/sfx/ from two sources:
+Builds the site's sound effects into public/sfx/ from these sources:
 
   - earshot (github.com/Leonxlnx/earshot, MIT): its bank of sounds made in code, rendered with
     `earshot sfx render` (no AI models needed). Used for the physical things in the room (switches,
     the speaker, the blind), the keyboard, and Ma's Garden's notes.
   - uisfx (CC0 audio; vendored in github.com/Clipwing/skills under skills/real-sfx): interface
     sounds, for R.V Bot, trophies and the garden.
+  - console-dog-nodejs (npm, MIT, by Javi Ezpeleta): real animal recordings, for the crying cat's
+    meow and Spider-Ham's snort. A plushie should sound like the animal, and made-in-code voices
+    don't. Pass the unpacked package with --console-dog.
 
 The perfume spray is designed in this file (spray()): earshot's micro click for the pump, then a
-steady, bright, grainy hiss of mist that thins as the pressure drops. The plushies' voices (meow,
-chirp, moo, oink), the candle and the drawer are designed in designs.py.
+steady, bright, grainy hiss of mist that thins as the pressure drops. Babs's chirp, the cow's moo,
+the candle and the drawer are designed in designs.py.
 
 Every sound is matched to a loudness target for its group (so nothing jumps out), its trailing
 silence trimmed, and written as a small mono MP3. A table of measurements is printed: the sounds
 are chosen and checked by numbers, then by ear.
 
-Usage (earshot installed in a venv, both repos cloned):
-  python scripts/sounds/build.py --earshot PATH/TO/earshot --uisfx PATH/TO/uisfx --out public/sfx
+Usage (earshot installed in a venv, both repos cloned, console-dog-nodejs unpacked from npm):
+  python scripts/sounds/build.py --earshot PATH/TO/earshot --uisfx PATH/TO/uisfx \
+    --console-dog PATH/TO/console-dog-nodejs --out public/sfx
 """
 
 import argparse
@@ -43,10 +47,11 @@ ROOM = {
     "room/spritz": ("spray", "toggle/micro", {"seed": 7}, -28),
     "room/chime": ("uisfx", "soft/wake", {}, -25),
     # the plushies' voices, the candle and the drawer: no bank has these, so they're designed in designs.py
-    "room/meow": ("design", "meow", {}, -26),
+    # the first "mew" of the recording (what follows is a long yowl); low rumble filtered out
+    "room/meow": ("clip", "dist/sounds/cat-meow.mp3", {"start": 0.0, "dur": 0.46, "highpass": 250}, -26),
     "room/chirp": ("design", "chirp", {}, -28),
     "room/moo": ("design", "moo", {}, -26),
-    "room/oink": ("design", "oink", {}, -26),
+    "room/oink": ("clip", "dist/sounds/pig-snort.mp3", {"highpass": 120}, -26),
     "room/candle-out": ("design", "candle_out", {}, -29),
     "room/candle-light": ("design", "candle_light", {}, -28),
     "room/drawer-open": ("design", "drawer_open", {}, -27),
@@ -121,7 +126,28 @@ def spray(click, seed):
     return out / np.abs(out).max() * 0.89
 
 
-def render(source, sound_id, opts, earshot, uisfx, tmp):
+def clip(path, start=0.0, dur=None, highpass=None):
+    """a stretch of a recording, with a short fade at each end so it starts and stops cleanly"""
+    x, sr = sf.read(path, always_2d=True)
+    x = x.mean(axis=1)
+    if sr != SR:
+        import soxr
+
+        x = soxr.resample(x, sr, SR)
+    x = x[int(start * SR) : int((start + dur) * SR) if dur else None].copy()
+    if highpass:
+        from scipy.signal import butter, sosfilt
+
+        x = sosfilt(butter(4, highpass, "highpass", fs=SR, output="sos"), x)
+    a, b = int(0.004 * SR), min(len(x) // 3, int(0.06 * SR))
+    x[:a] *= np.linspace(0, 1, a)
+    x[-b:] *= np.linspace(1, 0, b) ** 2
+    return x
+
+
+def render(source, sound_id, opts, earshot, uisfx, tmp, console_dog=None):
+    if source == "clip":
+        return clip(os.path.join(console_dog, sound_id), **opts)
     if source == "design":
         from designs import DESIGNS
 
@@ -173,13 +199,14 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--earshot", required=True)
     ap.add_argument("--uisfx", required=True)
+    ap.add_argument("--console-dog", required=True, help="the console-dog-nodejs package, unpacked")
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
     meter = pyloudnorm.Meter(SR)
     rows = []
     with tempfile.TemporaryDirectory() as tmp:
         for name, (source, sound_id, opts, target) in ALL.items():
-            x = trim(render(source, sound_id, opts, a.earshot, a.uisfx, tmp))
+            x = trim(render(source, sound_id, opts, a.earshot, a.uisfx, tmp, a.console_dog))
             gain = 10 ** ((target - loudness(x, meter)) / 20)
             x = x * gain
             peak = 20 * np.log10(np.abs(x).max() + 1e-12)

@@ -5,6 +5,8 @@ Built by scripts/sounds/build.py, which lists every sound, its source and its lo
 - earshot by Leon Lin (https://github.com/Leonxlnx/earshot), MIT licence. Sounds made in code from
   its bank with `earshot sfx render`: the room's switches, speaker and blind, the keyboard's
   keys, and Ma's Garden's marimba, glockenspiel, whoosh, thump and shimmer.
+- console-dog-nodejs by Javi Ezpeleta (https://github.com/JaviEzpeleta/console-dog-nodejs), MIT
+  licence: the crying cat's meow (cat-meow.mp3, its first mew) and Spider-Ham's snort (pig-snort.mp3).
 - uisfx by Romain Simon (https://uisfx.com), audio released under CC0 1.0, as vendored in
   Clipwing's real-sfx skill (https://github.com/Clipwing/skills). Interface cues (send, receive,
   complete, achievement, wake), the plushie's squeak and Ma's Garden's dreamy cues.
@@ -12,8 +14,7 @@ Built by scripts/sounds/build.py, which lists every sound, its source and its lo
 The perfume spray is designed in build.py: earshot's micro click for the pump, then a steady
 bright hiss of mist made from filtered noise.
 
-The plushies' voices (the cat's meow, Babs's chirp, the cow's moo, Spider-Ham's oink), the candle
-(blowing it out, striking a match) and the dresser drawer (sliding open, shutting) are designed
-in scripts/sounds/designs.py. The binoculars' rustle is earshot's swipe/velvet.
+Babs's chirp, the cow's moo, the candle (blowing it out, striking a match) and the dresser
+drawer (sliding open, shutting) are designed in scripts/sounds/designs.py. The binoculars' rustle is earshot's swipe/velvet.
 
 All sounds were trimmed, loudness-matched by group and encoded to MP3 for the web.
