@@ -202,7 +202,11 @@ export const projectPreviews: Record<string, string> = {
   "Mercatus": "/projects/Mercatus.jpg",
   "Anthropogenic-Sound-Device-Simulator---ES1050-Project": "/projects/Anthropogenic-Sound-Device-Simulator---ES1050-Project.jpg",
   "digitaldash": "/projects/digitaldash.jpg",
+  devassist: "/projects/devassist.jpg",
 };
+
+/** what the laptop on the desk has open: the newest version of the project I'm working on most */
+export const laptopScreen = projectPreviews.digitaldash;
 
 /**
  * Short screen recordings of each project in use, made by running the real thing locally and
@@ -236,7 +240,7 @@ export const demoVideos: Record<string, DemoVideo> = {
   "Raptors-BlackJack": demo("Raptors-BlackJack"),
 };
 
-export const inProgressRepos = ["MarkWise", "HarmonAI", "schematica-circuits", "devassist"];
+export const inProgressRepos = ["KanTV", "MarkWise", "HarmonAI", "schematica-circuits", "devassist"];
 
 /** how a repo is titled on its card, where the repo name doesn't read well */
 export const displayNames: Record<string, string> = {
@@ -249,6 +253,8 @@ export const displayNames: Record<string, string> = {
 };
 
 export const customDescriptions: Record<string, string> = {
+  KanTV:
+    "Makes an Android TV or Google TV yours: removes the ads and preinstalled junk, swaps the home screen for a clean launcher, designs its look with AI from a plain-English description, and controls it all from your phone.",
   "Mercatus": "A strategy game that teaches stocks, crypto, and market timing through simulated trading decisions.",
   "schematica-circuits":
     "Turns a photo of a circuit schematic, hand-drawn or from a textbook, into an interactive simulation: a Rust solver compiled to WebAssembly with live plots, and an AI assistant that explains the solution step by step.",
@@ -257,9 +263,9 @@ export const customDescriptions: Record<string, string> = {
   "Marq-Living-Platform":
     "A resident app and building-operations platform for The Marq in London, Ontario: live shuttle tracking, amenity booking, laundry availability and front desk requests, with MQTT-connected sensors that automate lights, HVAC and EV charging.",
   "digitaldash":
-    "A study dashboard for students: focus timers with study music, tasks, courses and grades, a calendar, study rooms with friends, and a year-long focus heatmap.",
+    "A study dashboard for students that you can style exactly your way: focus timers with study music, tasks with project folders, courses and grades, a calendar, a gym log and net worth tracker, study rooms with friends, and themes made from a plain-English description.",
   "My-Portfolio": "This site: a 3D recreation of my dorm room in three.js, where clicking things around the room opens my portfolio.",
-  "StatStack": "NBA Higher or Lower: guess whether the next player's stat is higher or lower, across real season data, and build a streak.",
+  "StatStack": "NBA Higher or Lower against a six-second shot clock, across real season data, plus a Daily Challenge, Who Am I?, card packs to open and collect, and leaderboards.",
   "Raptors-Slot-Machine": "A Toronto Raptors slot machine with paylines, bets and a running balance.",
   "Raptors-BlackJack": "Blackjack at a Raptors table, dealt by Scottie Barnes, with chips, bets and a win/loss record.",
   "Anthropogenic-Sound-Device-Simulator---ES1050-Project":
