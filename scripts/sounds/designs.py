@@ -1,10 +1,11 @@
 """
 Sounds the banks don't have, designed here from first principles (all deterministic per seed):
 
-  voices   Babs's chirp and the cow's moo (the cat and Spider-Ham use real recordings, see
+  voices   Babs's chirp and the cow's moo (the cat uses a real recording, see
            build.py): a voice is a buzz at a pitch that moves,
            shaped by formants (the resonances that make an "ee" an "ee") that move too. Each
            harmonic of the pitch is given the loudness the formants allow at that moment.
+  thwip    Spider-Ham's web-shooter: a snap, a resonant zip falling in pitch, a twang of the line.
   candle   blowing it out (a breath, then the flame guttering) and lighting it (a match's scratch,
            the head catching, the flare).
   drawer   wood sliding on wood (a stick-slip judder in a low band), then the stop or the shut.
@@ -210,8 +211,49 @@ def drawer_close(seed=29):
     return _norm(out)
 
 
+def _sweep_band(x, freq, q):
+    """a resonant band-pass whose centre moves (a state-variable filter, one sample at a time)"""
+    out = np.zeros_like(x)
+    low = band = 0.0
+    for i in range(len(x)):
+        f = 2 * np.sin(np.pi * min(freq[i], SR / 6) / SR)
+        high = x[i] - low - band / q
+        band += f * high
+        low += f * band
+        out[i] = band
+    return out
+
+
+def thwip(seed=31):
+    """Spider-Ham's web-shooter: a sharp snap, a fast zip of air falling in pitch as the web
+    shoots out, and a faint twang as the line goes taut"""
+    rng = np.random.default_rng(seed)
+    dur = 0.3
+    n = int(dur * SR)
+    t = np.arange(n) / SR
+    out = np.zeros(n)
+    # the snap of the shooter
+    k = int(0.003 * SR)
+    snap = _band(rng.standard_normal(k), "highpass", 3000) * np.exp(-np.arange(k) / (0.0006 * SR))
+    out[:k] += 0.7 * snap / (np.abs(snap).max() + 1e-9)
+    # the zip: noise through a tight resonance sweeping from 7 kHz down to 1.2 kHz, quick then slower
+    zip_f = 1200 + 5800 * np.exp(-t / 0.035)
+    z = _sweep_band(_sweep_band(rng.standard_normal(n), zip_f, 6.0), zip_f, 6.0)
+    z *= _curve(t, [(0, 0), (0.004, 1.0), (0.05, 0.75), (0.12, 0.25), (0.2, 0)])
+    out += z / (np.abs(z).max() + 1e-9)
+    # a whistle riding on it, the same fall
+    ph = 2 * np.pi * np.cumsum(2600 * np.exp(-t / 0.05) + 700) / SR
+    out += 0.22 * np.sin(ph) * _curve(t, [(0, 0), (0.006, 1.0), (0.08, 0.3), (0.14, 0)])
+    # the line going taut: a low elastic twang that bends up a touch
+    tw = 2 * np.pi * np.cumsum(170 + 40 * (1 - np.exp(-np.clip(t - 0.07, 0, None) / 0.03))) / SR
+    twang = (np.sin(tw) + 0.3 * np.sin(2 * tw)) * _curve(t, [(0, 0), (0.07, 0), (0.08, 1.0), (0.24, 0)]) ** 2
+    out += 0.3 * twang
+    return _norm(out)
+
+
 DESIGNS = {
     "chirp": chirp,
+    "thwip": thwip,
     "moo": moo,
     "candle_out": candle_out,
     "candle_light": candle_light,

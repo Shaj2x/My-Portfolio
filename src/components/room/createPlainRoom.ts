@@ -1691,8 +1691,8 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   // the candle burns from the start; a click blows it out (quickly) or lights it (it catches more slowly)
   let candleTarget = 1;
   let candleLevel = 1;
-  // each plushie says something when squeezed: the cat meows, Babs chirps, the cow moos, Spider-Ham oinks
-  const PLUSH_VOICE: Record<string, RoomSound> = { "Crying cat": "meow", Babs: "chirp", "Chick-fil-A cow": "moo", "Spider-Ham": "oink" };
+  // each plushie says something when squeezed: the cat meows, Babs chirps, the cow moos, Spider-Ham shoots a web
+  const PLUSH_VOICE: Record<string, RoomSound> = { "Crying cat": "meow", Babs: "chirp", "Chick-fil-A cow": "moo", "Spider-Ham": "thwip" };
   // plushies squash and spring back, each on its own clock
   const bounces = new Map<THREE.Group, number>();
 

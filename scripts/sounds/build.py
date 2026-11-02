@@ -7,11 +7,10 @@ Builds the site's sound effects into public/sfx/ from these sources:
   - uisfx (CC0 audio; vendored in github.com/Clipwing/skills under skills/real-sfx): interface
     sounds, for R.V Bot, trophies and the garden.
   - console-dog-nodejs (npm, MIT, by Javi Ezpeleta): real animal recordings, for the crying cat's
-    meow and Spider-Ham's snort. A plushie should sound like the animal, and made-in-code voices
-    don't. Pass the unpacked package with --console-dog.
+    meow. A plushie should sound like the animal, and a made-in-code voice doesn't. Pass the unpacked package with --console-dog.
 
 The perfume spray is designed in this file (spray()): earshot's micro click for the pump, then a
-steady, bright, grainy hiss of mist that thins as the pressure drops. Babs's chirp, the cow's moo,
+steady, bright, grainy hiss of mist that thins as the pressure drops. Babs's chirp, the cow's moo, Spider-Ham's web-shooter,
 the candle and the drawer are designed in designs.py.
 
 Every sound is matched to a loudness target for its group (so nothing jumps out), its trailing
@@ -51,7 +50,8 @@ ROOM = {
     "room/meow": ("clip", "dist/sounds/cat-meow.mp3", {"start": 0.0, "dur": 0.46, "highpass": 250}, -26),
     "room/chirp": ("design", "chirp", {}, -28),
     "room/moo": ("design", "moo", {}, -26),
-    "room/oink": ("clip", "dist/sounds/pig-snort.mp3", {"highpass": 120}, -26),
+    # Spider-Ham shoots a web when squeezed: designed in designs.py
+    "room/thwip": ("design", "thwip", {}, -26),
     "room/candle-out": ("design", "candle_out", {}, -29),
     "room/candle-light": ("design", "candle_light", {}, -28),
     "room/drawer-open": ("design", "drawer_open", {}, -27),
