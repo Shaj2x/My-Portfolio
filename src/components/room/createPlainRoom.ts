@@ -4,7 +4,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RectAreaLightUniformsLib } from "three/examples/jsm/lights/RectAreaLightUniformsLib.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { OutlinePass } from "three/examples/jsm/postprocessing/OutlinePass.js";
-import { createAudio, RADIO_STATION, type Outside } from "./createAudio";
+import { createAudio, RADIO_STATION, type Outside, type UiSound } from "./createAudio";
 import { createCampus } from "./createCampus";
 import { createFurniture, paintTexture } from "./createFurniture";
 import { createSteam } from "./createDetails";
@@ -199,6 +199,8 @@ export interface PlainRoomHandle {
   setSpeakerPlaying: (on: boolean) => void;
   /** a soft two-note chime, for celebrations in the page (e.g. a trophy) */
   chime: () => void;
+  /** an interface cue (a panel opening, R.V Bot, a trophy), at the room's sound-effects level */
+  ui: (kind: UiSound) => void;
   /** put a project on the curved monitor (its screenshot, or a title card when there isn't one), or null to clear it */
   showProject: (project: MonitorProject | null) => void;
   /** frame the monitor on the left of the screen while the Projects panel is open; false goes back */
@@ -2026,16 +2028,16 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
         bounces.set(hit.target.group, 0);
         audio.play("squeak");
       } else if (hit?.kind === "poster") {
-        audio.click("radio");
+        // the card opening makes the sound (RoomPlain)
         options.onPoster?.(hit.info);
       } else if (kind === "whiteboard" && hit && "root" in hit) {
         // step up to the board so it can be read
         const c = new THREE.Box3().setFromObject(hit.root).getCenter(new THREE.Vector3());
         moveTo(c.clone().add(new THREE.Vector3(-1.05, 0.02, 0)), c);
-        audio.click("lamp");
+        // the pad opening makes the sound (RoomPlain)
         options.onWhiteboard?.();
       } else if (hit?.kind === "portfolio") {
-        audio.play("chime");
+        // the section opening makes the sound (RoomPlain)
         burst(lastHitPoint);
         options.onPortfolio?.(hit.id);
       } else if (hit?.kind === "perfume") {
@@ -2730,12 +2732,20 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     getPose,
     setGhosts,
     setView,
-    toggleLamp,
-    toggleLight,
+    // from the dock, the lights panel or a shortcut: the same click as touching the switch in the room
+    toggleLamp: () => {
+      audio.click("lamp");
+      return toggleLamp();
+    },
+    toggleLight: (which) => {
+      audio.click(which === "ceiling" ? "switch" : "lamp");
+      return toggleLight(which);
+    },
     toggleRadio,
     setMuted: (m) => audio.setMuted(m),
     setSound: applySound,
-    chime: () => audio.play("chime"),
+    chime: () => audio.ui("achievement"),
+    ui: (kind) => audio.ui(kind),
     showProject,
     focusMonitor,
     setSky,

@@ -1,7 +1,8 @@
 /*
- * Every sound in the room is synthesised live with the Web Audio API: rain on the glass,
- * soft wind for snow, distant thunder, switch clicks, and a little lo-fi radio that composes
- * as it plays. Nothing is downloaded, so it works anywhere the page does.
+ * The room's sound. The weather (rain on the glass, wind, distant thunder) and the little lo-fi radio
+ * are synthesised live with the Web Audio API. The small sounds of things being touched (switches,
+ * the speaker, the blind, the perfume, the PS5 waking) and the interface's own cues are short audio
+ * files in public/sfx (scripts/sounds/build.py); until a file has loaded, a synthesised stand-in plays.
  *
  * Browsers only allow audio after the visitor interacts, so nothing is created until
  * `unlock()` is called from a click or key press.
@@ -12,6 +13,15 @@ export type Weather = "rain" | "snow" | "clear";
 export type Outside = Weather | "storm";
 
 /** What the radio on the shelf is "tuned" to. Edit this to say what you actually listen to. */
+import { createSamples } from "@/lib/samples";
+
+/** the interface's own cues: a panel opening and closing, R.V Bot, saving, a trophy */
+export type UiSound = "open" | "close" | "send" | "receive" | "save" | "achievement";
+
+const ROOM_SOUNDS = ["room/lamp", "room/switch", "room/radio", "room/squeak", "room/spritz", "room/chime", "room/blind"];
+const UI_SOUNDS = ["ui/open", "ui/close", "ui/send", "ui/receive", "ui/save", "ui/achievement"];
+const samples = createSamples();
+
 export const RADIO_STATION = {
   name: "WSTN 94.9",
   show: "Late-night lo-fi · what I code to",
@@ -28,6 +38,8 @@ export interface RoomAudio {
   /** 0..1 how loud the outside is (the telescope puts you "at" the window) */
   setOutside: (amount: number) => void;
   click: (kind: "lamp" | "switch" | "radio") => void;
+  /** an interface cue, at the sound-effects level */
+  ui: (kind: UiSound) => void;
   /** small sounds for things in the room: a plushie's squeak, a perfume spritz, the PS5 waking, the blind rolling */
   play: (kind: "squeak" | "spritz" | "chime" | "blind") => void;
   thunder: (delay: number) => void;
@@ -263,6 +275,8 @@ export function createAudio(): RoomAudio {
     ambience.connect(outsideFilter);
     sfx = gain(0.9 * effectsLevel);
     sfx.connect(master);
+    // the recorded effects are small (about 120 KB): fetch them now so the first click has its sound
+    void samples.preload(ctx, [...ROOM_SOUNDS, ...UI_SOUNDS]);
 
     // rain: a body of pink noise plus a brighter patter layer
     rainGain = gain(0);
@@ -424,6 +438,7 @@ export function createAudio(): RoomAudio {
     click: (kind) => {
       if (!ctx) return;
       const at = ctx.currentTime + 0.005;
+      if (samples.play(ctx, sfx, `room/${kind}`, { at, vary: 0.04 })) return;
       if (kind === "lamp") {
         burst(at, 0.012, "highpass", 2500, 0.35, sfx);
         tone(at, 140, 0.03, 0.2, sfx);
@@ -436,9 +451,15 @@ export function createAudio(): RoomAudio {
         tone(at, 90, 0.05, 0.25, sfx);
       }
     },
+    ui: (kind) => {
+      if (!ctx) return;
+      samples.play(ctx, sfx, `ui/${kind}`, { at: ctx.currentTime + 0.005 });
+    },
     play: (kind) => {
       if (!ctx) return;
       const at = ctx.currentTime + 0.005;
+      // a squeeze is never the same twice
+      if (samples.play(ctx, sfx, `room/${kind}`, { at, vary: kind === "squeak" ? 0.12 : 0.03 })) return;
       if (kind === "squeak") {
         // a soft squeeze: a rising then falling chirp, slightly different each time
         const base = 700 + Math.random() * 300;

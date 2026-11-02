@@ -45,7 +45,18 @@ const Paragraphs = ({ text }: { text: string }) => (
 
 const chip = "rounded-full border border-white/15 bg-white/[0.05] px-3 py-1.5 text-xs text-white/85 transition-colors duration-150 hover:border-amber-200/50 hover:bg-white/10 hover:text-white";
 
-export const AskMe = ({ onClose, pagesInNewTab = false, className = "" }: { onClose: () => void; pagesInNewTab?: boolean; className?: string }) => {
+export const AskMe = ({
+  onClose,
+  pagesInNewTab = false,
+  className = "",
+  onSound,
+}: {
+  onClose: () => void;
+  pagesInNewTab?: boolean;
+  className?: string;
+  /** a cue as a question goes out and as the answer arrives (the room plays them) */
+  onSound?: (kind: "send" | "receive") => void;
+}) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
   const [thinking, setThinking] = useState(false);
@@ -69,6 +80,7 @@ export const AskMe = ({ onClose, pagesInNewTab = false, className = "" }: { onCl
     if (!q || thinking) return;
     setDraft("");
     setMessages((m) => [...m, { id: next.current++, from: "them", text: q }]);
+    onSound?.("send");
     const reply = answer(q);
     // a short pause, as if typing; longer answers take a touch longer
     setThinking(true);
@@ -76,6 +88,7 @@ export const AskMe = ({ onClose, pagesInNewTab = false, className = "" }: { onCl
       () => {
         setThinking(false);
         setMessages((m) => [...m, { id: next.current++, from: "me", text: reply.text, reply }]);
+        onSound?.("receive");
       },
       reduce ? 0 : Math.min(900, 350 + reply.text.length * 1.5),
     );
