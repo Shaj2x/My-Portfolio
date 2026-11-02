@@ -40,71 +40,106 @@ type SoundProfile = keyof typeof SOUND_PROFILES;
 const KEY_TAKES = 3;
 const keyFiles = (profile: SoundProfile) => Array.from({ length: KEY_TAKES }, (_, i) => `keys/${profile.toLowerCase()}-${i}`);
 const keySamples = createSamples();
+/** every switch's sounds, so the first key and a switch change both sound right from the start */
+const ALL_KEY_FILES = [...(Object.keys(SOUND_PROFILES) as SoundProfile[]).flatMap(keyFiles), "keys/space"];
+/** how late a key may still sound when its file was still arriving (only ever the first press) */
+const LATE_MS = 300;
+
+const audioContext = () => window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+
+/** the synthesised key, for when the recorded ones can't be fetched (offline) */
+function synthKey(c: AudioContext, burst: { current: AudioBuffer | null }, profile: SoundProfile, volume: number, weight: number, release: boolean) {
+  if (!burst.current) {
+    // a few milliseconds of noise with a fast decay: the impulse of plastic meeting plastic
+    const len = Math.floor(c.sampleRate * 0.012);
+    burst.current = c.createBuffer(1, len, c.sampleRate);
+    const d = burst.current.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (len * 0.18));
+  }
+  const p = SOUND_PROFILES[profile];
+  const t = c.currentTime + 0.002;
+  // every key is a little different; big keys (space, shift) sit lower
+  const tune = (0.94 + Math.random() * 0.12) * (1 - Math.min(weight - 1, 3) * 0.07);
+  const level = p.level * volume * (release ? 0.28 : 1) * (0.85 + Math.random() * 0.3);
+  const out = c.createGain();
+  out.gain.value = level;
+  out.connect(c.destination);
+  const src = c.createBufferSource();
+  src.buffer = burst.current;
+  src.playbackRate.value = release ? 1.3 : 1;
+  // the resonances of the case and plate
+  p.modes.forEach((f, i) => {
+    const bp = c.createBiquadFilter();
+    bp.type = "bandpass";
+    bp.frequency.value = f * tune * (release ? 1.25 : 1);
+    bp.Q.value = p.q;
+    const g = c.createGain();
+    g.gain.value = p.gains[i] * 2.2;
+    src.connect(bp).connect(g).connect(out);
+  });
+  // a little of the raw tap, softened, so it has an edge without clacking
+  const lp = c.createBiquadFilter();
+  lp.type = "lowpass";
+  lp.frequency.value = p.bright * tune;
+  const edge = c.createGain();
+  edge.gain.value = 0.25;
+  src.connect(lp).connect(edge).connect(out);
+  src.start(t);
+  // the low thump of the board on the desk, only on the way down
+  if (!release) {
+    const th = c.createOscillator();
+    th.type = "sine";
+    th.frequency.value = p.thump * tune;
+    const tg = c.createGain();
+    tg.gain.setValueAtTime(0.0001, t);
+    tg.gain.exponentialRampToValueAtTime(0.18 * level, t + 0.003);
+    tg.gain.exponentialRampToValueAtTime(0.0001, t + 0.035);
+    th.connect(tg).connect(c.destination);
+    th.start(t);
+    th.stop(t + 0.04);
+  }
+}
 
 const useKeySound = (muted: boolean, profile: SoundProfile, volume: number) => {
   const ctx = useRef<AudioContext | null>(null);
   const burst = useRef<AudioBuffer | null>(null);
+  // the keyboard opens from a click, so the audio can start now and every key's sound is
+  // loading before the first press (it used to start loading on the first press, which then
+  // played the synthesised key: a different sound from the switch chosen)
+  useEffect(() => {
+    if (muted) return;
+    const AC = audioContext();
+    if (!AC) return;
+    const c = (ctx.current ??= new AC());
+    void keySamples.preload(c, ALL_KEY_FILES);
+  }, [muted]);
+  // the keyboard closing lets its audio go (a new one starts if it's opened again)
+  useEffect(
+    () => () => {
+      void ctx.current?.close().catch(() => undefined);
+      ctx.current = null;
+    },
+    [],
+  );
   return useCallback(
     (weight: number, release = false) => {
       if (muted || volume <= 0) return;
-      const AC = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const AC = audioContext();
       if (!AC) return;
       const c = (ctx.current ??= new AC());
       if (c.state === "suspended") void c.resume();
-      void keySamples.preload(c, [...keyFiles(profile), "keys/space"]);
       // a release is the same key coming back up: quieter and a touch higher
       const file = weight >= 3 ? "keys/space" : keyFiles(profile)[Math.floor(Math.random() * KEY_TAKES)];
-      if (keySamples.play(c, c.destination, file, { gain: volume * (release ? 0.3 : 1), rate: release ? 1.18 : 1, vary: 0.03 })) return;
-      // not loaded yet (or offline): the synthesised key below
-      if (!burst.current) {
-        // a few milliseconds of noise with a fast decay: the impulse of plastic meeting plastic
-        const len = Math.floor(c.sampleRate * 0.012);
-        burst.current = c.createBuffer(1, len, c.sampleRate);
-        const d = burst.current.getChannelData(0);
-        for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (len * 0.18));
-      }
-      const p = SOUND_PROFILES[profile];
-      const t = c.currentTime + 0.002;
-      // every key is a little different; big keys (space, shift) sit lower
-      const tune = (0.94 + Math.random() * 0.12) * (1 - Math.min(weight - 1, 3) * 0.07);
-      const level = p.level * volume * (release ? 0.28 : 1) * (0.85 + Math.random() * 0.3);
-      const out = c.createGain();
-      out.gain.value = level;
-      out.connect(c.destination);
-      const src = c.createBufferSource();
-      src.buffer = burst.current;
-      src.playbackRate.value = release ? 1.3 : 1;
-      // the resonances of the case and plate
-      p.modes.forEach((f, i) => {
-        const bp = c.createBiquadFilter();
-        bp.type = "bandpass";
-        bp.frequency.value = f * tune * (release ? 1.25 : 1);
-        bp.Q.value = p.q;
-        const g = c.createGain();
-        g.gain.value = p.gains[i] * 2.2;
-        src.connect(bp).connect(g).connect(out);
+      const opts = { gain: volume * (release ? 0.3 : 1), rate: release ? 1.18 : 1, vary: 0.03 };
+      if (keySamples.play(c, c.destination, file, opts)) return;
+      // still arriving: wait for it rather than play a different sound (a key heard well after
+      // the press is worse than none); only if it can't be fetched at all, offline, does the
+      // synthesised key stand in
+      const asked = performance.now();
+      void keySamples.preload(c, [file]).then(() => {
+        if (c.state === "closed" || performance.now() - asked > LATE_MS) return;
+        if (!keySamples.play(c, c.destination, file, opts)) synthKey(c, burst, profile, volume, weight, release);
       });
-      // a little of the raw tap, softened, so it has an edge without clacking
-      const lp = c.createBiquadFilter();
-      lp.type = "lowpass";
-      lp.frequency.value = p.bright * tune;
-      const edge = c.createGain();
-      edge.gain.value = 0.25;
-      src.connect(lp).connect(edge).connect(out);
-      src.start(t);
-      // the low thump of the board on the desk, only on the way down
-      if (!release) {
-        const th = c.createOscillator();
-        th.type = "sine";
-        th.frequency.value = p.thump * tune;
-        const tg = c.createGain();
-        tg.gain.setValueAtTime(0.0001, t);
-        tg.gain.exponentialRampToValueAtTime(0.18 * level, t + 0.003);
-        tg.gain.exponentialRampToValueAtTime(0.0001, t + 0.035);
-        th.connect(tg).connect(c.destination);
-        th.start(t);
-        th.stop(t + 0.04);
-      }
     },
     [muted, profile, volume],
   );
