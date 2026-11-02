@@ -4,7 +4,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { RectAreaLightUniformsLib } from "three/examples/jsm/lights/RectAreaLightUniformsLib.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { OutlinePass } from "three/examples/jsm/postprocessing/OutlinePass.js";
-import { createAudio, RADIO_STATION, type Outside, type UiSound } from "./createAudio";
+import { createAudio, RADIO_STATION, type Outside, type RoomSound, type UiSound } from "./createAudio";
 import { createCampus } from "./createCampus";
 import { createFurniture, paintTexture } from "./createFurniture";
 import { createSteam } from "./createDetails";
@@ -1389,6 +1389,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     returnPose = { pos: camera.position.clone(), target: controls.target.clone() };
     mode = "toBinoculars";
     controls.enabled = false;
+    audio.play("binoculars");
     options.onViewChange?.("binoculars");
     moveTo(eyePose.pos, eyePose.target, () => cutWithFade(startBinoculars));
   };
@@ -1690,6 +1691,8 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   // the candle burns from the start; a click blows it out (quickly) or lights it (it catches more slowly)
   let candleTarget = 1;
   let candleLevel = 1;
+  // each plushie says something when squeezed: the cat meows, Babs chirps, the cow moos, Spider-Ham oinks
+  const PLUSH_VOICE: Record<string, RoomSound> = { "Crying cat": "meow", Babs: "chirp", "Chick-fil-A cow": "moo", "Spider-Ham": "oink" };
   // plushies squash and spring back, each on its own clock
   const bounces = new Map<THREE.Group, number>();
 
@@ -2015,18 +2018,19 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       else if (kind === "phone") options.onPhone?.();
       else if (kind === "candle") {
         candleTarget = candleTarget > 0.5 ? 0 : 1;
-        audio.click("lamp");
+        // blown out, or a match struck to light it
+        audio.play(candleTarget > 0.5 ? "candle-light" : "candle-out");
         options.onCandle?.(candleTarget > 0.5);
       }
       else if (kind === "drawer") {
         drawerTarget = drawerTarget > 0.5 ? 0 : 1;
-        audio.play("blind");
+        audio.play(drawerTarget > 0.5 ? "drawer-open" : "drawer-close");
       } else if (kind === "blind") {
         blindTarget = blindTarget > 0.5 ? WINDOW.blindDown : 1;
         audio.play("blind");
       } else if (hit?.kind === "plushie") {
         bounces.set(hit.target.group, 0);
-        audio.play("squeak");
+        audio.play(PLUSH_VOICE[hit.target.name] ?? "squeak");
       } else if (hit?.kind === "poster") {
         // the card opening makes the sound (RoomPlain)
         options.onPoster?.(hit.info);
