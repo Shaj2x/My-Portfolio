@@ -54,6 +54,87 @@
   "bytes": 4808
  },
  {
+  "name": "room/meow",
+  "source": "design:meow",
+  "dur": 0.62,
+  "lufs": -26.0,
+  "peak": -16.6,
+  "centroid_hz": 1914,
+  "bytes": 5716
+ },
+ {
+  "name": "room/chirp",
+  "source": "design:chirp",
+  "dur": 0.2,
+  "lufs": -28.0,
+  "peak": -18.7,
+  "centroid_hz": 5645,
+  "bytes": 2076
+ },
+ {
+  "name": "room/moo",
+  "source": "design:moo",
+  "dur": 0.95,
+  "lufs": -26.0,
+  "peak": -15.0,
+  "centroid_hz": 1011,
+  "bytes": 6885
+ },
+ {
+  "name": "room/oink",
+  "source": "design:oink",
+  "dur": 0.33,
+  "lufs": -26.0,
+  "peak": -10.0,
+  "centroid_hz": 1675,
+  "bytes": 3429
+ },
+ {
+  "name": "room/candle-out",
+  "source": "design:candle_out",
+  "dur": 0.42,
+  "lufs": -29.0,
+  "peak": -12.0,
+  "centroid_hz": 1991,
+  "bytes": 4157
+ },
+ {
+  "name": "room/candle-light",
+  "source": "design:candle_light",
+  "dur": 0.55,
+  "lufs": -28.0,
+  "peak": -12.4,
+  "centroid_hz": 4955,
+  "bytes": 6765
+ },
+ {
+  "name": "room/drawer-open",
+  "source": "design:drawer_open",
+  "dur": 0.55,
+  "lufs": -27.0,
+  "peak": -11.3,
+  "centroid_hz": 1254,
+  "bytes": 6588
+ },
+ {
+  "name": "room/drawer-close",
+  "source": "design:drawer_close",
+  "dur": 0.5,
+  "lufs": -26.0,
+  "peak": -5.0,
+  "centroid_hz": 1461,
+  "bytes": 5519
+ },
+ {
+  "name": "room/binoculars",
+  "source": "earshot:swipe/velvet",
+  "dur": 0.42,
+  "lufs": -30.0,
+  "peak": -8.5,
+  "centroid_hz": 1798,
+  "bytes": 5415
+ },
+ {
   "name": "room/blind",
   "source": "earshot:swipe/cloth",
   "dur": 0.649,

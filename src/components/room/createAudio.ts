@@ -18,7 +18,9 @@ import { createSamples } from "@/lib/samples";
 /** the interface's own cues: R.V Bot, saving a doodle, a trophy (panels open silently) */
 export type UiSound = "send" | "receive" | "save" | "achievement";
 
-const ROOM_SOUNDS = ["room/lamp", "room/switch", "room/radio", "room/squeak", "room/spritz", "room/chime", "room/blind"];
+export type RoomSound = "squeak" | "spritz" | "chime" | "blind" | "meow" | "chirp" | "moo" | "oink" | "candle-out" | "candle-light" | "drawer-open" | "drawer-close" | "binoculars";
+const PLAYED: RoomSound[] = ["squeak", "spritz", "chime", "blind", "meow", "chirp", "moo", "oink", "candle-out", "candle-light", "drawer-open", "drawer-close", "binoculars"];
+const ROOM_SOUNDS = ["room/lamp", "room/switch", "room/radio", ...PLAYED.map((k) => `room/${k}`)];
 const UI_SOUNDS = ["ui/send", "ui/receive", "ui/save", "ui/achievement"];
 const samples = createSamples();
 
@@ -40,8 +42,8 @@ export interface RoomAudio {
   click: (kind: "lamp" | "switch" | "radio") => void;
   /** an interface cue, at the sound-effects level */
   ui: (kind: UiSound) => void;
-  /** small sounds for things in the room: a plushie's squeak, a perfume spritz, the PS5 waking, the blind rolling */
-  play: (kind: "squeak" | "spritz" | "chime" | "blind") => void;
+  /** small sounds for things in the room: the plushies' voices, a perfume spritz, the PS5 waking, the blind, the candle, the drawer, the binoculars */
+  play: (kind: RoomSound) => void;
   thunder: (delay: number) => void;
   /** called as lightning strikes in a thunderstorm, just before its thunder arrives */
   onLightning?: () => void;
@@ -458,8 +460,9 @@ export function createAudio(): RoomAudio {
     play: (kind) => {
       if (!ctx) return;
       const at = ctx.currentTime + 0.005;
-      // a squeeze is never the same twice
-      if (samples.play(ctx, sfx, `room/${kind}`, { at, vary: kind === "squeak" ? 0.12 : 0.03 })) return;
+      // a squeeze is never the same twice, and the plushies' voices shift a touch each time
+      const vary = kind === "squeak" ? 0.12 : kind === "meow" || kind === "chirp" || kind === "moo" || kind === "oink" ? 0.06 : 0.03;
+      if (samples.play(ctx, sfx, `room/${kind}`, { at, vary })) return;
       if (kind === "squeak") {
         // a soft squeeze: a rising then falling chirp, slightly different each time
         const base = 700 + Math.random() * 300;
@@ -483,6 +486,26 @@ export function createAudio(): RoomAudio {
         tone(at, midiHz(76), 0.5, 0.12, sfx, "sine");
         tone(at + 0.12, midiHz(83), 0.7, 0.1, sfx, "sine");
         tone(at + 0.12, midiHz(88), 0.7, 0.04, sfx, "sine");
+      } else if (kind === "meow") {
+        tone(at, 600, 0.55, 0.07, sfx, "triangle", 760);
+      } else if (kind === "chirp") {
+        tone(at, 3000, 0.055, 0.06, sfx, "sine", 5000);
+        tone(at + 0.085, 5500, 0.08, 0.07, sfx, "sine", 3600);
+      } else if (kind === "moo") {
+        tone(at, 145, 0.9, 0.12, sfx, "triangle", 160);
+      } else if (kind === "oink") {
+        tone(at, 230, 0.13, 0.08, sfx, "sawtooth", 170);
+        tone(at + 0.18, 205, 0.15, 0.08, sfx, "sawtooth", 150);
+      } else if (kind === "candle-out") {
+        burst(at, 0.35, "bandpass", 900, 0.12, sfx, 0.5);
+      } else if (kind === "candle-light") {
+        burst(at, 0.09, "highpass", 2500, 0.1, sfx);
+        burst(at + 0.1, 0.4, "bandpass", 600, 0.1, sfx, 0.6);
+      } else if (kind === "drawer-open" || kind === "drawer-close") {
+        burst(at, 0.35, "bandpass", 320, 0.12, sfx, 1.2);
+        tone(at + (kind === "drawer-close" ? 0.3 : 0.4), kind === "drawer-close" ? 105 : 150, 0.08, kind === "drawer-close" ? 0.3 : 0.15, sfx);
+      } else if (kind === "binoculars") {
+        burst(at, 0.35, "bandpass", 1500, 0.04, sfx, 0.7);
       } else {
         // the blind's chain rattling over its roller
         for (let i = 0; i < 9; i++) burst(at + i * 0.07, 0.012, "bandpass", 2600 + Math.random() * 800, 0.08, sfx, 3);

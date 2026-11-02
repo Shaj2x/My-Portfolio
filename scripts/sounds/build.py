@@ -8,7 +8,8 @@ Builds the site's sound effects into public/sfx/ from two sources:
     sounds, for R.V Bot, trophies and the garden.
 
 The perfume spray is designed in this file (spray()): earshot's micro click for the pump, then a
-steady, bright, grainy hiss of mist that thins as the pressure drops.
+steady, bright, grainy hiss of mist that thins as the pressure drops. The plushies' voices (meow,
+chirp, moo, oink), the candle and the drawer are designed in designs.py.
 
 Every sound is matched to a loudness target for its group (so nothing jumps out), its trailing
 silence trimmed, and written as a small mono MP3. A table of measurements is printed: the sounds
@@ -41,6 +42,17 @@ ROOM = {
     # neither bank has an atomiser, so it's made here: earshot's micro click for the pump, then a hiss (see spray())
     "room/spritz": ("spray", "toggle/micro", {"seed": 7}, -28),
     "room/chime": ("uisfx", "soft/wake", {}, -25),
+    # the plushies' voices, the candle and the drawer: no bank has these, so they're designed in designs.py
+    "room/meow": ("design", "meow", {}, -26),
+    "room/chirp": ("design", "chirp", {}, -28),
+    "room/moo": ("design", "moo", {}, -26),
+    "room/oink": ("design", "oink", {}, -26),
+    "room/candle-out": ("design", "candle_out", {}, -29),
+    "room/candle-light": ("design", "candle_light", {}, -28),
+    "room/drawer-open": ("design", "drawer_open", {}, -27),
+    "room/drawer-close": ("design", "drawer_close", {}, -26),
+    # lifting the binoculars to your eyes: the strap and the body brushing cloth
+    "room/binoculars": ("earshot", "swipe/velvet", {"dur": 0.45}, -30),
     "room/blind": ("earshot", "swipe/cloth", {}, -27),
 }
 UI = {
@@ -110,6 +122,10 @@ def spray(click, seed):
 
 
 def render(source, sound_id, opts, earshot, uisfx, tmp):
+    if source == "design":
+        from designs import DESIGNS
+
+        return DESIGNS[sound_id]()
     if source == "spray":
         return spray(render("earshot", sound_id, {}, earshot, uisfx, tmp), opts["seed"])
     wav = os.path.join(tmp, sound_id.replace("/", "_") + "_".join(f"{k}{v}" for k, v in opts.items()) + ".wav")

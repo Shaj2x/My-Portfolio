@@ -12,4 +12,8 @@ Built by scripts/sounds/build.py, which lists every sound, its source and its lo
 The perfume spray is designed in build.py: earshot's micro click for the pump, then a steady
 bright hiss of mist made from filtered noise.
 
+The plushies' voices (the cat's meow, Babs's chirp, the cow's moo, Spider-Ham's oink), the candle
+(blowing it out, striking a match) and the dresser drawer (sliding open, shutting) are designed
+in scripts/sounds/designs.py. The binoculars' rustle is earshot's swipe/velvet.
+
 All sounds were trimmed, loudness-matched by group and encoded to MP3 for the web.
