@@ -183,6 +183,15 @@ export const services: Service[] = [
 
 export const GITHUB_USERNAME = "Shaj2x";
 
+/** repos that stay off the site even though GitHub lists them publicly (private projects) */
+export const hiddenRepos = ["GTA6MM"];
+
+/** whether a repo from GitHub's list belongs on the site: not the profile repo, its Pages site, or a hidden one */
+export const showRepo = (name: string) => {
+  const n = name.toLowerCase();
+  return n !== GITHUB_USERNAME.toLowerCase() && n !== `${GITHUB_USERNAME.toLowerCase()}.github.io` && !hiddenRepos.some((h) => h.toLowerCase() === n);
+};
+
 export const demoLinks: Record<string, string> = {
   "Raptors-Slot-Machine": "https://shaj2x.github.io/Raptors-Slot-Machine/",
   "Raptors-BlackJack": "https://shaj2x.github.io/Raptors-BlackJack/",

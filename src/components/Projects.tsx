@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { ExternalLink, Github, Star, GitFork, Loader2, Gamepad2, Construction } from "lucide-react";
 import { motion } from "framer-motion";
 import MotionSection from "./MotionSection";
-import { GITHUB_USERNAME, demoLinks, inProgressRepos, customDescriptions } from "@/data/portfolio";
+import { GITHUB_USERNAME, demoLinks, inProgressRepos, customDescriptions, showRepo } from "@/data/portfolio";
 
 interface GitHubRepo {
   id: number;
@@ -40,9 +40,7 @@ const Projects = () => {
         return res.json();
       })
       .then((data: GitHubRepo[]) => {
-        const filtered = data.filter(
-          (r) => r.name !== GITHUB_USERNAME && r.name !== `${GITHUB_USERNAME}.github.io`
-        );
+        const filtered = data.filter((r) => showRepo(r.name));
         setRepos(filtered);
         setLoading(false);
       })
