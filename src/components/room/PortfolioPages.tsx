@@ -16,6 +16,7 @@ import {
   profile,
   projectPreviews,
   roles,
+  showRepo,
   skillCategories,
 } from "@/data/portfolio";
 import { ServicesShowcase } from "@/components/ServicesShowcase";
@@ -95,7 +96,7 @@ const ProjectsPage = ({ onPreview }: { onPreview?: OnPreview }) => {
     fetch(`https://api.github.com/users/${GITHUB_USERNAME}/repos?sort=updated&per_page=12`)
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then((data: Repo[]) => {
-        if (live) setRepos(data.filter((r) => r.name !== GITHUB_USERNAME && r.name !== `${GITHUB_USERNAME}.github.io`));
+        if (live) setRepos(data.filter((r) => showRepo(r.name)));
       })
       .catch(() => {
         // offline or blocked: keep the built-in list
