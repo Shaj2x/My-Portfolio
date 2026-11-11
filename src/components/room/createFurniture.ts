@@ -176,8 +176,6 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
         }
         extra?.(c, w, h);
       });
-    const fabric = (map: THREE.Texture, roughness = 0.92, sheen = 0) =>
-      new THREE.MeshPhysicalMaterial({ map, roughness, sheen, sheenRoughness: 0.6, sheenColor: new THREE.Color("#ffffff"), side: THREE.DoubleSide });
 
     // the mattress: a cream quilted band around the side, under a white fitted sheet
     const top = frame.h + mattress.h;
@@ -203,7 +201,7 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     bandTex.repeat.set(3, 1);
     const mattressMat = new THREE.MeshStandardMaterial({ map: bandTex, roughness: 0.95 });
     rounded(mattress.w - 0.01, mattress.h * 0.62, mattress.l - 0.01, 0.04, mattressMat, cx, frame.h + mattress.h * 0.31, cz);
-    const fittedMat = fabric(linen("#f2ede5", 512, 0.045), 0.9, 0.3);
+    const fittedMat = new THREE.MeshStandardMaterial({ map: linen("#f1ece4", 512, 0.035), roughness: 0.92 });
     rounded(mattress.w, mattress.h * 0.42, mattress.l, 0.06, fittedMat, cx, top - mattress.h * 0.21, cz);
 
     const hbMat = new THREE.MeshStandardMaterial({
@@ -228,111 +226,96 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     block(0.04, 0.14, 0.06, steel, x0 + 0.05, frame.h - 0.02, ROOM.back + 0.04);
     block(0.04, 0.14, 0.06, steel, x0 + frame.w - 0.05, frame.h - 0.02, ROOM.back + 0.04);
 
-    // pillows: plump, domed in the middle and pinched at the corners, leaning on the headboard
-    const pillowGeo = (w: number, d: number, t: number) => {
-      const geo = new THREE.BoxGeometry(w, t, d, 28, 6, 18);
+    // pillows: soft and full, lying against the headboard the way they settle on a made bed
+    const pillowGeo = (w: number, d: number, t: number, corner = 0.03) => {
+      const geo = new THREE.BoxGeometry(w, t, d, 32, 8, 22);
       const p = geo.attributes.position;
       for (let i = 0; i < p.count; i++) {
         const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
         const nx = (2 * x) / w, nz = (2 * z) / d;
-        // full in the middle, thin at the seams
-        const fill = Math.pow(Math.max(0, 1 - Math.pow(Math.abs(nx), 2.6)), 0.55) * Math.pow(Math.max(0, 1 - Math.pow(Math.abs(nz), 2.6)), 0.55);
-        // the corners pull out into soft points, and the seams pull in a touch between them
-        const ear = Math.pow(Math.abs(nx * nz), 3) * 0.06;
-        const pinch = 1 - 0.05 * (1 - nz * nz) * Math.abs(nx) ** 4;
-        p.setXYZ(i, x * (1 + ear) * pinch, y * (0.12 + 0.88 * fill), z * (1 + ear) * (1 - 0.05 * (1 - nx * nx) * Math.abs(nz) ** 4));
+        // full in the middle, easing to a thin seam all round
+        const fill = Math.sqrt(Math.max(0, 1 - Math.pow(Math.abs(nx), 3))) * Math.sqrt(Math.max(0, 1 - Math.pow(Math.abs(nz), 3)));
+        // the seams draw in slightly between the corners, which stay a touch fuller
+        const draw = 1 - 0.035 * (1 - nz * nz) * Math.pow(Math.abs(nx), 6);
+        const drawZ = 1 - 0.05 * (1 - nx * nx) * Math.pow(Math.abs(nz), 6);
+        const ear = 1 + corner * Math.pow(Math.abs(nx * nz), 4);
+        p.setXYZ(i, x * draw * ear, y * (0.08 + 0.92 * fill), z * drawZ * ear);
       }
       geo.computeVertexNormals();
       return geo;
     };
-    const caseTex = linen("#f4ede2", 512, 0.04, (c, w, h) => {
-      // the case's open end: a hem band with a stitched line
-      c.fillStyle = "rgba(120,95,70,0.08)";
-      c.fillRect(w * 0.86, 0, w * 0.14, h);
-      c.strokeStyle = "rgba(110,85,60,0.35)";
-      c.setLineDash([5, 4]);
-      c.lineWidth = 1.5;
-      c.beginPath();
-      c.moveTo(w * 0.865, 0);
-      c.lineTo(w * 0.865, h);
-      c.stroke();
-    });
-    const caseMat = fabric(caseTex, 0.9, 0.35);
-    const pillowY = top + 0.045;
-    for (const [px, flip] of [[cx - mattress.w * 0.24, 1], [cx + mattress.w * 0.24, -1]] as const) {
-      const pl = new THREE.Mesh(pillowGeo(0.62, 0.42, 0.21), caseMat);
-      pl.position.set(px, pillowY + 0.07, z0 + 0.25);
-      // propped against the headboard, each a little different
-      pl.rotation.set(-0.42, flip * 0.04, flip * 0.02);
-      pl.scale.x = flip; // the open ends face outwards
+    const caseMat = new THREE.MeshStandardMaterial({ map: linen("#f3eee6", 512, 0.035), roughness: 0.92 });
+    /** a pillow resting on the mattress, its back edge raised by `tilt` radians against what's behind it */
+    const restPillow = (geo: THREE.BufferGeometry, m: THREE.Material, x: number, z: number, d: number, t: number, tilt: number, yaw = 0, sink = 0.012) => {
+      const pl = new THREE.Mesh(geo, m);
+      // a positive tilt lifts the edge nearest the headboard; the front edge stays on the bed
+      pl.rotation.set(tilt, yaw, 0, "YXZ");
+      pl.position.set(x, top + t * 0.5 * Math.cos(tilt) + (d / 2) * Math.sin(tilt) - sink, z);
       pl.castShadow = pl.receiveShadow = true;
       group.add(pl);
-    }
-    // a burgundy velvet lumbar cushion in front of them
-    const velvetTex = paintTexture(256, 128, (c, w, h) => {
+      return pl;
+    };
+    // two sleeping pillows side by side, the second just overlapping the first
+    restPillow(pillowGeo(0.64, 0.44, 0.16), caseMat, cx - mattress.w * 0.235, z0 + 0.26, 0.44, 0.16, 0.16, 0.03);
+    restPillow(pillowGeo(0.64, 0.44, 0.16), caseMat, cx + mattress.w * 0.235, z0 + 0.265, 0.44, 0.16, 0.18, -0.04);
+    // a square accent cushion leaning on them, off centre
+    const velvetTex = paintTexture(256, 256, (c, w, h) => {
       c.fillStyle = COLORS.pillow;
       c.fillRect(0, 0, w, h);
-      // brushed pile: soft light and dark strokes
-      for (let i = 0; i < 400; i++) {
-        c.strokeStyle = rnd() > 0.5 ? "rgba(255,170,170,0.05)" : "rgba(30,0,0,0.08)";
+      for (let i = 0; i < 500; i++) {
+        c.strokeStyle = rnd() > 0.5 ? "rgba(255,190,180,0.04)" : "rgba(20,0,0,0.06)";
         c.lineWidth = between(1, 3);
         const x = rnd() * w, y = rnd() * h;
         c.beginPath();
         c.moveTo(x, y);
-        c.lineTo(x + between(8, 30), y + between(-4, 4));
+        c.lineTo(x + between(6, 20), y + between(-3, 3));
         c.stroke();
       }
     });
-    const velvet = new THREE.MeshPhysicalMaterial({ map: velvetTex, roughness: 0.75, sheen: 1, sheenRoughness: 0.35, sheenColor: new THREE.Color("#e07a7a") });
-    const lumbar = new THREE.Mesh(pillowGeo(0.5, 0.26, 0.13), velvet);
-    lumbar.position.set(cx + 0.02, top + 0.115, z0 + 0.5);
-    lumbar.rotation.set(-1.0, 0.05, 0);
-    lumbar.castShadow = lumbar.receiveShadow = true;
-    group.add(lumbar);
+    const velvet = new THREE.MeshPhysicalMaterial({ map: velvetTex, roughness: 0.8, sheen: 0.8, sheenRoughness: 0.4, sheenColor: new THREE.Color("#d98c7c") });
+    restPillow(pillowGeo(0.4, 0.4, 0.14, 0.06), velvet, cx + 0.16, z0 + 0.5, 0.4, 0.14, 0.95, -0.12, 0.03);
 
-    // the duvet, the turned-down sheet and the knit throw: cloth laid over the mattress, rounding
-    // over the open side and the foot and falling straight down, tucked against the wall
+    // the duvet, folded back at the top, and a knit throw across the foot: cloth laid over the
+    // mattress that rolls over the open side and the foot and falls straight, tucked at the wall
     const mL = cx - mattress.w / 2;
     const mR = cx + mattress.w / 2;
     const foot = cz + mattress.l / 2;
     const tuck = 0.05;
-    /** cloth from zFrom to zTo (falling over the foot if it gets there), `lift` above the sheet, with puffy squares of `cell` m */
-    const drape = (zFrom: number, zTo: number, lift: number, hang: number, puff = 0, cell = 0.3, ripple = 1) => {
+    /** cloth from zFrom to zTo, `lift` above the sheet; `folds` sets how much it billows */
+    const drape = (zFrom: number, zTo: number, lift: number, hang: number, folds = 1, roll = 0.06) => {
       const across = tuck + mattress.w + hang;
       const along = zTo - zFrom;
-      const geo = new THREE.PlaneGeometry(across, along, 110, Math.max(8, Math.round(along * 70)));
+      const geo = new THREE.PlaneGeometry(across, along, 120, Math.max(10, Math.round(along * 80)));
       geo.rotateX(-Math.PI / 2);
       const p = geo.attributes.position;
-      const r = 0.05;
       for (let i = 0; i < p.count; i++) {
         const u = p.getX(i) + across / 2 - tuck; // 0 at the mattress's wall-side edge
         let z = p.getZ(i) + zFrom + along / 2;
         let x = mL + u;
-        // quilted squares, soft wrinkles, and the cloth settling lower toward its edges
-        const onTop = u >= 0 && u <= mattress.w && z <= foot;
-        const q = puff * Math.pow(Math.sin((Math.PI * u) / cell), 2) * Math.pow(Math.sin((Math.PI * (z - zFrom)) / cell), 2);
-        const wr = ripple * (0.006 * Math.sin(u * 11 + z * 4) + 0.004 * Math.sin(z * 23 - u * 7) + 0.003 * Math.sin(u * 37));
-        let y = top + lift + (onTop ? q + wr : 0);
+        // broad, soft billows (no hard creases), stronger toward the middle of the bed
+        const mid = Math.sin(Math.PI * Math.min(1, Math.max(0, u / mattress.w)));
+        const billow = folds * (0.012 * Math.sin(u * 4.2 + z * 1.7 + 0.6) + 0.008 * Math.sin(z * 5.3 - u * 2.1) + 0.004 * Math.sin(u * 9.5 + z * 6.1)) * mid;
+        let y = top + lift + Math.max(-lift * 0.6, billow);
         if (u < 0) {
-          // tucked down between the mattress and the wall
           x = mL - 0.006;
-          y = top + lift - Math.max(0, -u) * 1.4;
+          y = top + lift * 0.5 - Math.max(0, -u) * 1.4;
         } else if (u > mattress.w) {
           const over = u - mattress.w;
-          // rolls over the edge, then hangs with a few soft vertical folds
-          const a = Math.min(over / (r * 1.6), 1) * (Math.PI / 2);
-          x = mR + lift * 0.6 + Math.sin(a) * r + 0.01 * Math.sin(z * 14) * Math.min(1, over * 6);
-          y = top + lift - (1 - Math.cos(a)) * r - Math.max(0, over - r * 1.6);
+          const a = Math.min(over / (roll * 1.6), 1) * (Math.PI / 2);
+          // rounds over the edge, then hangs in a few loose vertical folds
+          x = mR + lift * 0.5 + Math.sin(a) * roll * 0.7 + folds * 0.012 * Math.sin(z * 9 + 1.3) * Math.min(1, over * 5);
+          y = top + lift - (1 - Math.cos(a)) * roll - Math.max(0, over - roll * 1.6);
         }
         if (z > foot) {
           const over = z - foot;
-          const a = Math.min(over / (r * 1.6), 1) * (Math.PI / 2);
-          z = foot + lift * 0.6 + Math.sin(a) * r + 0.01 * Math.sin(x * 12) * Math.min(1, over * 6);
-          y = Math.min(y, top + lift) - (1 - Math.cos(a)) * r - Math.max(0, over - r * 1.6);
-          // the corner falls into a soft fold rather than a box
+          const a = Math.min(over / (roll * 1.6), 1) * (Math.PI / 2);
+          z = foot + lift * 0.5 + Math.sin(a) * roll * 0.7 + folds * 0.012 * Math.sin(x * 8 + 0.4) * Math.min(1, over * 5);
+          y = Math.min(y, top + lift) - (1 - Math.cos(a)) * roll - Math.max(0, over - roll * 1.6);
           if (u > mattress.w) {
-            x += Math.min(over, 0.08) * 0.25;
-            z += Math.min(u - mattress.w, 0.08) * 0.25;
+            // the corner falls in a soft diagonal fold
+            const k = Math.min(over, u - mattress.w);
+            x += k * 0.35;
+            z += k * 0.35;
           }
         }
         p.setXYZ(i, x, Math.max(frame.h - 0.02, y), z);
@@ -346,63 +329,35 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
       group.add(mesh);
       return mesh;
     };
-    // the duvet: oatmeal, thick, in quilted squares
-    const duvetTex = linen(COLORS.sheet, 1024, 0.04, (c, w, h) => {
-      // the quilting seams, faint shadowed lines
-      c.strokeStyle = "rgba(110,85,60,0.07)";
-      c.lineWidth = 2;
-      for (let i = 1; i < 8; i++) {
-        c.beginPath();
-        c.moveTo((i / 8) * w, 0);
-        c.lineTo((i / 8) * w, h);
-        c.moveTo(0, (i / 8) * h);
-        c.lineTo(w, (i / 8) * h);
-        c.stroke();
-      }
-    });
-    const duvetStart = z0 + 0.66;
     const hang = 0.24;
-    cloth(drape(duvetStart, foot + hang, 0.03, hang, 0.042, 0.34), fabric(duvetTex, 0.95, 0.4));
-    // the flat sheet turned down over its top edge, crisp white with a piped border
-    const turnTex = linen("#f6f2ec", 512, 0.04, (c, w, h) => {
-      c.fillStyle = COLORS.blanketStripe;
-      c.fillRect(0, h * 0.82, w, h * 0.03);
-    });
-    cloth(drape(duvetStart - 0.02, duvetStart + 0.2, 0.088, hang + 0.01, 0, 0.3, 0.5), fabric(turnTex, 0.85, 0.5));
-    // the chunky cable-knit throw, folded across the foot
+    const duvetStart = z0 + 0.62;
+    // a warm white duvet with soft billows
+    const duvetMat = new THREE.MeshStandardMaterial({ map: linen(COLORS.sheet, 1024, 0.03), roughness: 0.95, side: THREE.DoubleSide });
+    cloth(drape(duvetStart, foot + hang, 0.045, hang, 1, 0.07), duvetMat);
+    // its top folded back on itself: a smooth band a little thicker than the rest
+    cloth(drape(duvetStart - 0.005, duvetStart + 0.22, 0.072, hang + 0.012, 0.4, 0.075), duvetMat);
+    // a ribbed knit throw folded across the foot
     const knitTex = paintTexture(512, 512, (c, w, h) => {
       c.fillStyle = COLORS.blanket;
       c.fillRect(0, 0, w, h);
-      // rows of knit stitches: little V's, lit on one side and shaded on the other
-      const sw = 22, sh = 18;
-      for (let y = 0; y < h + sh; y += sh)
-        for (let x = 0; x < w; x += sw) {
-          for (const [dx, lit] of [[-1, true], [1, false]] as const) {
-            const g = c.createLinearGradient(x, y, x + dx * sw * 0.45, y + sh);
-            g.addColorStop(0, lit ? "rgba(255,200,190,0.26)" : "rgba(30,0,5,0.3)");
-            g.addColorStop(1, "rgba(0,0,0,0)");
-            c.fillStyle = g;
-            c.beginPath();
-            c.ellipse(x + sw / 2 + dx * sw * 0.2, y, sw * 0.24, sh * 0.62, dx * 0.5, 0, Math.PI * 2);
-            c.fill();
-          }
-        }
-      // a cable running up the middle of each panel
-      c.strokeStyle = "rgba(25,0,5,0.35)";
-      c.lineWidth = 4;
-      for (const cxp of [w * 0.25, w * 0.75]) {
-        c.beginPath();
-        for (let y = 0; y <= h; y += 6) c.lineTo(cxp + Math.sin(y * 0.06) * 18, y);
-        c.stroke();
-        c.beginPath();
-        for (let y = 0; y <= h; y += 6) c.lineTo(cxp - Math.sin(y * 0.06) * 18, y);
-        c.stroke();
+      // ribs: soft vertical light-to-shade columns
+      const rib = 16;
+      for (let x = 0; x < w; x += rib) {
+        const g = c.createLinearGradient(x, 0, x + rib, 0);
+        g.addColorStop(0, "rgba(20,0,0,0.22)");
+        g.addColorStop(0.45, "rgba(255,200,190,0.12)");
+        g.addColorStop(1, "rgba(20,0,0,0.22)");
+        c.fillStyle = g;
+        c.fillRect(x, 0, rib, h);
       }
+      // the stitches along each rib, very faint
+      c.fillStyle = "rgba(20,0,0,0.12)";
+      for (let y = 0; y < h; y += 8) c.fillRect(0, y, w, 1.2);
     });
     knitTex.wrapS = knitTex.wrapT = THREE.RepeatWrapping;
-    knitTex.repeat.set(1.5, 0.8);
+    knitTex.repeat.set(1.6, 1.4);
     const knit = new THREE.MeshStandardMaterial({ map: knitTex, roughness: 1, side: THREE.DoubleSide });
-    cloth(drape(foot - 0.52, foot + hang + 0.03, 0.075, hang + 0.04, 0.012, 0.13, 1.6), knit);
+    cloth(drape(foot - 0.46, foot + hang + 0.02, 0.07, hang + 0.03, 1.5, 0.085), knit);
   }
 
   // ---------- dresser, perfume shelf and clutter ----------
