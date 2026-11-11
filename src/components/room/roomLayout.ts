@@ -49,8 +49,8 @@ export const COLORS = {
   dresser: "#d2a877",
   pull: "#141414",
   steel: "#1c1c1e",
-  /** the duvet: warm white */
-  sheet: "#ece5da",
+  /** the duvet: cream */
+  sheet: "#ede3d1",
   /** the knit throw: deep burgundy */
   blanket: "#6a1d24",
   /** piping on the turned-down sheet */
