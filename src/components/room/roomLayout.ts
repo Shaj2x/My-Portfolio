@@ -49,10 +49,14 @@ export const COLORS = {
   dresser: "#d2a877",
   pull: "#141414",
   steel: "#1c1c1e",
-  sheet: "#9e2427",
-  blanket: "#c8161c",
-  blanketStripe: "#3a080c",
-  pillow: "#8f141b",
+  /** the duvet: oatmeal */
+  sheet: "#e3d8c6",
+  /** the knit throw: deep burgundy */
+  blanket: "#6e1a22",
+  /** piping on the turned-down sheet */
+  blanketStripe: "#7a2229",
+  /** the velvet lumbar cushion */
+  pillow: "#5e141b",
   deskTop: "#b89a78",
   blind: "#18191b",
   shade: "#f4eee2",
