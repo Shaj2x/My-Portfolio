@@ -35,6 +35,8 @@ export interface FurnitureHandle {
   mugTop: THREE.Vector3;
   /** things that react when clicked */
   interact: {
+    /** the bed's pillows and cushions: each a group whose origin is where it rests on the mattress, for squishing */
+    pillows: THREE.Group[];
     /** plushies: each a group whose origin is its base, for squash-and-bounce */
     plushies: { name: string; group: THREE.Group }[];
     /** perfume bottles, each a group with its base at the origin */
@@ -148,6 +150,9 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
   let setMonitorImage: (tex: THREE.Texture | null, k: number) => void = () => {};
   const psBars: THREE.MeshBasicMaterial[] = [];
 
+  // the bed's pillows, filled in as the bed is made
+  const pillows: THREE.Group[] = [];
+
   // ---------- bed ----------
   {
     const { pos, mattress, frame, headboard } = LAYOUT.bed;
@@ -244,22 +249,55 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
       geo.computeVertexNormals();
       return geo;
     };
-    const caseMat = new THREE.MeshStandardMaterial({ map: linen("#f3eee6", 512, 0.035), roughness: 0.92 });
+    // smooth cotton cases, with a few soft blurred creases
+    const caseTex = linen("#f4efe7", 512, 0, (c, w, h) => {
+      c.filter = "blur(8px)";
+      for (let i = 0; i < 10; i++) {
+        c.strokeStyle = rnd() > 0.5 ? "rgba(255,255,255,0.25)" : "rgba(130,110,90,0.12)";
+        c.lineWidth = between(10, 22);
+        c.lineCap = "round";
+        const x = rnd() * w, y = rnd() * h;
+        c.beginPath();
+        c.moveTo(x, y);
+        c.lineTo(x + between(-120, 120), y + between(-60, 60));
+        c.stroke();
+      }
+      c.filter = "none";
+    });
+    const caseMat = new THREE.MeshStandardMaterial({ map: caseTex, roughness: 0.9 });
     /** a pillow resting on the mattress, its back edge raised by `tilt` radians against what's behind it */
     const restPillow = (geo: THREE.BufferGeometry, m: THREE.Material, x: number, z: number, d: number, t: number, tilt: number, yaw = 0, sink = 0.012) => {
       const pl = new THREE.Mesh(geo, m);
       // a positive tilt lifts the edge nearest the headboard; the front edge stays on the bed
       pl.rotation.set(tilt, yaw, 0, "YXZ");
-      pl.position.set(x, top + t * 0.5 * Math.cos(tilt) + (d / 2) * Math.sin(tilt) - sink, z);
+      pl.position.set(0, t * 0.5 * Math.cos(tilt) + (d / 2) * Math.sin(tilt) - sink, 0);
       pl.castShadow = pl.receiveShadow = true;
-      group.add(pl);
+      // held by a group at the spot where it meets the mattress, so a squish presses it into the bed
+      const holder = new THREE.Group();
+      holder.position.set(x, top, z);
+      holder.add(pl);
+      group.add(holder);
+      pillows.push(holder);
       return pl;
     };
     // ---- a cosy pile of pillows: white sleeping pillows propped on the headboard, then olive and
     // cream cushions in front of them ----
     const olive = "#5d6740";
-    const oliveTex = linen(olive, 256, 0.06);
-    const oliveMat = new THREE.MeshPhysicalMaterial({ map: oliveTex, roughness: 0.85, sheen: 0.6, sheenRoughness: 0.5, sheenColor: new THREE.Color("#a9b486") });
+    const oliveTex = paintTexture(256, 256, (c, w, h) => {
+      c.fillStyle = olive;
+      c.fillRect(0, 0, w, h);
+      // brushed velvet pile: soft strokes of light and shade, no weave
+      for (let i = 0; i < 500; i++) {
+        c.strokeStyle = rnd() > 0.5 ? "rgba(210,220,170,0.05)" : "rgba(10,15,0,0.07)";
+        c.lineWidth = between(2, 6);
+        const x = rnd() * w, y = rnd() * h;
+        c.beginPath();
+        c.moveTo(x, y);
+        c.quadraticCurveTo(x + between(10, 30), y + between(-10, 10), x + between(20, 60), y + between(-6, 6));
+        c.stroke();
+      }
+    });
+    const oliveMat = new THREE.MeshPhysicalMaterial({ map: oliveTex, roughness: 0.8, sheen: 1, sheenRoughness: 0.35, sheenColor: new THREE.Color("#b8c48f") });
     // a cream cable-knit cushion
     const cableTex = paintTexture(256, 256, (c, w, h) => {
       c.fillStyle = "#e9dfcd";
@@ -285,8 +323,8 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     });
     const cableMat = new THREE.MeshStandardMaterial({ map: cableTex, roughness: 1 });
     // back row: two big sleeping pillows sitting up against the headboard, and a third laid in front
-    restPillow(pillowGeo(0.66, 0.46, 0.2), caseMat, cx - 0.33, z0 + 0.2, 0.46, 0.2, 0.62, 0.04, 0.02);
-    restPillow(pillowGeo(0.66, 0.46, 0.2), caseMat, cx + 0.33, z0 + 0.21, 0.46, 0.2, 0.66, -0.05, 0.02);
+    restPillow(pillowGeo(0.66, 0.46, 0.24), caseMat, cx - 0.33, z0 + 0.2, 0.46, 0.24, 0.62, 0.04, 0.025);
+    restPillow(pillowGeo(0.66, 0.46, 0.24), caseMat, cx + 0.33, z0 + 0.21, 0.46, 0.24, 0.66, -0.05, 0.025);
     restPillow(pillowGeo(0.62, 0.42, 0.18), caseMat, cx + 0.3, z0 + 0.37, 0.42, 0.18, 0.5, -0.1, 0.02);
     // front row: a cream cable-knit lumbar and two olive cushions, each set a little askew
     restPillow(pillowGeo(0.5, 0.34, 0.15, 0.05), cableMat, cx - 0.3, z0 + 0.44, 0.34, 0.15, 0.85, 0.12, 0.03);
@@ -348,12 +386,13 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
       return mesh;
     };
     // the duvet: big and soft, slept-in rumpled, falling nearly to the floor
-    const duvetTex = linen(COLORS.sheet, 1024, 0.03, (c, w, h) => {
-      // soft creases: long faint shadows and highlights
-      for (let i = 0; i < 40; i++) {
+    const duvetTex = linen(COLORS.sheet, 1024, 0, (c, w, h) => {
+      // soft creases: long, blurred shadows and highlights
+      c.filter = "blur(10px)";
+      for (let i = 0; i < 34; i++) {
         const lit = rnd() > 0.45;
-        c.strokeStyle = lit ? "rgba(255,255,255,0.12)" : "rgba(120,95,70,0.1)";
-        c.lineWidth = between(4, 14);
+        c.strokeStyle = lit ? "rgba(255,255,255,0.22)" : "rgba(120,95,70,0.16)";
+        c.lineWidth = between(14, 30);
         c.lineCap = "round";
         const x = rnd() * w, y = rnd() * h, len = between(60, 220), a = between(-0.9, 0.9);
         c.beginPath();
@@ -361,16 +400,17 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
         c.quadraticCurveTo(x + Math.cos(a) * len * 0.5 + between(-20, 20), y + Math.sin(a) * len * 0.5 + between(-20, 20), x + Math.cos(a) * len, y + Math.sin(a) * len);
         c.stroke();
       }
+      c.filter = "none";
     });
     const duvetMat = new THREE.MeshStandardMaterial({ map: duvetTex, roughness: 0.96, side: THREE.DoubleSide });
     const rumple = (x: number, z: number) =>
-      0.022 * Math.sin(x * 5.1 + z * 2.3 + 0.7) * Math.cos(z * 3.7 - x * 1.3) +
-      0.012 * Math.sin(x * 11.3 - z * 7.9) +
-      0.007 * Math.sin(x * 23 + z * 17) +
-      0.01 * Math.max(0, Math.sin(z * 4.4 + x * 0.8)) ** 3;
+      0.03 * Math.sin(x * 4.6 + z * 2.1 + 0.7) * Math.cos(z * 3.3 - x * 1.2) +
+      0.014 * Math.sin(x * 10.3 - z * 7.1) +
+      0.006 * Math.sin(x * 21 + z * 15) +
+      0.016 * Math.max(0, Math.sin(z * 4.1 + x * 0.8)) ** 3;
     const duvetHang = top - 0.1; // falls to about 10 cm off the floor
     const dStart = z0 + 0.42;
-    cloth(layCloth(mattress.w + duvetHang + 0.06, foot + duvetHang - dStart, cx + duvetHang / 2 - 0.03, (dStart + foot + duvetHang) / 2, 0, 0.06, rumple, 0.1, 0.1), duvetMat);
+    cloth(layCloth(mattress.w + duvetHang + 0.06, foot + duvetHang - dStart, cx + duvetHang / 2 - 0.03, (dStart + foot + duvetHang) / 2, 0, 0.075, rumple, 0.13, 0.1), duvetMat);
 
     // the olive chunky-knit throw, tossed on the diagonal across the foot and over the open side
     const knitTex = paintTexture(512, 512, (c, w, h) => {
@@ -397,10 +437,11 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     knitTex.wrapS = knitTex.wrapT = THREE.RepeatWrapping;
     knitTex.repeat.set(4.5, 4.5);
     const knit = new THREE.MeshStandardMaterial({ map: knitTex, roughness: 1, side: THREE.DoubleSide });
-    const throwRumple = (x: number, z: number) => 0.018 * Math.sin(x * 7 + z * 3) * Math.cos(z * 6 - x * 2) + 0.01 * Math.sin(x * 15 - z * 11) + 0.012;
+    const throwRumple = (x: number, z: number) =>
+      0.03 * Math.max(0, Math.sin(x * 5.5 + z * 2.4 + 1.1)) ** 2 + 0.016 * Math.sin(x * 9 - z * 6) * Math.cos(z * 7 + x * 3) + 0.006 * Math.sin(x * 31 + z * 23) + 0.012;
     const tw = 0.95, tl = 1.25, tAngle = 0.5;
     const tx = cx + 0.08, tz = foot - 0.3;
-    const knitGeo = layCloth(tw, tl, tx, tz, tAngle, 0.1, (x, z) => throwRumple(x, z) + rumple(x, z) * 0.7, 0.11, 0.08);
+    const knitGeo = layCloth(tw, tl, tx, tz, tAngle, 0.115, (x, z) => throwRumple(x, z) + rumple(x, z) * 0.8, 0.12, 0.08);
     cloth(knitGeo, knit);
     // a fringe along its two short ends: little tassels hanging from the edge
     {
@@ -1358,5 +1399,5 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     block(0.008, 0.035, 0.016, std("#f6f5f2", 0.4), sw[0] + 0.012, sw[1], sw[2], group, false);
   }
 
-  return { group, lamp, binoculars, sunset, deskLamp, screens, mugTop, interact: { plushies, bottles, speaker, controller, monitor, ps5, lightSwitch, setConsole, idle: { plants, setLaptopPing, setPsBreath: (b) => setPsBreath(b) }, setMonitorImage, spots, drawer, keyboard, phone, candle } };
+  return { group, lamp, binoculars, sunset, deskLamp, screens, mugTop, interact: { pillows, plushies, bottles, speaker, controller, monitor, ps5, lightSwitch, setConsole, idle: { plants, setLaptopPing, setPsBreath: (b) => setPsBreath(b) }, setMonitorImage, spots, drawer, keyboard, phone, candle } };
 }

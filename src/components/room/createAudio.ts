@@ -18,7 +18,7 @@ import { createSamples } from "@/lib/samples";
 /** the interface's own cues: R.V Bot, saving a doodle, a trophy (panels open silently) */
 export type UiSound = "send" | "receive" | "save" | "achievement";
 
-export type RoomSound = "squeak" | "spritz" | "chime" | "blind" | "meow" | "chirp" | "moo" | "thwip" | "candle-out" | "candle-light" | "drawer-open" | "drawer-close" | "binoculars";
+export type RoomSound = "pillow" | "squeak" | "spritz" | "chime" | "blind" | "meow" | "chirp" | "moo" | "thwip" | "candle-out" | "candle-light" | "drawer-open" | "drawer-close" | "binoculars";
 const PLAYED: RoomSound[] = ["squeak", "spritz", "chime", "blind", "meow", "chirp", "moo", "thwip", "candle-out", "candle-light", "drawer-open", "drawer-close", "binoculars"];
 const ROOM_SOUNDS = ["room/lamp", "room/switch", "room/radio", ...PLAYED.map((k) => `room/${k}`)];
 const UI_SOUNDS = ["ui/send", "ui/receive", "ui/save", "ui/achievement"];
@@ -460,6 +460,12 @@ export function createAudio(): RoomAudio {
     play: (kind) => {
       if (!ctx) return;
       const at = ctx.currentTime + 0.005;
+      if (kind === "pillow") {
+        // a soft, muffled fwump of air pushed out of a pillow: no recording, made here every time
+        burst(at, 0.28, "lowpass", 420 + Math.random() * 120, 0.2, sfx, 0.6);
+        burst(at + 0.01, 0.16, "bandpass", 1100 + Math.random() * 300, 0.05, sfx, 0.8);
+        return;
+      }
       // a squeeze is never the same twice, and the plushies' voices shift a touch each time
       const vary = kind === "squeak" ? 0.12 : kind === "meow" || kind === "chirp" || kind === "moo" || kind === "thwip" ? 0.06 : 0.03;
       if (samples.play(ctx, sfx, `room/${kind}`, { at, vary })) return;

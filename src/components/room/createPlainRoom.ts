@@ -1578,6 +1578,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   type Pick =
     | { kind: "lamp" | "binoculars" | "ceiling" | "sunset" | "desk" | "switch" | "radio" | "console" | "blind" | "drawer" | "keyboard" | "phone" | "candle" }
     | { kind: "plushie"; target: (typeof inter.plushies)[number] }
+    | { kind: "pillow"; target: THREE.Group }
     | { kind: "perfume"; target: THREE.Group }
     | { kind: "portfolio"; id: PortfolioId }
     | { kind: "poster"; info: PosterInfo; root: THREE.Object3D }
@@ -1602,6 +1603,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     phone: "My phone · ask R.V Bot",
     candle: "Candle · blow it out or light it",
     perfume: "The fragrances · spray one",
+    pillow: "Pillow · give it a squish",
     whiteboard: "Whiteboard · what I'm building right now",
   };
   // the mesh under the pointer at the last pick, for the hover glow and lift
@@ -1641,6 +1643,8 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     if (spot) return { kind: "portfolio", id: spot.id };
     const wall = wallPicks.find((w) => isIn(o, w.root));
     if (wall) return wall.kind === "poster" ? { kind: "poster", info: wall.info, root: wall.root } : { kind: wall.kind, root: wall.root };
+    const pillow = inter.pillows.find((g) => isIn(o, g));
+    if (pillow) return { kind: "pillow", target: pillow };
     const plush = inter.plushies.find((p) => isIn(o, p.group));
     if (plush) return { kind: "plushie", target: plush };
     const bottle = inter.bottles.find((g) => isIn(o, g));
@@ -1695,6 +1699,8 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   const PLUSH_VOICE: Record<string, RoomSound> = { "Crying cat": "meow", Babs: "chirp", "Chick-fil-A cow": "moo", "Spider-Ham": "thwip" };
   // plushies squash and spring back, each on its own clock
   const bounces = new Map<THREE.Group, number>();
+  // pillows squish deeper and more slowly than the plushies, and settle back softly
+  const squishy = new Set<THREE.Group>();
 
   // ---------- small wonders ----------
   // a soft round sprite shared by the sparkles and the dust
@@ -2028,6 +2034,10 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       } else if (kind === "blind") {
         blindTarget = blindTarget > 0.5 ? WINDOW.blindDown : 1;
         audio.play("blind");
+      } else if (hit?.kind === "pillow") {
+        bounces.set(hit.target, 0);
+        squishy.add(hit.target);
+        audio.play("pillow");
       } else if (hit?.kind === "plushie") {
         bounces.set(hit.target.group, 0);
         audio.play(PLUSH_VOICE[hit.target.name] ?? "squeak");
@@ -2080,6 +2090,8 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     switch (hit.kind) {
       case "plushie":
         return [hit.target.group];
+      case "pillow":
+        return [hit.target];
       case "perfume":
         return [hit.target];
       case "binoculars":
@@ -2610,11 +2622,13 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     for (const [g, age] of bounces) {
       const t2 = age + dt;
       // a quick squash, then a damped spring back to rest
-      const s2 = reducedMotion ? 0 : Math.exp(-t2 * 6) * Math.sin(t2 * 22) * 0.22;
-      g.scale.set(1 + s2 * 0.6, 1 - s2, 1 + s2 * 0.6);
-      if (t2 > 1.2) {
+      const soft = squishy.has(g);
+      const s2 = reducedMotion ? 0 : soft ? Math.exp(-t2 * 3.5) * Math.sin(t2 * 9) * 0.32 : Math.exp(-t2 * 6) * Math.sin(t2 * 22) * 0.22;
+      g.scale.set(1 + s2 * (soft ? 0.18 : 0.6), 1 - s2, 1 + s2 * (soft ? 0.18 : 0.6));
+      if (t2 > (soft ? 1.8 : 1.2)) {
         g.scale.set(1, 1, 1);
         bounces.delete(g);
+        squishy.delete(g);
       } else bounces.set(g, t2);
     }
     let mistAlive = false;
