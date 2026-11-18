@@ -412,22 +412,22 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     const dStart = z0 + 0.42;
     cloth(layCloth(mattress.w + duvetHang + 0.06, foot + duvetHang - dStart, cx + duvetHang / 2 - 0.03, (dStart + foot + duvetHang) / 2, 0, 0.075, rumple, 0.13, 0.1), duvetMat);
 
-    // the olive chunky-knit throw, tossed on the diagonal across the foot and over the open side
+    // the red chunky-knit throw, tossed on the diagonal across the foot and over the open side
     const knitTex = paintTexture(512, 512, (c, w, h) => {
-      c.fillStyle = olive;
+      c.fillStyle = COLORS.blanket;
       c.fillRect(0, 0, w, h);
       // chunky stitches: columns of plump loops, each a pair of leaning lobes, with dark gaps
       // between the columns
       const sw = 32, sh = 26;
-      c.fillStyle = "rgba(15,20,5,0.16)";
+      c.fillStyle = "rgba(40,0,5,0.16)";
       for (let x = 0; x < w; x += sw) c.fillRect(x - 2, 0, 4, h);
       for (let x = sw / 2; x < w + sw; x += sw)
         for (let y = 0; y < h + sh; y += sh)
           for (const side of [-1, 1]) {
             const g = c.createRadialGradient(x + side * 6, y - 4, 1, x + side * 6, y, sh * 0.6);
-            g.addColorStop(0, "rgba(225,235,185,0.16)");
-            g.addColorStop(0.7, "rgba(120,130,80,0.04)");
-            g.addColorStop(1, "rgba(15,20,5,0.14)");
+            g.addColorStop(0, "rgba(255,195,180,0.16)");
+            g.addColorStop(0.7, "rgba(160,60,60,0.04)");
+            g.addColorStop(1, "rgba(40,0,5,0.14)");
             c.fillStyle = g;
             c.beginPath();
             c.ellipse(x + side * sw * 0.2, y, sw * 0.22, sh * 0.5, -side * 0.5, 0, Math.PI * 2);
@@ -451,7 +451,7 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
       tassel.translate(0, -0.035, 0);
       const spots: THREE.Vector3[] = [];
       for (const row of [0, rows - 1]) for (let col = 0; col < cols; col += 2) spots.push(new THREE.Vector3(p.getX(row * cols + col), p.getY(row * cols + col), p.getZ(row * cols + col)));
-      const fringe = new THREE.InstancedMesh(tassel, new THREE.MeshStandardMaterial({ color: "#56603a", roughness: 1 }), spots.length);
+      const fringe = new THREE.InstancedMesh(tassel, new THREE.MeshStandardMaterial({ color: "#7e161c", roughness: 1 }), spots.length);
       const m = new THREE.Matrix4();
       const q = new THREE.Quaternion();
       spots.forEach((v, k) => {

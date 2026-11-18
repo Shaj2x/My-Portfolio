@@ -51,8 +51,8 @@ export const COLORS = {
   steel: "#1c1c1e",
   /** the duvet: cream */
   sheet: "#ede3d1",
-  /** the knit throw: deep burgundy */
-  blanket: "#6a1d24",
+  /** the knit throw: red */
+  blanket: "#9a1b22",
   /** piping on the turned-down sheet */
   blanketStripe: "#7a2229",
   /** the velvet lumbar cushion */
