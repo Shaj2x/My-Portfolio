@@ -146,16 +146,16 @@ const trackSpot = (e: React.PointerEvent<HTMLElement>) => {
 };
 
 /**
- * A dock button: an icon over a short label. `open` means its menu is showing; a lens of glass
- * slides between open buttons. `on` means the thing it controls is on (a lit dot). Presses
- * respond on pointer-down with a quick spring.
+ * A dock button: an icon over a short label, every button the same width so the dock keeps an even
+ * rhythm. `open` means its menu or panel is showing: a lens of glass slides to it. `on` means the
+ * thing it controls is on: the icon lights amber with a small dot beneath. Hover is a quiet
+ * highlight and a 1px rise; presses respond with a quick spring.
  */
 const DockButton = ({
   label,
   onClick,
   open = false,
   on = false,
-  accent = false,
   badge,
   className = "",
   children,
@@ -164,7 +164,6 @@ const DockButton = ({
   onClick: () => void;
   open?: boolean;
   on?: boolean;
-  accent?: boolean;
   badge?: string;
   className?: string;
   children: ReactNode;
@@ -173,20 +172,23 @@ const DockButton = ({
     type="button"
     onClick={onClick}
     aria-pressed={open || on}
-    whileTap={{ scale: 0.94 }}
-    whileHover={{ y: -2 }}
+    aria-label={badge ? `${label} (${badge})` : undefined}
+    whileTap={{ scale: 0.95 }}
     transition={{ type: "spring", bounce: 0.15, duration: 0.25 }}
-    className={`${className} group on-glass relative flex min-w-[52px] shrink-0 flex-col items-center gap-1 rounded-[16px] px-2 py-2 text-[10px] font-medium sm:min-w-[64px] sm:px-3 sm:text-[11px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-200 ${
-      accent ? "text-amber-100" : open || on ? "text-amber-100" : "text-white/80 hover:text-white"
+    className={`${className} group on-glass relative flex w-[62px] shrink-0 flex-col items-center gap-1 rounded-[14px] pb-2 pt-2 text-[10px] font-medium leading-none sm:w-[68px] sm:text-[11px] transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-amber-200 ${
+      open ? "text-white" : "text-white/70 hover:text-white"
     }`}
   >
-    {open && <motion.span layoutId="dock-lens" transition={SPRING} className="liquid-lens absolute inset-0 -z-10 rounded-[16px]" aria-hidden="true" />}
-    {accent && !open && <span className="absolute inset-0 -z-10 rounded-[16px] bg-amber-200/10" aria-hidden="true" />}
-    <span className="transition-transform duration-200 ease-out motion-safe:group-hover:scale-[1.15] motion-safe:group-hover:-rotate-3">{children}</span>
-    <span>{label}</span>
-    {!open && <span className="absolute inset-0 -z-10 rounded-[16px] bg-white/0 transition-colors duration-200 group-hover:bg-white/[0.07]" aria-hidden="true" />}
-    {on && <span className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-amber-200 shadow-[0_0_6px_rgba(253,230,138,0.9)]" aria-hidden="true" />}
-    {badge && <span className="absolute right-1 top-1 rounded-full bg-amber-200 px-1.5 text-[10px] font-semibold leading-4 text-black tabular-nums">{badge}</span>}
+    {open && <motion.span layoutId="dock-lens" transition={SPRING} className="liquid-lens absolute inset-0 -z-10 rounded-[14px]" aria-hidden="true" />}
+    {!open && <span className="absolute inset-0 -z-10 rounded-[14px] bg-white/0 transition-colors duration-200 group-hover:bg-white/[0.07]" aria-hidden="true" />}
+    <span className={`relative grid h-6 w-6 place-items-center transition-[transform,color] duration-200 ease-out motion-safe:group-hover:-translate-y-px ${on ? "text-amber-200" : ""}`}>
+      {children}
+      {badge && (
+        <span aria-hidden="true" className="absolute -right-3 -top-1.5 rounded-full bg-amber-200 px-1 text-[9px] font-semibold leading-[14px] text-[#1a1206] tabular-nums shadow-[0_1px_3px_rgba(0,0,0,0.35)]">{badge}</span>
+      )}
+    </span>
+    <span className="tracking-[0.01em]">{label}</span>
+    <span className={`absolute bottom-[3px] left-1/2 h-[3px] w-[3px] -translate-x-1/2 rounded-full bg-amber-200 shadow-[0_0_6px_rgba(253,230,138,0.9)] transition-opacity duration-200 ${on ? "opacity-100" : "opacity-0"}`} aria-hidden="true" />
   </motion.button>
 );
 
@@ -1209,16 +1211,18 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
               animate={chromeIn ? { opacity: 1, transform: "translateY(0px) scale(1)" } : undefined}
               transition={{ type: "spring", bounce: 0, duration: 0.6, delay: 0.12 }}
               onPointerMove={trackSpot}
-              className="liquid-glass glass-spot pointer-events-auto flex max-w-full items-stretch gap-1 overflow-x-auto rounded-[24px] p-1.5 [scrollbar-width:none]"
+              className="liquid-glass glass-spot pointer-events-auto flex max-w-full items-center gap-0.5 overflow-x-auto rounded-[22px] p-1.5 [scrollbar-width:none] max-sm:[mask-image:linear-gradient(to_right,black_86%,transparent)]"
               aria-label="Room controls"
             >
-              <DockButton label="Portfolio" open={menu === "portfolio"} onClick={() => toggleMenu("portfolio")} accent badge={`${found.length}/${PORTFOLIO_IDS.length}`}>
+              {/* the portfolio itself: one quiet tray, so it reads as the main group without four
+                  tinted tiles competing */}
+              <div className="flex shrink-0 gap-0.5 rounded-[18px] bg-white/[0.05] p-0.5 ring-1 ring-inset ring-white/[0.06]">
+              <DockButton label="Portfolio" open={menu === "portfolio"} onClick={() => toggleMenu("portfolio")} badge={`${found.length}/${PORTFOLIO_IDS.length}`}>
                 <LayoutGrid className="h-5 w-5" />
               </DockButton>
               {/* what I build is the site's main focus, so it's one tap away (it's also the desk chair) */}
               <DockButton
                 label="Services"
-                accent
                 open={section === "services"}
                 onClick={() => {
                   setMenu(null);
@@ -1232,7 +1236,6 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
               {/* getting in touch, one tap away (it's also the calendar on the door) */}
               <DockButton
                 label="Contact"
-                accent
                 open={section === "contact"}
                 onClick={() => {
                   setMenu(null);
@@ -1246,7 +1249,6 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
               {/* R.V Bot (it's also my phone on the desk) */}
               <DockButton
                 label="R.V Bot"
-                accent
                 open={asking}
                 onClick={() => {
                   setMenu(null);
@@ -1257,7 +1259,8 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
               >
                 <MessageCircle className="h-5 w-5" />
               </DockButton>
-              <span className="mx-1 hidden w-px self-stretch bg-white/10 sm:block" aria-hidden="true" />
+              </div>
+              <span className="mx-1 my-2 w-px shrink-0 self-stretch bg-white/10" aria-hidden="true" />
               <DockButton label="PlayStation" onClick={() => roomRef.current?.setView("console")}>
                 <Gamepad2 className="h-5 w-5" />
               </DockButton>
