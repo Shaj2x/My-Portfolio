@@ -176,7 +176,7 @@ const DockButton = ({
     whileTap={{ scale: 0.95 }}
     transition={{ type: "spring", bounce: 0.15, duration: 0.25 }}
     className={`${className} group on-glass relative flex w-[62px] shrink-0 flex-col items-center gap-1 rounded-[14px] pb-2 pt-2 text-[10px] font-medium leading-none sm:w-[68px] sm:text-[11px] transition-colors duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-amber-200 ${
-      open ? "text-white" : "text-white/70 hover:text-white"
+      open ? "text-white" : "text-white/85 hover:text-white"
     }`}
   >
     {open && <motion.span layoutId="dock-lens" transition={SPRING} className="liquid-lens absolute inset-0 -z-10 rounded-[14px]" aria-hidden="true" />}
@@ -257,6 +257,19 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
   const [playerOpen, setPlayerOpen] = useState(false);
   // R.V Bot, from the phone on the desk or the dock
   const [asking, setAsking] = useState(false);
+  // on narrow screens the dock scrolls sideways; its right edge fades only while more lies beyond it
+  const dockRef = useRef<HTMLElement>(null);
+  const [dockMore, setDockMore] = useState(false);
+  const measureDock = () => {
+    const d = dockRef.current;
+    if (d) setDockMore(d.scrollLeft + d.clientWidth < d.scrollWidth - 4);
+  };
+  useEffect(() => {
+    measureDock();
+    window.addEventListener("resize", measureDock);
+    return () => window.removeEventListener("resize", measureDock);
+    // the dock is remounted on the way back from the binoculars or the PlayStation
+  }, [view]);
   const askingRef = useRef(false);
   askingRef.current = asking;
   // the whiteboard's drawing pad, open with the plain board to draw over
@@ -1210,13 +1223,14 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
               initial={reduce ? { opacity: 0 } : { opacity: 0, transform: "translateY(20px) scale(0.97)" }}
               animate={chromeIn ? { opacity: 1, transform: "translateY(0px) scale(1)" } : undefined}
               transition={{ type: "spring", bounce: 0, duration: 0.6, delay: 0.12 }}
+              ref={dockRef}
+              onScroll={measureDock}
               onPointerMove={trackSpot}
-              className="liquid-glass glass-spot pointer-events-auto flex max-w-full items-center gap-0.5 overflow-x-auto rounded-[22px] p-1.5 [scrollbar-width:none] max-sm:[mask-image:linear-gradient(to_right,black_86%,transparent)]"
+              className={`liquid-glass glass-spot pointer-events-auto flex max-w-full items-center gap-0.5 overflow-x-auto rounded-[22px] p-1.5 [scrollbar-width:none] ${dockMore ? "[mask-image:linear-gradient(to_right,black_86%,transparent)]" : ""}`}
               aria-label="Room controls"
             >
-              {/* the portfolio itself: one quiet tray, so it reads as the main group without four
-                  tinted tiles competing */}
-              <div className="flex shrink-0 gap-0.5 rounded-[18px] bg-white/[0.05] p-0.5 ring-1 ring-inset ring-white/[0.06]">
+              {/* the portfolio itself, then the room's controls: two groups told apart by spacing
+                  and a divider rather than by boxes inside the dock */}
               <DockButton label="Portfolio" open={menu === "portfolio"} onClick={() => toggleMenu("portfolio")} badge={`${found.length}/${PORTFOLIO_IDS.length}`}>
                 <LayoutGrid className="h-5 w-5" />
               </DockButton>
@@ -1259,8 +1273,7 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
               >
                 <MessageCircle className="h-5 w-5" />
               </DockButton>
-              </div>
-              <span className="mx-1 my-2 w-px shrink-0 self-stretch bg-white/10" aria-hidden="true" />
+              <span className="mx-2 my-2.5 w-px shrink-0 self-stretch bg-white/15" aria-hidden="true" />
               <DockButton label="PlayStation" onClick={() => roomRef.current?.setView("console")}>
                 <Gamepad2 className="h-5 w-5" />
               </DockButton>
@@ -1281,7 +1294,7 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
               </DockButton>
             </motion.nav>
             <motion.p
-              className="on-glass hidden text-center text-xs text-white/55 sm:block"
+              className="on-glass hidden text-center text-xs text-white/75 sm:block"
               initial={{ opacity: 0 }}
               animate={chromeIn ? { opacity: 1 } : undefined}
               transition={{ duration: 0.5, ease: EASE_OUT, delay: 0.3 }}
