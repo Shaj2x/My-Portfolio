@@ -100,13 +100,13 @@ export const StartProject = ({ id }: { id: string }) => {
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1800);
   };
-  const field = "w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-sm text-white placeholder:text-white/45 outline-none transition-colors focus:border-amber-200/60";
+  const field = "w-full min-h-[44px] rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-sm text-white placeholder:text-white/45 outline-none transition-colors focus:border-amber-200/60";
   return (
     <div id={id} className="mt-4 max-w-2xl rounded-2xl border border-white/10 bg-white/[0.04] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.07)]">
       <p className="text-sm font-semibold text-white">Tell me what you have in mind</p>
       <fieldset className="mt-3">
         <legend className="mb-2 text-xs text-white/60">What do you need? Pick any.</legend>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-2">
           {services.map((s) => {
             const on = picked.includes(s.title);
             return (
@@ -115,7 +115,7 @@ export const StartProject = ({ id }: { id: string }) => {
                 type="button"
                 aria-pressed={on}
                 onClick={() => setPicked((p) => (on ? p.filter((x) => x !== s.title) : [...p, s.title]))}
-                className={`rounded-full border px-2.5 py-1 text-xs transition-colors duration-150 ${on ? "border-amber-200/70 bg-amber-200/15 text-amber-100" : "border-white/10 bg-white/[0.05] text-white/80 hover:border-white/25"}`}
+                className={`inline-flex min-h-[44px] items-center rounded-full border px-3.5 text-xs transition-colors duration-150 sm:min-h-[36px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-200 ${on ? "border-amber-200/70 bg-amber-200/15 text-amber-100" : "border-white/10 bg-white/[0.05] text-white/80 hover:border-white/25"}`}
               >
                 {s.title}
               </button>
@@ -140,12 +140,12 @@ export const StartProject = ({ id }: { id: string }) => {
             href={l.href}
             target={l.href.startsWith("mailto:") ? undefined : "_blank"}
             rel="noopener noreferrer"
-            className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm transition-colors duration-150 ${i === 0 ? "bg-amber-200 font-semibold text-[#1a1408] hover:bg-amber-100" : "border border-white/15 bg-white/[0.06] text-white hover:border-white/30"}`}
+            className={`inline-flex min-h-[46px] items-center gap-1.5 rounded-full px-4 text-sm transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-200 ${i === 0 ? "bg-amber-200 font-semibold text-[#1a1408] hover:bg-amber-100" : "border border-white/15 bg-white/[0.06] text-white hover:border-white/30"}`}
           >
             {l.label}
           </a>
         ))}
-        <button type="button" onClick={copy} className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.06] px-3.5 py-1.5 text-sm text-white transition-colors duration-150 hover:border-white/30">
+        <button type="button" onClick={copy} className="inline-flex min-h-[46px] items-center gap-1.5 rounded-full border focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-200 border-white/15 bg-white/[0.06] px-4 text-sm text-white transition-colors duration-150 hover:border-white/30">
           {copied ? <Check className="h-3.5 w-3.5 text-amber-200" aria-hidden="true" /> : <Copy className="h-3.5 w-3.5" aria-hidden="true" />}
           {copied ? "Copied" : "Copy my email"}
         </button>
