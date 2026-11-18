@@ -15,6 +15,7 @@ const RoomPlain = lazy(() => import("./pages/RoomPlain"));
 const QuickView = lazy(() => import("./pages/QuickView"));
 // a project's case study, opened from its card
 const CaseStudy = lazy(() => import("./pages/CaseStudy"));
+const ServicesPage = lazy(() => import("./pages/ServicesPage"));
 // Ma's Garden, a fruit-matching game made for Ma
 const MasGarden = lazy(() => import("./pages/MasGarden"));
 
@@ -68,6 +69,14 @@ const App = () => (
               element={
                 <Suspense fallback={<div className="fixed inset-0 bg-[#0d0e11]" />}>
                   <CaseStudy />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/services"
+              element={
+                <Suspense fallback={<div className="fixed inset-0 bg-[#0d0e11]" />}>
+                  <ServicesPage />
                 </Suspense>
               }
             />

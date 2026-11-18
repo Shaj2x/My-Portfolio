@@ -74,6 +74,35 @@ export const pages: SeoPage[] = [
     }),
   ),
   {
+    path: "/services",
+    title: `What I provide · ${NAME}`,
+    description:
+      "AI receptionists, automation, websites, brand identity, voice agents and custom AI tools for businesses, plus 1-on-1 tutoring and mentorship through ABA Tutoring.",
+    image: "/og.jpg",
+    imageAlt: "Shajith's dorm room in 3D at night: a red bed under the window, a lit floor lamp, and a desk with a curved monitor.",
+    data: {
+      "@context": "https://schema.org",
+      "@type": "ProfessionalService",
+      name: NAME,
+      url: `${SITE}/services`,
+      founder: { "@id": `${SITE}/#me` },
+      areaServed: "CA",
+      hasOfferCatalog: {
+        "@type": "OfferCatalog",
+        name: "Services",
+        itemListElement: [
+          "AI Receptionist Systems",
+          "End-to-End Automation",
+          "Full Website Development",
+          "Brand Identity & Logo Design",
+          "AI Voice Agents",
+          "Custom AI Solutions",
+          "1-on-1 tutoring and mentorship",
+        ].map((name) => ({ "@type": "Offer", itemOffered: { "@type": "Service", name } })),
+      },
+    },
+  },
+  {
     path: "/ma",
     title: "Ma's Garden",
     description: "A fruit-matching game, made for Ma. Match three, clear the garden, and pick up where you left off.",
