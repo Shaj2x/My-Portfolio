@@ -280,15 +280,16 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
       pillows.push(holder);
       return pl;
     };
-    // ---- a cosy pile of pillows: white sleeping pillows propped on the headboard, then olive and
+    // ---- a cosy pile of pillows: white sleeping pillows propped on the headboard, then red and
     // cream cushions in front of them ----
-    const olive = "#5d6740";
-    const oliveTex = paintTexture(256, 256, (c, w, h) => {
-      c.fillStyle = olive;
+    // a deep red velvet, a shade darker than the throw so the two read apart
+    const cushionRed = "#7f1820";
+    const velvetTex = paintTexture(256, 256, (c, w, h) => {
+      c.fillStyle = cushionRed;
       c.fillRect(0, 0, w, h);
       // brushed velvet pile: soft strokes of light and shade, no weave
       for (let i = 0; i < 500; i++) {
-        c.strokeStyle = rnd() > 0.5 ? "rgba(210,220,170,0.05)" : "rgba(10,15,0,0.07)";
+        c.strokeStyle = rnd() > 0.5 ? "rgba(255,190,180,0.05)" : "rgba(25,0,0,0.08)";
         c.lineWidth = between(2, 6);
         const x = rnd() * w, y = rnd() * h;
         c.beginPath();
@@ -297,7 +298,7 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
         c.stroke();
       }
     });
-    const oliveMat = new THREE.MeshPhysicalMaterial({ map: oliveTex, roughness: 0.8, sheen: 1, sheenRoughness: 0.35, sheenColor: new THREE.Color("#b8c48f") });
+    const velvetMat = new THREE.MeshPhysicalMaterial({ map: velvetTex, roughness: 0.8, sheen: 1, sheenRoughness: 0.35, sheenColor: new THREE.Color("#e3897d") });
     // a cream cable-knit cushion
     const cableTex = paintTexture(256, 256, (c, w, h) => {
       c.fillStyle = "#e9dfcd";
@@ -326,10 +327,10 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
     restPillow(pillowGeo(0.66, 0.46, 0.24), caseMat, cx - 0.33, z0 + 0.2, 0.46, 0.24, 0.62, 0.04, 0.025);
     restPillow(pillowGeo(0.66, 0.46, 0.24), caseMat, cx + 0.33, z0 + 0.21, 0.46, 0.24, 0.66, -0.05, 0.025);
     restPillow(pillowGeo(0.62, 0.42, 0.18), caseMat, cx + 0.3, z0 + 0.37, 0.42, 0.18, 0.5, -0.1, 0.02);
-    // front row: a cream cable-knit lumbar and two olive cushions, each set a little askew
+    // front row: a cream cable-knit lumbar and two red velvet cushions, each set a little askew
     restPillow(pillowGeo(0.5, 0.34, 0.15, 0.05), cableMat, cx - 0.3, z0 + 0.44, 0.34, 0.15, 0.85, 0.12, 0.03);
-    restPillow(pillowGeo(0.42, 0.42, 0.15, 0.07), oliveMat, cx + 0.02, z0 + 0.43, 0.42, 0.15, 0.95, 0.06, 0.03);
-    restPillow(pillowGeo(0.4, 0.4, 0.14, 0.07), oliveMat, cx + 0.38, z0 + 0.53, 0.4, 0.14, 0.9, -0.18, 0.03);
+    restPillow(pillowGeo(0.42, 0.42, 0.15, 0.07), velvetMat, cx + 0.02, z0 + 0.43, 0.42, 0.15, 0.95, 0.06, 0.03);
+    restPillow(pillowGeo(0.4, 0.4, 0.14, 0.07), velvetMat, cx + 0.38, z0 + 0.53, 0.4, 0.14, 0.9, -0.18, 0.03);
 
     // ---- the duvet and the throw: cloth laid on the bed that rolls over the open side and the
     // foot and falls toward the floor, and tucks down against the wall ----
