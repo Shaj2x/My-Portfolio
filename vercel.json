@@ -65,6 +65,10 @@
       "destination": "/ma/index.html"
     },
     {
+      "source": "/services",
+      "destination": "/services/index.html"
+    },
+    {
       "source": "/work/:slug(marq-living|devassist|schematica)",
       "destination": "/work/:slug/index.html"
     },

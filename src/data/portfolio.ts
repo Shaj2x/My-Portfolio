@@ -1,5 +1,5 @@
 /** Portfolio content shared by the portfolio page and the console in the 3D room. */
-import { Bot, Box, Crown, Globe, LayoutDashboard, Rocket, Users, Vote, type LucideIcon } from "lucide-react";
+import { AudioLines, Bot, Crown, Globe, Palette, PhoneCall, Users, Vote, Workflow, type LucideIcon } from "lucide-react";
 
 export interface TimelineItem {
   title: string;
@@ -136,50 +136,87 @@ export interface Service {
   icon: LucideIcon;
   title: string;
   description: string;
-  /** the main things in this category, shown on the card */
+  /** the main things in this service, shown as tags */
   tags: string[];
-  /** more of what's in it, shown when "See everything I build" is open */
-  more: string[];
 }
 
-/** What I build: the five things the site leads with, in the room (the desk chair) and the quick view */
+/** The line that introduces what I build, here and on the services page */
+export const servicesIntro =
+  "I create fully automated AI systems that help businesses scale without scaling headcount. From AI receptionists to complete brand identities, I deliver turnkey solutions.";
+
+/** What I build: the six services, in the room (the desk chair), the quick view and the services page */
 export const services: Service[] = [
   {
+    icon: PhoneCall,
+    title: "AI Receptionist Systems",
+    description: "Fully automated AI receptionists that handle calls, book appointments, answer FAQs and route inquiries, 24/7 with zero downtime.",
+    tags: ["Answers calls", "Books appointments", "Answers FAQs", "Routes inquiries"],
+  },
+  {
+    icon: Workflow,
+    title: "End-to-End Automation",
+    description: "Custom AI pipelines that automate repetitive workflows: lead capture, email follow-ups, CRM updates and data processing.",
+    tags: ["Lead capture", "Email follow-ups", "CRM updates", "Data processing"],
+  },
+  {
     icon: Globe,
-    title: "Web Development",
-    description: "Fast, mobile-friendly websites that look sharp and turn visitors into customers.",
-    tags: ["Business sites", "Landing pages", "Portfolios", "Redesigns"],
-    more: ["Online stores", "Restaurant menus and ordering", "Event and launch pages", "Hosting, domain and contact forms set up"],
+    title: "Full Website Development",
+    description: "High-converting, responsive websites built from scratch: landing pages, e-commerce stores, dashboards and SaaS platforms.",
+    tags: ["Landing pages", "E-commerce stores", "Dashboards", "SaaS platforms"],
+  },
+  {
+    icon: Palette,
+    title: "Brand Identity & Logo Design",
+    description: "Complete visual identities, including logos, color systems, typography and brand guidelines, that make businesses stand out.",
+    tags: ["Logos", "Color systems", "Typography", "Brand guidelines"],
+  },
+  {
+    icon: AudioLines,
+    title: "AI Voice Agents",
+    description: "Intelligent voice bots for inbound and outbound calling: qualifying leads, scheduling meetings and providing customer support.",
+    tags: ["Inbound and outbound calls", "Qualifying leads", "Scheduling meetings", "Customer support"],
   },
   {
     icon: Bot,
-    title: "AI Automation Services",
-    description: "AI that answers, books and follows up for you, so the busywork runs itself.",
-    tags: ["AI receptionist", "Website chatbots", "Workflow automation", "Custom AI tools"],
-    more: ["Appointment booking and reminders", "Lead capture and follow-up emails", "Assistants trained on your own info", "Connecting the tools you already use"],
-  },
-  {
-    icon: LayoutDashboard,
-    title: "Custom Web Apps",
-    description: "Software built around how you work, with accounts, data and dashboards.",
-    tags: ["Booking systems", "Dashboards", "Client portals", "MVPs"],
-    more: ["Inventory and order tracking", "Internal tools for teams", "Logins and databases", "A working first version of your idea, fast"],
-  },
-  {
-    icon: Box,
-    title: "Interactive & 3D Experiences",
-    description: "Sites people want to explore, like the 3D room this portfolio lives in.",
-    tags: ["3D websites", "Browser games", "Educational apps"],
-    more: ["3D product viewers", "Quiz and trivia apps", "Animated, scroll-driven pages", "Learning through play"],
-  },
-  {
-    icon: Rocket,
-    title: "Launch & Growth",
-    description: "Everything after launch: found on Google, quick to load, accessible and kept up to date.",
-    tags: ["SEO", "Analytics", "Accessibility audits", "Maintenance"],
-    more: ["Speed and performance tuning", "Link previews for social sharing", "WCAG accessibility fixes", "Monthly updates and support"],
+    title: "Custom AI Solutions",
+    description: "Bespoke AI tools tailored to your business: chatbots, content generators, data analyzers and smart recommendation engines.",
+    tags: ["Chatbots", "Content generators", "Data analyzers", "Recommendation engines"],
   },
 ];
+
+/** 1-on-1 tutoring and mentorship, through ABA Tutoring (from its own site, abatutoring.lovable.app) */
+export const training = {
+  name: "ABA Tutoring",
+  site: "https://abatutoring.lovable.app",
+  phone: "(437) 422-3308",
+  tel: "+14374223308",
+  intro: "I run a small crew of tutors covering K-12, in person or online. You'll be matched with whoever specializes in what you need, and your first session is free.",
+  story: "I started ABA Tutoring to make school a lot less stressful, and now I run it alongside a small team of tutors who each specialize in different subjects. A specialist for every subject, so support actually feels personal.",
+  steps: [
+    { title: "Tell me what you need", desc: "The subject, the grade and what's been hard. I'll match you with the right tutor on my team." },
+    { title: "Try a free first session", desc: "Zero commitment, so you can see if it's the right fit." },
+    { title: "Keep going, your way", desc: "In person or online, evenings and weekends, at a pace that works for you." },
+  ],
+  subjects: [
+    { name: "Math", desc: "Algebra to calculus" },
+    { name: "Science", desc: "Physics, chemistry, biology" },
+    { name: "Coding", desc: "Java, Python, C++, JavaScript" },
+    { name: "English", desc: "Essays and comprehension" },
+    { name: "Social Studies", desc: "History and geography" },
+    { name: "Languages", desc: "Thamizh, Gujarati, Hindi and Punjabi" },
+    { name: "Homework Help", desc: "All grades, all subjects" },
+    { name: "Study Skills", desc: "Focus and test prep" },
+  ],
+  why: [
+    { title: "Relatable tutors", desc: "A mix of high school and university students who remember what school feels like right now." },
+    { title: "Subject specialists", desc: "Each tutor focuses on their strongest subjects, so you get an expert, not a generalist." },
+    { title: "Multilingual support", desc: "Sessions in Thamizh, Gujarati, Hindi and Punjabi, in the language you're most comfortable with." },
+    { title: "In person or online", desc: "Sessions on your schedule, in whatever format works best." },
+    { title: "Flexible hours", desc: "Evenings and weekends: we'll find a time that fits." },
+    { title: "Judgement-free", desc: "Everyone learns differently. Just steady support, no pressure." },
+    { title: "Beyond grades", desc: "Study habits, confidence and time management too." },
+  ],
+};
 
 export const GITHUB_USERNAME = "Shaj2x";
 

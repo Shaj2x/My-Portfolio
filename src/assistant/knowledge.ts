@@ -90,8 +90,11 @@ export const knowledge: Entry[] = [
     id: "business",
     asks: ["tell me about your business", "ai receptionist", "what services do you offer", "do you build websites", "can you build my website", "what do you build for businesses", "agency", "clients"],
     answer:
-      "I build **AI receptionists** that pick up every call and book appointments, plus **websites**, **custom web apps** and **automations** for small businesses. The goal is simple: make the tech feel easy, so owners can get back to the work they love.",
-    links: [{ label: "Email me about a project", href: `mailto:${EMAIL}` }],
+      "I build turnkey systems for businesses: **AI receptionists** that handle calls and book appointments 24/7, **end-to-end automation** (lead capture, follow-ups, CRM updates), **full websites**, **brand identity and logo design**, **AI voice agents** for inbound and outbound calls, and **custom AI tools** like chatbots and data analyzers. I also offer **1-on-1 tutoring and mentorship** through ABA Tutoring.",
+    links: [
+      { label: "Everything I provide", href: "/services" },
+      { label: "Email me about a project", href: `mailto:${EMAIL}` },
+    ],
     follow: ["Why did you build DevAssist?", "How do I contact you?"],
   },
   {
@@ -151,8 +154,13 @@ export const knowledge: Entry[] = [
   },
   {
     id: "tutoring",
-    asks: ["tutoring", "do you tutor", "private tutor", "teaching"],
-    answer: "Since August 2025 I've run my own tutoring business, teaching middle and high school students one-on-one, in person and online, with lesson plans built around each student.",
+    asks: ["tutoring", "do you tutor", "private tutor", "teaching", "mentorship", "mentor", "1 on 1", "one on one training", "aba tutoring", "can you teach me to code"],
+    answer:
+      "I run **ABA Tutoring**: a small crew of tutors covering K-12, in person or online. You're matched with whoever specializes in what you need (math, science, coding, English, languages and more), and the **first session is free**. I started it to make school a lot less stressful.",
+    links: [
+      { label: "1-on-1 tutoring", href: "/services#training" },
+      { label: "ABA Tutoring site", href: "https://abatutoring.lovable.app" },
+    ],
   },
   {
     id: "this-site",
