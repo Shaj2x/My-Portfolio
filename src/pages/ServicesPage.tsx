@@ -21,11 +21,11 @@ const EASE_OUT = [0.23, 1, 0.32, 1] as const;
 
 const press = "transition-[background-color,border-color,transform,box-shadow] duration-150 hover:-translate-y-px active:translate-y-0 active:scale-[0.97] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#ffb35c]";
 /** sodium amber: the lamp's colour, used for the one action and the accents */
-const primary = `inline-flex min-h-[48px] items-center gap-2 rounded-full bg-[#ffb35c] px-6 py-3 text-sm font-semibold uppercase tracking-[0.08em] text-[#1a0f04] shadow-[0_0_40px_-8px_rgba(255,179,92,0.7)] hover:bg-[#ffc67f] hover:shadow-[0_0_56px_-6px_rgba(255,179,92,0.85)] ${press}`;
-const secondary = `inline-flex min-h-[48px] items-center gap-2 rounded-full border border-white/20 bg-black/30 px-6 py-3 text-sm font-semibold uppercase tracking-[0.08em] text-white backdrop-blur-md hover:border-white/40 hover:bg-black/45 ${press}`;
+const primary = `inline-flex min-h-[48px] items-center gap-2 rounded-full bg-[#ffb35c] px-6 py-3 text-sm font-semibold text-[#1a0f04] shadow-[0_0_32px_-10px_rgba(255,179,92,0.6)] hover:bg-[#ffc67f] ${press}`;
+const secondary = `inline-flex min-h-[48px] items-center gap-2 rounded-full border border-white/20 bg-black/30 px-6 py-3 text-sm font-medium text-white backdrop-blur-md hover:border-white/40 hover:bg-black/45 ${press}`;
 /** smoked glass over the alley */
 const glass = "rounded-[28px] border border-white/10 bg-[#07080a]/[0.86] shadow-[0_40px_120px_-40px_rgba(0,0,0,0.9)] backdrop-blur-xl";
-const display = "font-display font-extrabold uppercase";
+const display = "font-semibold tracking-[-0.035em]";
 
 /** the one demo for each service, in the order of `services` */
 const DEMOS: ReactNode[] = [<ReceptionistCall key="r" compact />, <AutomationLanes key="a" />, <WebsiteBuild key="w" />, <BrandKit key="b" />, <VoiceAgent key="v" />, <CustomAI key="c" />];
@@ -51,7 +51,7 @@ const LitStatement = ({ text }: { text: string }) => {
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start 0.85", "end 0.45"] });
   const words = text.split(" ");
   return (
-    <p ref={ref} className={`${display} text-[3.1rem] leading-[0.92] tracking-[-0.005em] text-white [text-shadow:0_4px_40px_rgba(0,0,0,0.6)] sm:text-7xl lg:text-[6.4rem]`}>
+    <p ref={ref} className={`${display} text-[1.75rem] leading-[1.2] text-white [text-shadow:0_2px_24px_rgba(0,0,0,0.6)] sm:text-4xl lg:text-[2.75rem]`}>
       {reduce
         ? text
         : words.map((w, i) => <LitWord key={i} word={w} progress={scrollYProgress} from={i / words.length} to={(i + 1) / words.length} />)}
@@ -105,7 +105,7 @@ const ServiceExplorer = () => {
         <div key={active} className="min-h-[290px]">
           {DEMOS[active]}
         </div>
-        <h3 className={`${display} mt-6 text-4xl tracking-[0.005em] text-white`}>{s.title}</h3>
+        <h3 className={`${display} mt-6 text-2xl text-white`}>{s.title}</h3>
         <p className="mt-2 max-w-xl text-base leading-relaxed text-white/75">{s.description}</p>
         <ul className="mt-4 flex flex-wrap gap-1.5" aria-label={`${s.title}: main offerings`}>
           {s.tags.map((t) => (
@@ -174,7 +174,7 @@ const ServicesPage = () => {
           <Link to="/" className="inline-flex min-h-[44px] items-center gap-2 rounded-md text-sm text-white/80 transition-colors hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#ffb35c]">
             <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Shajith Sasikumar
           </Link>
-          <nav aria-label="On this page" className="hidden items-center gap-8 text-xs font-semibold uppercase tracking-[0.14em] text-white/70 md:flex">
+          <nav aria-label="On this page" className="hidden items-center gap-8 text-sm text-white/70 md:flex">
             {[
               ["#build", "What I build"],
               ["#training", "1-on-1 tutoring"],
@@ -185,7 +185,7 @@ const ServicesPage = () => {
               </a>
             ))}
           </nav>
-          <a href="#contact" onClick={jump("contact")} className={`inline-flex min-h-[44px] items-center rounded-full border border-[#ffb35c]/60 bg-black/30 px-4 text-xs font-semibold uppercase tracking-[0.12em] text-[#ffb35c] backdrop-blur-md hover:bg-[#ffb35c] hover:text-[#1a0f04] ${press}`}>
+          <a href="#contact" onClick={jump("contact")} className={`inline-flex min-h-[44px] items-center rounded-full border border-[#ffb35c]/60 bg-black/30 px-4 text-sm font-semibold text-[#ffb35c] backdrop-blur-md hover:bg-[#ffb35c] hover:text-[#1a0f04] ${press}`}>
             Start a project
           </a>
         </div>
@@ -196,15 +196,15 @@ const ServicesPage = () => {
         <section className="relative flex min-h-[100svh] items-end">
           <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(3,4,5,0.88)_0%,rgba(3,4,5,0.55)_38%,transparent_70%),linear-gradient(0deg,rgba(3,4,5,0.9)_0%,transparent_45%)] [mask-image:linear-gradient(to_bottom,black_80%,transparent)]" aria-hidden="true" />
           <div className="relative mx-auto w-full max-w-[1360px] px-5 pb-14 pt-32 sm:px-8 sm:pb-20">
-            <motion.p {...enter(0)} className="inline-flex items-center gap-2.5 rounded-full border border-white/15 bg-black/40 px-3.5 py-1.5 text-[11px] font-medium uppercase tracking-[0.1em] text-white/85 backdrop-blur-md sm:text-xs sm:tracking-[0.14em]">
+            <motion.p {...enter(0)} className="inline-flex items-center gap-2.5 rounded-full border border-white/15 bg-black/40 px-3.5 py-1.5 text-xs text-white/85 backdrop-blur-md">
               <span className="relative flex h-2 w-2" aria-hidden="true">
                 <span className="absolute inset-0 animate-ping rounded-full bg-emerald-400/70 motion-reduce:hidden" />
                 <span className="relative h-2 w-2 rounded-full bg-emerald-400" />
               </span>
               London, Ontario · answering calls 24/7
             </motion.p>
-            <motion.h1 {...enter(0.08)} className={`${display} mt-6 max-w-[14ch] text-[3.6rem] leading-[0.84] tracking-[-0.005em] [text-shadow:0_6px_60px_rgba(0,0,0,0.7)] sm:text-[6.5rem] lg:text-[9.5rem]`}>
-              AI receptionists &amp; websites <span className="text-[#ffb35c] [text-shadow:0_0_60px_rgba(255,150,60,0.45)]">for small businesses</span>
+            <motion.h1 {...enter(0.08)} className={`${display} mt-6 max-w-[16ch] text-[2.5rem] leading-[1.04] [text-shadow:0_4px_40px_rgba(0,0,0,0.7)] sm:text-[3.25rem] lg:text-[4rem]`}>
+              AI receptionists and websites <span className="text-[#ffb35c]">for small businesses</span>
             </motion.h1>
             <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
               <motion.p {...enter(0.18)} className="max-w-xl text-lg leading-relaxed text-white/80">
@@ -223,11 +223,11 @@ const ServicesPage = () => {
         </section>
 
         {/* the page's moment: one statement, lit as you walk past it */}
-        <section className="relative flex min-h-[110svh] items-center">
+        <section className="relative flex min-h-[80svh] items-center">
           <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(3,4,5,0.75)_0%,rgba(3,4,5,0.35)_55%,transparent_85%)] [mask-image:linear-gradient(to_bottom,transparent,black_25%,black_75%,transparent)]" aria-hidden="true" />
           <div className="relative mx-auto w-full max-w-[1360px] px-5 sm:px-8">
             <h2 className="sr-only">What the systems do</h2>
-            <div className="max-w-[1080px]">
+            <div className="max-w-[820px]">
               <LitStatement text="Your phone gets answered. Your leads get a reply. Your follow‑ups go out on time, even after you close." />
             </div>
           </div>
@@ -237,7 +237,7 @@ const ServicesPage = () => {
         <section className="relative mx-auto max-w-[1360px] scroll-mt-20 px-3 py-16 sm:px-8 sm:py-24" id="build">
           <div className={`${glass} p-5 sm:p-10`}>
             <div className="mb-10 grid gap-5 lg:grid-cols-[minmax(0,6fr)_minmax(0,6fr)] lg:items-end lg:gap-12">
-              <h2 className={`${display} text-5xl leading-[0.88] sm:text-7xl`}>
+              <h2 className={`${display} text-3xl leading-[1.1] sm:text-[2.5rem]`}>
                 Six services, <span className="text-[#ffb35c]">set up for you</span>
               </h2>
               <p className="max-w-xl text-base leading-relaxed text-white/70 sm:text-lg">{servicesIntro}</p>
@@ -251,13 +251,13 @@ const ServicesPage = () => {
           <div className={`${glass} overflow-hidden bg-[radial-gradient(90%_60%_at_100%_0%,rgba(255,170,90,0.14),transparent_60%),rgba(7,8,10,0.86)] p-5 sm:p-10`}>
             <div className="grid gap-10 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start">
               <div>
-                <h2 className={`${display} text-5xl leading-[0.88] sm:text-7xl`}>
-                  1-on-1 tutoring <span className="text-[#ffb35c]">&amp; mentorship</span>
+                <h2 className={`${display} text-3xl leading-[1.1] sm:text-[2.5rem]`}>
+                  1-on-1 tutoring <span className="text-[#ffb35c]">and mentorship</span>
                 </h2>
                 <p className="mt-6 max-w-2xl text-lg leading-relaxed text-white/75">{training.intro}</p>
               </div>
               <div className="rounded-[22px] border border-[#ffb35c]/30 bg-[#ffb35c]/[0.08] p-6">
-                <p className={`${display} text-7xl leading-none text-[#ffb35c] [text-shadow:0_0_50px_rgba(255,150,60,0.4)]`}>Free</p>
+                <p className={`${display} text-5xl leading-none text-[#ffb35c]`}>Free</p>
                 <p className="mt-2 text-sm text-white/75">first session, with zero commitment</p>
                 <div className="mt-6 flex flex-wrap gap-2.5">
                   <a href={bookHref} className={primary}>
@@ -288,7 +288,7 @@ const ServicesPage = () => {
 
             <div className="mt-16 grid gap-12 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-14">
               <div>
-                <h3 className={`${display} text-3xl text-white`}>K-12 subjects</h3>
+                <h3 className="text-xl font-semibold text-white">K-12 subjects</h3>
                 <ul className="mt-5 flex flex-wrap gap-2">
                   {training.subjects.map((sub) => (
                     <li
@@ -306,7 +306,7 @@ const ServicesPage = () => {
                 </a>
               </div>
               <div>
-                <h3 className={`${display} text-3xl text-white`}>What 1-on-1 tutoring includes</h3>
+                <h3 className="text-xl font-semibold text-white">What 1-on-1 tutoring includes</h3>
                 <ul className="mt-5 grid gap-x-8 gap-y-5 sm:grid-cols-2">
                   {training.why.map((w) => (
                     <li key={w.title} className="flex gap-3">
@@ -327,12 +327,12 @@ const ServicesPage = () => {
         <section className="relative scroll-mt-16" id="contact">
           <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(0deg,rgba(3,4,5,0.92)_0%,rgba(3,4,5,0.55)_60%,transparent_100%)] [mask-image:linear-gradient(to_bottom,transparent,black_30%)]" aria-hidden="true" />
           <div className="relative mx-auto flex min-h-[100svh] max-w-[1360px] flex-col justify-center px-5 py-24 sm:px-8">
-            <h2 className={`${display} max-w-[13ch] text-[3.4rem] leading-[0.86] [text-shadow:0_6px_60px_rgba(0,0,0,0.7)] sm:text-8xl lg:text-[8.5rem]`}>
-              Project briefs go <span className="text-[#ffb35c] [text-shadow:0_0_60px_rgba(255,150,60,0.45)]">straight to my inbox.</span>
+            <h2 className={`${display} max-w-[18ch] text-[2.25rem] leading-[1.08] [text-shadow:0_4px_40px_rgba(0,0,0,0.7)] sm:text-5xl lg:text-[3.5rem]`}>
+              Project briefs go <span className="text-[#ffb35c]">straight to my inbox.</span>
             </h2>
             <p className="mt-6 max-w-2xl text-lg leading-relaxed text-white/75">Whether you need an AI system, a website, or just want to connect, I'd love to hear from you.</p>
             <div className="mt-10 grid gap-6 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-10">
-              <div className="rounded-[24px] bg-[#07080a]/80 backdrop-blur-xl">
+              <div className="max-w-2xl self-start rounded-2xl bg-[#07080a]/85 backdrop-blur-xl [&>div]:mt-0">
                 <StartProject id={formId} />
               </div>
               <ul className="space-y-3 text-sm">

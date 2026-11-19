@@ -18,7 +18,6 @@ export default {
       fontFamily: {
         sans: ["Space Grotesk", "sans-serif"],
         mono: ["JetBrains Mono", "monospace"],
-        display: ["\"Big Shoulders Display\"", "Impact", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",
