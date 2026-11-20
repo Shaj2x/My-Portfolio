@@ -263,7 +263,7 @@ export function createAlley(canvas: HTMLCanvasElement, opts: { reduceMotion: boo
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: "high-performance" });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, lowPower ? 1 : 1.5));
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFShadowMap;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.05;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -273,7 +273,7 @@ export function createAlley(canvas: HTMLCanvasElement, opts: { reduceMotion: boo
   scene.background = fogColor;
   scene.fog = new THREE.FogExp2(fogColor, 0.034);
 
-  const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 120);
+  const camera = new THREE.PerspectiveCamera(42, 1, 0.4, 90);
 
   const disposables: { dispose: () => void }[] = [];
   const track = <T extends { dispose: () => void }>(o: T) => {
@@ -333,7 +333,7 @@ export function createAlley(canvas: HTMLCanvasElement, opts: { reduceMotion: boo
     color: 0x8a8a8a,
   });
   reflector.rotation.x = -Math.PI / 2;
-  reflector.position.set(0, -0.002, (NEAR_Z + FAR_Z) / 2);
+  reflector.position.set(0, -0.03, (NEAR_Z + FAR_Z) / 2);
   scene.add(reflector);
   track(reflector.getRenderTarget());
   track(reflector.material as THREE.Material);
@@ -523,10 +523,10 @@ export function createAlley(canvas: HTMLCanvasElement, opts: { reduceMotion: boo
   const frameMat = track(new THREE.MeshBasicMaterial({ colorWrite: false, side: THREE.DoubleSide }));
   const frameParts: [number, number, number, number][] = [
     // y, z, height, width (in the wall plane)
-    [winY + winH / 2 + 3, winZ, 6, 14],
-    [winY - winH / 2 - 3, winZ, 6, 14],
-    [winY, winZ + winW / 2 + 3.5, winH, 7],
-    [winY, winZ - winW / 2 - 3.5, winH, 7],
+    [winY + winH / 2 + 10, winZ, 20, 40],
+    [winY - winH / 2 - 10, winZ, 20, 40],
+    [winY, winZ + winW / 2 + 10, winH, 20],
+    [winY, winZ - winW / 2 - 10, winH, 20],
     [winY, winZ, winH, 0.05],
   ];
   for (const [y, z, h, w] of frameParts) {
@@ -538,7 +538,7 @@ export function createAlley(canvas: HTMLCanvasElement, opts: { reduceMotion: boo
     slats.add(f);
   }
   scene.add(slats);
-  const winLight = new THREE.SpotLight("#ffae63", 260, 22, 0.62, 0.35, 1.6);
+  const winLight = new THREE.SpotLight("#ffae63", 260, 22, 0.62, 0.6, 1.6);
   winLight.position.set(-W - 3.4, winY + 1.0, winZ - 1.6);
   winLight.target.position.set(W, winY - 1.2, winZ + 0.9);
   winLight.castShadow = true;
@@ -609,7 +609,7 @@ export function createAlley(canvas: HTMLCanvasElement, opts: { reduceMotion: boo
   endLight.target.position.set(0, 0, -22);
   scene.add(endLight, endLight.target);
 
-  scene.add(new THREE.HemisphereLight("#33302c", "#0b0907", 0.18));
+  scene.add(new THREE.HemisphereLight("#4a4f5a", "#14100c", 0.55));
 
   // ---------- dust drifting in the beam ----------
   const dustCount = lowPower ? 260 : 600;
@@ -699,6 +699,8 @@ export function createAlley(canvas: HTMLCanvasElement, opts: { reduceMotion: boo
     const h = canvas.clientHeight || window.innerHeight;
     renderer.setSize(w, h, false);
     composer.setSize(w, h);
+    const rs = lowPower ? 0.35 : 0.6;
+    reflector.getRenderTarget().setSize(Math.round(w * rs), Math.round(h * rs));
     bloom.resolution.set(w / 2, h / 2);
     camera.aspect = w / h;
     // narrow screens see more of the alley's height
@@ -728,10 +730,6 @@ export function createAlley(canvas: HTMLCanvasElement, opts: { reduceMotion: boo
     camera.lookAt(look);
 
     if (!reduceMotion) {
-      // the sodium lamp hums: a slow breath with a rare stutter
-      const stutter = Math.sin(t * 0.37) > 0.995 ? 0.55 : 1;
-      key.intensity = 1100 * (0.97 + Math.sin(t * 2.1) * 0.015 + Math.sin(t * 13.7) * 0.008) * stutter;
-      beamMat.uniforms.uStrength.value = 0.16 * (key.intensity / 1100);
       for (let i = 0; i < dustCount; i++) {
         const s = dustSeed[i];
         dustPos[i * 3] = dustBase[i * 3] + Math.sin(t * 0.21 + s) * 0.25;
