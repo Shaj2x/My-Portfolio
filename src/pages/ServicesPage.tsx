@@ -170,7 +170,7 @@ const ServicesPage = () => {
       <AlleyBackdrop />
 
       <header className={`fixed inset-x-0 top-0 z-30 transition-[background-color,border-color] duration-300 ${scrolled ? "border-b border-white/10 bg-[#050607]/80 backdrop-blur-xl" : "border-b border-transparent bg-gradient-to-b from-black/80 via-black/40 to-transparent"}`}>
-        <div className="mx-auto flex max-w-[1360px] items-center justify-between gap-4 px-5 py-3 sm:px-8">
+        <div className="mx-auto flex max-w-[1680px] items-center justify-between gap-4 px-5 py-3 sm:px-8">
           <Link to="/" className="inline-flex min-h-[44px] items-center gap-2 rounded-md text-sm text-white/80 transition-colors hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#ffb35c]">
             <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Shajith Sasikumar
           </Link>
@@ -195,7 +195,7 @@ const ServicesPage = () => {
         {/* the first screen: a title card over the alley. What's sold, to whom, one hard fact */}
         <section className="relative flex min-h-[100svh] items-end">
           <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(3,4,5,0.88)_0%,rgba(3,4,5,0.55)_38%,transparent_70%),linear-gradient(0deg,rgba(3,4,5,0.9)_0%,transparent_45%)] [mask-image:linear-gradient(to_bottom,black_80%,transparent)]" aria-hidden="true" />
-          <div className="relative mx-auto w-full max-w-[1360px] px-5 pb-14 pt-32 sm:px-8 sm:pb-20">
+          <div className="relative mx-auto w-full max-w-[1680px] px-5 pb-14 pt-32 sm:px-8 sm:pb-20">
             <motion.p {...enter(0)} className="inline-flex items-center gap-2.5 rounded-full border border-white/15 bg-black/40 px-3.5 py-1.5 text-xs text-white/85 backdrop-blur-md">
               <span className="relative flex h-2 w-2" aria-hidden="true">
                 <span className="absolute inset-0 animate-ping rounded-full bg-emerald-400/70 motion-reduce:hidden" />
@@ -225,7 +225,7 @@ const ServicesPage = () => {
         {/* the page's moment: one statement, lit as you walk past it */}
         <section className="relative flex min-h-[80svh] items-center">
           <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(3,4,5,0.75)_0%,rgba(3,4,5,0.35)_55%,transparent_85%)] [mask-image:linear-gradient(to_bottom,transparent,black_25%,black_75%,transparent)]" aria-hidden="true" />
-          <div className="relative mx-auto w-full max-w-[1360px] px-5 sm:px-8">
+          <div className="relative mx-auto w-full max-w-[1680px] px-5 sm:px-8 lg:px-14">
             <h2 className="sr-only">What the systems do</h2>
             <div className="max-w-[820px]">
               <LitStatement text="Your phone gets answered. Your leads get a reply. Your follow‑ups go out on time, even after you close." />
@@ -234,7 +234,7 @@ const ServicesPage = () => {
         </section>
 
         {/* the six services, each shown working, on smoked glass */}
-        <section className="relative mx-auto max-w-[1360px] scroll-mt-20 px-3 py-16 sm:px-8 sm:py-24" id="build">
+        <section className="relative mx-auto max-w-[1680px] scroll-mt-20 px-3 py-16 sm:px-8 sm:py-24 lg:px-14" id="build">
           <div className={`${glass} p-5 sm:p-10`}>
             <div className="mb-10 grid gap-5 lg:grid-cols-[minmax(0,6fr)_minmax(0,6fr)] lg:items-end lg:gap-12">
               <h2 className={`${display} text-3xl leading-[1.1] sm:text-[2.5rem]`}>
@@ -247,7 +247,7 @@ const ServicesPage = () => {
         </section>
 
         {/* 1-on-1 tutoring and mentorship: the warm window in the alley */}
-        <section className="relative mx-auto max-w-[1360px] scroll-mt-20 px-3 py-16 sm:px-8 sm:py-24" id="training">
+        <section className="relative mx-auto max-w-[1680px] scroll-mt-20 px-3 py-16 sm:px-8 sm:py-24 lg:px-14" id="training">
           <div className={`${glass} overflow-hidden bg-[radial-gradient(90%_60%_at_100%_0%,rgba(255,170,90,0.14),transparent_60%),rgba(7,8,10,0.86)] p-5 sm:p-10`}>
             <div className="grid gap-10 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start">
               <div>
@@ -326,7 +326,7 @@ const ServicesPage = () => {
         {/* the close: the loudest type on the page, then the brief */}
         <section className="relative scroll-mt-16" id="contact">
           <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(0deg,rgba(3,4,5,0.92)_0%,rgba(3,4,5,0.55)_60%,transparent_100%)] [mask-image:linear-gradient(to_bottom,transparent,black_30%)]" aria-hidden="true" />
-          <div className="relative mx-auto flex min-h-[100svh] max-w-[1360px] flex-col justify-center px-5 py-24 sm:px-8">
+          <div className="relative mx-auto flex min-h-[100svh] max-w-[1680px] flex-col justify-center px-5 py-24 sm:px-8">
             <h2 className={`${display} max-w-[18ch] text-[2.25rem] leading-[1.08] [text-shadow:0_4px_40px_rgba(0,0,0,0.7)] sm:text-5xl lg:text-[3.5rem]`}>
               Project briefs go <span className="text-[#ffb35c]">straight to my inbox.</span>
             </h2>
@@ -360,7 +360,7 @@ const ServicesPage = () => {
       </main>
 
       <footer className="relative z-10 border-t border-white/10 bg-black/70 backdrop-blur-md">
-        <div className="mx-auto flex max-w-[1360px] flex-wrap items-center justify-between gap-3 px-5 py-6 text-sm text-white/60 sm:px-8">
+        <div className="mx-auto flex max-w-[1680px] flex-wrap items-center justify-between gap-3 px-5 py-6 text-sm text-white/60 sm:px-8">
           <p>Shajith Sasikumar · London, Ontario · © {new Date().getFullYear()}</p>
           <Link to="/" className="inline-flex min-h-[44px] items-center rounded-sm transition-colors hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#ffb35c]">
             Step into the 3D room →

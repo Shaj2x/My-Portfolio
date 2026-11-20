@@ -63,8 +63,8 @@ const AlleyBackdrop = () => {
         className={`absolute inset-0 h-full w-full transition-opacity duration-[1200ms] ease-out ${ready ? "opacity-100" : "opacity-0"}`}
       />
       {/* film: a vignette and fine grain over the whole frame */}
-      <div className="absolute inset-0 bg-[radial-gradient(120%_90%_at_55%_45%,transparent_45%,rgba(0,0,0,0.75)_100%)]" />
-      <div className="alley-grain absolute -inset-[50%] opacity-[0.09] mix-blend-overlay" />
+      <div className="absolute inset-0 bg-[radial-gradient(140%_100%_at_55%_45%,transparent_60%,rgba(0,0,0,0.45)_100%)]" />
+      <div className="alley-grain absolute inset-0 opacity-[0.07] mix-blend-overlay" />
     </div>
   );
 };
