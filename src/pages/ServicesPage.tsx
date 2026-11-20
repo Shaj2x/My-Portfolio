@@ -5,16 +5,14 @@ import { ArrowLeft, ArrowRight, ArrowUpRight, Check, Github, Linkedin, Mail, Pho
 import { profile, services, servicesIntro, training } from "@/data/portfolio";
 import { StartProject } from "@/components/ServicesShowcase";
 import { AutomationLanes, BrandKit, CustomAI, ReceptionistCall, VoiceAgent, WebsiteBuild } from "@/components/services/ServiceDemos";
-import AlleyBackdrop from "@/components/services/alley/AlleyBackdrop";
+import DeskBackdrop from "@/components/services/DeskBackdrop";
 
 /*
- * Everything I provide, on one page, set in a 3D alley at night (see AlleyBackdrop).
- * The alley is the world: a sodium lamp, fire-escape shadows, rain, a cold far end. Scrolling
- * walks the camera down it. The words sit over it in tall condensed capitals, the content on
- * smoked glass so the scene keeps showing through. Built to the Impeccable and Taste skills:
- * the h1 names the category and the buyer with one hard fact, one statement lights word by word
- * as you scroll (the page's dealt moment), and each service is shown working. Nothing else fades
- * in on scroll; the hero enters once. Under reduced motion the alley holds still.
+ * Everything I provide, on one page, seen from the desk chair of the 3D room (see DeskBackdrop):
+ * clicking the chair in the room sits you down, and this page opens from that seat, with your
+ * hands on the keyboard and mouse following the cursor. The content sits on smoked glass over it.
+ * Built to the Impeccable and Taste skills: the h1 names the category and the buyer with one hard
+ * fact, one statement lights word by word as you scroll, and each service is shown working.
  */
 
 const EASE_OUT = [0.23, 1, 0.32, 1] as const;
@@ -23,7 +21,7 @@ const press = "transition-[background-color,border-color,transform,box-shadow] d
 /** sodium amber: the lamp's colour, used for the one action and the accents */
 const primary = `inline-flex min-h-[48px] items-center gap-2 rounded-full bg-[#ffb35c] px-6 py-3 text-sm font-semibold text-[#1a0f04] shadow-[0_0_32px_-10px_rgba(255,179,92,0.6)] hover:bg-[#ffc67f] ${press}`;
 const secondary = `inline-flex min-h-[48px] items-center gap-2 rounded-full border border-white/20 bg-black/30 px-6 py-3 text-sm font-medium text-white backdrop-blur-md hover:border-white/40 hover:bg-black/45 ${press}`;
-/** smoked glass over the alley */
+/** smoked glass over the desk */
 const glass = "rounded-[28px] border border-white/10 bg-[#07080a]/[0.86] shadow-[0_40px_120px_-40px_rgba(0,0,0,0.9)] backdrop-blur-xl";
 const display = "font-semibold tracking-[-0.035em]";
 
@@ -167,7 +165,7 @@ const ServicesPage = () => {
 
   return (
     <div className="relative min-h-screen overflow-x-clip bg-[#06080b] text-white selection:bg-[#ffb35c]/30">
-      <AlleyBackdrop />
+      <DeskBackdrop />
 
       <header className={`fixed inset-x-0 top-0 z-30 transition-[background-color,border-color] duration-300 ${scrolled ? "border-b border-white/10 bg-[#050607]/80 backdrop-blur-xl" : "border-b border-transparent bg-gradient-to-b from-black/80 via-black/40 to-transparent"}`}>
         <div className="mx-auto flex max-w-[1680px] items-center justify-between gap-4 px-5 py-3 sm:px-8">
@@ -192,7 +190,7 @@ const ServicesPage = () => {
       </header>
 
       <main className="relative z-10">
-        {/* the first screen: a title card over the alley. What's sold, to whom, one hard fact */}
+        {/* the first screen: a title card over the desk. What's sold, to whom, one hard fact */}
         <section className="relative flex min-h-[100svh] items-end">
           <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(3,4,5,0.88)_0%,rgba(3,4,5,0.55)_38%,transparent_70%),linear-gradient(0deg,rgba(3,4,5,0.9)_0%,transparent_45%)] [mask-image:linear-gradient(to_bottom,black_80%,transparent)]" aria-hidden="true" />
           <div className="relative mx-auto w-full max-w-[1680px] px-5 pb-14 pt-32 sm:px-8 sm:pb-20">
@@ -246,7 +244,7 @@ const ServicesPage = () => {
           </div>
         </section>
 
-        {/* 1-on-1 tutoring and mentorship: the warm window in the alley */}
+        {/* 1-on-1 tutoring and mentorship */}
         <section className="relative mx-auto max-w-[1680px] scroll-mt-20 px-3 py-16 sm:px-8 sm:py-24 lg:px-14" id="training">
           <div className={`${glass} overflow-hidden bg-[radial-gradient(90%_60%_at_100%_0%,rgba(255,170,90,0.14),transparent_60%),rgba(7,8,10,0.86)] p-5 sm:p-10`}>
             <div className="grid gap-10 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-start">
