@@ -9,8 +9,8 @@ import DeskBackdrop from "@/components/services/DeskBackdrop";
 
 /*
  * Everything I provide, on one page, seen from the desk chair of the 3D room (see DeskBackdrop):
- * clicking the chair in the room sits you down, and this page opens from that seat, with your
- * hands on the keyboard and mouse following the cursor. The content sits on smoked glass over it.
+ * clicking the chair in the room sits you down, and this page opens from that seat. The content
+ * sits on smoked glass over it.
  * Built to the Impeccable and Taste skills: the h1 names the category and the buyer with one hard
  * fact, one statement lights word by word as you scroll, and each service is shown working.
  */

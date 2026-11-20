@@ -3,8 +3,7 @@ import type { PlainRoomHandle } from "@/components/room/createPlainRoom";
 
 /*
  * The services page's world: you're sitting in the desk chair of the 3D room, looking at the
- * monitor, with your hands on the keyboard and mouse. The cursor moves your right hand and turns
- * your head a little; scrolling leans you in toward the screen. Loaded after the text, and it
+ * monitor. The cursor turns your head a little; scrolling leans you in toward the screen. Loaded after the text, and it
  * fades up from black (the room's sit-down transition ends on black, so the two meet).
  */
 const DeskBackdrop = () => {
