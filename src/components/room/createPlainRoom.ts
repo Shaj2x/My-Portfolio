@@ -18,6 +18,7 @@ import posterRodeo from "@/assets/poster-rodeo.jpg";
 import { PORTFOLIO_SPOTS, type PortfolioId } from "./portfolioSpots";
 import { nowBuilding } from "@/data/portfolio";
 import { CLOSET, COLORS, DOOR, HERO, LAYOUT, ROOM, WINDOW } from "./roomLayout";
+import { createSeatedHands, type SeatedHands } from "./createSeatedHands";
 
 /**
  * A plain recreation of the real room: the shell, furniture and night lighting, with orbit
@@ -61,9 +62,11 @@ export interface MonitorProject {
   /** a demo video, if there is one: it plays on the monitor, silently, in place of the screenshot */
   video?: string;
   status?: string;
+  /** the small line at the foot of the title card; defaults to the project's GitHub address */
+  footer?: string;
 }
 
-export type PlainRoomView = "photo" | "window" | "dollhouse" | "desk" | "door" | "binoculars" | "console";
+export type PlainRoomView = "photo" | "window" | "dollhouse" | "desk" | "door" | "seat" | "binoculars" | "console";
 type CameraView = Exclude<PlainRoomView, "binoculars" | "console">;
 
 /** the room's switchable lights: the floor lamp (dimmable, any colour), the ceiling light and the sunset lamp */
@@ -180,6 +183,12 @@ export interface PlainRoomOptions {
   sound?: SoundSettings;
   /** the sky outside: the visitor's own clock, or a fixed time */
   sky?: SkyMode;
+  /**
+   * sit in the desk chair: a fixed first-person view of the desk with your own hands on it. The
+   * cursor (anywhere on the page) moves the right hand and turns the head a little; the room's
+   * objects aren't clickable. Used as the backdrop of the services page.
+   */
+  seated?: boolean;
 }
 
 export interface PlainRoomHandle {
@@ -190,6 +199,8 @@ export interface PlainRoomHandle {
   toggleLight: (which: "ceiling" | "sunset" | "desk") => boolean;
   /** change any lamp settings; the light fades to them */
   setLamp: (settings: Partial<LampSettings>) => void;
+  /** seated only: lean toward the monitor, 0 sitting back to 1 leaning in */
+  setLean: (amount: number) => void;
   /** play or stop the lo-fi radio on the speaker; returns the new state */
   toggleRadio: () => boolean;
   setMuted: (muted: boolean) => void;
@@ -236,6 +247,9 @@ export interface Ghost {
 
 const vec = (v: [number, number, number]) => new THREE.Vector3(...v);
 
+/** the seated, first-person pose at the desk (eye height of someone sitting in the chair) */
+const SEAT = { pos: [0.5, 1.2, -0.27] as [number, number, number], target: [1.4, 0.98, -0.14] as [number, number, number] };
+
 // camera poses; the photo view keeps the hero framing but pivots about a point inside the room
 const heroPos = vec(HERO.pos);
 const heroDir = vec(HERO.target).sub(heroPos).normalize();
@@ -248,6 +262,8 @@ const VIEWS: Record<CameraView, { pos: THREE.Vector3; target: THREE.Vector3 }> =
   desk: { pos: new THREE.Vector3(-0.15, 1.7, 0.6), target: new THREE.Vector3(1.0, 0.3, -1.2) },
   // matches photo E: from beside the desk, looking at the entry door and the closet
   door: { pos: new THREE.Vector3(0.35, 1.5, -0.45), target: new THREE.Vector3(0.0, 1.0, ROOM.front) },
+  // sitting in the desk chair, eyes on the monitor, keyboard and mouse under your hands
+  seat: { pos: new THREE.Vector3(...SEAT.pos), target: new THREE.Vector3(...SEAT.target) },
 };
 
 export function createPlainRoom(container: HTMLElement, options: PlainRoomOptions = {}): PlainRoomHandle {
@@ -1495,7 +1511,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       if (line && y <= h - 80) c.fillText(line, 72, y);
       c.fillStyle = "rgba(255,255,255,0.35)";
       c.font = "22px ui-monospace, monospace";
-      c.fillText(`github.com/Shaj2x/${p.name}`, 72, h - 56);
+      c.fillText(p.footer ?? `github.com/Shaj2x/${p.name}`, 72, h - 56);
     });
   const projectVideos = new Map<string, HTMLVideoElement>();
   // swaps in a better picture for a project once it has loaded (the screenshot, then the video)
@@ -1571,6 +1587,49 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       beforeFocus = null;
     }
   };
+
+  // ---------- seated: first person at the desk, hands on the keyboard and mouse ----------
+  const seated = !!options.seated;
+  let hands: SeatedHands | null = null;
+  let lean = 0;
+  const look = { x: 0, y: 0, tx: 0, ty: 0 };
+  const seatPos = vec(SEAT.pos);
+  const seatTarget = vec(SEAT.target);
+  const seatLook = new THREE.Vector3();
+  const onSeatPointer = (e: PointerEvent) => {
+    const x = (e.clientX / window.innerWidth) * 2 - 1;
+    const y = -(e.clientY / window.innerHeight) * 2 + 1;
+    look.tx = x;
+    look.ty = y;
+    hands?.setPointer(x, y);
+  };
+  const onSeatTap = (e: PointerEvent) => {
+    if (e.button === 0) hands?.tap();
+  };
+  if (seated) {
+    controls.enabled = false;
+    camera.position.copy(seatPos);
+    controls.target.copy(seatTarget);
+    camera.lookAt(seatTarget);
+    const deskTopY = LAYOUT.desk.h + 0.012;
+    const deskFront = LAYOUT.desk.pos[0] - LAYOUT.desk.d / 2;
+    hands = createSeatedHands(
+      scene,
+      camera,
+      {
+        y: deskTopY,
+        minX: deskFront + 0.04,
+        maxX: deskFront + 0.36,
+        minZ: LAYOUT.keyboard.pos[2] - 0.35,
+        maxZ: LAYOUT.mouse.pos[2] + 0.2,
+        keyboard: new THREE.Vector3(LAYOUT.keyboard.pos[0] - 0.02, deskTopY, LAYOUT.keyboard.pos[2] - 0.1),
+        mouse: new THREE.Vector3(LAYOUT.mouse.pos[0] - 0.03, deskTopY, LAYOUT.mouse.pos[2]),
+      },
+      reducedMotion,
+    );
+    window.addEventListener("pointermove", onSeatPointer, { passive: true });
+    window.addEventListener("pointerdown", onSeatTap, { passive: true });
+  }
 
   // ---------- pointer: click the lamp or the binoculars; drag to aim through the binoculars ----------
   const raycaster = new THREE.Raycaster();
@@ -2000,6 +2059,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   let dragFrom: { x: number; y: number } | null = null;
   const onDown = (e: PointerEvent) => (downAt = dragFrom = { x: e.clientX, y: e.clientY });
   const onUp = (e: PointerEvent) => {
+    if (seated) return;
     if (downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < 6) {
       const hit = pickTarget(e);
       const kind = hit?.kind;
@@ -2163,6 +2223,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     } else outlineTarget = 0;
   };
   const onMove = (e: PointerEvent) => {
+    if (seated) return;
     if (mode === "binoculars") {
       renderer.domElement.style.cursor = e.buttons ? "grabbing" : "grab";
       if (e.buttons && dragFrom && !zoom) {
@@ -2179,7 +2240,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     const hit = pickTarget(e);
     renderer.domElement.style.cursor = hit ? "pointer" : "";
     setHover(hit);
-    const label = !hit ? null : hit.kind === "plushie" ? `${hit.target.name} · give it a squeeze` : hit.kind === "portfolio" ? `${PORTFOLIO_SPOTS[hit.id].object} · something's here` : hit.kind === "poster" ? `${hit.info.album} · what am I listening to?` : LABELS[hit.kind];
+    const label = !hit ? null : hit.kind === "plushie" ? `${hit.target.name} · give it a squeeze` : hit.kind === "portfolio" ? (hit.id === "services" ? "Desk chair · sit down" : `${PORTFOLIO_SPOTS[hit.id].object} · something's here`) : hit.kind === "poster" ? `${hit.info.album} · what am I listening to?` : LABELS[hit.kind];
     if (label !== hoverLabel) {
       hoverLabel = label;
       options.onHover?.(label);
@@ -2245,7 +2306,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
   // the camera drifts down from near the ceiling into the photo view while the lamp flickers on,
   // the way an old bulb catches. Skipped for reduced motion.
   let intro = reducedMotion ? 1 : 0;
-  if (!reducedMotion) {
+  if (!reducedMotion && !seated) {
     camera.position.copy(VIEWS.photo.pos).add(new THREE.Vector3(0.1, 0.55, 0.02));
     controls.target.copy(VIEWS.photo.target).add(new THREE.Vector3(0, -0.35, 0));
     camera.lookAt(controls.target);
@@ -2707,7 +2768,16 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
           done?.();
         }
       }
-      if (mode === "room") controls.update();
+      if (seated && !tween) {
+        // the head turns a little toward the cursor, and leans in toward the monitor
+        const k = reducedMotion ? 1 : 1 - Math.exp(-dt * 3);
+        look.x += (look.tx - look.x) * k;
+        look.y += (look.ty - look.y) * k;
+        camera.position.copy(seatPos).add(new THREE.Vector3(0.16 * lean, -0.03 * lean, look.x * 0.025));
+        seatLook.copy(seatTarget).add(new THREE.Vector3(0, look.y * 0.14 - 0.04 * lean, look.x * 0.32));
+        camera.lookAt(seatLook);
+        hands?.update(dt, time);
+      } else if (mode === "room") controls.update();
       else camera.lookAt(controls.target);
       // dollhouse cutaway: hide any wall the camera is behind, and the ceiling from above
       for (const w of walls) {
@@ -2769,7 +2839,13 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     setSky,
     setSpeakerPlaying: (on) => (speakerPlaying = on),
     setLamp,
+    setLean: (amount) => {
+      lean = THREE.MathUtils.clamp(amount, 0, 1);
+    },
     dispose: () => {
+      window.removeEventListener("pointermove", onSeatPointer);
+      window.removeEventListener("pointerdown", onSeatTap);
+      hands?.dispose();
       renderer.domElement.removeEventListener("touchstart", onTouchStart);
       renderer.domElement.removeEventListener("touchmove", onTouchMove);
       renderer.domElement.removeEventListener("touchend", onTouchEnd);

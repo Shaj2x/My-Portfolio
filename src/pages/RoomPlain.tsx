@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion, useReducedMotion, type Transition } from "framer-motion";
 import { ArrowUpRight, Binoculars, Briefcase, CalendarDays, Camera, Check, Gamepad2, LayoutGrid, Lightbulb, LightbulbOff, ChevronDown, MessageCircle, Radio, ScrollText, SlidersHorizontal, Trophy, Volume2, VolumeX, X } from "lucide-react";
 import type { ReactNode } from "react";
@@ -199,6 +199,11 @@ const DockButton = ({
 const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const roomRef = useRef<PlainRoomHandle | null>(null);
+  const navigate = useNavigate();
+  const navigateRef = useRef(navigate);
+  navigateRef.current = navigate;
+  // clicking the desk chair sits you down in it, then the services page opens from that seat
+  const [sitting, setSitting] = useState(false);
   const [view, setView] = useState<PlainRoomView>("photo");
   const viewRef = useRef<PlainRoomView>("photo");
   const lastRoomView = useRef<RoomView>("photo");
@@ -368,7 +373,13 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
           },
           onPortfolio: (id) => {
             if (id === "resume" && profile.resumePdf) openResume();
-            else setSection(id);
+            else if (id === "services") {
+              setSection(null);
+              setSitting(true);
+              roomRef.current?.setView("seat");
+              const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+              window.setTimeout(() => navigateRef.current("/services"), still ? 300 : 1700);
+            } else setSection(id);
             setFound((f) => {
               if (f.includes(id)) return f;
               const next = [...f, id];
@@ -558,6 +569,11 @@ const RoomPlain = ({ hosted = false }: { hosted?: boolean }) => {
   return (
     <main className="fixed inset-0 bg-[#0d0e11] text-white">
       <div ref={containerRef} className="absolute inset-0" />
+      {/* sitting down: the view dims as you settle into the chair, and the services page fades up from there */}
+      <div
+        className={`pointer-events-none absolute inset-0 z-[60] bg-[#0b0c0f] transition-opacity ease-out ${sitting ? "opacity-100 delay-[1100ms] duration-500" : "opacity-0 duration-0"}`}
+        aria-hidden="true"
+      />
       {error && <p className="absolute inset-0 grid place-items-center text-white/70">This browser can't show the 3D room.</p>}
 
       <div className="pointer-events-none absolute inset-x-0 top-0 z-[6] flex items-start justify-between gap-4 p-4">
