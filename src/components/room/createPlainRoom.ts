@@ -18,7 +18,6 @@ import posterRodeo from "@/assets/poster-rodeo.jpg";
 import { PORTFOLIO_SPOTS, type PortfolioId } from "./portfolioSpots";
 import { nowBuilding } from "@/data/portfolio";
 import { CLOSET, COLORS, DOOR, HERO, LAYOUT, ROOM, WINDOW } from "./roomLayout";
-import { createSeatedHands, type SeatedHands } from "./createSeatedHands";
 
 /**
  * A plain recreation of the real room: the shell, furniture and night lighting, with orbit
@@ -184,9 +183,8 @@ export interface PlainRoomOptions {
   /** the sky outside: the visitor's own clock, or a fixed time */
   sky?: SkyMode;
   /**
-   * sit in the desk chair: a fixed first-person view of the desk with your own hands on it. The
-   * cursor (anywhere on the page) moves the right hand and turns the head a little; the room's
-   * objects aren't clickable. Used as the backdrop of the services page.
+   * sit in the desk chair: a fixed first-person view of the desk. The cursor (anywhere on the
+   * page) turns the head a little; the room's objects aren't clickable. Used as the backdrop of the services page.
    */
   seated?: boolean;
 }
@@ -262,7 +260,7 @@ const VIEWS: Record<CameraView, { pos: THREE.Vector3; target: THREE.Vector3 }> =
   desk: { pos: new THREE.Vector3(-0.15, 1.7, 0.6), target: new THREE.Vector3(1.0, 0.3, -1.2) },
   // matches photo E: from beside the desk, looking at the entry door and the closet
   door: { pos: new THREE.Vector3(0.35, 1.5, -0.45), target: new THREE.Vector3(0.0, 1.0, ROOM.front) },
-  // sitting in the desk chair, eyes on the monitor, keyboard and mouse under your hands
+  // sitting in the desk chair, eyes on the monitor
   seat: { pos: new THREE.Vector3(...SEAT.pos), target: new THREE.Vector3(...SEAT.target) },
 };
 
@@ -1588,9 +1586,8 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     }
   };
 
-  // ---------- seated: first person at the desk, hands on the keyboard and mouse ----------
+  // ---------- seated: first person at the desk ----------
   const seated = !!options.seated;
-  let hands: SeatedHands | null = null;
   let lean = 0;
   const look = { x: 0, y: 0, tx: 0, ty: 0 };
   const seatPos = vec(SEAT.pos);
@@ -1601,34 +1598,13 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     const y = -(e.clientY / window.innerHeight) * 2 + 1;
     look.tx = x;
     look.ty = y;
-    hands?.setPointer(x, y);
-  };
-  const onSeatTap = (e: PointerEvent) => {
-    if (e.button === 0) hands?.tap();
   };
   if (seated) {
     controls.enabled = false;
     camera.position.copy(seatPos);
     controls.target.copy(seatTarget);
     camera.lookAt(seatTarget);
-    const deskTopY = LAYOUT.desk.h + 0.012;
-    const deskFront = LAYOUT.desk.pos[0] - LAYOUT.desk.d / 2;
-    hands = createSeatedHands(
-      scene,
-      camera,
-      {
-        y: deskTopY,
-        minX: deskFront + 0.04,
-        maxX: deskFront + 0.36,
-        minZ: LAYOUT.keyboard.pos[2] - 0.35,
-        maxZ: LAYOUT.mouse.pos[2] + 0.2,
-        keyboard: new THREE.Vector3(LAYOUT.keyboard.pos[0] - 0.02, deskTopY, LAYOUT.keyboard.pos[2] - 0.1),
-        mouse: new THREE.Vector3(LAYOUT.mouse.pos[0] - 0.03, deskTopY, LAYOUT.mouse.pos[2]),
-      },
-      reducedMotion,
-    );
     window.addEventListener("pointermove", onSeatPointer, { passive: true });
-    window.addEventListener("pointerdown", onSeatTap, { passive: true });
   }
 
   // ---------- pointer: click the lamp or the binoculars; drag to aim through the binoculars ----------
@@ -2776,7 +2752,6 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
         camera.position.copy(seatPos).add(new THREE.Vector3(0.16 * lean, -0.03 * lean, look.x * 0.025));
         seatLook.copy(seatTarget).add(new THREE.Vector3(0, look.y * 0.14 - 0.04 * lean, look.x * 0.32));
         camera.lookAt(seatLook);
-        hands?.update(dt, time);
       } else if (mode === "room") controls.update();
       else camera.lookAt(controls.target);
       // dollhouse cutaway: hide any wall the camera is behind, and the ceiling from above
@@ -2844,8 +2819,6 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     },
     dispose: () => {
       window.removeEventListener("pointermove", onSeatPointer);
-      window.removeEventListener("pointerdown", onSeatTap);
-      hands?.dispose();
       renderer.domElement.removeEventListener("touchstart", onTouchStart);
       renderer.domElement.removeEventListener("touchmove", onTouchMove);
       renderer.domElement.removeEventListener("touchend", onTouchEnd);
