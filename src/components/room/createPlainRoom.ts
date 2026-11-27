@@ -199,6 +199,8 @@ export interface PlainRoomHandle {
   setLamp: (settings: Partial<LampSettings>) => void;
   /** seated only: lean toward the monitor, 0 sitting back to 1 leaning in */
   setLean: (amount: number) => void;
+  /** stop drawing (e.g. while the room is scrolled out of sight), or start again */
+  setPaused: (paused: boolean) => void;
   /** play or stop the lo-fi radio on the speaker; returns the new state */
   toggleRadio: () => boolean;
   setMuted: (muted: boolean) => void;
@@ -2490,7 +2492,7 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     return { pos: r(camera.position), look: r(controls.target) };
   };
 
-  renderer.setAnimationLoop(() => {
+  const loop = () => {
     const dt = Math.min(clock.getDelta(), 0.1);
     const time = clock.elapsedTime;
     updateGhosts(dt, time);
@@ -2788,7 +2790,9 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
       renderer.render(overlay, overlayCam);
       renderer.autoClear = true;
     }
-  });
+  };
+  let paused = false;
+  renderer.setAnimationLoop(loop);
 
   return {
     whiteboard: { base: () => whiteboard.base(), setDoodle: (img) => whiteboard.setDoodle(img) },
@@ -2816,6 +2820,12 @@ export function createPlainRoom(container: HTMLElement, options: PlainRoomOption
     setLamp,
     setLean: (amount) => {
       lean = THREE.MathUtils.clamp(amount, 0, 1);
+    },
+    setPaused: (on) => {
+      if (on === paused) return;
+      paused = on;
+      renderer.setAnimationLoop(on ? null : loop);
+      if (!on) clock.getDelta(); // don't count the paused time as one long frame
     },
     dispose: () => {
       window.removeEventListener("pointermove", onSeatPointer);
