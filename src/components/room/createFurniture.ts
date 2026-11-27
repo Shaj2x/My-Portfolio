@@ -1278,44 +1278,22 @@ export function createFurniture(env: THREE.Texture | null = null): FurnitureHand
   }
 
   // ---------- tapestry: "IF YOURE READING THIS ITS TOO LATE" ----------
+  // The artwork itself (public/room/tapestry.jpg: the lettering and the praying hands, cropped and
+  // set on black at the tapestry's proportions), so it reads exactly like the real one. Plain black
+  // cloth stands in for the moment before it loads.
   {
     const { pos, w, h } = LAYOUT.tapestry;
-    const tex = paintTexture(1024, 944, (c, cw, ch) => {
-      c.fillStyle = COLORS.tapestry;
+    const tex = paintTexture(4, 4, (c, cw, ch) => {
+      c.fillStyle = "#000";
       c.fillRect(0, 0, cw, ch);
-      c.strokeStyle = COLORS.chalk;
-      c.fillStyle = COLORS.chalk;
-      c.lineCap = "round";
-      c.lineJoin = "round";
-      const lines = ["IF  YOURE", "READING", "THIS  ITS", "TOO  LATE"];
-      c.font = "400 150px 'Chalkboard SE', 'Comic Sans MS', 'Segoe Print', sans-serif";
-      c.textBaseline = "middle";
-      lines.forEach((line, i) => {
-        let x = 110 + i * 16;
-        const y = 170 + i * 175;
-        for (const ch2 of line) {
-          c.save();
-          c.translate(x, y + between(-6, 6));
-          c.rotate(between(-0.08, 0.08));
-          // a dry-brush look: the letter, then a faint offset stroke over it
-          c.globalAlpha = 0.92;
-          c.fillText(ch2, 0, 0);
-          c.lineWidth = 2;
-          c.globalAlpha = 0.35;
-          c.strokeText(ch2, between(-4, 4), between(-4, 4));
-          c.restore();
-          x += ch2 === " " ? 38 : c.measureText(ch2).width * 0.98;
-        }
-      });
-      // small praying hands near the bottom
-      c.lineWidth = 3;
-      c.beginPath();
-      c.moveTo(cw * 0.42, ch * 0.93);
-      c.quadraticCurveTo(cw * 0.43, ch * 0.84, cw * 0.44, ch * 0.83);
-      c.quadraticCurveTo(cw * 0.45, ch * 0.84, cw * 0.46, ch * 0.93);
-      c.moveTo(cw * 0.44, ch * 0.84);
-      c.lineTo(cw * 0.44, ch * 0.93);
-      c.stroke();
+    });
+    new THREE.TextureLoader().load("/room/tapestry.jpg", (art) => {
+      art.colorSpace = THREE.SRGBColorSpace;
+      art.anisotropy = 8;
+      const m = cloth.material as THREE.MeshStandardMaterial;
+      m.map = art;
+      m.needsUpdate = true;
+      tex.dispose();
     });
     const geo = new THREE.PlaneGeometry(w, h, 30, 20);
     const p = geo.attributes.position;
