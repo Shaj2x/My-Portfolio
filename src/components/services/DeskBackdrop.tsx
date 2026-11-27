@@ -16,8 +16,10 @@ const DeskBackdrop = () => {
     let room: PlainRoomHandle | null = null;
     let cancelled = false;
     const onScroll = () => {
-      const max = document.documentElement.scrollHeight - window.innerHeight;
-      room?.setLean(max > 0 ? Math.min(1, (window.scrollY / max) * 1.6) : 0);
+      // lean in over the first screen; once the page below covers the room, stop drawing it
+      const h = window.innerHeight;
+      room?.setLean(Math.min(1, window.scrollY / h));
+      room?.setPaused(window.scrollY > h * 1.05);
     };
     import("@/components/room/createPlainRoom")
       .then(({ createPlainRoom }) => {

@@ -142,44 +142,44 @@ export interface Service {
 
 /** The line that introduces what I build, here and on the services page */
 export const servicesIntro =
-  "I create fully automated AI systems that help businesses scale without scaling headcount. From AI receptionists to complete brand identities, I deliver turnkey solutions.";
+  "Six things I build for small businesses. Each one is set up around how you already work, tested with you, and handed over running.";
 
 /** What I build: the six services, in the room (the desk chair), the quick view and the services page */
 export const services: Service[] = [
   {
     icon: PhoneCall,
     title: "AI Receptionist Systems",
-    description: "Fully automated AI receptionists that handle calls, book appointments, answer FAQs and route inquiries, 24/7 with zero downtime.",
-    tags: ["Answers calls", "Books appointments", "Answers FAQs", "Routes inquiries"],
+    description: "Picks up when you can't: books the appointment, answers the questions you get every day, and passes anything urgent straight to you.",
+    tags: ["Answers calls", "Books appointments", "Answers FAQs", "Forwards urgent calls"],
   },
   {
     icon: Workflow,
     title: "End-to-End Automation",
-    description: "Custom AI pipelines that automate repetitive workflows: lead capture, email follow-ups, CRM updates and data processing.",
+    description: "Takes the repetitive admin off your plate: new leads logged, follow-up emails sent on time, and your CRM kept up to date without you touching it.",
     tags: ["Lead capture", "Email follow-ups", "CRM updates", "Data processing"],
   },
   {
     icon: Globe,
     title: "Full Website Development",
-    description: "High-converting, responsive websites built from scratch: landing pages, e-commerce stores, dashboards and SaaS platforms.",
+    description: "A fast site that says what you do in one look and gets people to book or buy, from a single page to a full store or dashboard.",
     tags: ["Landing pages", "E-commerce stores", "Dashboards", "SaaS platforms"],
   },
   {
     icon: Palette,
     title: "Brand Identity & Logo Design",
-    description: "Complete visual identities, including logos, color systems, typography and brand guidelines, that make businesses stand out.",
+    description: "A logo, colours and type that belong together, with a short guide so your signs, posts and invoices all look like the same business.",
     tags: ["Logos", "Color systems", "Typography", "Brand guidelines"],
   },
   {
     icon: AudioLines,
     title: "AI Voice Agents",
-    description: "Intelligent voice bots for inbound and outbound calling: qualifying leads, scheduling meetings and providing customer support.",
+    description: "A phone agent that makes and takes calls for you: it qualifies new leads, books meetings into your calendar and handles routine support.",
     tags: ["Inbound and outbound calls", "Qualifying leads", "Scheduling meetings", "Customer support"],
   },
   {
     icon: Bot,
     title: "Custom AI Solutions",
-    description: "Bespoke AI tools tailored to your business: chatbots, content generators, data analyzers and smart recommendation engines.",
+    description: "For anything else AI should be doing in your business: a chatbot that knows your services, a tool that reads your documents, or a recommender for your shop.",
     tags: ["Chatbots", "Content generators", "Data analyzers", "Recommendation engines"],
   },
 ];
